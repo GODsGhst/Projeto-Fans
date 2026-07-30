@@ -1,0 +1,29 @@
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node / Ionic / Angular
+node_modules/
+www/
+.angular/
+dist/
+
+# Capacitor nativo
+android/
+ios/
+
+# Segredos — NUNCA commitar
+.env
+.env.*
+*-service-account*.json
+application-prod.yml
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Buffer de sessão
+.remember/
