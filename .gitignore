@@ -27,3 +27,8 @@ Thumbs.db
 
 # Buffer de sessão
 .remember/
+
+# Artefatos de plugin, nao do projeto
+.swarm/
+ruvector.db
+*.db
