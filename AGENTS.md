@@ -28,7 +28,7 @@ Estes não são preferências. Código que viola qualquer um deles é rejeitado 
 5. **Teto de 6 itens e janela de 14 dias na Home** — calculados **no servidor**, em `HomeService`. Não replique essa lógica no cliente.
 6. **Semana vazia mostra pouca coisa.** Lista vazia é resposta correta e informativa. Não preencha com sugestão, dica, card promocional ou skeleton permanente.
 7. **Cor + sigla sempre juntas.** Nunca renderize só a cor. Use `MateriaChipComponent`; não crie outro caminho para exibir matéria.
-8. **Prova é visualmente mais pesada que entrega**, por forma (borda, ícone, peso de fonte) — **não** só por cor. Teste: em escala de cinza os dois ainda se distinguem.
+8. **Prova é visualmente mais pesada que entrega**, por peso de tinta: prova é **bloco sólido**, entrega é **contorno de 1px**. A cor **não** participa dessa distinção — ela já identifica a matéria. Teste: em escala de cinza os dois ainda se distinguem. Ver `docs/design/design-system-v1.html`.
 9. **Qualquer membro posta, sem aprovação.** Nenhuma fila, nenhum gate, nenhum status "pendente de revisão" na criação.
 10. **Só o autor edita ou exclui o próprio registro.** Nem o líder edita registro alheio — o líder só muda visibilidade.
 11. **Tela de prova mostra apenas os materiais vinculados** àquele evento. Nunca despeje a matéria inteira.

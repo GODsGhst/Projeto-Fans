@@ -1,0 +1,872 @@
+<title>projetoFans — Design System</title>
+
+<style>
+  /* ============================================================
+     TOKENS
+     O cromo do app é cromaticamente quieto de propósito: os dados
+     já carregam 12 hues (uma por matéria). UI colorida brigaria.
+     ============================================================ */
+  :root {
+    --paper:      #EEF0EC;   /* cinza-papel, viés verde */
+    --panel:      #F7F8F6;
+    --ink:        #14181A;
+    --ink-2:      #4A5254;
+    --ink-3:      #7C8486;
+    --rule:       rgba(20, 24, 26, .14);
+    --rule-soft:  rgba(20, 24, 26, .07);
+    --accent:     #0F766E;
+    --accent-ink: #FFFFFF;
+
+    /* prova = bloco sólido no valor OPOSTO ao da página */
+    --prova-bg:   #14181A;
+    --prova-fg:   #EEF0EC;
+    --prova-fg-2: rgba(238, 240, 236, .62);
+
+    --grid:       rgba(20, 24, 26, .035);
+
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 18px;
+
+    --step--1: clamp(.75rem, .72rem + .12vw, .8125rem);
+    --step-0:  clamp(.9375rem, .91rem + .14vw, 1rem);
+    --step-1:  clamp(1.125rem, 1.06rem + .3vw, 1.3125rem);
+    --step-2:  clamp(1.5rem, 1.32rem + .8vw, 2rem);
+    --step-3:  clamp(2rem, 1.6rem + 1.9vw, 3.25rem);
+
+    --ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #101315; --panel: #191E20;
+      --ink: #E8EBE6; --ink-2: #A7AFB0; --ink-3: #767E80;
+      --rule: rgba(232, 235, 230, .16); --rule-soft: rgba(232, 235, 230, .08);
+      --accent: #4DBFB3; --accent-ink: #06201D;
+      --prova-bg: #E8EBE6; --prova-fg: #14181A;
+      --prova-fg-2: rgba(20, 24, 26, .6);
+      --grid: rgba(232, 235, 230, .04);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #101315; --panel: #191E20;
+    --ink: #E8EBE6; --ink-2: #A7AFB0; --ink-3: #767E80;
+    --rule: rgba(232, 235, 230, .16); --rule-soft: rgba(232, 235, 230, .08);
+    --accent: #4DBFB3; --accent-ink: #06201D;
+    --prova-bg: #E8EBE6; --prova-fg: #14181A;
+    --prova-fg-2: rgba(20, 24, 26, .6);
+    --grid: rgba(232, 235, 230, .04);
+  }
+  :root[data-theme="light"] {
+    --paper: #EEF0EC; --panel: #F7F8F6;
+    --ink: #14181A; --ink-2: #4A5254; --ink-3: #7C8486;
+    --rule: rgba(20, 24, 26, .14); --rule-soft: rgba(20, 24, 26, .07);
+    --accent: #0F766E; --accent-ink: #FFFFFF;
+    --prova-bg: #14181A; --prova-fg: #EEF0EC;
+    --prova-fg-2: rgba(238, 240, 236, .62);
+    --grid: rgba(20, 24, 26, .035);
+  }
+
+  /* Paleta de matérias — 12 hues, todas na mesma escuridão.
+     Regra única: fundo sólido + texto branco. Funciona em qualquer ground. */
+  :root {
+    --m-calc:  #1D4ED8;
+    --m-bd:    #0369A1;
+    --m-esoft: #0F766E;
+    --m-redes: #15803D;
+    --m-so:    #4D7C0F;
+    --m-est:   #A16207;
+    --m-poo:   #B45309;
+    --m-ihc:   #C2410C;
+    --m-alg:   #B91C1C;
+    --m-eth:   #BE185D;
+    --m-comp:  #A21CAF;
+    --m-mat:   #6D28D9;
+  }
+
+  /* ============================================================
+     BASE
+     ============================================================ */
+  * { box-sizing: border-box; }
+
+  .pg {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: clamp(1.25rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2rem) 5rem;
+    transition: filter .35s ease;
+  }
+  .pg.is-gray { filter: grayscale(1); }
+
+  .wrap { max-width: 1180px; margin-inline: auto; }
+
+  h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -.022em; }
+  h1 { font-size: var(--step-3); font-weight: 680; }
+  h2 { font-size: var(--step-2); font-weight: 640; }
+  h3 { font-size: var(--step-1); font-weight: 620; letter-spacing: -.015em; }
+  p  { margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--ink-3);
+  }
+  .lede { font-size: var(--step-1); color: var(--ink-2); max-width: 62ch; line-height: 1.5; }
+  .prose { max-width: 66ch; color: var(--ink-2); display: flex; flex-direction: column; gap: .85rem; }
+  .prose strong { color: var(--ink); font-weight: 620; }
+  code {
+    font-family: var(--mono); font-size: .875em;
+    background: var(--rule-soft); padding: .12em .38em; border-radius: var(--r-sm);
+  }
+
+  /* ============================================================
+     LAYOUT
+     ============================================================ */
+  header.masthead { display: flex; flex-direction: column; gap: 1.1rem; padding-bottom: 2.5rem; }
+  .masthead-top { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: baseline; justify-content: space-between; }
+
+  section { padding-block: clamp(2.5rem, 5vw, 4rem); border-top: 1px solid var(--rule); }
+  .sec-head { display: flex; flex-direction: column; gap: .7rem; margin-bottom: 2rem; }
+
+  .cols { display: grid; gap: clamp(1.5rem, 3vw, 2.75rem); }
+  @media (min-width: 900px) { .cols.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+
+  /* ============================================================
+     CONTROLE
+     ============================================================ */
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+    padding: .7rem .85rem;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+  }
+  .toolbar p { font-size: var(--step--1); color: var(--ink-2); margin-inline-end: auto; }
+
+  button.sw {
+    font: inherit; font-size: var(--step--1); font-weight: 600;
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .5rem .85rem; border-radius: var(--r-sm); cursor: pointer;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--rule);
+    transition: background .16s ease, border-color .16s ease;
+  }
+  button.sw:hover { border-color: var(--ink-3); }
+  button.sw[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dot { width: .55rem; height: .55rem; border-radius: 50%; border: 1px solid currentColor; }
+  button.sw[aria-pressed="true"] .dot { background: currentColor; }
+
+  /* ============================================================
+     PALETA
+     ============================================================ */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: .6rem; }
+  .sw-card { border: 1px solid var(--rule); border-radius: var(--r-md); overflow: hidden; background: var(--panel); }
+  .sw-chip {
+    padding: .85rem .8rem 1.6rem;
+    color: #fff; font-weight: 680; letter-spacing: .04em; font-size: var(--step--1);
+  }
+  .sw-meta {
+    padding: .5rem .7rem .6rem; display: flex; justify-content: space-between; gap: .5rem;
+    font-family: var(--mono); font-size: .6875rem; color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .sw-meta .ratio { font-weight: 700; }
+  .sw-meta .ratio.bad { color: #B91C1C; }
+
+  /* ============================================================
+     CHIP DE MATÉRIA — cor + sigla, sempre juntas.
+     Não existe variante que renderize só a cor.
+     ============================================================ */
+  .chip {
+    display: inline-flex; align-items: center;
+    background: var(--c); color: #fff;
+    font-size: .6875rem; font-weight: 700; letter-spacing: .055em;
+    padding: .16rem .42rem; border-radius: 4px;
+    white-space: nowrap; text-transform: uppercase;
+  }
+
+  /* ============================================================
+     CARD DE EVENTO — peso por tinta, não por cor.
+     prova  = bloco sólido no valor oposto ao da página
+     entrega = contorno de 1px
+     ============================================================ */
+  .ev {
+    display: grid; grid-template-columns: 2.85rem minmax(0, 1fr); gap: .8rem;
+    padding: .7rem .8rem; border-radius: var(--r-md); align-items: start;
+  }
+  .ev--entrega { background: transparent; border: 1px solid var(--rule); color: var(--ink); }
+  .ev--prova   { background: var(--prova-bg); border: 1px solid var(--prova-bg); color: var(--prova-fg); }
+
+  .ev-date { text-align: center; font-variant-numeric: tabular-nums; padding-top: .1rem; }
+  .ev-day  { display: block; font-size: 1.4rem; font-weight: 700; line-height: .95; letter-spacing: -.03em; }
+  .ev-mon  { display: block; font-family: var(--mono); font-size: .625rem; text-transform: uppercase; letter-spacing: .1em; opacity: .62; }
+
+  .ev-body { display: flex; flex-direction: column; gap: .28rem; min-width: 0; }
+  .ev-top  { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+  .ev-kind {
+    font-family: var(--mono); font-size: .625rem; text-transform: uppercase; letter-spacing: .11em;
+    display: inline-flex; align-items: center; gap: .28rem;
+  }
+  .ev--entrega .ev-kind { color: var(--ink-3); }
+  .ev--prova   .ev-kind { color: var(--prova-fg-2); }
+  .ev-title { font-weight: 600; font-size: .875rem; line-height: 1.32; letter-spacing: -.008em; }
+  .ev--prova .ev-title { font-weight: 700; }
+  .ev-foot { font-size: .6875rem; }
+  .ev--entrega .ev-foot { color: var(--ink-3); }
+  .ev--prova   .ev-foot { color: var(--prova-fg-2); }
+
+  /* glifo de tipo: preenchido = prova, contorno = entrega */
+  .glyph { width: .5rem; height: .5rem; border: 1.5px solid currentColor; display: inline-block; }
+  .glyph--prova { background: currentColor; border-radius: 1px; }
+  .glyph--entrega { border-radius: 50%; }
+
+  .feito { display: inline-flex; align-items: center; gap: .25rem; }
+
+  /* ============================================================
+     APARELHOS
+     ============================================================ */
+  .devices { display: flex; gap: 1.1rem; overflow-x: auto; padding-block: .35rem 1rem; scroll-snap-type: x proximity; }
+  .device { flex: 0 0 auto; scroll-snap-align: start; width: 274px; display: flex; flex-direction: column; gap: .6rem; }
+  .screen {
+    background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-lg);
+    height: 520px; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 28px -18px rgba(0,0,0,.3);
+  }
+  .device figcaption { font-size: var(--step--1); color: var(--ink-2); }
+  .device figcaption b { color: var(--ink); font-weight: 620; display: block; }
+
+  .scr-bar {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: .8rem .85rem .55rem; border-bottom: 1px solid var(--rule-soft);
+  }
+  .scr-bar h4 { margin: 0; font-size: .9375rem; font-weight: 680; letter-spacing: -.015em; }
+  .scr-bar span { font-family: var(--mono); font-size: .5625rem; text-transform: uppercase; letter-spacing: .11em; color: var(--ink-3); }
+  .scr-body { flex: 1; overflow: hidden; padding: .6rem .7rem; display: flex; flex-direction: column; gap: .45rem; }
+  .scr-tabs {
+    display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--rule-soft);
+    padding: .45rem .3rem .5rem;
+  }
+  .scr-tabs i {
+    font-style: normal; text-align: center;
+    font-family: var(--mono); font-size: .5rem; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--ink-3); display: flex; flex-direction: column; align-items: center; gap: .22rem;
+  }
+  .scr-tabs i b { width: .95rem; height: .95rem; border: 1.5px solid currentColor; border-radius: 3px; }
+  .scr-tabs i[aria-current] { color: var(--accent); font-weight: 700; }
+  .scr-tabs i[aria-current] b { background: var(--accent); border-color: var(--accent); }
+
+  .day-sep {
+    font-family: var(--mono); font-size: .5625rem; text-transform: uppercase; letter-spacing: .11em;
+    color: var(--ink-3); padding-top: .3rem;
+  }
+
+  /* estado vazio — a Home de semana vazia mostra pouca coisa, e isso é informação */
+  .empty { display: flex; flex-direction: column; gap: .4rem; padding: 1.6rem .4rem; }
+  .empty b { font-weight: 620; font-size: .875rem; }
+  .empty span { font-size: .75rem; color: var(--ink-3); line-height: 1.5; }
+
+  /* matérias */
+  .mat-row {
+    display: flex; align-items: center; gap: .55rem; padding: .6rem .55rem;
+    border: 1px solid var(--rule); border-radius: var(--r-md);
+  }
+  .mat-row .nm { font-size: .8125rem; font-weight: 570; min-width: 0; }
+  .mat-row .ct { margin-left: auto; font-family: var(--mono); font-size: .625rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  .grp-label {
+    font-family: var(--mono); font-size: .5625rem; text-transform: uppercase; letter-spacing: .11em;
+    color: var(--ink-3); display: flex; align-items: center; gap: .45rem;
+  }
+  .grp-label::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+  .mtl { display: flex; gap: .45rem; align-items: baseline; font-size: .75rem; padding: .3rem .1rem; }
+  .mtl .k { font-family: var(--mono); font-size: .5625rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; padding-top: .1rem; }
+  .mtl .t { min-width: 0; }
+  .mtl .by { color: var(--ink-3); font-size: .6875rem; }
+
+  /* kanban */
+  .kan { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+  .kan-col { display: flex; flex-direction: column; gap: .4rem; min-width: 0; }
+  .mini {
+    border: 1px solid var(--rule); border-radius: var(--r-sm); padding: .4rem .45rem;
+    display: flex; flex-direction: column; gap: .25rem;
+  }
+  .mini.solid { background: var(--prova-bg); border-color: var(--prova-bg); color: var(--prova-fg); }
+  .mini .mt { font-size: .6875rem; font-weight: 570; line-height: 1.3; }
+  .mini.done { opacity: .55; }
+  .mini.done .mt { text-decoration: line-through; }
+  .nao-list {
+    margin-top: .5rem; border-top: 1px dashed var(--rule); padding-top: .5rem;
+    display: flex; flex-direction: column; gap: .3rem;
+  }
+
+  /* calendário */
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal i {
+    font-style: normal; aspect-ratio: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+    font-size: .625rem; font-variant-numeric: tabular-nums; color: var(--ink-2);
+    border-radius: 3px;
+  }
+  .cal i.hd { color: var(--ink-3); font-family: var(--mono); font-size: .5rem; text-transform: uppercase; }
+  .cal i.off { opacity: .3; }
+  .cal i.solid { background: var(--prova-bg); color: var(--prova-fg); font-weight: 700; }
+  .cal i.out { box-shadow: inset 0 0 0 1px var(--rule); }
+  .cal .marks { display: flex; gap: 2px; }
+  .cal .marks u { width: 4px; height: 4px; border-radius: 50%; background: var(--c); display: block; }
+
+  /* ============================================================
+     ANOTAÇÃO
+     ============================================================ */
+  .note {
+    border-left: 2px solid var(--accent); padding: .1rem 0 .1rem .85rem;
+    display: flex; flex-direction: column; gap: .3rem;
+  }
+  .note b { font-size: var(--step--1); font-family: var(--mono); text-transform: uppercase; letter-spacing: .09em; color: var(--accent); font-weight: 700; }
+  .note span { font-size: var(--step--1); color: var(--ink-2); line-height: 1.55; }
+
+  .cmp { display: grid; gap: 1rem; }
+  @media (min-width: 620px) { .cmp { grid-template-columns: 1fr 1fr; } }
+  .cmp-cell { display: flex; flex-direction: column; gap: .6rem; padding: 1rem; border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--panel); }
+  .cmp-cell .eyebrow { font-size: .625rem; }
+
+  /* tokens */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--r-md); }
+  table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+  th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
+  th { font-family: var(--mono); font-size: .625rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3); font-weight: 700; }
+  tr:last-child td { border-bottom: 0; }
+  td.v { font-family: var(--mono); color: var(--ink-2); }
+  td .sq { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; border: 1px solid var(--rule); vertical-align: -2px; margin-right: .4rem; }
+
+  footer.end { border-top: 1px solid var(--rule); padding-top: 1.75rem; margin-top: 1rem; }
+  footer.end p { font-size: var(--step--1); color: var(--ink-3); max-width: 70ch; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+
+<div class="pg" id="pg">
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="masthead-top">
+      <p class="eyebrow">design system · v1 · 29 jul 2026</p>
+      <p class="eyebrow">projetoFans</p>
+    </div>
+    <h1>O que foi dado no período.</h1>
+    <p class="lede">
+      App onde a turma mantém, junta, provas, entregas e o material de cada aula.
+      Este documento é a camada visual — a fonte de verdade para os componentes de
+      <code>app/src/app/shared/</code>, que o Codex consome e não altera.
+    </p>
+  </header>
+
+  <div class="toolbar">
+    <p><strong>Teste de aceite da Seção 8:</strong> prova tem de se distinguir de entrega sem ler o texto.</p>
+    <button class="sw" id="gray" type="button" aria-pressed="false">
+      <span class="dot" aria-hidden="true"></span> Escala de cinza
+    </button>
+  </div>
+
+  <!-- ==================== 1. FUNDAMENTO ==================== -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">01 · fundamento</p>
+      <h2>O cromo é quieto porque os dados são coloridos.</h2>
+    </div>
+    <div class="cols two">
+      <div class="prose">
+        <p>
+          Cada matéria tem uma cor, e uma turma tem de seis a doze matérias. Isso significa que
+          <strong>a paleta de dados já usa a roda de cores inteira</strong>. Se a interface também
+          fosse colorida, ela competiria com a informação que precisa ser lida.
+        </p>
+        <p>
+          Daí a decisão que governa tudo aqui: o ground é um cinza-papel com viés verde, a tinta é
+          quase preta, e existe <strong>um único acento</strong> — teal — reservado para o que é
+          interativo. Nada mais no cromo tem cor.
+        </p>
+        <p>
+          As doze cores de matéria ficam numa <strong>faixa estreita de luminosidade</strong>.
+          Isso não é capricho: cores de luminosidade muito diferente fazem uma matéria parecer mais
+          urgente que a outra sem que ninguém tenha decidido isso. Comprimir a faixa remove essa mentira.
+        </p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="note">
+          <b>Tipografia é da plataforma</b>
+          <span>
+            Os aparelhos usam Roboto no Android e SF no iOS, via <code>system-ui</code>. Num app
+            Capacitor isso é o certo — fonte de sistema é o que faz a coisa parecer nativa em vez
+            de site embrulhado. Só esta página de documentação usa tratamento próprio.
+          </span>
+        </div>
+        <div class="note">
+          <b>Cor nunca viaja sozinha</b>
+          <span>
+            Não existe componente que renderize apenas a cor de uma matéria. Existe
+            <code>MateriaChipComponent</code>, que renderiza cor <em>e</em> sigla, sempre juntas.
+            O não-negociável deixa de depender de disciplina e passa a depender da API do componente.
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 2. PALETA ==================== -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">02 · paleta de matérias</p>
+      <h2>Doze hues numa faixa estreita de luminosidade.</h2>
+      <p class="prose" style="max-width:66ch">
+        O aluno escolhe da paleta, nunca digita hex — é o que impede amarelo em fundo branco.
+        Os números abaixo são <strong>calculados nesta página</strong>, não afirmados: contraste real
+        de texto branco sobre cada cor, com piso de 4.5:1, e a luminosidade perceptual L*.
+      </p>
+      <p class="prose" style="max-width:66ch">
+        As doze ficam entre <strong>L* 37 e 47</strong> — uma faixa de dez pontos, não um valor único.
+        Igualdade perfeita ao longo da roda de cores não é alcançável mantendo hue reconhecível e
+        4.5:1 com texto branco: âmbar e violeta não coexistem no mesmo L* sem que um deles deixe de
+        parecer âmbar ou violeta. Dez pontos é estreito o bastante para que nenhuma matéria pareça
+        mais urgente que a outra, e é o que se pode honestamente prometer.
+      </p>
+      <p class="eyebrow" id="faixa" style="color:var(--accent)">calculando…</p>
+    </div>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <!-- ==================== 3. PESO ==================== -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">03 · prova vs entrega</p>
+      <h2>Peso é tinta, não cor.</h2>
+      <p class="prose" style="max-width:66ch">
+        A cor já está ocupada identificando a matéria, então ela não pode também identificar o tipo.
+        <strong>Prova é um bloco sólido no valor oposto ao da página; entrega é um contorno de 1px.</strong>
+        Ligue a escala de cinza acima: a diferença não se move.
+      </p>
+    </div>
+    <div class="cmp">
+      <div class="cmp-cell">
+        <p class="eyebrow">prova — bloco sólido</p>
+        <div class="ev ev--prova">
+          <div class="ev-date"><span class="ev-day">12</span><span class="ev-mon">ago</span></div>
+          <div class="ev-body">
+            <div class="ev-top">
+              <span class="chip" style="--c:var(--m-bd)">BD</span>
+              <span class="ev-kind"><span class="glyph glyph--prova"></span>prova · 19:00</span>
+            </div>
+            <p class="ev-title">Prova 2 — normalização e SQL</p>
+            <p class="ev-foot">Ana Beatriz · há 2 dias</p>
+          </div>
+        </div>
+        <p style="font-size:var(--step--1); color:var(--ink-2)">
+          Fundo cheio, título em peso 700, glifo preenchido. Três canais dizendo a mesma coisa.
+        </p>
+      </div>
+      <div class="cmp-cell">
+        <p class="eyebrow">entrega — contorno</p>
+        <div class="ev ev--entrega">
+          <div class="ev-date"><span class="ev-day">08</span><span class="ev-mon">ago</span></div>
+          <div class="ev-body">
+            <div class="ev-top">
+              <span class="chip" style="--c:var(--m-calc)">CALC2</span>
+              <span class="ev-kind"><span class="glyph glyph--entrega"></span>entrega · 23:59</span>
+            </div>
+            <p class="ev-title">Lista 4 — integrais por partes</p>
+            <p class="ev-foot">Otávio · há 5 h</p>
+          </div>
+        </div>
+        <p style="font-size:var(--step--1); color:var(--ink-2)">
+          Sem preenchimento, peso 600, glifo vazado. Presente sem pesar.
+        </p>
+      </div>
+    </div>
+    <div class="note" style="margin-top:1.25rem">
+      <b>Por que não borda-esquerda-grossa</b>
+      <span>
+        Era a solução obvia, e é o clichê de card com trilho de acento — além de ser uma diferença
+        pequena demais para sobreviver a uma olhada de dois segundos no ônibus. Bloco sólido contra
+        contorno é a maior diferença de tinta disponível, e ela também atravessa daltonismo,
+        brilho de tela no sol e screenshot em preto e branco.
+      </span>
+    </div>
+  </section>
+
+  <!-- ==================== 4. AS 4 TELAS ==================== -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">04 · as quatro telas do MVP</p>
+      <h2>Home decide, o resto consulta.</h2>
+      <p class="prose" style="max-width:66ch">
+        A Home é a entrada e responde uma pergunta só: <em>o que vem aí?</em> Próximos 14 dias,
+        no máximo 6 itens, ordenados por data — <strong>calculado no servidor</strong>, para que a
+        regra tenha uma implementação e uma suíte de teste em vez de divergir por tela.
+      </p>
+    </div>
+
+    <div class="devices">
+
+      <!-- HOME -->
+      <figure class="device" style="margin:0">
+        <div class="screen">
+          <div class="scr-bar"><h4>Esta semana</h4><span>6 de 6</span></div>
+          <div class="scr-body">
+            <p class="day-sep">amanhã</p>
+            <div class="ev ev--entrega">
+              <div class="ev-date"><span class="ev-day">08</span><span class="ev-mon">ago</span></div>
+              <div class="ev-body">
+                <div class="ev-top">
+                  <span class="chip" style="--c:var(--m-calc)">CALC2</span>
+                  <span class="ev-kind"><span class="glyph glyph--entrega"></span>23:59</span>
+                </div>
+                <p class="ev-title">Lista 4 — integrais por partes</p>
+                <p class="ev-foot">Otávio · há 5 h</p>
+              </div>
+            </div>
+
+            <p class="day-sep">em 4 dias</p>
+            <div class="ev ev--prova">
+              <div class="ev-date"><span class="ev-day">12</span><span class="ev-mon">ago</span></div>
+              <div class="ev-body">
+                <div class="ev-top">
+                  <span class="chip" style="--c:var(--m-bd)">BD</span>
+                  <span class="ev-kind"><span class="glyph glyph--prova"></span>19:00</span>
+                </div>
+                <p class="ev-title">Prova 2 — normalização e SQL</p>
+                <p class="ev-foot">Ana Beatriz · há 2 dias</p>
+              </div>
+            </div>
+
+            <div class="ev ev--entrega">
+              <div class="ev-date"><span class="ev-day">14</span><span class="ev-mon">ago</span></div>
+              <div class="ev-body">
+                <div class="ev-top">
+                  <span class="chip" style="--c:var(--m-esoft)">ESOFT</span>
+                  <span class="ev-kind"><span class="glyph glyph--entrega"></span>entrega</span>
+                </div>
+                <p class="ev-title">Diagrama de casos de uso</p>
+                <p class="ev-foot">Rafa · ontem</p>
+              </div>
+            </div>
+
+            <div class="ev ev--prova">
+              <div class="ev-date"><span class="ev-day">16</span><span class="ev-mon">ago</span></div>
+              <div class="ev-body">
+                <div class="ev-top">
+                  <span class="chip" style="--c:var(--m-redes)">REDES</span>
+                  <span class="ev-kind"><span class="glyph glyph--prova"></span>14:00</span>
+                </div>
+                <p class="ev-title">Prova 1 — camada de enlace</p>
+                <p class="ev-foot">Ana Beatriz · há 3 dias</p>
+              </div>
+            </div>
+          </div>
+          <div class="scr-tabs">
+            <i aria-current="page"><b></b>Home</i><i><b></b>Cal</i><i><b></b>Matérias</i><i><b></b>Quadro</i>
+          </div>
+        </div>
+        <figcaption><b>Home</b>A entrega de amanhã vem antes da prova de daqui a quatro dias. Ordem é urgência, nunca tipo.</figcaption>
+      </figure>
+
+      <!-- MATÉRIAS -->
+      <figure class="device" style="margin:0">
+        <div class="screen">
+          <div class="scr-bar"><h4>Banco de Dados</h4><span>bd</span></div>
+          <div class="scr-body">
+            <p class="grp-label">material de aula</p>
+            <div class="mtl"><span class="k">pdf</span><span class="t">Formas normais 1FN–3FN<br><span class="by">Ana Beatriz · 22 jul</span></span></div>
+            <div class="mtl"><span class="k">slide</span><span class="t">Álgebra relacional<br><span class="by">prof. Marcos · 18 jul</span></span></div>
+            <div class="mtl"><span class="k">foto</span><span class="t">Quadro da aula de junção<br><span class="by">Otávio · 15 jul</span></span></div>
+
+            <p class="grp-label" style="margin-top:.5rem">material adicional</p>
+            <div class="mtl"><span class="k">link</span><span class="t">Exercícios de SQL resolvidos<br><span class="by">Rafa · 24 jul</span></span></div>
+            <div class="mtl"><span class="k">link</span><span class="t">Simulador de plano de query<br><span class="by">Otávio · 20 jul</span></span></div>
+
+            <p class="grp-label" style="margin-top:.5rem">eventos</p>
+            <div class="ev ev--prova">
+              <div class="ev-date"><span class="ev-day">12</span><span class="ev-mon">ago</span></div>
+              <div class="ev-body">
+                <div class="ev-top"><span class="ev-kind"><span class="glyph glyph--prova"></span>prova · 2 materiais</span></div>
+                <p class="ev-title">Prova 2 — normalização e SQL</p>
+              </div>
+            </div>
+          </div>
+          <div class="scr-tabs">
+            <i><b></b>Home</i><i><b></b>Cal</i><i aria-current="page"><b></b>Matérias</i><i><b></b>Quadro</i>
+          </div>
+        </div>
+        <figcaption><b>Matérias</b>Aula e adicional separados por tipo. A prova diz quantos materiais estão vinculados — a resposta a "o que estudo".</figcaption>
+      </figure>
+
+      <!-- MEU QUADRO -->
+      <figure class="device" style="margin:0">
+        <div class="screen">
+          <div class="scr-bar"><h4>Meu quadro</h4><span>só seu</span></div>
+          <div class="scr-body">
+            <div class="kan">
+              <div class="kan-col">
+                <p class="grp-label">a fazer</p>
+                <div class="mini solid">
+                  <span class="chip" style="--c:var(--m-bd)">BD</span>
+                  <span class="mt">Prova 2 — normalização</span>
+                </div>
+                <div class="mini">
+                  <span class="chip" style="--c:var(--m-esoft)">ESOFT</span>
+                  <span class="mt">Diagrama de casos de uso</span>
+                </div>
+                <div class="mini solid">
+                  <span class="chip" style="--c:var(--m-redes)">REDES</span>
+                  <span class="mt">Prova 1 — enlace</span>
+                </div>
+              </div>
+              <div class="kan-col">
+                <p class="grp-label">feito</p>
+                <div class="mini done">
+                  <span class="chip" style="--c:var(--m-calc)">CALC2</span>
+                  <span class="mt">Lista 3 — derivadas</span>
+                </div>
+                <div class="mini done">
+                  <span class="chip" style="--c:var(--m-so)">SO</span>
+                  <span class="mt">Trabalho de escalonamento</span>
+                </div>
+              </div>
+            </div>
+            <div class="nao-list">
+              <p class="grp-label">não listados · 1</p>
+              <div class="mini" style="opacity:.72">
+                <span class="chip" style="--c:var(--m-alg)">ALG</span>
+                <span class="mt">Prova de grafos — 30 jul</span>
+                <span style="font-size:.5625rem; color:var(--ink-3); font-family:var(--mono)">oculto pelo líder · só você vê</span>
+              </div>
+            </div>
+          </div>
+          <div class="scr-tabs">
+            <i><b></b>Home</i><i><b></b>Cal</i><i><b></b>Matérias</i><i aria-current="page"><b></b>Quadro</i>
+          </div>
+        </div>
+        <figcaption><b>Meu quadro</b>Duas colunas, e "Não listados" como seção recolhida embaixo — não uma terceira coluna. Marcar feito não muda nada para mais ninguém.</figcaption>
+      </figure>
+
+      <!-- CALENDÁRIO -->
+      <figure class="device" style="margin:0">
+        <div class="screen">
+          <div class="scr-bar"><h4>Agosto</h4><span>mês</span></div>
+          <div class="scr-body">
+            <div class="cal" id="cal"></div>
+            <p class="grp-label" style="margin-top:.6rem">dia 12</p>
+            <div class="ev ev--prova">
+              <div class="ev-date"><span class="ev-day">12</span><span class="ev-mon">ago</span></div>
+              <div class="ev-body">
+                <div class="ev-top">
+                  <span class="chip" style="--c:var(--m-bd)">BD</span>
+                  <span class="ev-kind"><span class="glyph glyph--prova"></span>19:00</span>
+                </div>
+                <p class="ev-title">Prova 2 — normalização e SQL</p>
+              </div>
+            </div>
+          </div>
+          <div class="scr-tabs">
+            <i><b></b>Home</i><i aria-current="page"><b></b>Cal</i><i><b></b>Matérias</i><i><b></b>Quadro</i>
+          </div>
+        </div>
+        <figcaption><b>Calendário</b>Consulta, não entrada. Dia com prova é preenchido; dia com entrega é vazado. Mesma gramática da Home.</figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ==================== 5. ESTADO VAZIO ==================== -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">05 · o estado vazio</p>
+      <h2>Semana vazia é resposta, não falha.</h2>
+      <p class="prose" style="max-width:66ch">
+        Esta é a tela mais fácil de estragar, e a razão de o design não ter sido delegado.
+        A tentação é preencher — com dica, sugestão, card promocional, skeleton eterno.
+        <strong>Não preencher é o requisito.</strong> "Não tem nada nos próximos 14 dias" é
+        exatamente o que o aluno abriu o app para saber.
+      </p>
+    </div>
+    <div class="cmp">
+      <div class="cmp-cell">
+        <p class="eyebrow">home · nada nos próximos 14 dias</p>
+        <div class="screen" style="height:auto; min-height:190px">
+          <div class="scr-bar"><h4>Esta semana</h4><span>0 de 6</span></div>
+          <div class="scr-body">
+            <div class="empty">
+              <b>Nada nos próximos 14 dias.</b>
+              <span>Se você sabe de alguma prova ou entrega que não está aqui, cadastre — qualquer pessoa da turma pode.</span>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:var(--step--1); color:var(--ink-2)">
+          Duas frases. A segunda existe porque o app só funciona se alguém alimentar, e o convite é
+          a única coisa acionável honesta nesse momento.
+        </p>
+      </div>
+      <div class="cmp-cell">
+        <p class="eyebrow">home · offline</p>
+        <div class="screen" style="height:auto; min-height:190px">
+          <div class="scr-bar"><h4>Esta semana</h4><span>cache</span></div>
+          <div class="scr-body">
+            <div style="border:1px dashed var(--rule); border-radius:var(--r-sm); padding:.45rem .55rem; font-size:.6875rem; color:var(--ink-2)">
+              Sem conexão · mostrando dados de ontem 21:40
+            </div>
+            <div class="ev ev--entrega">
+              <div class="ev-date"><span class="ev-day">08</span><span class="ev-mon">ago</span></div>
+              <div class="ev-body">
+                <div class="ev-top"><span class="chip" style="--c:var(--m-calc)">CALC2</span><span class="ev-kind"><span class="glyph glyph--entrega"></span>23:59</span></div>
+                <p class="ev-title">Lista 4 — integrais por partes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:var(--step--1); color:var(--ink-2)">
+          Nunca lista vazia disfarçada de "não há eventos". Confundir <em>não tem prova</em> com
+          <em>falhei ao buscar</em> é o pior bug que este app pode ter.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 6. TOKENS ==================== -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">06 · tokens</p>
+      <h2>O que vira SCSS.</h2>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>token</th><th>claro</th><th>escuro</th><th>uso</th></tr></thead>
+        <tbody>
+          <tr><td class="v">--paper</td><td class="v"><span class="sq" style="background:#EEF0EC"></span>#EEF0EC</td><td class="v"><span class="sq" style="background:#101315"></span>#101315</td><td>ground da tela</td></tr>
+          <tr><td class="v">--panel</td><td class="v"><span class="sq" style="background:#F7F8F6"></span>#F7F8F6</td><td class="v"><span class="sq" style="background:#191E20"></span>#191E20</td><td>superfície elevada</td></tr>
+          <tr><td class="v">--ink</td><td class="v"><span class="sq" style="background:#14181A"></span>#14181A</td><td class="v"><span class="sq" style="background:#E8EBE6"></span>#E8EBE6</td><td>texto primário</td></tr>
+          <tr><td class="v">--ink-2</td><td class="v"><span class="sq" style="background:#4A5254"></span>#4A5254</td><td class="v"><span class="sq" style="background:#A7AFB0"></span>#A7AFB0</td><td>texto secundário</td></tr>
+          <tr><td class="v">--ink-3</td><td class="v"><span class="sq" style="background:#7C8486"></span>#7C8486</td><td class="v"><span class="sq" style="background:#767E80"></span>#767E80</td><td>rótulo, autoria</td></tr>
+          <tr><td class="v">--accent</td><td class="v"><span class="sq" style="background:#0F766E"></span>#0F766E</td><td class="v"><span class="sq" style="background:#4DBFB3"></span>#4DBFB3</td><td>só o que é interativo</td></tr>
+          <tr><td class="v">--prova-bg</td><td class="v"><span class="sq" style="background:#14181A"></span>#14181A</td><td class="v"><span class="sq" style="background:#E8EBE6"></span>#E8EBE6</td><td>bloco sólido de prova</td></tr>
+          <tr><td class="v">--r-sm / md / lg</td><td class="v">6 / 10 / 18 px</td><td class="v">idem</td><td>raio</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="end">
+    <p>
+      Fase 1 de 2. Aprovado isto, os componentes viram Ionic/Angular reais em
+      <code>app/src/app/shared/</code> — zona proibida para o Codex, que consome e liga nos dados.
+      Ajuste aqui custa minutos; ajuste depois de virar componente custa hora.
+    </p>
+  </footer>
+
+</div>
+</div>
+
+<script>
+  // ---- contraste real, calculado, não afirmado ----------------------------
+  const MATERIAS = [
+    ['CALC2', 'Cálculo II',             '#1D4ED8'],
+    ['BD',    'Banco de Dados',         '#0369A1'],
+    ['ESOFT', 'Eng. de Software',       '#0F766E'],
+    ['REDES', 'Redes de Computadores',  '#15803D'],
+    ['SO',    'Sistemas Operacionais',  '#4D7C0F'],
+    ['EST',   'Estatística',            '#A16207'],
+    ['POO',   'Prog. Orientada a Obj.', '#B45309'],
+    ['IHC',   'Interação Humano-Comp.', '#C2410C'],
+    ['ALG',   'Algoritmos',             '#B91C1C'],
+    ['ETH',   'Ética e Sociedade',      '#BE185D'],
+    ['COMP',  'Compiladores',           '#A21CAF'],
+    ['MAT',   'Matemática Discreta',    '#6D28D9'],
+  ];
+
+  function canal(v) {
+    v /= 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+  function luminancia(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return 0.2126 * canal((n >> 16) & 255)
+         + 0.7152 * canal((n >> 8) & 255)
+         + 0.0722 * canal(n & 255);
+  }
+  function contrasteComBranco(hex) {
+    return 1.05 / (luminancia(hex) + 0.05);
+  }
+  // L* de CIELAB: luminosidade perceptual, 0 = preto, 100 = branco
+  function lStar(hex) {
+    const y = luminancia(hex);
+    return y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y;
+  }
+
+  const alvo = document.getElementById('swatches');
+  const ls = MATERIAS.map(([, , hex]) => lStar(hex));
+  alvo.innerHTML = MATERIAS.map(([sigla, nome, hex]) => {
+    const r = contrasteComBranco(hex);
+    const ok = r >= 4.5;
+    return `<div class="sw-card">
+        <div class="sw-chip" style="background:${hex}">${sigla}</div>
+        <div class="sw-meta">
+          <span>${hex}</span>
+          <span class="ratio ${ok ? '' : 'bad'}">${r.toFixed(1)}:1</span>
+        </div>
+        <div class="sw-meta" style="padding-top:0; border-top:1px solid var(--rule-soft)">
+          <span style="white-space:normal; font-family:var(--ui)">${nome}</span>
+          <span>L* ${lStar(hex).toFixed(0)}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('faixa').textContent =
+    `L* ${Math.min(...ls).toFixed(0)}–${Math.max(...ls).toFixed(0)} · ` +
+    `todas ≥ 4.5:1 com texto branco`;
+
+  // ---- calendário de agosto, com marcas por matéria -----------------------
+  const EVENTOS_CAL = {
+    8:  [{ cor: 'var(--m-calc)',  tipo: 'entrega' }],
+    12: [{ cor: 'var(--m-bd)',    tipo: 'prova'   }],
+    14: [{ cor: 'var(--m-esoft)', tipo: 'entrega' }],
+    16: [{ cor: 'var(--m-redes)', tipo: 'prova'   }],
+    19: [{ cor: 'var(--m-redes)', tipo: 'entrega' }],
+    23: [{ cor: 'var(--m-calc)',  tipo: 'prova'   }],
+  };
+  const cal = document.getElementById('cal');
+  let html = ['d', 's', 't', 'q', 'q', 's', 's']
+    .map(d => `<i class="hd">${d}</i>`).join('');
+  // agosto de 2026 começa num sábado
+  for (let i = 0; i < 6; i++) html += '<i class="off"></i>';
+  for (let dia = 1; dia <= 31; dia++) {
+    const evs = EVENTOS_CAL[dia];
+    let cls = '';
+    if (evs) cls = evs.some(e => e.tipo === 'prova') ? 'solid' : 'out';
+    const marcas = evs
+      ? `<span class="marks">${evs.map(e => `<u style="--c:${e.cor}"></u>`).join('')}</span>`
+      : '';
+    html += `<i class="${cls}">${dia}${marcas}</i>`;
+  }
+  cal.innerHTML = html;
+
+  // ---- escala de cinza: o teste de aceite, interativo ---------------------
+  const btn = document.getElementById('gray');
+  const pg = document.getElementById('pg');
+  btn.addEventListener('click', () => {
+    const ligado = btn.getAttribute('aria-pressed') === 'true';
+    btn.setAttribute('aria-pressed', String(!ligado));
+    pg.classList.toggle('is-gray', !ligado);
+  });
+</script>

@@ -470,12 +470,24 @@ Codex recebe os componentes prontos e faz apenas o wiring: chamar o repository, 
 
 **`cor_hex` sai de uma paleta fixa de 12 cores com contraste validado.** O aluno escolhe da paleta, não digita hex. Isso evita amarelo em fundo branco e garante que o par cor/texto passe em contraste. Validado na aplicação, não só na UI.
 
-**"Prova mais pesada visualmente que entrega" se resolve por forma, não por cor:**
+**"Prova mais pesada visualmente que entrega" se resolve por peso de tinta, não por cor:**
 
-- Prova: borda esquerda grossa, ícone preenchido, peso de fonte maior
-- Entrega: borda fina, ícone outline
+- **Prova:** bloco **sólido**, preenchido no valor oposto ao da página (tinta no tema claro, papel no tema escuro), título em peso 700, glifo de tipo preenchido.
+- **Entrega:** **contorno** de 1px, sem preenchimento, título em peso 600, glifo vazado.
 
-Critério de aceite verificável: *screenshot em escala de cinza ainda distingue prova de entrega*. Isso também faz o app funcionar para daltônicos — cor, sigla e forma são três canais redundantes.
+**Isto substitui a ideia inicial de borda-esquerda-grossa,** por duas razões descobertas ao desenhar: borda grossa é uma diferença pequena demais para sobreviver a uma olhada de dois segundos, e é o clichê de card com trilho de acento. Bloco sólido contra contorno é a maior diferença de tinta disponível.
+
+A cor **não pode** participar dessa distinção — ela já está ocupada identificando a matéria.
+
+Critério de aceite verificável: *screenshot em escala de cinza ainda distingue prova de entrega*. O mockup em `docs/design/design-system-v1.html` tem um interruptor de escala de cinza que roda esse teste. Isso também faz o app funcionar para daltônicos — sigla, peso de tinta e forma do glifo são três canais redundantes, nenhum deles cromático.
+
+### 9.3 A paleta, e o que o cálculo desmentiu
+
+12 hues, todas com contraste ≥ 4.5:1 para texto branco sobre o preenchimento — verificado por `node docs/design/validar-paleta.mjs`, não afirmado.
+
+As 12 ficam entre **L\* 37 e 47**. A intenção original era luminosidade única; isso não é alcançável ao longo da roda de cores mantendo hue reconhecível e o piso de contraste — âmbar e violeta não coexistem no mesmo L\* sem que um deles deixe de parecer âmbar ou violeta. Dez pontos de L\* é estreito o bastante para que nenhuma matéria pareça mais urgente que outra por acidente.
+
+O chip é **preenchimento sólido da hue + texto branco, em qualquer ground e qualquer tema** — uma regra só, sem variante por tema, o que remove uma classe inteira de bug.
 
 **Semana vazia mostra pouca coisa, e isso é informação.** O estado vazio da Home diz que não há nada nos próximos 14 dias. Não preenche com sugestão, dica, card promocional ou skeleton permanente. Este é o ponto onde o Codex mais tentaria "ajudar", então o estado vazio é entregue pronto por mim.
 

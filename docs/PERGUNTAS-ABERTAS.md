@@ -83,9 +83,26 @@ Todas têm fake ou fallback, então **o Codex trabalha e testa sem nenhuma delas
 
 Hoje: `projetoFans`, package `com.projetofans.app`. Rebranding depois é cosmético — trocar nome de exibição e ícone. Trocar o **package** depois é mais chato (Google/Firebase amarram credencial ao package), então se você tem um nome em mente, dizer antes de B1/B2 economiza retrabalho.
 
-### C2. Paleta de 12 cores
+### C2. Paleta de 12 cores e o design system
 
-Eu escolhi e validei contraste. Está no design system. Você veta o que não gostar — é troca de token, minutos.
+**Mockup navegável:** https://claude.ai/code/artifact/bb733f0c-5ae3-4ca8-bf3e-30830f0bdcc3
+Fonte versionada: `docs/design/design-system-v1.html`. Validador: `node docs/design/validar-paleta.mjs`.
+
+Escolhi as 12 e validei contraste de verdade — a página calcula os números em vez de afirmá-los.
+Todas passam ≥ 4.5:1 com texto branco. Você veta o que não gostar; é troca de token, minutos.
+
+**Uma correção que o cálculo me forçou:** eu queria dizer "as 12 na mesma luminosidade". Falso — elas
+ficam entre **L\* 37 e 47**, uma faixa de dez pontos. Igualdade perfeita ao longo da roda de cores não
+é alcançável mantendo hue reconhecível e 4.5:1 com texto branco; âmbar e violeta não coexistem no
+mesmo L\* sem que um deles pare de parecer âmbar ou violeta. Dez pontos é estreito o bastante para
+que nenhuma matéria pareça mais urgente que a outra, e é o que dá para prometer sem mentir.
+
+**Uma decisão visual que eu mudei em relação ao que estava no spec:** prova vs entrega **não** usa
+borda-esquerda-grossa. Virou **bloco sólido vs contorno de 1px** — prova é preenchida no valor oposto
+ao da página. Duas razões: borda grossa é uma diferença pequena demais para sobreviver a uma olhada
+de dois segundos, e é o clichê de card com trilho de acento. Bloco contra contorno é a maior diferença
+de tinta disponível, e atravessa daltonismo, sol na tela e screenshot em preto e branco. A página tem
+um interruptor de escala de cinza para você conferir.
 
 ### C3. Quantas pessoas na turma, e quantas topariam instalar?
 
