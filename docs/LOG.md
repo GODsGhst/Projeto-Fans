@@ -77,3 +77,37 @@ Eu afirmei no spec que as 12 cores ficariam "na mesma luminosidade". O cálculo 
 O navegador embutido travou em `navigate` (timeout de 300s), então a validação visual foi feita por parse estrutural e execução do JS em Node, não por screenshot. A página abre normalmente no link publicado.
 
 **Próximo passo:** aprovada a fase 1, converter em componentes Ionic/Angular reais em `app/src/app/shared/` — o que desbloqueia as tarefas 10-12 do Codex.
+
+---
+
+### [2026-08-03] Tarefas 1 e 2 — backend escrito, TESTES NÃO RODARAM (Claude)
+
+**Status: parcial.** Código escrito e compilando. Nenhum teste executado — Docker travado, detalhe abaixo.
+
+**O que foi feito:**
+Scaffold do backend (pom, docker-compose, application.yml com três perfis, classe de aplicação), migration V1 completa, 12 entidades JPA, 12 repositories, seed de dev e a suíte `SchemaTest` com 6 testes.
+
+**Arquivos principais:** `backend/pom.xml`, `backend/src/main/resources/db/migration/V1__schema_inicial.sql`, `backend/src/main/java/com/projetofans/{domain,repo,config}/`, `backend/src/test/java/com/projetofans/`
+
+**Critério de aceite: NÃO ATINGIDO.** `./mvnw test-compile` passa; `./mvnw test` não foi executado.
+
+**Trava — Docker Desktop não sobe.**
+O daemon não responde: `docker info` estoura timeout e o named pipe `dockerDesktopLinuxEngine` não existe. Os processos do Docker Desktop estão no ar e a distro WSL `docker-desktop` fica em `Stopped`. Sintoma típico de app parado em tela de onboarding/login esperando interação humana. Tentei iniciar o app duas vezes e forçar `DockerCli.exe -SwitchLinuxEngine`; nada.
+
+**Para destravar:** abrir o Docker Desktop manualmente, passar por qualquer tela de aceite/login, e confirmar com `docker run --rm hello-world`. Depois disso `cd backend && ./mvnw test` deve rodar sem mais nada.
+
+**Decisões que eu tomei:**
+
+*Java 17, não 21.* O `JAVA_HOME` desta máquina aponta para `dev-tools\jdk-17`; há zulu-25 e jdk-24 instalados, mas mudar `JAVA_HOME` global afetaria os outros projetos Java daqui. 17 é a baseline do Spring Boot 3.x e nada aqui usa recurso exclusivo do 21. Spec e plano diziam 21 — corrigido no `pom` com o motivo escrito.
+
+*Enums viraram `TEXT` + `CHECK`, não `CREATE TYPE ... AS ENUM`.* Enum nativo do Postgres com `ddl-auto: validate` do Hibernate é atrito conhecido de mapeamento, e adicionar valor depois vira `ALTER TYPE` em vez de trocar uma constraint.
+
+*O seed virou componente Java com `@Profile("dev")`, não migration SQL.* Usuário de seed precisa de hash BCrypt válido e SQL não computa hash — em migration eu teria de colar um literal e torcer para conferir.
+
+*Container do Testcontainers é singleton de JVM* (`TesteComPostgres`), não `@Container` por classe. Com ~10 classes de teste, o padrão idiomático subiria dez Postgres em vez de um.
+
+*`SegurancaConfig` está com `permitAll`.* Deliberado neste estágio — trancar antes de existir emissão de JWT tornaria o scaffold impossível de exercitar. **Não pode chegar a produção assim**; a Task 3 substitui.
+
+*Dois testes a mais do que o plano pedia:* `naoPermiteCorForaDoFormatoHex` e `eventoNaoTemColunaFeito`. O segundo consulta `information_schema` e cai se alguém adicionar uma coluna de estado pessoal em `evento` — é o não-negociável 3 virando teste em vez de comentário.
+
+**Travas / dúvidas:** só o Docker.

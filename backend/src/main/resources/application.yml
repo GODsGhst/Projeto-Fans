@@ -1,0 +1,89 @@
+spring:
+  application:
+    name: projetofans
+  jpa:
+    hibernate:
+      # O schema e do Flyway, nunca do Hibernate. validate em TODOS os perfis.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: America/Sao_Paulo
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+
+app:
+  timezone: America/Sao_Paulo
+  notificacao-hora-vespera: "19:00"
+  janela-home-dias: 14
+  teto-home-itens: 6
+
+server:
+  port: 8080
+  error:
+    include-message: always
+
+logging:
+  level:
+    com.projetofans: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/projetofans
+    username: projetofans
+    password: dev
+  flyway:
+    locations: classpath:db/migration
+# O seed de dev e o componente SeedDev (@Profile("dev")), nao uma migration:
+# usuario de exemplo precisa de hash BCrypt valido, e SQL nao computa hash.
+# O perfil test nao o carrega, entao linhas de exemplo nao poluem as assercoes.
+
+app:
+  jwt-secret: dev-apenas-nao-use-em-producao-esta-chave-tem-256-bits-de-comprimento
+  jwt-expiracao-horas: 720
+  google-oauth-client-id: dev-client-id-fake
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  flyway:
+    locations: classpath:db/migration
+
+app:
+  jwt-secret: test-apenas-chave-de-teste-com-256-bits-de-comprimento-suficiente
+  jwt-expiracao-horas: 1
+  google-oauth-client-id: test-client-id-fake
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DATABASE_URL}
+  flyway:
+    locations: classpath:db/migration
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USER}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+app:
+  # sem default: se faltar, a aplicacao NAO sobe. E o comportamento correto.
+  jwt-secret: ${JWT_SECRET}
+  jwt-expiracao-horas: 720
+  google-oauth-client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+  fcm-service-account-json: ${FCM_SERVICE_ACCOUNT_JSON}
