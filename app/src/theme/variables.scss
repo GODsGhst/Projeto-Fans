@@ -1,2 +1,108 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// ============================================================================
+// projetoFans — tokens do design system
+//
+// Fonte: docs/design/design-system-v1.html, secao "O que vira SCSS".
+// Os nomes sao identicos aos do mockup de proposito: quando alguem comparar a
+// tela com o arquivo aprovado, os tokens tem que bater sem traducao.
+//
+// O cromo e cromaticamente quieto porque os dados ja carregam 12 hues, uma por
+// materia. UI colorida brigaria com o unico canal que identifica materia.
+//
+// Este arquivo carrega DEPOIS de global.scss no build (ver angular.json), entao
+// o mapeamento das variaveis do Ionic aqui vence o dark.system.css importado la.
+// ============================================================================
+
+:root {
+  // ---- cromo ----
+  --paper:      #EEF0EC;   // ground da tela — cinza-papel, vies verde
+  --panel:      #F7F8F6;   // superficie elevada
+  --ink:        #14181A;   // texto primario
+  --ink-2:      #4A5254;   // texto secundario
+  --ink-3:      #7C8486;   // rotulo, autoria, metadado
+  --rule:       rgba(20, 24, 26, .14);
+  --rule-soft:  rgba(20, 24, 26, .07);
+  --accent:     #0F766E;   // so o que e interativo. NUNCA identifica materia
+  --accent-ink: #FFFFFF;
+
+  // prova = bloco solido no valor OPOSTO ao da pagina
+  --prova-bg:   #14181A;
+  --prova-fg:   #EEF0EC;
+  --prova-fg-2: rgba(238, 240, 236, .62);
+
+  // ---- raio ----
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 18px;
+
+  // ---- tipografia ----
+  --ui:   Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  // ---- paleta de materia: 12 hues, contraste >= 4.5:1 com texto branco ----
+  // Verificado por docs/design/validar-paleta.mjs, nao afirmado. Minimo real 4.92:1.
+  // O aluno escolhe DESTA lista; nao digita hex.
+  --m-01-azul:             #1D4ED8;
+  --m-02-azul-celeste:     #0369A1;
+  --m-03-teal:             #0F766E;
+  --m-04-verde:            #15803D;
+  --m-05-oliva:            #4D7C0F;
+  --m-06-ambar:            #A16207;
+  --m-07-laranja-queimado: #B45309;
+  --m-08-laranja:          #C2410C;
+  --m-09-vermelho:         #B91C1C;
+  --m-10-rosa:             #BE185D;
+  --m-11-magenta:          #A21CAF;
+  --m-12-violeta:          #6D28D9;
+
+  // ---- mapeamento para o Ionic ----
+  --ion-background-color: var(--paper);
+  --ion-background-color-rgb: 238, 240, 236;
+  --ion-text-color: var(--ink);
+  --ion-text-color-rgb: 20, 24, 26;
+  --ion-font-family: var(--ui);
+  --ion-toolbar-background: var(--paper);
+  --ion-toolbar-color: var(--ink);
+  --ion-item-background: var(--paper);
+  --ion-tab-bar-background: var(--paper);
+  --ion-tab-bar-color: var(--ink-3);
+  --ion-tab-bar-color-selected: var(--accent);
+
+  --ion-color-primary: var(--accent);
+  --ion-color-primary-rgb: 15, 118, 110;
+  --ion-color-primary-contrast: var(--accent-ink);
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0d685f;
+  --ion-color-primary-tint: #27847d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:      #101315;
+    --panel:      #191E20;
+    --ink:        #E8EBE6;
+    --ink-2:      #A7AFB0;
+    --ink-3:      #767E80;
+    --rule:       rgba(232, 235, 230, .16);
+    --rule-soft:  rgba(232, 235, 230, .08);
+    --accent:     #4DBFB3;
+    --accent-ink: #06201D;
+
+    // no escuro o bloco de prova inverte junto: continua sendo o valor oposto
+    --prova-bg:   #E8EBE6;
+    --prova-fg:   #14181A;
+    --prova-fg-2: rgba(20, 24, 26, .6);
+
+    --ion-background-color-rgb: 16, 19, 21;
+    --ion-text-color-rgb: 232, 235, 230;
+
+    --ion-color-primary-rgb: 77, 191, 179;
+    --ion-color-primary-contrast: var(--accent-ink);
+    --ion-color-primary-contrast-rgb: 6, 32, 29;
+    --ion-color-primary-shade: #44a89d;
+    --ion-color-primary-tint: #5fc5ba;
+  }
+}
+
+// As hues de materia NAO mudam entre temas. Uma regra so, sem variante por tema,
+// o que remove uma classe inteira de bug: o chip e preenchimento solido da hue
+// com texto branco em qualquer ground.

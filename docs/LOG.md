@@ -292,3 +292,52 @@ os dois de relance — que é o ponto inteiro de eles não poderem se parecer.
 versão v1 — sem grade de aulas, sem sala, sem anotações, sem envio. Os scripts em
 `docs/design/figma/README.md` cobrem só o que faltava da v1; a v2 inteira ainda não tem script.
 Enquanto a cota do Starter não voltar, o mockup é a fonte de verdade visual.
+
+---
+
+### [2026-08-22] Componentes Ionic/Angular reais — tarefas 10-12 desbloqueadas (Claude)
+
+**Status: entregue e verificado.** Lint limpo, 11/11 testes, build passa.
+
+Fase 2 do design: o mockup aprovado virou componente de verdade em
+`app/src/app/shared/`, que era a condição escrita no `AGENTS.md` para destravar as
+tarefas 10 a 12 do Codex.
+
+**Entregue:**
+
+- `src/theme/variables.scss` — os tokens do design system, com os nomes idênticos aos do
+  mockup para não precisar de tradução ao comparar. Mapeia as variáveis do Ionic por cima,
+  o que funciona porque este arquivo carrega depois do `global.scss` no build.
+- `shared/` — `MateriaChip`, `EventoCard`, `AulaCard`, `MiniCard`, `MaterialLinha`, `Nota`.
+- `shared/design-system.spec.ts` — 11 asserções sobre os não-negociáveis visuais.
+- `global.scss` — três utilitários de página (`.pf-rotulo`, `.pf-pilha`, `.pf-vazio`).
+- Páginas `home` e `quadro` renderizando, com dados de exemplo em signal.
+
+**Bug pré-existente encontrado: o app não compilava.** `tabs.routes.ts` importava
+`features/quadro/quadro.page`, mas a pasta `quadro/` estava vazia — o scaffold criou a rota
+e o diretório e nunca a página. Nenhum build tinha sido rodado desde então. Criei a página,
+que é justamente onde o `MiniCard` vive.
+
+**Decisões que eu tomei:**
+
+*A regra virou tipo, não comentário.* `MateriaChip` tem `cor` e `sigla` como `input.required`,
+e `Materia` é um par indivisível em `tipos.ts`. "Cor + sigla sempre juntas" deixa de depender
+de disciplina: quem tentar renderizar só a cor não compila.
+
+*O tipo do evento também virou texto.* Prova e entrega se distinguiam só por tinta e forma,
+o que deixava leitor de tela de fora — a distinção existia para quem enxerga e não existia
+para quem ouve. Agora vai um rótulo visualmente escondido e anunciado.
+
+*Prefixo `app-`, não `pf-`.* Eu tinha escolhido `pf-`; o eslint do projeto exige `app`.
+Segui a convenção que já estava configurada em vez de afrouxar a regra.
+
+*Nada de sombra nem de estado de pressão inventado.* "Melhorar o design" aqui não é
+acrescentar profundidade — o sistema é chapado de propósito. O que melhorou foi o que estava
+faltando de fato: acessibilidade do tipo de evento, quebra de título longo sem estourar
+coluna, numeral tabular nas datas, e `OnPush` em tudo.
+
+**Verificado:** `ng lint` limpo, `ng test` 11/11 em Chrome headless, `ng build` completa.
+
+**Arquivos mortos encontrados, não apagados:** `tabs.page.html`, `tabs.page.scss` e
+`app.component.scss` são restos do starter do Ionic — nenhum componente usa `templateUrl`
+ou `styleUrl`. Deixei para decisão de quem toca no app.

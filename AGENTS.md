@@ -9,7 +9,11 @@ Projeto: **projetoFans** — app onde uma turma mantém, junta, o que cai na sem
 3. `docs/HANDOFF-v2.md` — fonte de verdade do **produto**.
 4. `docs/superpowers/specs/2026-07-29-projetofans-design.md` — fonte de verdade **técnica** (schema, endpoints, asserções).
 
-As tarefas **1 a 9 não dependem de nada externo** — nenhuma conta no Google, Firebase, SMTP ou Postgres gerenciado. Execute-as em sequência sem parar para perguntar. As tarefas **10 a 12 estão bloqueadas** até `app/src/app/shared/` existir; não as comece.
+As tarefas **1 a 9 não dependem de nada externo** — nenhuma conta no Google, Firebase, SMTP ou Postgres gerenciado. Execute-as em sequência sem parar para perguntar.
+
+As tarefas **10 a 12 foram desbloqueadas em 2026-08-22**: `app/src/app/shared/` existe, com `MateriaChip`, `EventoCard`, `AulaCard`, `MiniCard`, `MaterialLinha` e `Nota`. A pasta continua sendo zona proibida (ver "Proibido implementar") — sua tarefa é ligar os dados nos componentes, não alterá-los.
+
+As páginas `home` e `quadro` já renderizam com dados de exemplo em `signal`. Troque a origem por serviço mantendo o mesmo shape; o comentário `PARA O CODEX` em cada página diz qual endpoint. Não mude a ordem de renderização nem o estado vazio.
 
 Se algo neste arquivo contradiz o que você assumiu, este arquivo ganha. Se o handoff contradiz o spec numa regra de negócio, o handoff ganha. Se o spec contradiz o handoff numa questão de implementação, o spec ganha.
 
