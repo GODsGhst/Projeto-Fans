@@ -111,3 +111,158 @@ O daemon não responde: `docker info` estoura timeout e o named pipe `dockerDesk
 *Dois testes a mais do que o plano pedia:* `naoPermiteCorForaDoFormatoHex` e `eventoNaoTemColunaFeito`. O segundo consulta `information_schema` e cai se alguém adicionar uma coluna de estado pessoal em `evento` — é o não-negociável 3 virando teste em vez de comentário.
 
 **Travas / dúvidas:** só o Docker.
+
+---
+
+### [2026-08-21] Design system e telas no Figma — 3 de 5 telas (Claude)
+
+**Status: parcial.** Sistema completo, 3 telas prontas, 2 bloqueadas por cota do Figma.
+
+Criado o arquivo **projetoFans — Design System e Telas**
+(`2y3DwZteuQfOFQxoj7o1fd`), convertido de `docs/design/design-system-v1.html`. Nada foi
+redesenhado — o mockup da fase 1 é a fonte, e os hexes foram reconferidos rodando
+`validar-paleta.mjs` antes de gravar: 12/12 passam, mínimo 4.92:1.
+
+**Pronto:** 26 variáveis de cor (13 tokens × 2 temas), 12 hues de matéria, 3 raios,
+14 estilos de texto, e 5 componentes — Chip de materia, Card de evento, Barra de abas,
+Mini card, Linha de material. Telas Home, Matérias e Meu quadro.
+
+**Pendente:** Calendário, Home vazia e Home offline. Os scripts estão escritos e prontos
+em `docs/design/figma/README.md`, junto com o mapa de IDs necessário para rodá-los.
+
+**Trava — cota de chamadas MCP do plano Starter do Figma.** Não é limite de tempo
+conhecido; a mensagem do servidor só oferece upgrade. Tentei duas vezes com intervalo.
+Para destravar: esperar a janela virar ou subir o plano, e rodar os dois scripts do README.
+
+**Decisões que eu tomei:**
+
+*Fonte Roboto, não Inter.* O mockup usa a stack `system-ui`, que no Android via Capacitor
+resolve para Roboto. Inter seria a escolha automática e estaria errada.
+
+*Telas em 390×844, não nos 274px do mockup.* O `.screen` do HTML é uma miniatura de
+preview, com proporção que não é de aparelho nenhum. Reinterpretei a escala tipográfica
+para tamanho real de telefone preservando as relações — título 16, barra 21, mono 11.
+
+*Temas viraram grupos de nome, não modos.* O plano Starter limita a 1 modo por coleção.
+`claro/paper` e `escuro/paper` na mesma coleção dão o mesmo acesso sem depender do plano.
+Custo: trocar tema exige religar variáveis em vez de um toggle. Num plano pago, converter
+é meia hora.
+
+*Chip virou variant set de 12, não um componente com fill sobrescrito.* Mais caro de
+construir, mas faz o Figma recusar cor fora da paleta — que é o mesmo raciocínio do spec
+ao dizer que a regra deve depender da API do componente, não de disciplina.
+
+*Card de evento ganhou `Mostrar chip` e `Mostrar rodape` como booleanos.* A tela de
+Matérias precisa de card sem chip (você já está dentro da matéria). Esconder o filho por
+override resolveria, mas ficaria invisível na API — ninguém montando tela nova saberia
+que é permitido.
+
+*Estado vazio e offline são duas telas separadas.* O mockup já as separa e o spec diz por
+que: confundir *não tem prova* com *falhei ao buscar* é o pior bug que este app pode ter.
+
+**Próximo passo inalterado:** converter o mockup aprovado em componentes Ionic/Angular
+reais em `app/src/app/shared/`, o que desbloqueia as tarefas 10-12 do Codex. O Figma é
+referência e superfície de ajuste barato — não substitui essa conversão.
+
+---
+
+### [2026-08-21] Telas v2 — grade de aulas, calendário expansível e anotações (Claude)
+
+**Status: entregue como mockup navegável.** `docs/design/telas-v2.html`, publicado como Artifact.
+
+O dono pediu telas novas: Home com as próximas 3 aulas e o que há para entregar, com um
+quadrado pequeno e uma ilustração vetorial de sala de aula; calendário que expande o dia
+mostrando matéria, sala e atividade; e anotações — lembrete do líder visível para a turma
+inteira, mais uma anotação pessoal de cada um.
+
+Entregue em mockup e não no Figma porque a cota MCP do plano Starter do Figma segue
+estourada (ver entrada anterior). Mockup navegável é o formato preferido da fase de design
+neste projeto de qualquer forma; a conversão para Figma fica pendurada na cota.
+
+**Telas:** Home, Calendário (com dia expansível), Anotação (compor), Matérias. Navega de
+verdade — abas trocam de tela, dias do calendário abrem, e o seletor de alcance da anotação
+troca o texto do aviso e do botão.
+
+**Decisões que eu tomei:**
+
+*O quadrado virou informação, não enfeite.* Ele pediu "um pequeno quadrado" com "imagem
+tipo sala de aula do tipo vetor". Em vez de decoração, o quadrado carrega o código da sala
+sob o vetor — vira o marcador de "isto é uma aula", função equivalente à do glifo
+cheio/vazado para prova e entrega. Monocromático, porque a cor já identifica matéria.
+
+*Nota da turma e nota pessoal se distinguem por forma, não por cor.* Régua sólida no accent
+com rótulo "da turma · todos veem" contra régua tracejada com "pessoal · só você". Mesma
+lógica do par prova/entrega: sobrevive à escala de cinza. Confundir as duas é pior que bug
+de layout — alguém deixa de estudar por causa de rabisco alheio.
+
+*Só a aula em andamento tem trilho de accent.* Se tudo destacasse, nada destacaria.
+
+**Verificado:** JS passa em `node --check`, tags HTML balanceadas, e a matemática de dia da
+semana de agosto/2026 confere com `Date` real em 6 datas testadas — 21/ago é sexta (dia de
+BD e ESOFT na grade) e 25/ago é terça (dia de CALC2, matéria da prova). O screenshot do
+navegador embutido estourou timeout de novo, mesmo sintoma da v1; a validação visual foi
+feita numa captura da Home antes do travamento.
+
+**O que isto exige do backend e ainda NÃO existe no schema:**
+
+| falta | tabela | por quê |
+|---|---|---|
+| Grade de aulas | `aula` — turma_id, materia_id, dia_semana, hora_inicio, hora_fim, sala | Provas e entregas são pontuais; aula é recorrente e precisa de exceção (feriado, cancelamento, troca de sala), senão a Home mente no primeiro feriado |
+| Sala | coluna em `aula`, não em `materia` | A mesma matéria cai em salas diferentes por dia; pendurar em `materia` quebra na primeira aula de laboratório |
+| Anotação da turma | `anotacao` — turma_id, autor_id, data, texto | Amplia o papel do líder: hoje ele só modera, aqui passa a emitir |
+| Anotação pessoal | `anotacao_pessoal` — usuario_id, data, texto | Tabela separada, não coluna — o não-negociável 3 proíbe estado pessoal dentro do fato compartilhado |
+
+**Pergunta aberta que pode invalidar parte disto:** o handoff vende *"o que foi dado no
+período"*. Grade de aulas empurra o produto para *"grade horária"*, que é outra coisa. Se a
+faculdade já publica a grade, replicá-la é trabalho duplicado com risco de divergir — a
+mesma dúvida que já está pendente sobre o diário eletrônico. Vale conferir antes de
+construir o backend disto.
+
+---
+
+### [2026-08-22] Envio de material com arquivo — A4 revertida (Claude)
+
+**Status: telas prontas.** `docs/design/telas-v2.html`, mesmo Artifact de ontem.
+
+O dono perguntou se professor ou líder poderiam subir os PDFs e arquivos. A resposta estava
+em dois lugares do repo e vale repetir porque contraria a intuição da pergunta:
+
+- **Não é privilégio de ninguém.** Qualquer membro posta material — não-negociável 1. O papel
+  `PROFESSOR` já existe (A5) mas com as mesmas permissões de aluno; ele serve só ao badge de
+  autoria, porque dar poder ao papel tornaria o professor requisito de funcionamento, e o
+  handoff diz que ele é contribuidor opcional.
+- **Mas ninguém conseguia subir arquivo nenhum.** A A4 tinha reduzido o escopo para só link,
+  com `arquivo_ref` sempre NULL. A própria A4 previa que isso mudaria se foto do quadro fosse
+  o caso de uso principal. O pedido do dono é esse gatilho, então **A4 foi revertida** e
+  documentada como resolvida.
+
+**Telas:** nova tela "Enviar material" (origem foto/arquivo/link, título, matéria, tipo,
+vínculo opcional com prova) alcançada por botão dentro de Matérias — não virou aba, porque as
+quatro abas são fixas. Matérias ganhou os estados de envio: enviando com barra de progresso, e
+falhou com "sem conexão · fica na fila" e botão de refazer.
+
+**Decisões que eu tomei:**
+
+*Falha de envio usa forma e palavra, nunca cor.* Contorno tracejado, glifo cheio e o texto
+dizendo o que houve. Vermelho seria o reflexo automático, mas `--m-alg` é uma hue de matéria —
+pintar erro de vermelho quebraria a regra de que cor identifica matéria e nada mais. Também
+sai de graça para daltônico.
+
+*O envio nunca some quando falha.* Mesmo princípio da tela offline: lista vazia disfarçando
+falha é o pior bug possível aqui. O arquivo que falhou continua visível, na fila, com botão.
+
+*Sem fila de aprovação.* Publica direto, com o aviso de que a turma toda vai ver com o seu
+nome. Moderação continua posterior ao fato, como manda a decisão 2.5.
+
+**Storage recomendado (registrado na A4):** Cloudflare R2 com URL pré-assinada. Egress grátis
+é o argumento decisivo — 30 pessoas rebaixando o mesmo PDF é exatamente o padrão que faz egress
+cobrado doer. Limpeza de órfãos por *lifecycle rule* do R2, não por `@Scheduled`, porque host
+de tier gratuito hiberna e job agendado em host dormindo falha em silêncio — mesmo raciocínio
+da decisão 2.3.
+
+**Verificado:** `node --check` no JS, tags balanceadas, 5 telas, e todos os `data-ir` apontam
+para uma tela existente. Sem validação visual — o navegador embutido segue estourando timeout
+no screenshot.
+
+**Fica aberto:** cota de storage por turma. Sem teto, uma turma come os 10 GB gratuitos
+sozinha. Sugeri 2 GB com aviso em 80%, mas é decisão de produto, não implementei.

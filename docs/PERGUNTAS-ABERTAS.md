@@ -40,6 +40,38 @@ Razão: upload exige storage de objeto (S3, R2, Supabase Storage), política de 
 
 **Isto é uma redução de escopo que eu decidi.** Se a turma precisa subir foto do quadro (o que é plausível e talvez seja o caso de uso principal), isso muda: passa a ser tarefa própria, depois do aceite da Seção 8.
 
+#### RESOLVIDA em 2026-08-22 — o dono pediu upload
+
+O dono perguntou se professor ou líder poderiam "colocar os pdfs ou arquivos que precisarem".
+Era exatamente o gatilho previsto acima. **Upload entra no escopo**; `arquivo_ref` deixa de ser
+sempre NULL. Telas desenhadas em `docs/design/telas-v2.html`.
+
+Quem pode enviar **não muda**: qualquer membro, como qualquer outro material. Não é privilégio
+de líder nem de professor — isso é o não-negociável 1, e a A5 abaixo continua valendo.
+
+**Storage recomendado: Cloudflare R2 com URL pré-assinada.** Razões, em ordem de peso:
+
+1. **Egress grátis.** O padrão de acesso deste app é 30 pessoas baixando repetidamente o mesmo
+   PDF e a mesma foto de quadro — que é justamente onde egress cobrado dói. S3 e Firebase
+   Storage cobram por isso; R2 não.
+2. **API compatível com S3.** Usa o SDK padrão, então trocar de fornecedor depois é configuração,
+   não reescrita.
+3. **O app nunca vê credencial.** O backend emite URL pré-assinada para o PUT (envio) e para o
+   GET (leitura). Isso fecha a "superfície de segurança nova" que era a objeção original.
+
+**Órfãos sem job agendado.** Envio em duas fases: o backend pré-assina, o app faz PUT no prefixo
+`tmp/`, o backend confirma e move para `mat/`. O que ficar em `tmp/` expira por *lifecycle rule*
+do próprio R2 em 24 h. Sem `@Scheduled` — pelo mesmo motivo da decisão 2.3: host de tier gratuito
+hiberna, e job agendado em host dormindo não roda. Limpeza que depende do servidor acordado
+falharia em silêncio.
+
+**Limites:** 15 MB por arquivo; whitelist de tipo validada no servidor por MIME **e** extensão,
+nunca só pelo que o cliente declara; imagem comprimida no app antes de subir (foto de quadro sai
+de ~5 MB para ~2 MB).
+
+**Ainda aberto:** cota por turma. Sem teto, uma turma sozinha come os 10 GB gratuitos. Sugiro
+2 GB por turma com aviso em 80%, mas não implementei nada disso — é decisão de produto.
+
 ### A5. O papel `PROFESSOR` faz o que de diferente?
 
 **Default aplicado: nada.** Mesmas permissões de `ALUNO`. O papel existe só para exibição no badge de autoria.
