@@ -266,3 +266,29 @@ no screenshot.
 
 **Fica aberto:** cota de storage por turma. Sem teto, uma turma come os 10 GB gratuitos
 sozinha. Sugeri 2 GB com aviso em 80%, mas é decisão de produto, não implementei.
+
+---
+
+### [2026-08-22] Telas v2 completas — quadro, estados e a aba que sobrava (Claude)
+
+**Status: conjunto fechado.** Seis telas navegáveis mais os dois estados da Home.
+
+Faltavam Meu quadro, Home vazia e Home offline — existiam só na v1. Portadas para a v2.
+
+**Correção de estrutura.** Com "Anotar" virando aba, ficaram cinco destinos para quatro abas.
+Anotar não é destino, é ação de compor, e é sempre sobre um dia — então virou botão dentro do
+dia expandido do calendário, com seta de voltar. As abas voltaram às quatro canônicas da v1:
+Home, Cal, Matérias, Quadro. Mesmo padrão que já valia para "Enviar material", que mora dentro
+de Matérias.
+
+**Estados da Home ficaram lado a lado**, em frames menores fora do aparelho navegável, em vez
+de escondidos atrás de um seletor. Vazio e offline só são revisáveis quando dá para comparar
+os dois de relance — que é o ponto inteiro de eles não poderem se parecer.
+
+**Verificado:** `node --check`, tags balanceadas, seis `data-tela` únicos, quatro abas, nenhum
+`data-ir` apontando para tela inexistente.
+
+**Nota sobre o Figma:** ele agora está atrasado em relação a isto. Tem três telas, todas na
+versão v1 — sem grade de aulas, sem sala, sem anotações, sem envio. Os scripts em
+`docs/design/figma/README.md` cobrem só o que faltava da v1; a v2 inteira ainda não tem script.
+Enquanto a cota do Starter não voltar, o mockup é a fonte de verdade visual.

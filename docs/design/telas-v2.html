@@ -433,6 +433,38 @@
   .vinc .vt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .vinc .vs { font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: .08em; text-transform: uppercase; }
 
+  /* ---------- MEU QUADRO ---------- */
+  .kan { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
+  .kan-col { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .mini {
+    border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 8px 9px;
+    display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
+  }
+  .mini.solid { background: var(--prova-bg); border-color: var(--prova-bg); color: var(--prova-fg); }
+  .mini .mt { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .mini.done { opacity: .55; }
+  .mini.done .mt { text-decoration: line-through; }
+  .mini .mav { font-family: var(--mono); font-size: 9px; color: var(--ink-3); letter-spacing: .06em; line-height: 1.3; }
+  /* "nao listados" e secao recolhida ABAIXO do kanban, nunca uma terceira coluna */
+  .nao-list {
+    margin-top: 10px; border-top: 1px dashed var(--rule); padding-top: 12px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+
+  /* ---------- estados da Home, lado a lado para comparar ---------- */
+  .bloco { display: flex; flex-direction: column; gap: 1.1rem; }
+  .estados { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .estado-cel { display: flex; flex-direction: column; gap: .7rem; flex: 0 1 340px; }
+  .estado-cel > p { font-size: .875rem; color: var(--ink-2); line-height: 1.5; }
+  .fone--mini { width: 100%; height: auto; }
+  .fone--mini .tela { display: flex; }
+  .fone--mini .t-corpo { overflow: visible; min-height: 150px; }
+
+  .cache-aviso {
+    border: 1px dashed var(--rule); border-radius: var(--r-sm);
+    padding: 9px 11px; font-size: 12px; color: var(--ink-2); line-height: 1.4;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
@@ -572,9 +604,12 @@
       </div>
 
       <!-- ==================== ANOTACAO ==================== -->
-      <div class="tela" data-tela="nota">
+      <div class="tela" data-tela="nota" data-aba="cal">
         <div class="t-barra">
-          <h3>Nova anotação</h3>
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="cal" aria-label="Voltar para o calendário">&larr;</button>
+            <h3>Nova anotação</h3>
+          </span>
           <span>25 ago</span>
         </div>
         <div class="t-corpo">
@@ -677,6 +712,53 @@
         </div>
       </div>
 
+      <!-- ==================== MEU QUADRO ==================== -->
+      <div class="tela" data-tela="quadro">
+        <div class="t-barra">
+          <h3>Meu quadro</h3>
+          <span>só seu</span>
+        </div>
+        <div class="t-corpo">
+          <div class="kan">
+            <div class="kan-col">
+              <p class="rotulo">a fazer</p>
+              <div class="mini solid">
+                <span class="chip" style="--c: var(--m-calc)">CALC2</span>
+                <span class="mt">Prova 2 — integrais</span>
+              </div>
+              <div class="mini">
+                <span class="chip" style="--c: var(--m-esoft)">ESOFT</span>
+                <span class="mt">Diagrama de casos de uso</span>
+              </div>
+              <div class="mini solid">
+                <span class="chip" style="--c: var(--m-redes)">REDES</span>
+                <span class="mt">Prova 1 — enlace</span>
+              </div>
+            </div>
+            <div class="kan-col">
+              <p class="rotulo">feito</p>
+              <div class="mini done">
+                <span class="chip" style="--c: var(--m-bd)">BD</span>
+                <span class="mt">Lista 4 — normalização</span>
+              </div>
+              <div class="mini done">
+                <span class="chip" style="--c: var(--m-so)">SO</span>
+                <span class="mt">Trabalho de escalonamento</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="nao-list">
+            <p class="rotulo">não listados · 1</p>
+            <div class="mini" style="opacity:.72; max-width:250px">
+              <span class="chip" style="--c: var(--m-alg)">ALG</span>
+              <span class="mt">Prova de grafos — 30 jul</span>
+              <span class="mav">oculto pelo líder · só você vê</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ==================== ENVIAR MATERIAL ==================== -->
       <div class="tela" data-tela="material" data-aba="materias">
         <div class="t-barra">
@@ -767,7 +849,7 @@
         <button type="button" data-ir="home" aria-current="page"><i></i>Home</button>
         <button type="button" data-ir="cal"><i></i>Cal</button>
         <button type="button" data-ir="materias"><i></i>Matérias</button>
-        <button type="button" data-ir="nota"><i></i>Anotar</button>
+        <button type="button" data-ir="quadro"><i></i>Quadro</button>
       </nav>
     </div>
 
@@ -799,6 +881,64 @@
       </div>
     </div>
 
+  </div>
+
+  <div class="bloco">
+    <p class="eyebrow">estados da home</p>
+    <h2>Vazio e offline não podem se parecer.</h2>
+    <p class="prose">
+      Estas são as duas telas mais fáceis de estragar. A tentação é preencher a primeira com
+      dica, sugestão ou skeleton eterno — <strong>não preencher é o requisito</strong>, porque
+      "não tem nada" é exatamente o que o aluno abriu o app para saber. E a segunda nunca pode
+      virar lista vazia: confundir <em>não tem prova</em> com <em>falhei ao buscar</em> é o pior
+      bug que este app pode ter.
+    </p>
+    <div class="estados">
+
+      <div class="estado-cel">
+        <div class="fone fone--mini">
+          <div class="tela">
+            <div class="t-barra"><h3>Esta semana</h3><span>0 de 6</span></div>
+            <div class="t-corpo">
+              <div class="vazio">
+                <b>Nada nos próximos 14 dias.</b>
+                <span>Se você sabe de alguma prova ou entrega que não está aqui, cadastre — qualquer pessoa da turma pode.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p>
+          Duas frases. A segunda existe porque o app só funciona se alguém alimentar, e o
+          convite a cadastrar é a única coisa acionável honesta neste momento.
+        </p>
+      </div>
+
+      <div class="estado-cel">
+        <div class="fone fone--mini">
+          <div class="tela">
+            <div class="t-barra"><h3>Esta semana</h3><span>cache</span></div>
+            <div class="t-corpo">
+              <div class="cache-aviso">Sem conexão · mostrando dados de ontem 21:40</div>
+              <div class="ev ev--entrega">
+                <div class="ev-data"><span class="ev-dia">21</span><span class="ev-mes">ago</span></div>
+                <div class="ev-corpo">
+                  <div class="ev-topo">
+                    <span class="chip" style="--c: var(--m-bd)">BD</span>
+                    <span class="ev-tipo"><span class="glyph glyph--entrega"></span>23:59</span>
+                  </div>
+                  <p class="ev-titulo">Lista 4 — normalização</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p>
+          Mostra o que tem em cache e diz de quando é. O aviso é tracejado e nomeia a falha —
+          nunca uma tela limpa que finge que a semana está vazia.
+        </p>
+      </div>
+
+    </div>
   </div>
 
   <div class="aviso-mudanca">
@@ -997,9 +1137,12 @@
 
     let h = '<p class="rotulo">' + chave + ', ' + dia + ' de agosto</p>';
 
+    // anotar e acao sobre um dia, entao mora no dia — nao vira aba
+    const btnAnotar = '<button class="add-linha" type="button" data-ir="nota">+ &nbsp;Anotar neste dia</button>';
+
     if (!aulas.length && !ev && !notas.length) {
       h += '<div class="vazio"><b>Sem aula neste dia.</b>' +
-           '<span>Nada marcado, e nada escondido — é fim de semana.</span></div>';
+           '<span>Nada marcado, e nada escondido — é fim de semana.</span></div>' + btnAnotar;
       painel.innerHTML = h;
       return;
     }
@@ -1037,6 +1180,7 @@
       }
     }
 
+    h += btnAnotar;
     painel.innerHTML = h;
   }
 
