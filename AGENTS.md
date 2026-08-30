@@ -8,10 +8,26 @@ Projeto: **projetoFans** — app onde uma turma mantém, junta, o que cai na sem
 2. `docs/superpowers/plans/2026-07-29-projetofans-mvp.md` — o plano. Pegue **a próxima tarefa não concluída**, uma só.
 3. `docs/HANDOFF-v2.md` — fonte de verdade do **produto**.
 4. `docs/superpowers/specs/2026-07-29-projetofans-design.md` — fonte de verdade **técnica** (schema, endpoints, asserções).
+5. `docs/STACK.md` — o que roda, com qual versão, e como rodar. Leia antes de tocar em `pom.xml` ou em dependência.
 
 As tarefas **1 a 9 não dependem de nada externo** — nenhuma conta no Google, Firebase, SMTP ou Postgres gerenciado. Execute-as em sequência sem parar para perguntar.
 
 As tarefas **10 a 12 foram desbloqueadas em 2026-08-22**: `app/src/app/shared/` existe, com `MateriaChip`, `EventoCard`, `AulaCard`, `MiniCard`, `MaterialLinha` e `Nota`. A pasta continua sendo zona proibida (ver "Proibido implementar") — sua tarefa é ligar os dados nos componentes, não alterá-los.
+
+As tarefas **13 a 16 entraram em 2026-08-26**. Elas cobrem o que o design abriu depois do plano
+original — grade de aulas, anotações e envio de arquivo — e também não dependem de conta nenhuma:
+`FakeArmazenamento` cobre o R2 em dev e teste. Vêm depois da 12 na ordem, com uma ressalva escrita
+na A8: **a Task 13 vale uma pergunta ao dono antes de começar**, porque é a que mais custa se a
+faculdade já publicar a grade.
+
+**A Task 2 fechou em 2026-08-30**, 27 dias depois de escrita. Ela estava parcial porque a suíte
+dependia de Docker e o Docker desta máquina não sobe desde 03/08. Trocamos Testcontainers por
+Postgres embutido (binário real, sem daemon) e a suíte roda: **7/7 verdes**. Detalhe em
+`docs/STACK.md`.
+
+**Você não precisa de Docker para nada.** Toda tarefa de backend fecha com `cd backend && ./mvnw test`.
+Se algum dia você escrever um teste que precise de container, pare e registre no log — não é assim
+que este projeto testa.
 
 As páginas `home` e `quadro` já renderizam com dados de exemplo em `signal`. Troque a origem por serviço mantendo o mesmo shape; o comentário `PARA O CODEX` em cada página diz qual endpoint. Não mude a ordem de renderização nem o estado vazio.
 

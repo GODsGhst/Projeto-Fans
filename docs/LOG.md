@@ -341,3 +341,243 @@ coluna, numeral tabular nas datas, e `OnPush` em tudo.
 **Arquivos mortos encontrados, não apagados:** `tabs.page.html`, `tabs.page.scss` e
 `app.component.scss` são restos do starter do Ionic — nenhum componente usa `templateUrl`
 ou `styleUrl`. Deixei para decisão de quem toca no app.
+
+---
+
+### [2026-08-26] Planejamento V2 — tarefas 13 a 16 (Claude)
+
+**Status:** concluída.
+
+**O que foi feito:**
+O design tinha passado na frente do plano. Desde 21/08 existem componentes, telas aprovadas e
+tipos congelados para grade de aulas, anotações e envio de arquivo — e nenhuma tarefa, nenhuma
+tabela e nenhum endpoint para nada disso. Três dos seis componentes de `shared/` não tinham de
+onde puxar dado. Escrevi as Tasks 13 a 16 fechando esse buraco, na mesma densidade das 1-12:
+caminho de arquivo, assinatura, nome de teste e comando de aceite.
+
+**Arquivos principais:** `docs/superpowers/plans/2026-07-29-projetofans-mvp.md` (Tasks 13-16,
+grafo de dependências, self-review V2), `docs/PERGUNTAS-ABERTAS.md` (A8, A9, A10), `AGENTS.md`
+
+**Critério de aceite:** documental — o plano agora cobre todo componente entregue. Nenhum código
+tocado, nenhum teste a rodar.
+
+**Decisões que eu tomei:**
+
+*Uma tabela `anotacao`, não duas.* O log de 21/08 propôs `anotacao` + `anotacao_pessoal` citando o
+não-negociável 3. É leitura errada dele: o não-negociável proíbe estado pessoal **dentro de fato
+compartilhado** — `feito` como coluna de `evento`. Anotação pessoal não é estado sobre fato alheio,
+é registro próprio com autor próprio. E `shared/tipos.ts` já congelou `AlcanceNota` como um tipo
+só, com `alcance` de input; duas tabelas contradiriam o componente entregue.
+
+*Nota da turma não é privilégio do líder.* O log de 21/08 escreveu que ela "amplia o papel do
+líder: hoje ele só modera, aqui passa a emitir". Isso colide com o não-negociável 9 e com a A5.
+Mantive o não-negociável e virei o rótulo do mockup em descrição, não em permissão — com teste
+nomeado na Task 14 para a regra não voltar por descuido.
+
+*`agora` não vai no DTO da aula.* Flag de "aula em andamento" calculada no servidor chega velha:
+resposta cacheada, app aberto, e às 10h05 ele ainda destaca a aula das 9h. O servidor manda
+`horaInicio`/`horaFim` e a página compara com o relógio. Comparar relógio é apresentação. O teto
+de 6 e a janela de 14 dias continuam no servidor — esses são regra de negócio de verdade.
+
+*Exceção de aula virou tabela, não fui pela versão mais curta.* `aula_excecao` com feriado,
+cancelamento e troca de sala é uma tabela a mais que eu preferiria não escrever. Escrevi porque
+grade recorrente sem exceção mente no primeiro feriado, e a tela existe justamente para dizer
+onde a pessoa precisa estar agora.
+
+*Construí a grade mesmo com a dúvida aberta.* A A8 pode invalidar as Tasks 13, 14 e 16 inteiras.
+Planejei assim mesmo porque travar deixaria `AulaCard` sem origem de dado por tempo indeterminado
+— e plano não gasta nada até virar código. Está escrito no plano e na A8 que a pergunta vale
+**antes** de começar a 13.
+
+**Correções que encontrei no caminho:**
+
+- Task 10 mandava consumir `EventoItemComponent`. Esse componente nunca existiu; o entregue é
+  `EventoCardComponent`, seletor `app-evento-card`. O Codex teria travado na primeira linha.
+- O grafo de dependências ainda dizia que 10-12 estavam bloqueadas, dez dias depois de terem sido
+  desbloqueadas. Corrigido, com a tabela de seletores e inputs reais dos seis componentes.
+- `AGENTS.md` não registrava que a Task 2 continua parcial. Registrado, com a regra explícita de
+  não marcar tarefa como pronta sem Testcontainers rodando.
+
+**Travas / dúvidas:**
+
+1. **A8 / C4 — grade e diário eletrônico.** Uma conversa com a coordenação responde as duas, e a
+   resposta decide se a Task 13 custa uma semana ou some.
+2. **Docker.** A Task 2 nunca fechou. Enquanto não fechar, nenhuma tarefa de backend consegue
+   atingir critério de aceite.
+3. **`backend/pom.xml` está modificado e não commitado** — alguém subiu `java.version` de 17 para
+   25 e apagou o comentário que explicava a escolha do 17. Não commitei nem revertí: é decisão de
+   quem mudou. Se o `JAVA_HOME` da máquina ainda aponta para o JDK 17, o build quebra.
+
+---
+
+### [2026-08-26] Protótipo no Figma — parcial, cota estourou de novo (Claude)
+
+**Status: parcial.** Arquivo criado e Home pronta; navegação entre telas **não** foi ligada.
+
+Arquivo: https://www.figma.com/design/dj58VB52MRck2VoEQifptB
+
+**O que entrou:** as 6 telas como frames de 390×844 (Home, Calendário, Matérias, Meu quadro,
+Nova anotação, Enviar material), cada uma com barra de título, corpo e barra de abas, em Roboto
+e nos tokens do `design-system-v1`. A Home está completa — aulas com o quadro de sala, prova em
+bloco sólido, entrega em contorno de 1px.
+
+**O que faltou:** o corpo de cinco telas e, principalmente, as reactions de protótipo. Era a
+última chamada da sequência e é justamente o que o dono pediu — clicar na aba e ir para a tela.
+
+**Trava: cota MCP do plano Starter do Figma.** Mesma parede de 21/08. Ela reseta — hoje liberou
+três chamadas de escrita antes de cortar — mas o orçamento é pequeno demais para fechar o
+protótipo numa sessão. Retomar custa ~3 chamadas e não exige refazer nada: os IDs das telas são
+`home 1:2 · cal 1:22 · materias 1:42 · quadro 1:62 · nota 1:82 · material 1:105`.
+
+**Decisões que eu tomei:**
+
+*`setReactionsAsync` é o caminho, e foi verificado antes de começar.* Botão navegável em Figma é
+`{trigger:{type:'ON_CLICK'}, actions:[{type:'NODE', destinationId, navigation:'NAVIGATE'}]}`. Os
+nós já estão nomeados para isso — `aba-home`, `aba-cal`, `aba-materias`, `aba-quadro`,
+`btn-voltar`, `btn-anotar` — então religar é achar por nome, não reconstruir.
+
+*Agente não resolve isso, e eu disse isso em vez de tentar.* O dono pediu para distribuir o
+trabalho entre agentes. A cota é da conta Figma, não da sessão: dez agentes batem no mesmo limite.
+Registrado aqui para ninguém tentar de novo achando que é paralelizável.
+
+**Travas / dúvidas:** decisão do dono entre esperar a cota, fazer upgrade, ou ficar com
+`telas-v2.html`, que já navega e não custa cota nenhuma.
+
+---
+
+### [2026-08-26] Telas v3 — profundidade, e dois bugs que a v2 escondia (Claude)
+
+**Status: entregue e verificado.** `docs/design/telas-v3.html`. A v2 fica no repo para comparar.
+
+O dono olhou a v2 e disse que estava seca demais, que não parecia aplicativo. Isso veta em cheio
+a decisão escrita em 21/08 — *"nada de sombra nem de estado de pressão inventado, o sistema é
+chapado de propósito"*. Ele é o dono do produto; a decisão dele ganha.
+
+**Diagnóstico — cinco coisas faziam aquilo ler como documento impresso, e nenhuma era a paleta:**
+
+1. Zero elevação dentro da tela. Todo cartão era contorno de 1px no mesmo plano do fundo.
+2. Rótulo mono em caixa alta com tracking largo em tudo — tique de revista, não de app.
+3. Barra de abas sem ícone: quadradinhos de 15px com legenda mono.
+4. Nenhuma resposta ao toque. Nada de `:active`, nada de transição.
+5. Raios apertados (6/10/18) e barras coladas ao conteúdo, sem chrome que flutue.
+
+**O que a v3 mudou:**
+
+- **Escada de três superfícies** — `--paper` rebaixado, `--surface` para cartão, `--surface-2`
+  para o que sobe mais. Com `--e1/--e2/--e3` de sombra real, cartão fica **acima** do fundo em
+  vez de desenhado sobre ele. É a correção principal; as outras quatro são consequência.
+- **Chrome que flutua:** barra de cima e barra de abas com `backdrop-filter` e sombra própria.
+- **Ícones de verdade** na barra de abas, com pílula no accent marcando a aba ativa.
+- **Toque responde:** `:active` com escala e colapso de sombra em tudo que se toca; hover
+  levanta 1px onde há mouse. Transição de entrada nas telas.
+- **Mono só onde ganha o lugar:** hora, data, código de sala, tipo de arquivo. Rótulo de seção
+  virou caixa baixa com peso, e a régua tipográfica do `.rotulo::after` saiu.
+
+**Não mudou nada do que é não-negociável:** as 12 hues, cor+sigla juntas no chip, prova em bloco
+sólido contra entrega em contorno, nota da turma em régua sólida contra pessoal tracejada, estado
+vazio sem preenchimento inventado.
+
+**Dois bugs pré-existentes que apareceram na verificação:**
+
+*A v2 não declarava encoding nem doctype.* Sem `<meta charset>`, servida por HTTP ela renderiza
+`Ã¡` e `â€"` no lugar dos acentos, e o navegador entra em quirks mode. Corrigido nas **duas**
+versões — a v2 carregava isso desde 21/08 e ninguém tinha aberto ela por servidor.
+
+*O cinza secundário nunca passou no próprio teste do projeto.* `--ink-3` da v2 dava **3.58:1**
+sobre o painel, contra os 4.5:1 que o design system promete. A v3 tinha herdado o problema
+(3.92:1). Agora `#626A6C` no claro e `#878F91` no escuro, e validei os três níveis de texto
+contra as três superfícies nos dois temas: **tudo ≥ 4.5:1**, chips inclusive.
+
+**Decisões que eu tomei:**
+
+*Profundidade sutil, não Material Design.* A crítica era "não parece app", não "quero outro
+app". Sombra curta e de opacidade baixa, elevação em três degraus e nada de gradiente colorido —
+o que muda é o plano, não a identidade.
+
+*Não mexi na tipografia.* Roboto continua. Trocar a fonte seria mudar identidade, o que ele não
+pediu, e ela já está nos tokens do Angular e no arquivo do Figma.
+
+*Prova continua em bloco sólido.* Foi tentador suavizar junto com o resto, mas é o não-negociável
+8 e o teste de escala de cinza depende dele. Verifiquei na página rodando: luminância 0.823
+contra 0.011 entre prova e entrega — a distinção sobrevive sem cor.
+
+**Verificado, na página servida em localhost:** as 4 abas navegam; clique no dia abre o painel;
+"Anotar neste dia" vai para a anotação e o voltar retorna ao calendário; 4 ícones SVG na barra;
+prova e entrega distinguíveis em escala de cinza; nota da turma sólida contra pessoal tracejada;
+`node --check` limpo no script; todas as tags balanceadas; contraste validado por cálculo.
+
+**Travas / dúvidas:** screenshot do navegador embutido continua estourando timeout — terceira
+sessão seguida com o mesmo sintoma. A verificação foi feita por DOM e estilo computado, que para
+estas asserções é mais forte que olhar imagem, mas ninguém ainda validou a v3 **visualmente**.
+
+---
+
+### [2026-08-30] Tarefa 2 fechada — o build quebrado e os 27 dias de Docker (Claude)
+
+**Status:** concluída. **7/7 testes verdes**, pela primeira vez desde que a suíte foi escrita.
+
+O pedido era "acelerar e fazer o planejamento e a stack". O planejamento já existia — 16 tarefas
+escritas, com critério de aceite em cada uma. Não era ele que segurava nada. Fui olhar o que
+segurava de verdade e eram duas coisas concretas.
+
+**1. O backend não compilava.** Alguém subiu o `pom.xml` para `<java.version>25</java.version>` e
+apagou o comentário que explicava a escolha do 17. O `JAVA_HOME` desta máquina aponta para o
+jdk-17, e o Maven roda no `JAVA_HOME`, não no `java` do PATH — que é o Zulu 25. Resultado:
+`error: release version 25 not supported`. Revertido para 17, com o comentário de volta e o aviso
+de como usar 25 de verdade se alguém quiser.
+
+**2. O Docker estava morto há 27 dias e levava a suíte junto.** O sintoma é o mesmo de 03/08: o
+named pipe `dockerDesktopLinuxEngine` não existe. Testcontainers exige daemon, então
+`SchemaTest` nunca rodou uma única vez — e como o critério de aceite de *toda* tarefa de backend
+é a suíte passar, o plano inteiro estava formalmente travado num app de GUI esperando um clique.
+
+Troquei Testcontainers por `io.zonky.test:embedded-postgres`, que executa um binário real do
+Postgres 16 sem daemon nenhum.
+
+**Arquivos principais:** `backend/pom.xml`, `backend/src/test/java/com/projetofans/support/TesteComPostgres.java`,
+`backend/src/test/java/com/projetofans/SmokeTest.java`, `docs/STACK.md` (novo)
+
+**Critério de aceite — ATINGIDO.** `cd backend && ./mvnw test`:
+
+```
+[INFO] iniciando PostgreSQL 16.2, compiled by Visual C++ build 1937, 64-bit
+[INFO] Migrating schema "public" to version "1 - schema inicial"
+[INFO] Successfully applied 1 migration to schema "public", now at version v1
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.domain.SchemaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.SmokeTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+**Decisões que eu tomei:**
+
+*Postgres embutido, não H2 em modo de compatibilidade.* H2 seria mais leve e teria sido a escolha
+preguiçosa errada. Este schema depende de `CHECK`, índice parcial com `WHERE`, `TIMESTAMPTZ` e de
+consulta a `information_schema` — o `eventoNaoTemColunaFeito` lê o catálogo do banco para provar o
+não-negociável 3. Um banco quase-compatível aprovaria o que o Postgres reprova. Suíte que mente é
+pior que suíte que não roda.
+
+*Voltar o pom para 17 em vez de mudar o `JAVA_HOME`.* Mexer no `JAVA_HOME` global afeta os outros
+projetos Java desta máquina, e foi exatamente esse o raciocínio de 03/08 que a mudança para 25
+apagou. Deixei escrito no pom que, para usar 25, aponta-se o `JAVA_HOME` **antes** de mexer no
+número.
+
+*O `SmokeTest` virou um teste melhor por acidente.* Ele perguntava ao Testcontainers se o container
+estava de pé — provava que um processo existia, não que a aplicação falava com ele. Agora consulta
+`select version()` pela conexão do Spring e exige `PostgreSQL 16`. Isso protege contra o risco que
+a própria troca criou: cair sem perceber num banco diferente do de produção.
+
+*Não toquei em `docker-compose.yml`.* Ele continua sendo o Postgres de desenvolvimento e continua
+dependendo do Docker. Não bloqueia nada, porque nenhuma tarefa fecha por `dev` — todas fecham por
+`./mvnw test`.
+
+**Documentado:** `docs/STACK.md` é novo e reúne o que antes estava espalhado entre plano, spec e
+perguntas abertas — camada por camada, com versão, motivo, estado e comando de execução, mais o
+histórico de mudanças de stack. `AGENTS.md`, o plano e `PERGUNTAS-ABERTAS.md` foram atualizados
+para refletir que Docker deixou de ser pré-requisito.
+
+**Travas / dúvidas:**
+
+1. **A8 / C4 continuam abertas** e agora são o único bloqueio de verdade. A grade de aulas pode ser
+   trabalho duplicado se a faculdade já publica a grade; a Task 13 é a mais cara de refazer.
+2. **Nada foi commitado desde 2026-08-22.** São 8 arquivos modificados e 2 novos parados na árvore.

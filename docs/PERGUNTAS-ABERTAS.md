@@ -94,6 +94,54 @@ Razão: coerente com "qualquer aluno posta, sem gatekeeper".
 
 ---
 
+### A8. A grade de aulas duplica o que a faculdade já publica?
+
+Levantada em 2026-08-21 pelo próprio design, e ainda **sem resposta**. As telas v2 mostram grade
+horária — matéria, hora e sala. O handoff vende *"o que foi dado no período"*. São coisas
+diferentes: a segunda é registro do que aconteceu, a primeira é cópia de um calendário que a
+instituição já mantém.
+
+**Default aplicado: construir.** As Tasks 13, 14 e 16 do plano existem, com tabela `aula`,
+exceções por dia e resolução de recorrência no servidor. Construí porque as telas foram aprovadas
+e os componentes já estão entregues — travar aqui deixaria `AulaCard` sem origem de dado por
+tempo indeterminado.
+
+**Custo se mudar:** alto, e é o mais alto de todos deste arquivo. Se a resposta for "a faculdade
+já publica", as Tasks 13, 14 e 16 encolhem para só `anotacao`, e some a metade mais cara do
+backend V2. **Vale perguntar antes de começar a Task 13**, não depois.
+
+**Risco de construir mesmo assim:** grade digitada à mão diverge da oficial no primeiro
+remanejamento de sala, e uma grade que mente sobre onde a pessoa precisa estar agora é pior que
+nenhuma grade.
+
+Esta pergunta é irmã da C4 e provavelmente tem a mesma resposta. Uma conversa resolve as duas.
+
+### A9. A nota da turma é privilégio do líder?
+
+O mockup rotula a nota da turma como "lembrete do líder", e o log do design de 2026-08-21 escreveu
+que isso "amplia o papel do líder: hoje ele só modera, aqui passa a emitir".
+
+**Default aplicado: não é privilégio.** Qualquer membro escreve nota de turma, como escreve
+qualquer outro registro. O rótulo do mockup descreve quem costuma escrever, não permissão.
+
+Razão: o contrário colidiria de frente com o não-negociável 9 ("qualquer membro posta, sem
+aprovação") e com a A5 ("papel não dá poder, existe só para exibição"). Se um papel passa a
+emitir e outro não, papel virou permissão, e aí `PROFESSOR` também precisa de resposta nova.
+
+**Custo se mudar:** uma checagem de papel no `AnotacaoService` e um teste invertido. Barato —
+mas mexe num não-negociável, então é decisão sua, não minha.
+
+### A10. Cota de armazenamento por turma
+
+Herdada da A4. Sem teto, uma turma sozinha come os 10 GB gratuitos do R2.
+
+**Default aplicado: nenhum teto.** A Task 15 não implementa cota.
+
+**Custo se mudar:** uma contagem por turma no `confirmar` e um erro novo. Meia hora. Sugestão que
+continua de pé: 2 GB por turma, aviso em 80%.
+
+---
+
 ## B. Contas e credenciais — você precisa criar, mas nada está travado
 
 Todas têm fake ou fallback, então **o Codex trabalha e testa sem nenhuma delas**. Elas viram necessárias só no momento de rodar em dois aparelhos reais, que é o aceite da Seção 8.
@@ -102,7 +150,7 @@ Todas têm fake ou fallback, então **o Codex trabalha e testa sem nenhuma delas
 |---|---|---|---|
 | B1 | Projeto no Google Cloud + OAuth Client ID (Android + Web) | Google Sign-In | validador de token fake injetado |
 | B2 | Projeto Firebase + service account JSON | FCM data-push | `FakeNotifier` |
-| B3 | Postgres gerenciado (Neon, Supabase ou Railway) + host da API | rodar em aparelho real | `docker-compose` local |
+| B3 | Postgres gerenciado (Neon, Supabase ou Railway) + host da API | rodar em aparelho real | Postgres **embutido** nos testes (sem Docker, desde 30/08) |
 | B4 | Conta SMTP (Brevo tem 300/dia grátis) | reset de senha | logger imprime o link no console |
 
 **B3 tem uma escolha embutida** que eu não fiz porque depende de conta sua: onde a API roda. Se for free tier que hiberna, está tudo bem — o design já assume isso, e é por isso que a notificação é local. Só evite host que hiberne **e** cobre cold start de 30s, porque aí cadastrar evento fica desagradável.
@@ -161,3 +209,6 @@ Se ele já responde "o que foi dado no período", o app perde a razão de existi
 | 2026-07-29 | 6.6 Hora do evento | Dia obrigatório + hora opcional; véspera às 19h |
 | 2026-07-29 | 6.7 Nome | `projetoFans`, provisório |
 | 2026-07-29 | Quem faz o design | Claude, não Codex. Mockup navegável primeiro, depois componentes reais |
+| 2026-08-22 | A4 Upload de arquivo | Revertida: entra no escopo, R2 pré-assinado em duas fases |
+| 2026-08-26 | A9 Nota da turma é do líder? | Não. Qualquer membro — não-negociável 9 ganha do rótulo do mockup |
+| 2026-08-26 | Uma tabela de anotação ou duas? | Uma, com coluna `alcance`. `tipos.ts` já congelou um tipo só |

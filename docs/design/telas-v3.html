@@ -1,0 +1,1345 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telas do projetoFans — v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+
+<style>
+  /* ============================================================
+     TOKENS v3 — a identidade da v1 continua inteira: as 12 hues,
+     cor+sigla juntas, prova solida contra entrega em contorno.
+     O que mudou e a PROFUNDIDADE. A v2 era chapada de proposito e
+     por isso lia como documento impresso. Aqui existe uma escada de
+     tres superficies e sombra de verdade, entao cartao fica ACIMA
+     do fundo em vez de desenhado sobre ele.
+     ============================================================ */
+  :root {
+    /* escada de superficie: fundo rebaixado -> cartao -> flutuante */
+    --paper:      #E7EAE5;
+    --surface:    #F7F9F6;
+    --surface-2:  #FDFEFC;
+    --panel:      #F7F9F6;
+
+    --ink:        #14181A;
+    --ink-2:      #464E50;
+    --ink-3:      #626A6C;
+    --rule:       rgba(20, 24, 26, .10);
+    --rule-soft:  rgba(20, 24, 26, .05);
+
+    --accent:     #0F766E;
+    --accent-ink: #FFFFFF;
+    --accent-soft: rgba(15, 118, 110, .12);
+    --accent-line: rgba(15, 118, 110, .28);
+
+    --prova-bg:   #14181A;
+    --prova-fg:   #EEF0EC;
+    --prova-fg-2: rgba(238, 240, 236, .64);
+    --grid:       rgba(20, 24, 26, .03);
+
+    /* elevacao — o consertosinho principal da v3 */
+    --e1: 0 1px 1.5px rgba(16,20,22,.055), 0 2px 6px -2px rgba(16,20,22,.07);
+    --e2: 0 1px 2px rgba(16,20,22,.06), 0 8px 20px -8px rgba(16,20,22,.16);
+    --e3: 0 2px 4px rgba(16,20,22,.07), 0 16px 34px -12px rgba(16,20,22,.24);
+    --e-fone: 0 2px 6px rgba(0,0,0,.06), 0 40px 80px -40px rgba(0,0,0,.45);
+    --pressao: inset 0 1px 2px rgba(16,20,22,.10);
+
+    --r-sm: 8px;
+    --r-md: 14px;
+    --r-lg: 22px;
+    --r-fone: 34px;
+    --r-pill: 999px;
+
+    --ui: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Roboto Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+
+    --mola: cubic-bezier(.22, 1, .36, 1);
+
+    /* 12 hues de materia — contraste >= 4.5:1 com branco, validado */
+    --m-calc:  #1D4ED8;
+    --m-bd:    #0369A1;
+    --m-esoft: #0F766E;
+    --m-redes: #15803D;
+    --m-so:    #4D7C0F;
+    --m-est:   #A16207;
+    --m-alg:   #B91C1C;
+    --m-mat:   #6D28D9;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-tema="claro"]) {
+      --paper: #0C0F11; --surface: #171B1D; --surface-2: #202527; --panel: #171B1D;
+      --ink: #E8EBE6; --ink-2: #AEB6B7; --ink-3: #878F91;
+      --rule: rgba(232, 235, 230, .12); --rule-soft: rgba(232, 235, 230, .06);
+      --accent: #4DBFB3; --accent-ink: #06201D;
+      --accent-soft: rgba(77, 191, 179, .16); --accent-line: rgba(77, 191, 179, .34);
+      --prova-bg: #E8EBE6; --prova-fg: #14181A; --prova-fg-2: rgba(20, 24, 26, .62);
+      --grid: rgba(232, 235, 230, .035);
+      --e1: 0 1px 1.5px rgba(0,0,0,.4), 0 2px 6px -2px rgba(0,0,0,.5);
+      --e2: 0 1px 2px rgba(0,0,0,.45), 0 8px 20px -8px rgba(0,0,0,.7);
+      --e3: 0 2px 4px rgba(0,0,0,.5), 0 16px 34px -12px rgba(0,0,0,.8);
+      --e-fone: 0 2px 6px rgba(0,0,0,.5), 0 40px 80px -40px rgba(0,0,0,1);
+      --pressao: inset 0 1px 2px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-tema="escuro"] {
+    --paper: #0C0F11; --surface: #171B1D; --surface-2: #202527; --panel: #171B1D;
+    --ink: #E8EBE6; --ink-2: #AEB6B7; --ink-3: #878F91;
+    --rule: rgba(232, 235, 230, .12); --rule-soft: rgba(232, 235, 230, .06);
+    --accent: #4DBFB3; --accent-ink: #06201D;
+    --accent-soft: rgba(77, 191, 179, .16); --accent-line: rgba(77, 191, 179, .34);
+    --prova-bg: #E8EBE6; --prova-fg: #14181A; --prova-fg-2: rgba(20, 24, 26, .62);
+    --grid: rgba(232, 235, 230, .035);
+    --e1: 0 1px 1.5px rgba(0,0,0,.4), 0 2px 6px -2px rgba(0,0,0,.5);
+    --e2: 0 1px 2px rgba(0,0,0,.45), 0 8px 20px -8px rgba(0,0,0,.7);
+    --e3: 0 2px 4px rgba(0,0,0,.5), 0 16px 34px -12px rgba(0,0,0,.8);
+    --e-fone: 0 2px 6px rgba(0,0,0,.5), 0 40px 80px -40px rgba(0,0,0,1);
+    --pressao: inset 0 1px 2px rgba(0,0,0,.5);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 4rem;
+    -webkit-font-smoothing: antialiased;
+    transition: filter .3s ease;
+  }
+  body.is-gray { filter: grayscale(1); }
+
+  .wrap { max-width: 1100px; margin-inline: auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  h1, h2 { margin: 0; line-height: 1.12; letter-spacing: -.022em; text-wrap: balance; }
+  h1 { font-size: clamp(1.9rem, 1.4rem + 2vw, 2.9rem); font-weight: 700; }
+  h2 { font-size: clamp(1.35rem, 1.1rem + 1vw, 1.8rem); font-weight: 600; }
+  p { margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: .75rem; text-transform: uppercase;
+    letter-spacing: .11em; color: var(--ink-3);
+  }
+  .lede { font-size: 1.1rem; color: var(--ink-2); max-width: 64ch; line-height: 1.55; }
+  .prose { max-width: 66ch; color: var(--ink-2); display: flex; flex-direction: column; gap: .8rem; }
+  .prose strong { color: var(--ink); font-weight: 600; }
+  code {
+    font-family: var(--mono); font-size: .875em;
+    background: var(--rule-soft); padding: .12em .4em; border-radius: var(--r-sm);
+  }
+
+  header.top { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* ---------- controles ---------- */
+  .barra-ctl {
+    display: flex; flex-wrap: wrap; gap: .55rem; align-items: center;
+    padding: .8rem .95rem; background: var(--surface);
+    border-radius: var(--r-md); box-shadow: var(--e1);
+  }
+  .barra-ctl p { font-size: .8125rem; color: var(--ink-2); margin-inline-end: auto; }
+  button.sw {
+    font: inherit; font-size: .8125rem; font-weight: 600;
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .5rem .85rem; border-radius: var(--r-pill); cursor: pointer;
+    background: var(--surface-2); color: var(--ink); border: 1px solid var(--rule);
+    box-shadow: var(--e1);
+    transition: transform .14s var(--mola), box-shadow .14s var(--mola), background .16s ease, color .16s ease;
+  }
+  button.sw:hover { transform: translateY(-1px); box-shadow: var(--e2); }
+  button.sw:active { transform: translateY(0) scale(.97); box-shadow: var(--pressao); }
+  button.sw[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  button.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ponto { width: .55rem; height: .55rem; border-radius: 50%; border: 1px solid currentColor; }
+  button.sw[aria-pressed="true"] .ponto { background: currentColor; }
+
+  /* ============================================================
+     APARELHO — 390x844, tamanho real de telefone
+     ============================================================ */
+  .palco { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+
+  .fone {
+    flex: 0 0 auto;
+    width: 390px; height: 844px;
+    background: var(--paper);
+    border-radius: var(--r-fone);
+    box-shadow: var(--e-fone);
+    display: flex; flex-direction: column; overflow: hidden;
+    position: relative; isolation: isolate;
+  }
+  @media (max-width: 460px) {
+    .fone { width: 100%; height: 760px; }
+  }
+
+  .tela { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .tela[data-ativa] { display: flex; animation: entra .34s var(--mola) both; }
+  @keyframes entra {
+    from { opacity: 0; transform: translateY(10px) scale(.995); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* chrome que flutua sobre o conteudo — e o que separa app de pagina */
+  .t-barra {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: 20px 18px 14px; flex: 0 0 auto;
+    background: var(--surface);
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    box-shadow: 0 1px 0 var(--rule-soft), var(--e1);
+    position: relative; z-index: 3;
+  }
+  .t-barra h3 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+  .t-barra span {
+    font-size: 12.5px; color: var(--ink-3); white-space: nowrap; letter-spacing: -.005em;
+  }
+  .t-corpo {
+    flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin;
+    padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 10px;
+    position: relative; z-index: 1;
+  }
+
+  /* ---------- barra de abas: pilula ativa, icone de verdade ---------- */
+  .abas {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    padding: 7px 8px 12px; flex: 0 0 auto;
+    background: var(--surface);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    box-shadow: 0 -1px 0 var(--rule-soft), 0 -10px 24px -16px rgba(16,20,22,.3);
+    position: relative; z-index: 3;
+  }
+  .abas button {
+    font: inherit; background: none; border: 0; cursor: pointer;
+    font-size: 11px; font-weight: 600; letter-spacing: -.004em;
+    color: var(--ink-3); display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 0; border-radius: var(--r-sm);
+    transition: color .18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .abas button i {
+    display: grid; place-items: center;
+    width: 46px; height: 28px; border-radius: var(--r-pill);
+    transition: background .2s var(--mola), transform .2s var(--mola);
+  }
+  .abas button i svg { width: 19px; height: 19px; display: block; }
+  .abas button:active i { transform: scale(.9); }
+  .abas button[aria-current="page"] { color: var(--accent); }
+  .abas button[aria-current="page"] i { background: var(--accent-soft); }
+  .abas button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- rotulo de grupo: sem regua tipografica de revista ---------- */
+  .rotulo {
+    font-size: 12.5px; font-weight: 600; letter-spacing: -.005em;
+    color: var(--ink-3); display: flex; align-items: center; gap: 7px;
+    padding: 6px 2px 0;
+  }
+
+  /* ---------- chip de materia: cor + sigla, sempre juntas ---------- */
+  .chip {
+    display: inline-flex; align-items: center; background: var(--c); color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: .05em;
+    padding: 3px 8px; border-radius: var(--r-pill); white-space: nowrap; text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(16,20,22,.16);
+  }
+
+  /* ---------- glifo de tipo: preenchido = prova, vazado = entrega ---------- */
+  .glyph { width: 8px; height: 8px; border: 1.5px solid currentColor; display: inline-block; flex: 0 0 auto; }
+  .glyph--prova { background: currentColor; border-radius: 1px; }
+  .glyph--entrega { border-radius: 50%; }
+
+  /* ---------- superficie base de cartao: e a mudanca de verdade ---------- */
+  .aula, .ev--entrega, .campo, .linha-campo, .arquivo, .mini, .dia-aberto, .aviso-mudanca {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    box-shadow: var(--e1);
+  }
+
+  /* ---------- AULA ---------- */
+  .aula {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 13px; border-radius: var(--r-md);
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola);
+  }
+  @media (hover: hover) { .aula:hover { transform: translateY(-1px); box-shadow: var(--e2); } }
+  .aula:active { transform: scale(.985); box-shadow: var(--e1); }
+  .aula--agora {
+    background: linear-gradient(180deg, var(--accent-soft), transparent 62%), var(--surface-2);
+    border-color: var(--accent-line);
+    box-shadow: var(--e2);
+    position: relative; overflow: hidden;
+  }
+  .aula--agora::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--accent);
+  }
+
+  .quadro-sala {
+    flex: 0 0 auto; width: 48px; height: 48px; border-radius: var(--r-sm);
+    background: var(--surface-2); border: 1px solid var(--rule);
+    box-shadow: var(--e1);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    color: var(--ink-3);
+  }
+  .quadro-sala svg { width: 20px; height: 20px; display: block; }
+  .quadro-sala b {
+    font-family: var(--mono); font-size: 8.5px; font-weight: 500;
+    letter-spacing: .04em; color: var(--ink-2);
+  }
+
+  .aula-corpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+  .aula-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .aula-hora {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .02em; color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .aula-nome { font-size: 15.5px; font-weight: 600; letter-spacing: -.012em; line-height: 1.25; }
+  .aula-meta { font-size: 12px; color: var(--ink-3); }
+  .aula-atv {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 3px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: -.004em; color: var(--ink-2);
+  }
+  .aula--agora .aula-atv { color: var(--accent); }
+
+  /* ---------- CARD DE EVENTO: peso por tinta, nunca por cor ---------- */
+  .ev {
+    display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 14px;
+    padding: 13px 14px; border-radius: var(--r-md); align-items: start;
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola);
+  }
+  @media (hover: hover) { .ev:hover { transform: translateY(-1px); box-shadow: var(--e2); } }
+  .ev:active { transform: scale(.985); }
+  .ev--entrega { color: var(--ink); }
+  .ev--prova {
+    background: var(--prova-bg); border: 1px solid var(--prova-bg); color: var(--prova-fg);
+    box-shadow: var(--e2);
+  }
+  .ev-data { text-align: center; font-variant-numeric: tabular-nums; }
+  .ev-dia { display: block; font-size: 21px; font-weight: 700; line-height: 1; letter-spacing: -.035em; }
+  .ev-mes {
+    display: block; font-family: var(--mono); font-size: 10px;
+    text-transform: uppercase; letter-spacing: .1em; opacity: .62; margin-top: 3px;
+  }
+  .ev-corpo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .ev-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ev-tipo {
+    font-size: 11.5px; font-weight: 600; letter-spacing: -.004em;
+    display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums;
+  }
+  .ev--entrega .ev-tipo { color: var(--ink-3); }
+  .ev--prova .ev-tipo { color: var(--prova-fg-2); }
+  .ev-titulo { font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.014em; }
+  .ev--prova .ev-titulo { font-weight: 700; }
+  .ev-rodape { font-size: 12.5px; }
+  .ev--entrega .ev-rodape { color: var(--ink-3); }
+  .ev--prova .ev-rodape { color: var(--prova-fg-2); }
+
+  /* ---------- ANOTACOES: turma e pessoal nunca se confundem ---------- */
+  .nota {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 10px 13px; border-radius: var(--r-sm);
+  }
+  .nota-cab {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: -.002em;
+  }
+  .nota-txt { font-size: 14px; line-height: 1.45; color: var(--ink); }
+  .nota-quem { font-size: 11.5px; color: var(--ink-3); }
+
+  /* da turma: regra solida no accent, marcada como visivel a todos */
+  .nota--turma {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    box-shadow: var(--e1);
+  }
+  .nota--turma .nota-cab { color: var(--accent); }
+
+  /* pessoal: regra tracejada, nunca solida — nao e fato compartilhado */
+  .nota--pessoal { border-left: 3px dashed var(--ink-3); background: var(--rule-soft); }
+  .nota--pessoal .nota-cab { color: var(--ink-3); }
+  .nota--pessoal .nota-txt { color: var(--ink-2); }
+
+  /* ---------- CALENDARIO ---------- */
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-hd {
+    font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-align: center; padding-bottom: 4px;
+  }
+  .cal button {
+    font: inherit; background: none; border: 0; cursor: pointer;
+    aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink-2);
+    border-radius: var(--r-sm); padding: 0;
+    transition: background .16s ease, transform .16s var(--mola);
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .cal button:not(:disabled):hover { background: var(--rule-soft); } }
+  .cal button:not(:disabled):active { transform: scale(.88); }
+  .cal button:disabled { opacity: 0; cursor: default; }
+  .cal button.tem-prova { background: var(--prova-bg); color: var(--prova-fg); font-weight: 700; box-shadow: var(--e1); }
+  .cal button.tem-entrega { box-shadow: inset 0 0 0 1px var(--rule); }
+  .cal button[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cal button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cal .marcas { display: flex; gap: 2px; }
+  .cal .marcas u { width: 4px; height: 4px; border-radius: 50%; background: var(--c); display: block; }
+
+  .dia-aberto {
+    display: flex; flex-direction: column; gap: 9px;
+    padding: 13px 14px; border-radius: var(--r-md);
+    animation: entra .3s var(--mola) both;
+  }
+  .aula-min {
+    display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: baseline;
+    padding: 8px 2px; border-bottom: 1px solid var(--rule-soft);
+  }
+  .aula-min:last-of-type { border-bottom: 0; }
+  .aula-min .h {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+    letter-spacing: .04em; font-variant-numeric: tabular-nums;
+  }
+  .aula-min .c { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .aula-min .l1 { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .aula-min .s { font-size: 12px; color: var(--ink-3); }
+
+  /* ---------- COMPOR ANOTACAO ---------- */
+  .seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    background: var(--rule-soft); padding: 4px; border-radius: var(--r-pill);
+  }
+  .seg button {
+    font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    padding: 9px 8px; border-radius: var(--r-pill); border: 0;
+    background: transparent; color: var(--ink-2); text-align: center;
+    transition: background .2s var(--mola), color .2s ease, box-shadow .2s var(--mola), transform .14s var(--mola);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg button:active { transform: scale(.96); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: var(--e1); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .campo {
+    border-radius: var(--r-md); padding: 11px 13px;
+    min-height: 94px; font-size: 14px; line-height: 1.45; color: var(--ink);
+    box-shadow: var(--pressao);
+    transition: box-shadow .2s var(--mola), border-color .2s ease;
+  }
+  .campo:focus { outline: 0; border-color: var(--accent-line); box-shadow: var(--pressao), 0 0 0 3px var(--accent-soft); }
+  .campo:empty::before { content: attr(data-vazio); color: var(--ink-3); }
+
+  .linha-campo {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 13px; border-radius: var(--r-md); font-size: 13.5px;
+  }
+  .linha-campo b { font-weight: 600; }
+  .linha-campo span { font-size: 12px; color: var(--ink-3); }
+
+  .alerta {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 10px 12px; border-radius: var(--r-sm); font-size: 12.5px; line-height: 1.42;
+    border: 1px dashed var(--rule); color: var(--ink-2); background: var(--rule-soft);
+  }
+  .alerta[data-tom="turma"] {
+    border-style: solid; border-color: var(--accent-line);
+    background: var(--accent-soft); color: var(--ink-2);
+  }
+
+  .botao {
+    font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer;
+    padding: 14px; border-radius: var(--r-md); border: 0;
+    background: var(--accent); color: var(--accent-ink); width: 100%;
+    box-shadow: var(--e2);
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola), filter .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .botao:hover { transform: translateY(-1px); box-shadow: var(--e3); filter: brightness(1.06); } }
+  .botao:active { transform: translateY(0) scale(.975); box-shadow: var(--e1); }
+  .botao:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .vazio { display: flex; flex-direction: column; gap: 8px; padding: 26px 4px; }
+  .vazio b { font-weight: 600; font-size: 16px; }
+  .vazio span { font-size: 15px; color: var(--ink-3); line-height: 1.5; }
+
+  /* ---------- notas laterais ---------- */
+  .notas { flex: 1 1 320px; min-width: 280px; display: flex; flex-direction: column; gap: 1.5rem; }
+  .nota-lateral { display: flex; flex-direction: column; gap: .5rem; border-left: 2px solid var(--accent); padding-left: .9rem; }
+  .nota-lateral h3 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -.01em; }
+  .nota-lateral p { font-size: .9375rem; color: var(--ink-2); line-height: 1.5; }
+
+  .tabela-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .875rem; min-width: 520px; }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th { font-family: var(--mono); font-size: .6875rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3); font-weight: 500; }
+  td code { white-space: nowrap; }
+
+  .aviso-mudanca {
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-md); padding: 1rem 1.15rem;
+    display: flex; flex-direction: column; gap: .6rem;
+  }
+
+  /* ---------- ENVIAR MATERIAL ---------- */
+  .add-linha {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 12px; border: 1px dashed var(--accent-line); border-radius: var(--r-md);
+    background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13.5px;
+    font-weight: 700; cursor: pointer; width: 100%;
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola), background .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .add-linha:hover { transform: translateY(-1px); box-shadow: var(--e1); } }
+  .add-linha:active { transform: scale(.98); }
+  .add-linha:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .voltar {
+    border: 0; background: var(--rule-soft); padding: 0; margin: 0 10px 0 0;
+    width: 32px; height: 32px; border-radius: var(--r-pill);
+    display: grid; place-items: center;
+    color: var(--ink); cursor: pointer; font-size: 17px; line-height: 1;
+    transition: transform .16s var(--mola), background .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .voltar:hover { background: var(--rule); } }
+  .voltar:active { transform: scale(.9); }
+  .voltar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .t-barra .esq { display: flex; align-items: center; min-width: 0; }
+
+  .origem { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .origem button {
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    padding: 14px 6px; border: 1px solid var(--rule); border-radius: var(--r-md);
+    background: var(--surface); color: var(--ink-2); font: inherit; font-size: 11.5px;
+    font-weight: 600; cursor: pointer; text-align: center; line-height: 1.25;
+    box-shadow: var(--e1);
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola), border-color .16s ease, color .16s ease, background .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .origem button svg { width: 22px; height: 22px; }
+  @media (hover: hover) { .origem button:hover { transform: translateY(-1px); box-shadow: var(--e2); } }
+  .origem button:active { transform: scale(.96); box-shadow: var(--pressao); }
+  .origem button[aria-pressed="true"] {
+    border-color: var(--accent-line); color: var(--accent);
+    background: var(--accent-soft); box-shadow: var(--e1);
+  }
+  .origem button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .arquivo {
+    display: flex; gap: 11px; align-items: flex-start;
+    padding: 11px 12px; border-radius: var(--r-md);
+  }
+  /* falha usa forma e palavra, nunca cor: a cor esta ocupada identificando materia */
+  .arquivo--erro { background: transparent; border-style: dashed; box-shadow: none; }
+  .arquivo .ico {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--r-sm);
+    background: var(--surface-2); border: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-3); font-family: var(--mono); font-size: 9px; font-weight: 500; letter-spacing: .04em;
+  }
+  .arquivo .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+  .arquivo .nome { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .arquivo .sub {
+    font-size: 11.5px; color: var(--ink-3);
+    display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums;
+  }
+  .prog { height: 4px; background: var(--rule); border-radius: var(--r-pill); overflow: hidden; }
+  .prog i { display: block; height: 100%; background: var(--accent); border-radius: var(--r-pill); }
+  .arquivo .refazer {
+    border: 1px solid var(--rule); background: var(--surface-2); color: var(--ink); font: inherit;
+    font-size: 11.5px; font-weight: 600; padding: 6px 11px; border-radius: var(--r-pill); cursor: pointer;
+    align-self: flex-start; box-shadow: var(--e1);
+    transition: transform .14s var(--mola);
+  }
+  .arquivo .refazer:active { transform: scale(.95); }
+
+  .chips-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips-pick button {
+    border: 0; padding: 0; background: none; cursor: pointer; opacity: .38;
+    transition: opacity .16s ease, transform .16s var(--mola);
+  }
+  .chips-pick button[aria-pressed="true"] { opacity: 1; transform: scale(1.04); }
+  .chips-pick button:active { transform: scale(.94); }
+  .chips-pick button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-pill); }
+
+  .vinc { display: flex; flex-direction: column; gap: 6px; }
+  .vinc label {
+    display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px;
+    border: 1px solid var(--rule); border-radius: var(--r-sm); cursor: pointer; font-size: 13px;
+    background: var(--surface); box-shadow: var(--e1);
+    transition: transform .14s var(--mola);
+  }
+  .vinc label:active { transform: scale(.985); }
+  .vinc input { margin: 2px 0 0; accent-color: var(--accent); width: 16px; height: 16px; flex: 0 0 auto; }
+  .vinc .vt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .vinc .vs { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+
+  /* ---------- MEU QUADRO ---------- */
+  .kan { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
+  .kan-col { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .mini {
+    border-radius: var(--r-sm); padding: 9px 10px;
+    display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola);
+  }
+  @media (hover: hover) { .mini:hover { transform: translateY(-1px); box-shadow: var(--e2); } }
+  .mini:active { transform: scale(.97); }
+  .mini.solid { background: var(--prova-bg); border-color: var(--prova-bg); color: var(--prova-fg); box-shadow: var(--e2); }
+  .mini .mt { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .mini.done { opacity: .55; box-shadow: none; }
+  .mini.done .mt { text-decoration: line-through; }
+  .mini .mav { font-size: 10.5px; color: var(--ink-3); line-height: 1.3; }
+  /* "nao listados" e secao recolhida ABAIXO do kanban, nunca uma terceira coluna */
+  .nao-list {
+    margin-top: 12px; border-top: 1px dashed var(--rule); padding-top: 13px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+
+  /* ---------- estados da Home, lado a lado para comparar ---------- */
+  .bloco { display: flex; flex-direction: column; gap: 1.1rem; }
+  .estados { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .estado-cel { display: flex; flex-direction: column; gap: .7rem; flex: 0 1 340px; }
+  .estado-cel > p { font-size: .875rem; color: var(--ink-2); line-height: 1.5; }
+  .fone--mini { width: 100%; height: auto; border-radius: var(--r-lg); }
+  .fone--mini .tela { display: flex; animation: none; }
+  .fone--mini .t-corpo { overflow: visible; min-height: 150px; }
+
+  .cache-aviso {
+    border: 1px dashed var(--rule); border-radius: var(--r-sm);
+    padding: 10px 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.4;
+    background: var(--rule-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">projetoFans · telas v3</p>
+    <h1>O que tem aula hoje, onde, e o que já era pra estar pronto.</h1>
+    <p class="lede">
+      Mesma informação da v2, mesma paleta, mesma regra de prova contra entrega. O que mudou é
+      que agora <strong>parece aplicativo</strong>: cartão fica acima do fundo em vez de desenhado
+      sobre ele, a barra de cima e a de abas flutuam sobre o conteúdo, os ícones são ícones, e
+      tudo que se toca responde ao toque. Toque nas abas e nos dias do calendário.
+    </p>
+    <div class="barra-ctl">
+      <p>Escala de cinza continua sendo o teste de aceite: com sombra e profundidade no meio, prova ainda precisa se distinguir de entrega, e nota da turma de nota pessoal, sem nenhuma cor.</p>
+      <button class="sw" id="btn-cinza" type="button" aria-pressed="false"><span class="ponto"></span>Escala de cinza</button>
+      <button class="sw" id="btn-tema" type="button" aria-pressed="false"><span class="ponto"></span>Tema escuro</button>
+    </div>
+  </header>
+
+  <div class="palco">
+
+    <div class="fone">
+
+      <!-- ==================== HOME ==================== -->
+      <div class="tela" data-tela="home" data-ativa>
+        <div class="t-barra">
+          <h3>Sexta, 21 ago</h3>
+          <span>3 aulas</span>
+        </div>
+        <div class="t-corpo">
+
+          <p class="rotulo">próximas aulas</p>
+
+          <div class="aula aula--agora">
+            <div class="quadro-sala">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3.2" width="18" height="10" rx="1.2"/>
+                <path d="M6.4 7h7M6.4 9.8h4.6"/>
+                <path d="M4 17.4h6v3.2H4zM14 17.4h6v3.2h-6z"/>
+                <path d="M7 17.4v-1.7M17 17.4v-1.7"/>
+              </svg>
+              <b>B-204</b>
+            </div>
+            <div class="aula-corpo">
+              <div class="aula-topo">
+                <span class="chip" style="--c: var(--m-bd)">BD</span>
+                <span class="aula-hora">19:00–20:40</span>
+              </div>
+              <p class="aula-nome">Banco de Dados</p>
+              <p class="aula-meta">agora · prof. Marcos</p>
+              <p class="aula-atv"><span class="glyph glyph--entrega"></span>entregar hoje · Lista 4</p>
+            </div>
+          </div>
+
+          <div class="aula">
+            <div class="quadro-sala">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3.2" width="18" height="10" rx="1.2"/>
+                <path d="M6.4 7h7M6.4 9.8h4.6"/>
+                <path d="M4 17.4h6v3.2H4zM14 17.4h6v3.2h-6z"/>
+                <path d="M7 17.4v-1.7M17 17.4v-1.7"/>
+              </svg>
+              <b>B-204</b>
+            </div>
+            <div class="aula-corpo">
+              <div class="aula-topo">
+                <span class="chip" style="--c: var(--m-esoft)">ESOFT</span>
+                <span class="aula-hora">20:50–22:30</span>
+              </div>
+              <p class="aula-nome">Eng. de Software</p>
+              <p class="aula-meta">em 1 h 50 · prof. Lúcia</p>
+            </div>
+          </div>
+
+          <div class="aula">
+            <div class="quadro-sala">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3.2" width="18" height="10" rx="1.2"/>
+                <path d="M6.4 7h7M6.4 9.8h4.6"/>
+                <path d="M4 17.4h6v3.2H4zM14 17.4h6v3.2h-6z"/>
+                <path d="M7 17.4v-1.7M17 17.4v-1.7"/>
+              </svg>
+              <b>LAB-3</b>
+            </div>
+            <div class="aula-corpo">
+              <div class="aula-topo">
+                <span class="chip" style="--c: var(--m-redes)">REDES</span>
+                <span class="aula-hora">seg · 19:00</span>
+              </div>
+              <p class="aula-nome">Redes de Computadores</p>
+              <p class="aula-meta">próxima segunda · lab. de redes</p>
+            </div>
+          </div>
+
+          <p class="rotulo">o que vem aí</p>
+
+          <div class="ev ev--entrega">
+            <div class="ev-data"><span class="ev-dia">21</span><span class="ev-mes">ago</span></div>
+            <div class="ev-corpo">
+              <div class="ev-topo">
+                <span class="chip" style="--c: var(--m-bd)">BD</span>
+                <span class="ev-tipo"><span class="glyph glyph--entrega"></span>23:59</span>
+              </div>
+              <p class="ev-titulo">Lista 4 — normalização</p>
+              <p class="ev-rodape">Otávio · há 5 h</p>
+            </div>
+          </div>
+
+          <div class="ev ev--prova">
+            <div class="ev-data"><span class="ev-dia">25</span><span class="ev-mes">ago</span></div>
+            <div class="ev-corpo">
+              <div class="ev-topo">
+                <span class="chip" style="--c: var(--m-calc)">CALC2</span>
+                <span class="ev-tipo"><span class="glyph glyph--prova"></span>19:00</span>
+              </div>
+              <p class="ev-titulo">Prova 2 — integrais</p>
+              <p class="ev-rodape">Ana Beatriz · há 2 dias</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================== CALENDARIO ==================== -->
+      <div class="tela" data-tela="cal">
+        <div class="t-barra">
+          <h3>Agosto</h3>
+          <span id="cal-legenda">toque num dia</span>
+        </div>
+        <div class="t-corpo">
+          <div class="cal" id="cal"></div>
+          <div class="dia-aberto" id="dia-aberto"></div>
+        </div>
+      </div>
+
+      <!-- ==================== ANOTACAO ==================== -->
+      <div class="tela" data-tela="nota" data-aba="cal">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="cal" aria-label="Voltar para o calendário">&larr;</button>
+            <h3>Nova anotação</h3>
+          </span>
+          <span>25 ago</span>
+        </div>
+        <div class="t-corpo">
+          <p class="rotulo">quem vai ver</p>
+          <div class="seg" id="seg-alcance">
+            <button type="button" data-alcance="turma" aria-pressed="true">A turma toda</button>
+            <button type="button" data-alcance="pessoal" aria-pressed="false">Só eu</button>
+          </div>
+
+          <div class="alerta" id="alerta-alcance" data-tom="turma">
+            <span class="glyph glyph--prova" style="margin-top:3px"></span>
+            <span id="alerta-txt">Todo mundo da turma vai ver isto, com o seu nome. Só você pode editar ou apagar depois.</span>
+          </div>
+
+          <p class="rotulo">anotação</p>
+          <div class="campo" contenteditable="true" role="textbox" aria-label="Texto da anotação" data-vazio="Prof. avisou que a prova cobra até a aula de junção…">Prof. avisou que a prova cobra até a aula de junção. Não entra plano de query.</div>
+
+          <p class="rotulo">quando aparece</p>
+          <div class="linha-campo">
+            <b>25 de agosto</b>
+            <span>dia da prova</span>
+          </div>
+          <div class="linha-campo">
+            <b>Banco de Dados</b>
+            <span>matéria</span>
+          </div>
+
+          <button class="botao" type="button">Publicar para a turma</button>
+        </div>
+      </div>
+
+      <!-- ==================== MATERIAS ==================== -->
+      <div class="tela" data-tela="materias">
+        <div class="t-barra">
+          <h3>Banco de Dados</h3>
+          <span>bd · b-204</span>
+        </div>
+        <div class="t-corpo">
+          <p class="rotulo">grade</p>
+          <div class="aula">
+            <div class="quadro-sala">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3.2" width="18" height="10" rx="1.2"/>
+                <path d="M6.4 7h7M6.4 9.8h4.6"/>
+                <path d="M4 17.4h6v3.2H4zM14 17.4h6v3.2h-6z"/>
+                <path d="M7 17.4v-1.7M17 17.4v-1.7"/>
+              </svg>
+              <b>B-204</b>
+            </div>
+            <div class="aula-corpo">
+              <p class="aula-nome">Sexta · 19:00–20:40</p>
+              <p class="aula-meta">prof. Marcos · toda semana</p>
+            </div>
+          </div>
+
+          <p class="rotulo">material de aula</p>
+          <div class="aula-min">
+            <span class="h">PDF</span>
+            <span class="c"><span class="l1">Formas normais 1FN–3FN</span><span class="s">Ana Beatriz · 22 jul</span></span>
+          </div>
+          <div class="aula-min">
+            <span class="h">SLIDE</span>
+            <span class="c"><span class="l1">Álgebra relacional</span><span class="s">prof. Marcos · 18 jul</span></span>
+          </div>
+          <div class="aula-min">
+            <span class="h">FOTO</span>
+            <span class="c"><span class="l1">Quadro da aula de junção</span><span class="s">Otávio · 15 jul</span></span>
+          </div>
+
+          <div class="arquivo">
+            <span class="ico">JPG</span>
+            <span class="info">
+              <span class="nome">quadro-juncao-2.jpg</span>
+              <span class="sub">enviando · 1,8 MB</span>
+              <span class="prog"><i style="width:64%"></i></span>
+            </span>
+          </div>
+
+          <div class="arquivo arquivo--erro">
+            <span class="ico">PDF</span>
+            <span class="info">
+              <span class="nome">indices-b-tree.pdf</span>
+              <span class="sub"><span class="glyph glyph--prova"></span>falhou · sem conexão · fica na fila</span>
+              <button class="refazer" type="button">Tentar de novo</button>
+            </span>
+          </div>
+
+          <button class="add-linha" type="button" data-ir="material">+ &nbsp;Enviar material</button>
+
+          <p class="rotulo">eventos</p>
+          <div class="ev ev--prova">
+            <div class="ev-data"><span class="ev-dia">25</span><span class="ev-mes">ago</span></div>
+            <div class="ev-corpo">
+              <div class="ev-topo">
+                <span class="ev-tipo"><span class="glyph glyph--prova"></span>prova · 2 materiais</span>
+              </div>
+              <p class="ev-titulo">Prova 2 — normalização e SQL</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== MEU QUADRO ==================== -->
+      <div class="tela" data-tela="quadro">
+        <div class="t-barra">
+          <h3>Meu quadro</h3>
+          <span>só seu</span>
+        </div>
+        <div class="t-corpo">
+          <div class="kan">
+            <div class="kan-col">
+              <p class="rotulo">a fazer</p>
+              <div class="mini solid">
+                <span class="chip" style="--c: var(--m-calc)">CALC2</span>
+                <span class="mt">Prova 2 — integrais</span>
+              </div>
+              <div class="mini">
+                <span class="chip" style="--c: var(--m-esoft)">ESOFT</span>
+                <span class="mt">Diagrama de casos de uso</span>
+              </div>
+              <div class="mini solid">
+                <span class="chip" style="--c: var(--m-redes)">REDES</span>
+                <span class="mt">Prova 1 — enlace</span>
+              </div>
+            </div>
+            <div class="kan-col">
+              <p class="rotulo">feito</p>
+              <div class="mini done">
+                <span class="chip" style="--c: var(--m-bd)">BD</span>
+                <span class="mt">Lista 4 — normalização</span>
+              </div>
+              <div class="mini done">
+                <span class="chip" style="--c: var(--m-so)">SO</span>
+                <span class="mt">Trabalho de escalonamento</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="nao-list">
+            <p class="rotulo">não listados · 1</p>
+            <div class="mini" style="opacity:.72; max-width:250px">
+              <span class="chip" style="--c: var(--m-alg)">ALG</span>
+              <span class="mt">Prova de grafos — 30 jul</span>
+              <span class="mav">oculto pelo líder · só você vê</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== ENVIAR MATERIAL ==================== -->
+      <div class="tela" data-tela="material" data-aba="materias">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="materias" aria-label="Voltar para Matérias">&larr;</button>
+            <h3>Enviar material</h3>
+          </span>
+          <span>banco de dados</span>
+        </div>
+        <div class="t-corpo">
+
+          <p class="rotulo">de onde vem</p>
+          <div class="origem" id="origem">
+            <button type="button" data-origem="foto" aria-pressed="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/>
+                <circle cx="12" cy="13" r="3.4"/>
+              </svg>
+              Foto do quadro
+            </button>
+            <button type="button" data-origem="arquivo" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/>
+                <path d="M13.5 3v5.5H19"/>
+              </svg>
+              Arquivo
+            </button>
+            <button type="button" data-origem="link" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.54 3.54 0 0 0-5-5l-1.6 1.6"/>
+                <path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.54 3.54 0 0 0 5 5l1.6-1.6"/>
+              </svg>
+              Link
+            </button>
+          </div>
+
+          <div id="alvo-origem">
+            <div class="arquivo">
+              <span class="ico">JPG</span>
+              <span class="info">
+                <span class="nome">quadro-normalizacao.jpg</span>
+                <span class="sub">2,1 MB · comprimida de 4,8 MB</span>
+              </span>
+            </div>
+          </div>
+
+          <p class="rotulo">sobre</p>
+          <div class="campo" contenteditable="true" role="textbox" aria-label="Título do material" style="min-height:auto" data-vazio="Título — o que a turma vai ler na lista">Quadro da aula de normalização</div>
+
+          <div class="chips-pick" role="group" aria-label="Matéria" id="pick-materia">
+            <button type="button" aria-pressed="true"><span class="chip" style="--c: var(--m-bd)">BD</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-calc)">CALC2</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-esoft)">ESOFT</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-redes)">REDES</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-alg)">ALG</span></button>
+          </div>
+
+          <div class="seg" id="seg-tipo">
+            <button type="button" aria-pressed="true">Material de aula</button>
+            <button type="button" aria-pressed="false">Adicional</button>
+          </div>
+
+          <p class="rotulo">vincular a uma prova · opcional</p>
+          <div class="vinc">
+            <label>
+              <input type="checkbox" checked>
+              <span class="vt"><span>Prova 2 — normalização e SQL</span><span class="vs">25 ago · prova</span></span>
+            </label>
+            <label>
+              <input type="checkbox">
+              <span class="vt"><span>Lista 4 — normalização</span><span class="vs">21 ago · entrega</span></span>
+            </label>
+          </div>
+
+          <div class="alerta" data-tom="turma">
+            <span class="glyph glyph--prova" style="margin-top:3px"></span>
+            <span>Todo mundo da turma vai ver, com o seu nome. Ninguém aprova antes — publica direto. Só você pode apagar depois.</span>
+          </div>
+
+          <button class="botao" type="button">Publicar material</button>
+
+          <p class="aula-meta" style="text-align:center">Até 15 MB · pdf, imagem, slide ou doc</p>
+
+        </div>
+      </div>
+
+      <nav class="abas" id="abas">
+        <button type="button" data-ir="home" aria-current="page"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.8 10.4 12 3.8l8.2 6.6"/><path d="M6.3 9.2V20h11.4V9.2"/><path d="M10 20v-4.6h4V20"/></svg></i>Home</button>
+        <button type="button" data-ir="cal"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.4" y="5.2" width="17.2" height="15" rx="2.4"/><path d="M3.4 10h17.2M8.2 3.4v3.6M15.8 3.4v3.6"/></svg></i>Cal</button>
+        <button type="button" data-ir="materias"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.6 5.4a2.2 2.2 0 0 1 2.2-2.2H19v13.6H6.8a2.2 2.2 0 0 0-2.2 2.2z"/><path d="M4.6 19a2.2 2.2 0 0 1 2.2-2.2H19v4H6.8A2.2 2.2 0 0 1 4.6 19z"/></svg></i>Matérias</button>
+        <button type="button" data-ir="quadro"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="4.2" width="6.6" height="15.6" rx="1.8"/><rect x="13.8" y="4.2" width="6.6" height="9.4" rx="1.8"/></svg></i>Quadro</button>
+      </nav>
+    </div>
+
+    <div class="notas">
+      <div class="nota-lateral">
+        <h3>O quadrado é a sala, não um enfeite</h3>
+        <p>
+          O vetor de sala de aula marca <em>isto é uma aula</em> — a mesma função que o glifo
+          cheio/vazado faz para prova e entrega. Embaixo dele vai o código da sala, então o
+          quadrado carrega informação em vez de ocupar espaço. Ele é monocromático de propósito:
+          a cor já está ocupada identificando a matéria.
+        </p>
+      </div>
+      <div class="nota-lateral">
+        <h3>Nota da turma e nota pessoal nunca se parecem</h3>
+        <p>
+          Anotação do líder tem régua sólida no accent e diz <em>turma</em>. A pessoal tem régua
+          tracejada e diz <em>só você</em>. A diferença é de forma, não de cor — sobrevive à
+          escala de cinza, como prova e entrega. Confundir as duas seria pior que um bug de
+          layout: alguém deixaria de estudar por causa de um rabisco alheio.
+        </p>
+      </div>
+      <div class="nota-lateral">
+        <h3>A aula de agora tem trilho, e é a única</h3>
+        <p>
+          Só a aula em andamento ganha o trilho de accent à esquerda. Se tudo destacasse, nada
+          destacaria — e o aluno abre o app justamente para saber onde precisa estar agora.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bloco">
+    <p class="eyebrow">estados da home</p>
+    <h2>Vazio e offline não podem se parecer.</h2>
+    <p class="prose">
+      Estas são as duas telas mais fáceis de estragar. A tentação é preencher a primeira com
+      dica, sugestão ou skeleton eterno — <strong>não preencher é o requisito</strong>, porque
+      "não tem nada" é exatamente o que o aluno abriu o app para saber. E a segunda nunca pode
+      virar lista vazia: confundir <em>não tem prova</em> com <em>falhei ao buscar</em> é o pior
+      bug que este app pode ter.
+    </p>
+    <div class="estados">
+
+      <div class="estado-cel">
+        <div class="fone fone--mini">
+          <div class="tela">
+            <div class="t-barra"><h3>Esta semana</h3><span>0 de 6</span></div>
+            <div class="t-corpo">
+              <div class="vazio">
+                <b>Nada nos próximos 14 dias.</b>
+                <span>Se você sabe de alguma prova ou entrega que não está aqui, cadastre — qualquer pessoa da turma pode.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p>
+          Duas frases. A segunda existe porque o app só funciona se alguém alimentar, e o
+          convite a cadastrar é a única coisa acionável honesta neste momento.
+        </p>
+      </div>
+
+      <div class="estado-cel">
+        <div class="fone fone--mini">
+          <div class="tela">
+            <div class="t-barra"><h3>Esta semana</h3><span>cache</span></div>
+            <div class="t-corpo">
+              <div class="cache-aviso">Sem conexão · mostrando dados de ontem 21:40</div>
+              <div class="ev ev--entrega">
+                <div class="ev-data"><span class="ev-dia">21</span><span class="ev-mes">ago</span></div>
+                <div class="ev-corpo">
+                  <div class="ev-topo">
+                    <span class="chip" style="--c: var(--m-bd)">BD</span>
+                    <span class="ev-tipo"><span class="glyph glyph--entrega"></span>23:59</span>
+                  </div>
+                  <p class="ev-titulo">Lista 4 — normalização</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p>
+          Mostra o que tem em cache e diz de quando é. O aviso é tracejado e nomeia a falha —
+          nunca uma tela limpa que finge que a semana está vazia.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="aviso-mudanca">
+    <p class="eyebrow">o que isto exige do backend</p>
+    <p class="prose">
+      Três coisas destas telas <strong>não existem</strong> no schema aprovado. Nenhuma é
+      difícil, mas todas são novas — e a primeira muda o que o app é.
+    </p>
+    <div class="tabela-wrap">
+      <table>
+        <thead>
+          <tr><th>o que falta</th><th>tabela</th><th>por que importa</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Grade de aulas</b></td>
+            <td><code>aula</code> — turma_id, materia_id, dia_semana, hora_inicio, hora_fim, sala</td>
+            <td>Hoje só existem provas e entregas, que são pontuais. Aula é recorrente e precisa de exceção (feriado, aula cancelada, sala trocada), senão a Home mente no primeiro feriado.</td>
+          </tr>
+          <tr>
+            <td><b>Sala</b></td>
+            <td>coluna em <code>aula</code>, não em <code>materia</code></td>
+            <td>A mesma matéria pode cair em salas diferentes por dia da semana. Pendurar em <code>materia</code> parece mais simples e quebra na primeira aula de laboratório.</td>
+          </tr>
+          <tr>
+            <td><b>Anotação da turma</b></td>
+            <td><code>anotacao</code> — turma_id, autor_id, data, texto</td>
+            <td>Amplia o papel do líder: hoje ele só modera o que já existe, aqui ele passa a emitir. Vale decidir de propósito, não por acidente de tela.</td>
+          </tr>
+          <tr>
+            <td><b>Anotação pessoal</b></td>
+            <td><code>anotacao_pessoal</code> — usuario_id, data, texto</td>
+            <td>Tabela separada, não coluna. O não-negociável 3 proíbe estado pessoal dentro do fato compartilhado, e é exatamente por isso que ela nasce separada.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose">
+      A pergunta que fica aberta: o handoff vende <strong>"o que foi dado no período"</strong>.
+      Grade de aulas empurra para <strong>"grade horária"</strong>, que é outro produto — útil,
+      mas outro. Se a faculdade já publica a grade, replicá-la é trabalho duplicado com risco de
+      divergir. Vale conferir antes de construir.
+    </p>
+  </div>
+
+</div>
+
+<script>
+  // ---- controles -------------------------------------------------------
+  const btnCinza = document.getElementById('btn-cinza');
+  btnCinza.addEventListener('click', () => {
+    const ligado = btnCinza.getAttribute('aria-pressed') === 'true';
+    btnCinza.setAttribute('aria-pressed', String(!ligado));
+    document.body.classList.toggle('is-gray', !ligado);
+  });
+
+  const btnTema = document.getElementById('btn-tema');
+  btnTema.addEventListener('click', () => {
+    const escuro = btnTema.getAttribute('aria-pressed') === 'true';
+    btnTema.setAttribute('aria-pressed', String(!escuro));
+    document.documentElement.setAttribute('data-tema', !escuro ? 'escuro' : 'claro');
+  });
+
+  // ---- navegacao entre telas ------------------------------------------
+  const abas = document.getElementById('abas');
+
+  function irPara(nome) {
+    const alvo = document.querySelector('.tela[data-tela="' + nome + '"]');
+    if (!alvo) return;
+    for (const t of document.querySelectorAll('.tela')) t.removeAttribute('data-ativa');
+    alvo.setAttribute('data-ativa', '');
+    // subtela acende a aba do pai: "enviar material" vive dentro de Materias
+    const aba = alvo.dataset.aba || nome;
+    for (const b of abas.querySelectorAll('button')) {
+      if (b.dataset.ir === aba) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    }
+    const corpo = alvo.querySelector('.t-corpo');
+    if (corpo) corpo.scrollTop = 0;
+  }
+
+  // delegado global: aba, botao de enviar e seta de voltar usam o mesmo caminho
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-ir]');
+    if (!btn) return;
+    irPara(btn.dataset.ir);
+  });
+
+  // seletor de escolha unica reaproveitado por origem, tipo e materia
+  function escolhaUnica(id, aoTrocar) {
+    const raiz = document.getElementById(id);
+    if (!raiz) return;
+    raiz.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn || !raiz.contains(btn)) return;
+      for (const b of raiz.querySelectorAll('button')) b.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-pressed', 'true');
+      if (aoTrocar) aoTrocar(btn);
+    });
+  }
+
+  escolhaUnica('pick-materia');
+  escolhaUnica('seg-tipo');
+
+  const alvoOrigem = document.getElementById('alvo-origem');
+  const ORIGENS = {
+    foto: '<div class="arquivo"><span class="ico">JPG</span><span class="info">' +
+          '<span class="nome">quadro-normalizacao.jpg</span>' +
+          '<span class="sub">2,1 MB · comprimida de 4,8 MB</span></span></div>',
+    arquivo: '<div class="arquivo"><span class="ico">PDF</span><span class="info">' +
+          '<span class="nome">formas-normais-1fn-3fn.pdf</span>' +
+          '<span class="sub">6,4 MB · 18 páginas</span></span></div>',
+    link: '<div class="campo" contenteditable="true" role="textbox" aria-label="Endereço do link" ' +
+          'style="min-height:auto" data-vazio="https://…">https://use-the-index-luke.com/sql/join</div>'
+  };
+  escolhaUnica('origem', (btn) => {
+    alvoOrigem.innerHTML = ORIGENS[btn.dataset.origem];
+  });
+
+  // ---- alcance da anotacao --------------------------------------------
+  const seg = document.getElementById('seg-alcance');
+  const alerta = document.getElementById('alerta-alcance');
+  const alertaTxt = document.getElementById('alerta-txt');
+  const botaoPub = document.querySelector('.tela[data-tela="nota"] .botao');
+  seg.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-alcance]');
+    if (!btn) return;
+    for (const b of seg.querySelectorAll('button')) b.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-pressed', 'true');
+    const turma = btn.dataset.alcance === 'turma';
+    alerta.setAttribute('data-tom', turma ? 'turma' : 'pessoal');
+    alertaTxt.textContent = turma
+      ? 'Todo mundo da turma vai ver isto, com o seu nome. Só você pode editar ou apagar depois.'
+      : 'Só você vê. Não aparece para mais ninguém e não altera o que a turma enxerga.';
+    botaoPub.textContent = turma ? 'Publicar para a turma' : 'Salvar só para mim';
+  });
+
+  // ---- calendario ------------------------------------------------------
+  // agosto de 2026 comeca num sabado
+  const AULAS = {
+    seg: [['19:00', 'REDES', 'm-redes', 'Redes de Computadores', 'LAB-3']],
+    ter: [['19:00', 'CALC2', 'm-calc', 'Cálculo II', 'A-102'],
+          ['20:50', 'EST', 'm-est', 'Estatística', 'A-102']],
+    qua: [['19:00', 'ALG', 'm-alg', 'Algoritmos', 'LAB-1']],
+    qui: [['19:00', 'MAT', 'm-mat', 'Matemática Discreta', 'A-108']],
+    sex: [['19:00', 'BD', 'm-bd', 'Banco de Dados', 'B-204'],
+          ['20:50', 'ESOFT', 'm-esoft', 'Eng. de Software', 'B-204']]
+  };
+  const DIA_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+
+  const EVENTOS = {
+    21: { tipo: 'entrega', cor: 'm-bd', sigla: 'BD', titulo: 'Lista 4 — normalização', hora: '23:59' },
+    25: { tipo: 'prova', cor: 'm-calc', sigla: 'CALC2', titulo: 'Prova 2 — integrais', hora: '19:00' },
+    27: { tipo: 'entrega', cor: 'm-esoft', sigla: 'ESOFT', titulo: 'Diagrama de casos de uso', hora: 'entrega' }
+  };
+
+  const NOTAS = {
+    25: [
+      { alcance: 'turma', texto: 'Prof. avisou que a prova cobra até a aula de junção. Não entra plano de query.', quem: 'Otávio · líder da turma · ontem' },
+      { alcance: 'pessoal', texto: 'revisar 3FN e refazer a lista 3', quem: 'só você' }
+    ],
+    21: [
+      { alcance: 'pessoal', texto: 'pedir o slide da Ana', quem: 'só você' }
+    ]
+  };
+
+  const cal = document.getElementById('cal');
+  const painel = document.getElementById('dia-aberto');
+  const legenda = document.getElementById('cal-legenda');
+
+  let html = '';
+  for (const d of ['d', 's', 't', 'q', 'q', 's', 's']) html += '<div class="cal-hd">' + d + '</div>';
+  for (let i = 0; i < 6; i++) html += '<button type="button" disabled></button>';
+  for (let dia = 1; dia <= 31; dia++) {
+    const ev = EVENTOS[dia];
+    let cls = '';
+    if (ev) cls = ev.tipo === 'prova' ? 'tem-prova' : 'tem-entrega';
+    const marcas = ev ? '<span class="marcas"><u style="--c: var(--' + ev.cor + ')"></u></span>' : '';
+    html += '<button type="button" class="' + cls + '" data-dia="' + dia + '" aria-pressed="false">' + dia + marcas + '</button>';
+  }
+  cal.innerHTML = html;
+
+  function svgSala() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<rect x="3" y="3.2" width="18" height="10" rx="1.2"/><path d="M6.4 7h7M6.4 9.8h4.6"/>' +
+      '<path d="M4 17.4h6v3.2H4zM14 17.4h6v3.2h-6z"/><path d="M7 17.4v-1.7M17 17.4v-1.7"/></svg>';
+  }
+
+  function abrirDia(dia) {
+    // 1 de agosto de 2026 e sabado -> indice 6
+    const idx = (6 + dia - 1) % 7;
+    const chave = DIA_SEMANA[idx];
+    const aulas = AULAS[chave] || [];
+    const ev = EVENTOS[dia];
+    const notas = NOTAS[dia] || [];
+
+    let h = '<p class="rotulo">' + chave + ', ' + dia + ' de agosto</p>';
+
+    // anotar e acao sobre um dia, entao mora no dia — nao vira aba
+    const btnAnotar = '<button class="add-linha" type="button" data-ir="nota">+ &nbsp;Anotar neste dia</button>';
+
+    if (!aulas.length && !ev && !notas.length) {
+      h += '<div class="vazio"><b>Sem aula neste dia.</b>' +
+           '<span>Nada marcado, e nada escondido — é fim de semana.</span></div>' + btnAnotar;
+      painel.innerHTML = h;
+      return;
+    }
+
+    if (aulas.length) {
+      for (const a of aulas) {
+        h += '<div class="aula-min">' +
+             '<span class="h">' + a[0] + '</span>' +
+             '<span class="c"><span class="l1"><span class="chip" style="--c: var(--' + a[2] + ')">' + a[1] + '</span>' +
+             '<span class="s">' + a[4] + '</span></span>' +
+             '<span class="s">' + a[3] + '</span></span></div>';
+      }
+    } else {
+      h += '<p class="aula-meta" style="padding:4px 2px">Sem aula neste dia.</p>';
+    }
+
+    if (ev) {
+      const prova = ev.tipo === 'prova';
+      h += '<div class="ev ev--' + ev.tipo + '" style="margin-top:6px">' +
+           '<div class="ev-data"><span class="ev-dia">' + dia + '</span><span class="ev-mes">ago</span></div>' +
+           '<div class="ev-corpo"><div class="ev-topo">' +
+           '<span class="chip" style="--c: var(--' + ev.cor + ')">' + ev.sigla + '</span>' +
+           '<span class="ev-tipo"><span class="glyph glyph--' + ev.tipo + '"></span>' + ev.hora + '</span>' +
+           '</div><p class="ev-titulo">' + ev.titulo + '</p></div></div>';
+    }
+
+    if (notas.length) {
+      h += '<p class="rotulo">anotações</p>';
+      for (const n of notas) {
+        const turma = n.alcance === 'turma';
+        h += '<div class="nota nota--' + n.alcance + '">' +
+             '<span class="nota-cab">' + (turma ? 'da turma · todos veem' : 'pessoal · só você') + '</span>' +
+             '<p class="nota-txt">' + n.texto + '</p>' +
+             '<span class="nota-quem">' + n.quem + '</span></div>';
+      }
+    }
+
+    h += btnAnotar;
+    painel.innerHTML = h;
+  }
+
+  cal.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-dia]');
+    if (!btn) return;
+    for (const b of cal.querySelectorAll('button')) b.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-pressed', 'true');
+    legenda.textContent = 'dia ' + btn.dataset.dia;
+    abrirDia(Number(btn.dataset.dia));
+  });
+
+  cal.querySelector('button[data-dia="25"]').click();
+</script>

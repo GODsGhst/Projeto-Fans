@@ -100,14 +100,29 @@ app/
 
 **Tarefas 1 a 9 não dependem de nada externo.** Nenhuma conta no Google, Firebase, SMTP ou Postgres gerenciado é necessária — tudo tem fake ou fallback local. Pode executar em sequência, sem parar para perguntar.
 
-**Tarefas 10, 11 e 12 estão BLOQUEADAS** até `app/src/app/shared/` existir (entrega do Claude). Não comece: você não tem os componentes visuais e improvisá-los viola os não-negociáveis 7 e 8 do `AGENTS.md`.
+**Tarefas 10, 11 e 12 foram DESBLOQUEADAS em 2026-08-22:** `app/src/app/shared/` existe com
+`MateriaChip`, `EventoCard`, `AulaCard`, `MiniCard`, `MaterialLinha` e `Nota`. A pasta continua
+sendo zona proibida — ligar dado nos componentes, nunca alterá-los.
+
+**Tarefas 13 a 16 são V2**, escritas em 2026-08-26 para cobrir o que o design abriu depois do
+plano original: grade de aulas, anotações e envio de arquivo. Também não dependem de conta
+nenhuma — `FakeArmazenamento` cobre o R2 em dev e teste.
 
 ```
 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8       backend completo, sem bloqueio
               9                      app core (paralelo a 5-8 se quiser)
-                    [design: shared/]
-              10 → 11 → 12           wiring das telas
+              10 → 11 → 12           wiring das telas (desbloqueado)
+13 → 14                              grade e anotacoes (backend V2)
+15                                   envio de arquivo (independente de 14)
+                    9 + 13-15 → 16   wiring da grade, anotacoes e envio
 ```
+
+**Estado real em 2026-08-30** — ver `docs/LOG.md`: **1 e 2 fechadas** (7/7 testes verdes),
+3 a 16 não começadas. O bloqueio de Docker que segurou a Task 2 por 27 dias foi resolvido trocando
+Testcontainers por Postgres embutido: **nenhuma tarefa deste plano precisa mais de Docker**, e o
+critério de aceite de todas elas é `cd backend && ./mvnw test`. Ver `docs/STACK.md`.
+
+**A próxima tarefa não concluída é a Task 3.**
 
 ---
 
@@ -881,17 +896,28 @@ git commit -m "feat: core do app com interceptors, storage local e repositories 
 
 ---
 
-# TAREFAS BLOQUEADAS
+# TAREFAS DESBLOQUEADAS EM 2026-08-22
 
-> **NÃO EXECUTE 10, 11 ou 12** até `app/src/app/shared/` existir com os componentes visuais.
+> `app/src/app/shared/` foi entregue. Estes são os componentes que existem, com os seletores reais:
 >
-> Eles são entregues pelo Claude, não por você. Improvisar UI aqui viola os não-negociáveis 6, 7 e 8 do `AGENTS.md`, e o review vai rejeitar.
+> | componente | seletor | inputs |
+> |---|---|---|
+> | `MateriaChipComponent` | `app-materia-chip` | `cor`, `sigla` (ambos obrigatórios) |
+> | `EventoCardComponent` | `app-evento-card` | evento de PROVA ou ENTREGA |
+> | `AulaCardComponent` | `app-aula-card` | `materia`, `nome`, `hora`, `sala`, `detalhe?`, `atividade?` |
+> | `MiniCardComponent` | `app-mini-card` | `materia`, `titulo`, `tipo`, `aviso?` |
+> | `MaterialLinhaComponent` | `app-material-linha` | `tipo`, `titulo`, `autoria` |
+> | `NotaComponent` | `app-nota` | `alcance`, `texto`, `autoria?` |
 >
-> Ao chegar aqui com `shared/` ainda vazio: registre no log que as tarefas 1-9 fecharam e que 10-12 aguardam o design. Pare.
+> **A pasta continua proibida.** Ligar dado, nunca alterar. Se faltar algo num componente,
+> registre no log em vez de improvisar — improvisar UI viola os não-negociáveis 6, 7 e 8.
 
 ## Task 10: Wiring da Home e do Calendário
 
-Consome `HomeRepository` (Task 9) e os componentes `EventoItemComponent` e `MateriaChipComponent` de `shared/`.
+Consome `HomeRepository` (Task 9) e os componentes `EventoCardComponent` e `MateriaChipComponent` de `shared/`.
+
+> **Correção de 2026-08-26:** o plano original citava `EventoItemComponent`, que nunca existiu.
+> O componente entregue chama-se `EventoCardComponent`, seletor `app-evento-card`.
 
 Sua responsabilidade é só ligar: `@for` sobre `home.itens()`, estados de carregando/erro/offline, e o estado vazio **que já vem pronto** de `shared/` — não escreva um.
 
@@ -936,6 +962,340 @@ it('respeita America/Sao_Paulo e nao desloca por UTC')   // o bug classico
 
 ---
 
+# TAREFAS V2 — o que o design abriu e o plano ainda não cobria
+
+> Escritas em 2026-08-26. As telas v2 (`docs/design/telas-v2.html`, aprovadas) e a
+> reversão da A4 introduziram três coisas que **não existem no schema V1 nem nas
+> tarefas 1-12**: grade de aulas, anotações e envio de arquivo. Sem estas tarefas,
+> metade dos componentes de `shared/` não tem de onde puxar dado.
+>
+> Dependência: **13 → 14** (backend), **15** independente de 14, **16** exige a 9.
+
+---
+
+## Task 13: Migration V2 — grade de aulas e anotações
+
+**Files:**
+- Create: `backend/src/main/resources/db/migration/V2__aula_e_anotacao.sql`
+- Create: `domain/Aula.java`, `domain/AulaExcecao.java`, `domain/Anotacao.java`, `domain/AlcanceAnotacao.java`
+- Create: `repo/AulaRepository.java`, `repo/AulaExcecaoRepository.java`, `repo/AnotacaoRepository.java`
+- Modify: `backend/src/test/java/com/projetofans/domain/SchemaTest.java`
+
+**Não edite `V1__schema_inicial.sql`.** Ela já foi aplicada; a regra do `AGENTS.md` vale.
+
+**Schema:**
+
+```sql
+CREATE TABLE aula (
+  id             UUID        PRIMARY KEY,
+  turma_id       UUID        NOT NULL REFERENCES turma(id),
+  materia_id     UUID        NOT NULL REFERENCES materia(id),
+  dia_semana     SMALLINT    NOT NULL,   -- 1=segunda .. 7=domingo (ISO-8601, igual a DayOfWeek)
+  hora_inicio    TIME        NOT NULL,
+  hora_fim       TIME        NOT NULL,
+  sala           TEXT        NOT NULL,
+  autor_id       UUID        NOT NULL REFERENCES usuario(id),
+  criado_em      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  atualizado_em  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  version        INTEGER     NOT NULL DEFAULT 0,
+  visivel_turma  BOOLEAN     NOT NULL DEFAULT true,
+  excluido_em    TIMESTAMPTZ NULL,
+  CONSTRAINT aula_dia_valido       CHECK (dia_semana BETWEEN 1 AND 7),
+  CONSTRAINT aula_horario_coerente CHECK (hora_fim > hora_inicio)
+);
+CREATE INDEX aula_grade ON aula (turma_id, dia_semana, hora_inicio);
+
+-- Feriado, cancelamento e troca de sala. Sem esta tabela a Home mente no primeiro
+-- feriado, e mentir sobre onde a pessoa precisa estar agora e o pior erro desta tela.
+CREATE TABLE aula_excecao (
+  id         UUID        PRIMARY KEY,
+  aula_id    UUID        NOT NULL REFERENCES aula(id),
+  data       DATE        NOT NULL,
+  cancelada  BOOLEAN     NOT NULL DEFAULT false,
+  sala_nova  TEXT        NULL,
+  motivo     TEXT        NULL,
+  autor_id   UUID        NOT NULL REFERENCES usuario(id),
+  criado_em  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT aula_excecao_faz_algo CHECK (cancelada OR sala_nova IS NOT NULL),
+  CONSTRAINT aula_excecao_unica    UNIQUE (aula_id, data)
+);
+
+CREATE TABLE anotacao (
+  id             UUID        PRIMARY KEY,
+  turma_id       UUID        NOT NULL REFERENCES turma(id),
+  autor_id       UUID        NOT NULL REFERENCES usuario(id),
+  alcance        TEXT        NOT NULL,
+  texto          TEXT        NOT NULL,
+  data           DATE        NULL,   -- opcional: anotacao presa a um dia, ou solta
+  criado_em      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  atualizado_em  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  version        INTEGER     NOT NULL DEFAULT 0,
+  excluido_em    TIMESTAMPTZ NULL,
+  CONSTRAINT anotacao_alcance_valido CHECK (alcance IN ('TURMA','PESSOAL'))
+);
+CREATE INDEX anotacao_turma   ON anotacao (turma_id, data DESC) WHERE alcance = 'TURMA';
+CREATE INDEX anotacao_pessoal ON anotacao (autor_id, data DESC) WHERE alcance = 'PESSOAL';
+```
+
+**Uma tabela `anotacao`, não duas.** O log de 2026-08-21 propôs `anotacao` + `anotacao_pessoal`
+separadas, citando o não-negociável 3. É leitura errada do não-negociável: ele proíbe **estado
+pessoal dentro de fato compartilhado** — `feito` como coluna de `evento`. Anotação pessoal não é
+estado sobre fato alheio; é registro próprio, com autor próprio. Além disso `shared/tipos.ts` já
+congelou `AlcanceNota = 'TURMA' | 'PESSOAL'` como **um** tipo, e o componente `Nota` recebe
+`alcance` como input — duas tabelas contradiriam o componente entregue. Custo se eu estiver
+errado: uma migration separando a tabela enquanto ela está vazia. Barato.
+
+**`anotacao` não tem `visivel_turma`.** `alcance` já responde quem vê. Duas colunas para a mesma
+pergunta divergem no primeiro bug.
+
+- [ ] **Step 1: Escrever os testes em `SchemaTest` (falham primeiro)**
+
+```java
+@Test void aulaNaoAceitaDiaSemanaForaDe1a7()
+@Test void aulaNaoAceitaHoraFimAntesDoInicio()
+@Test void aulaExcecaoNaoAceitaDuasLinhasParaMesmaAulaEData()
+@Test void anotacaoNaoAceitaAlcanceInvalido()
+@Test void anotacaoNaoTemColunaVisivelTurma()   // information_schema, igual ao eventoNaoTemColunaFeito
+```
+
+- [ ] **Step 2: Rodar, implementar entidades e repositories, verificar**
+
+Run: `cd backend && ./mvnw test -Dtest=SchemaTest`
+Expected: PASS, **11 testes** (os 6 que já existiam + 5).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "feat(backend): schema V2 com grade de aulas, excecoes e anotacoes"
+```
+
+**Critério de aceite:** 11 testes verdes. `V1` intocada. `anotacao` sem coluna de visibilidade.
+
+---
+
+## Task 14: API da grade e das anotações
+
+**Files:**
+- Create: `service/GradeService.java`, `service/AnotacaoService.java`
+- Create: `web/controller/GradeController.java`, `web/controller/AnotacaoController.java`
+- Create: `web/dto/AulaDoDiaResponse.java`, `web/dto/AnotacaoResponse.java`
+- Create: `backend/src/test/java/com/projetofans/grade/GradeTest.java`
+- Create: `backend/src/test/java/com/projetofans/anotacao/AnotacaoTest.java`
+
+**Interfaces:**
+
+```java
+public interface GradeService {
+    /** Aulas de um dia concreto, com excecao ja aplicada. Aula cancelada NAO aparece. */
+    List<AulaDoDiaResponse> doDia(UsuarioAtual usuario, LocalDate dia);
+
+    /** As proximas `limite` aulas a partir de agora, atravessando dias. A Home usa limite=3. */
+    List<AulaDoDiaResponse> proximas(UsuarioAtual usuario, int limite);
+}
+
+public record AulaDoDiaResponse(
+    UUID id, MateriaResponse materia, String nome,
+    LocalDate data, LocalTime horaInicio, LocalTime horaFim,
+    String sala,        // sala_nova da excecao quando houver
+    String detalhe,     // motivo da excecao, ou null
+    String atividade    // titulo do evento daquela materia naquele dia, ou null
+) {}
+
+public interface AnotacaoService {
+    /** As de alcance TURMA mais as PESSOAIS do proprio usuario. Nunca as pessoais de outro. */
+    List<AnotacaoResponse> doDia(UsuarioAtual usuario, LocalDate dia);
+    AnotacaoResponse criar(UsuarioAtual usuario, AlcanceAnotacao alcance, String texto, LocalDate data);
+}
+```
+
+**Os campos batem um a um com os inputs de `AulaCardComponent`** (`materia`, `nome`, `hora`,
+`sala`, `detalhe`, `atividade`). De propósito: o wiring da Task 16 não deve traduzir nada.
+
+**`agora` não vai no DTO.** O card tem estado "aula em andamento", mas flag calculada no servidor
+chega velha — a resposta é cacheada, o app fica aberto, e às 10h05 ele ainda destaca a aula das 9h.
+O servidor manda `horaInicio`/`horaFim`; a página compara com o relógio. Comparar relógio é
+apresentação, não regra de negócio. O teto de 6 e a janela de 14 dias continuam no servidor —
+esses **são** regra.
+
+**Endpoints:**
+
+```
+GET  /api/v1/grade?dia=2026-08-26        -> List<AulaDoDiaResponse>
+GET  /api/v1/grade/proximas?limite=3     -> List<AulaDoDiaResponse>
+POST /api/v1/aulas                       -> cria linha da grade
+POST /api/v1/aulas/{id}/excecoes         -> cancela ou troca sala num dia
+GET  /api/v1/anotacoes?dia=2026-08-26    -> List<AnotacaoResponse>
+POST /api/v1/anotacoes                   -> { alcance, texto, data? }
+```
+
+Escopo de turma sempre por `TurmaScopeResolver`. Registro de outra turma → **404**.
+
+- [ ] **Step 1: Escrever os testes (falham primeiro)**
+
+```java
+// GradeTest
+@Test void diaSemAulaRetornaListaVazia()                  // nao-negociavel 6
+@Test void aulaCanceladaNaoApareceNoDia()
+@Test void trocaDeSalaSubstituiASalaDaGrade()
+@Test void excecaoDeOutroDiaNaoAfetaODiaConsultado()      // o off-by-one classico
+@Test void aulaDeOutraTurmaRetorna404NaoLista()
+@Test void proximasAtravessaODiaEMantemOrdemDeHorario()
+
+// AnotacaoTest
+@Test void anotacaoPessoalDeAdoNaoApareceParaB()          // o teste central
+@Test void anotacaoDaTurmaApareceParaTodosDaTurma()
+@Test void membroSemPapelDeLiderCriaAnotacaoDeTurma()     // nao-negociavel 9
+@Test void soOAutorEditaAnotacao()                        // nao-negociavel 10
+@Test void anotacaoDeOutraTurmaRetorna404()
+```
+
+**`membroSemPapelDeLiderCriaAnotacaoDeTurma` corrige uma contradição.** O log do design descreveu
+a nota da turma como "lembrete do líder" e escreveu que isso "amplia o papel do líder: hoje ele só
+modera, aqui passa a emitir". Colide de frente com o não-negociável 9 e com a A5. **O líder não
+ganha poder nenhum aqui**: nota da turma é de qualquer membro, como qualquer outro registro.
+"Do líder" no mockup descreve quem costuma escrever, não permissão.
+
+- [ ] **Step 2: Rodar, implementar, verificar**
+
+Run: `cd backend && ./mvnw test -Dtest='GradeTest,AnotacaoTest'`
+Expected: PASS, 11 testes.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "feat(backend): grade de aulas com excecoes e anotacoes de turma e pessoais"
+```
+
+**Critério de aceite:** 11 testes verdes. Nenhum `turma_id` filtrado à mão em controller.
+
+---
+
+## Task 15: Envio de arquivo — armazenamento pré-assinado
+
+Fecha a A4, revertida em 2026-08-22. `material.arquivo_ref` deixa de ser sempre NULL. O comentário
+na `V1` que diz o contrário fica lá — migration aplicada não se edita — e passa a estar
+desatualizado de propósito; esta tarefa é a nota de rodapé dele.
+
+**Files:**
+- Create: `service/Armazenamento.java` (interface), `service/R2Armazenamento.java`, `service/FakeArmazenamento.java`
+- Create: `web/controller/UploadController.java`
+- Create: `web/dto/PreAssinarRequest.java`, `web/dto/PreAssinarResponse.java`, `web/dto/ConfirmarUploadRequest.java`
+- Create: `backend/src/test/java/com/projetofans/upload/UploadTest.java`
+- Modify: `application.yml` (bloco `armazenamento`), Seção 11 do spec (tabela de env)
+
+**Interface:**
+
+```java
+public interface Armazenamento {
+    /** URL de PUT de validade curta, sempre sob o prefixo tmp/. */
+    UrlPreAssinada paraEnvio(UUID turmaId, String nomeArquivo, String mime, long tamanhoBytes);
+
+    /** Valida e move de tmp/ para mat/. Retorna a chave definitiva (vai em arquivo_ref). */
+    String confirmar(UsuarioAtual usuario, String chaveTmp);
+
+    /** URL de GET de validade curta. O app nunca recebe credencial. */
+    UrlPreAssinada paraLeitura(String chaveDefinitiva);
+}
+```
+
+**Duas fases, sem `@Scheduled`.** Pré-assina → app faz PUT em `tmp/` → backend confirma e move
+para `mat/`. O que ficar em `tmp/` morre por *lifecycle rule* do próprio bucket em 24h. Mesmo
+motivo da decisão 2.3: host de tier gratuito hiberna, e job agendado em host dormindo não roda —
+limpeza que depende do servidor acordado falha em silêncio.
+
+**Limites, validados no servidor:** 15 MB; whitelist de MIME **e** de extensão, checados juntos.
+Nunca confie no `Content-Type` que o cliente declara.
+
+**Nada disto exige conta.** `FakeArmazenamento` (`@Profile({"dev","test"})`) grava em diretório
+temporário e devolve URL `file:`. R2 só entra quando for rodar em aparelho real.
+
+| Env | Para que | Sem ela |
+|---|---|---|
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_BUCKET` | credenciais S3-compatíveis | `FakeArmazenamento` |
+| `ARMAZENAMENTO_MAX_BYTES` | teto por arquivo | default 15728640 |
+
+- [ ] **Step 1: Escrever `UploadTest` (falha primeiro)**
+
+```java
+@Test void recusaArquivoAcimaDoTeto()
+@Test void recusaMimeForaDaWhitelist()
+@Test void recusaExtensaoQueNaoBateComOMimeDeclarado()   // o ataque: .exe dizendo image/png
+@Test void preAssinarSempreEmiteChaveSobTmp()
+@Test void confirmarMoveDeTmpParaMat()
+@Test void confirmarChaveDeOutraTurmaRetorna404()        // 404, nao 403
+@Test void materialComArquivoRefDispensaUrl()            // a CHECK da V1 aceita os dois caminhos
+@Test void confirmarDuasVezesEIdempotente()
+```
+
+- [ ] **Step 2: Rodar, implementar, verificar**
+
+Run: `cd backend && ./mvnw test -Dtest=UploadTest`
+Expected: PASS, 8 testes.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "feat(backend): envio de arquivo em duas fases com URL pre-assinada"
+```
+
+**Critério de aceite:** 8 testes verdes com `FakeArmazenamento`, sem nenhuma credencial de nuvem.
+
+**Fora desta tarefa, de propósito:** cota por turma. Continua aberto na A4 — decisão de produto.
+
+---
+
+## Task 16: Wiring da grade, das anotações e do envio
+
+**Depende da Task 9** (core do app: http, auth, storage, repositories).
+
+**Files:**
+- Create: `core/repositories/grade.repository.ts`, `anotacao.repository.ts`, `upload.repository.ts`
+- Create: `core/grade/aula-em-andamento.ts`, `core/upload/comprimir-imagem.ts`
+- Create: `features/anotacao/anotacao.page.ts`
+- Modify: `features/home/home.page.ts` (próximas 3 aulas), `features/calendario/calendario.page.ts` (dia expansível)
+
+Os componentes já existem e **não se altera nenhum**: `AulaCard`, `Nota`, `MaterialLinha`,
+`MateriaChip`. Ligar dado, só.
+
+**A única parte com risco real é a de sempre — relógio. Função pura:**
+
+```ts
+/** True quando `agora` cai dentro de [inicio, fim). Fuso do aparelho, sem UTC no meio. */
+export function aulaEmAndamento(agora: Date, inicio: string, fim: string): boolean;
+```
+
+- [ ] **Step 1: Escrever os testes (falham primeiro)**
+
+```ts
+it('aula em andamento e a unica com destaque')
+it('exatamente na hora de inicio ja conta como em andamento')
+it('exatamente na hora de fim ja nao conta')          // fronteira fechada-aberta
+it('nenhuma aula em andamento fora do horario de aula')
+it('dia sem aula mostra estado vazio, nao skeleton')  // nao-negociavel 6
+it('nota da turma e nota pessoal usam o mesmo componente com alcances diferentes')
+it('imagem acima de 2MB e comprimida antes do PUT')
+it('falha no PUT nao chama confirmar')                // senao nasce material apontando para nada
+```
+
+- [ ] **Step 2: Rodar, implementar, verificar**
+
+Run: `cd app && npx ng test --watch=false --browsers=ChromeHeadless && npx ng lint && npx ng build`
+Expected: todos verdes, lint limpo, build completa.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "feat(app): wiring da grade, anotacoes e envio de arquivo"
+```
+
+**Critério de aceite:** testes verdes, lint limpo, build passa, `shared/` sem uma linha alterada.
+
+---
+
 ## Self-review deste plano
 
 **Cobertura do spec** — cada seção do spec tem tarefa: Seção 4 arquitetura → 1; Seção 5 schema → 2; Seção 6.1 Home → 5; Seção 6.2 endpoints → 3,4,5,6,7,8; Seção 7 asserções R1-R20 → mapeadas nos testes nomeados; Seção 8 storage local → 9; Seção 9 design → fora do escopo do Codex, por decisão; Seção 10 erros → 3 (backend) e 9 (frontend); Seção 11 config → 1 e 3; Seção 12 testes → todas; Seção 13 fora de escopo → Global Constraints.
@@ -945,3 +1305,34 @@ it('respeita America/Sao_Paulo e nao desloca por UTC')   // o bug classico
 **Consistência de tipos:** `ItemHomeResponse` (Java, Task 5) e `ItemHome` (TS, Task 9) têm os mesmos campos com os mesmos nomes. `AutoriaResponse`/`Autoria` idem. `PayloadSync.tipo` é sempre `"sync"`, e é o que o app espera na Task 12.
 
 **Contagem de testes das tarefas desbloqueadas:** 1 + 4 + 13 + 23 + 9 + 6 + 11 + 7 + 6 = **80 testes**.
+
+---
+
+## Self-review das tarefas V2 (2026-08-26)
+
+**O que estas quatro tarefas fecham.** Todo componente entregue em `shared/` passa a ter origem
+de dado: `AulaCard` ← Task 14, `Nota` ← Task 14, `MaterialLinha` ← Task 15 (arquivo) e Task 4
+(link), `MiniCard`/`EventoCard`/`MateriaChip` ← tarefas 4-6 que já existiam. Antes destas
+tarefas, três dos seis componentes não tinham de onde puxar nada.
+
+**Consistência de tipos.** `AulaDoDiaResponse` (Java, Task 14) e os inputs de `AulaCardComponent`
+(TS, já entregue) têm os mesmos nomes de campo. `AlcanceAnotacao` (Java) e `AlcanceNota` (TS)
+têm os mesmos dois valores. `alcance` é sempre `"TURMA"` ou `"PESSOAL"`, nas duas pontas.
+
+**Contradições que estas tarefas resolvem, e como:**
+
+| contradição | resolução |
+|---|---|
+| Log do design propôs `anotacao` + `anotacao_pessoal`; `tipos.ts` tem um tipo só com `alcance` | uma tabela, `alcance` como coluna — Task 13 explica por que o não-negociável 3 não se aplica |
+| Log do design disse que a nota da turma "amplia o papel do líder"; não-negociável 9 e A5 dizem que papel não dá poder | qualquer membro escreve nota de turma; teste nomeado na Task 14 |
+| Task 10 citava `EventoItemComponent`, que não existe | corrigido para `EventoCardComponent` |
+| `V1` comenta que `arquivo_ref` é sempre NULL; A4 foi revertida | Task 15 liga o campo; o comentário fica desatualizado porque migration aplicada não se edita |
+
+**Contagem de testes das tarefas V2:** 5 + 11 + 8 + 8 = **32 testes**, sobre os 80 do plano
+original. Total do plano fechado: 112.
+
+**Risco que continua aberto e não é código.** A grade de aulas empurra o produto de *"o que foi
+dado no período"* para *"grade horária"*. Se a faculdade já publica a grade e o diário eletrônico
+já responde o que foi dado, as Tasks 13, 14 e 16 são trabalho duplicado com risco de divergir do
+oficial. Isso é a C4 de `PERGUNTAS-ABERTAS.md`, e vale a pergunta à coordenação **antes** de
+começar a Task 13 — é a tarefa que mais custa se a resposta for "já existe".
