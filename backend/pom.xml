@@ -21,7 +21,10 @@
     <!-- JAVA_HOME desta maquina aponta para o JDK 17 (ha zulu-25 e jdk-24 instalados,
          mas mudar JAVA_HOME global afetaria os outros projetos Java daqui).
          17 e a baseline do Spring Boot 3.x e nada neste projeto usa recurso
-         exclusivo do 21 — sem virtual threads, sem pattern matching de switch. -->
+         exclusivo do 21 — sem virtual threads, sem pattern matching de switch.
+         Ja foi subido para 25 uma vez e quebrou o build: o Maven roda no
+         JAVA_HOME, nao no java do PATH. Para usar 25, aponte JAVA_HOME para
+         o zulu-25 ANTES de mudar este numero. -->
     <java.version>17</java.version>
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -29,6 +32,8 @@
     <jjwt.version>0.12.6</jjwt.version>
     <firebase-admin.version>9.9.0</firebase-admin.version>
     <google-api-client.version>2.8.0</google-api-client.version>
+    <embedded-postgres.version>2.0.7</embedded-postgres.version>
+    <embedded-postgres-binaries.version>16.2.0</embedded-postgres-binaries.version>
   </properties>
 
   <dependencies>
@@ -110,22 +115,34 @@
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Postgres de verdade nos testes, SEM daemon do Docker.
+         Trocado de Testcontainers em 2026-08-30: o Docker Desktop desta maquina
+         nao sobe desde 2026-08-03 e a suite nunca tinha rodado uma vez sequer.
+         O binario e Postgres 16, o mesmo que o container usava, entao CHECK,
+         indice parcial, TIMESTAMPTZ e consulta a information_schema continuam
+         valendo — nada de H2 em modo de compatibilidade.
+         Para voltar ao Testcontainers quando o Docker viver: troque esta
+         dependencia pelas tres antigas e o TesteComPostgres pelo do git. -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-testcontainers</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
+      <groupId>io.zonky.test</groupId>
+      <artifactId>embedded-postgres</artifactId>
+      <version>${embedded-postgres.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- fixa a familia do binario em 16.x, igual ao antigo postgres:16 -->
+      <dependency>
+        <groupId>io.zonky.test.postgres</groupId>
+        <artifactId>embedded-postgres-binaries-bom</artifactId>
+        <version>${embedded-postgres-binaries.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <plugins>
