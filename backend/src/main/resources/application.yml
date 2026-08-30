@@ -14,9 +14,18 @@ spring:
     enabled: true
   jackson:
     default-property-inclusion: non_null
+  mvc:
+    # Erro do proprio Spring MVC (payload invalido, media type errado, rota
+    # inexistente) tambem sai em RFC 7807. Sem isto o contrato de erro teria duas
+    # formas: ProblemDetail para o dominio e o corpo antigo do Boot para o resto.
+    problemdetails:
+      enabled: true
 
 app:
   timezone: America/Sao_Paulo
+  # Base do link que vai no e-mail de reset. Em dev/test o LogEmailSender so
+  # imprime; em prod o SMTP manda.
+  reset-senha-url-base: http://localhost:8100/senha/reset
   notificacao-hora-vespera: "19:00"
   janela-home-dias: 14
   teto-home-itens: 6
@@ -82,6 +91,7 @@ spring:
       mail.smtp.starttls.enable: true
 
 app:
+  reset-senha-url-base: ${RESET_SENHA_URL_BASE}
   # sem default: se faltar, a aplicacao NAO sobe. E o comportamento correto.
   jwt-secret: ${JWT_SECRET}
   jwt-expiracao-horas: 720

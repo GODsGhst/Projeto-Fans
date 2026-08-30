@@ -142,6 +142,24 @@ continua de pé: 2 GB por turma, aviso em 80%.
 
 ---
 
+### A11. Existe tela de entrada, ou o app assume que já está autenticado?
+
+**Default aplicado:** o interceptor de 401 limpa a sessão e navega para `/login`, como a Seção 10
+do spec manda. Essa rota **não existe** — o plano não lista tela de login em tarefa nenhuma, nem
+nas 10-12. Hoje a navegação falha e cai num `console.error`; a sessão é limpa de qualquer jeito,
+então nada fica em estado sujo.
+
+Duas saídas, e é decisão sua:
+
+1. **Entra uma tarefa de tela de entrada** (login, cadastro, esqueci a senha, entrar na turma por
+   código). O backend da Task 3 já prevê os quatro endpoints; falta só a tela.
+2. **O app assume que só roda autenticado** — por exemplo, o convite vem por link e a sessão nunca
+   expira em uso normal. Nesse caso o 401 vira uma mensagem, não um redirecionamento.
+
+Custa uma linha mudar: a rota está isolada em `ROTA_LOGIN`, em `app/src/app/core/auth.service.ts`.
+Vale responder antes da Task 10, porque é a primeira que roda o app com dados de verdade.
+
+
 ## B. Contas e credenciais — você precisa criar, mas nada está travado
 
 Todas têm fake ou fallback, então **o Codex trabalha e testa sem nenhuma delas**. Elas viram necessárias só no momento de rodar em dois aparelhos reais, que é o aceite da Seção 8.

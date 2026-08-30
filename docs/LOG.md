@@ -581,3 +581,199 @@ para refletir que Docker deixou de ser pré-requisito.
 1. **A8 / C4 continuam abertas** e agora são o único bloqueio de verdade. A grade de aulas pode ser
    trabalho duplicado se a faculdade já publica a grade; a Task 13 é a mais cara de refazer.
 2. **Nada foi commitado desde 2026-08-22.** São 8 arquivos modificados e 2 novos parados na árvore.
+
+---
+
+### [2026-08-30] Tarefa 9 — Core do app: http, auth, storage e repositories
+
+**Status:** concluída
+
+**O que foi feito:** a camada que as telas vão consumir, sem nenhuma tela. `core/` ganhou
+`ApiService` (único lugar que sabe o prefixo `/api/v1` e monta `If-Match`), `AuthService`
+(sessão em signal, persistida em Preferences), `StorageService` (snapshot local) e os dois
+interceptors. `data/` ganhou `models.ts` — espelho dos DTOs das Tasks 4-8 — e os seis
+repositories: home, evento, materia, material, quadro e sync. Os testes vieram primeiro e a
+primeira execução falhou na compilação, porque nada do que eles importam existia.
+
+**Arquivos principais:**
+`app/src/app/core/api.service.ts`, `auth.service.ts`, `storage.service.ts`,
+`auth.interceptor.ts`, `http-error.interceptor.ts`;
+`app/src/app/data/models.ts`, `home.repository.ts`, `evento.repository.ts`,
+`materia.repository.ts`, `material.repository.ts`, `quadro.repository.ts`,
+`sync.repository.ts`;
+testes em `app/src/app/data/home.repository.spec.ts`, `app/src/app/core/storage.service.spec.ts`,
+`app/src/app/core/http-error.interceptor.spec.ts`;
+`app/src/main.ts` e `app/src/environments/*` modificados.
+
+**Critério de aceite:**
+
+```
+cd app && npx ng test --watch=false --browsers=ChromeHeadless && npx ng lint && npx ng build
+
+Chrome Headless 152.0.0.0 (Windows 10): Executed 18 of 18 SUCCESS (0.206 secs / 0.174 secs)
+TOTAL: 18 SUCCESS
+
+Linting "app"...
+All files pass linting.
+
+Initial total | 1.26 MB | 250.69 kB
+Build at: 2026-08-30T18:21:22.342Z - Hash: 770794f6bbc8496d - Time: 36447ms
+```
+
+18 no total: os 11 do design system que já existiam mais os 7 desta tarefa (os 6 nomes que o
+plano lista, mais um sétimo explicado abaixo).
+
+**Decisões que eu tomei:**
+
+*Um sétimo teste, `offline com snapshot serve o cache com a hora do ultimo sync`.* O plano lista
+seis nomes, e o sexto (`erro de rede NAO devolve lista vazia como sucesso`) cobre o caso **sem**
+snapshot. O caso **com** snapshot é um ramo diferente do mesmo `catch` e é onde mora a regra da
+Seção 10 do spec — servir o cache com a hora, nunca como se fosse fresco. Ramo sem teste é ramo
+que ninguém percebe quebrar.
+
+*Verifiquei os dois testes-guarda com uma mutação, não só com a compilação vermelha.* Coloquei um
+`.sort(...).slice(0, 6)` dentro do `HomeRepository` e rodei: `TOTAL: 1 FAILED, 17 SUCCESS`. Desfiz.
+Teste que protege o não-negociável mais provável de ser violado precisa provar que morde.
+
+*`models.ts` reexporta `TipoEvento` de `shared/tipos.ts` em vez de redeclarar.* O plano escreve
+`export type TipoEvento = 'PROVA' | 'ENTREGA'` nos dois arquivos. Duas declarações idênticas hoje
+são duas declarações que divergem depois, e a divergência apareceria como um erro de template
+incompreensível no wiring. Reexportar mantém a superfície que o plano pede e torna a divergência
+impossível.
+
+*`ErroApi` mora dentro de `http-error.interceptor.ts`, sem arquivo novo de erros.* É o interceptor
+que produz o tipo; separá-lo criaria um arquivo com uma classe e nada mais.
+
+*Instalei `@capacitor/preferences@8.0.1`* — a Seção 8 do spec escolhe Preferences explicitamente, e
+o pacote não estava no `package.json`. `localStorage` teria evitado a dependência, mas no WebView do
+Android ele é despejável, e o snapshot é o que impede tela branca offline.
+
+*`StorageService` ganhou `mesclar()` e os três métodos de sessão, além dos três que o plano lista.*
+Home e Matérias gravam pedaços diferentes do mesmo snapshot; sem a mescla, a última a gravar apagaria
+a outra. A sessão (jwt + usuário) fica na mesma classe porque ela é o wrapper de Preferences, e não
+valia uma segunda.
+
+*Chave de snapshot única, não uma por turma.* A Seção 8 diz "um snapshot por turma", mas a API
+resolve **uma** turma por usuário e não existe seletor de turma na UI — a assinatura que o plano
+congela, `ler(): Promise<SnapshotLocal | null>`, nem aceita turma. A sessão é o que identifica a
+turma, então `sair()` apaga snapshot e sessão juntos. Se múltiplas turmas um dia entrarem no escopo,
+este é um dos arquivos a mexer.
+
+*`MaterialRepository` não tem listagem por matéria, e isso é deliberado.* Material chega pela tela da
+matéria (`MateriaRepository.detalhe`) ou pelos vínculos de um evento (`EventoRepository.detalhe`). Um
+`GET /materiais?materia=` daria a alguém, na Task 11, o caminho fácil de despejar a matéria inteira na
+tela de uma prova — exatamente o não-negociável 11.
+
+*O `HomeRepository` degrada, os outros relançam.* Só a Home tem snapshot para servir offline, então só
+ela absorve o erro — e mesmo assim marcando `erro()` e `offline()`. Os outros repositories marcam
+`erro()` e relançam: não existe `catch` neste diretório que devolva lista vazia como sucesso, e
+nenhum deles esvazia a lista que já estava na tela por causa de uma falha.
+
+*`environment.apiUrl` em prod é um placeholder* (`https://api.projetofans.app/api/v1`). O host real
+depende da B3, que continua aberta.
+
+**Travas / dúvidas:**
+
+1. **A rota `/login` ainda não existe.** O interceptor de 401 limpa a sessão e chama
+   `router.navigateByUrl('/login')`, como a Seção 10 manda; hoje essa navegação falha e cai num
+   `console.error` (que loga, não engole). A tela de login não é desta tarefa nem das 10-12 — o
+   plano não a lista em lugar nenhum. **Vale uma decisão do dono:** ou entra uma tarefa de tela de
+   entrada, ou o app assume que só roda autenticado e o 401 vira outra coisa. A constante está
+   isolada em `ROTA_LOGIN`, então mudar é uma linha.
+2. **Nenhum repository foi exercitado contra o backend de verdade** — as Tasks 3 a 8 não existem
+   ainda nesta árvore (`backend/` tem só domain e repo). Os nomes de campo de `models.ts` saíram do
+   spec e do plano, não de um DTO compilado. Quando as Tasks 4-8 fecharem, vale conferir campo a
+   campo antes de acreditar no wiring.
+3. **Não commitei nada**, conforme instrução desta execução — há outro agente trabalhando em
+   `backend/` na mesma árvore.
+
+
+---
+
+### [2026-08-30] Tarefa 3 — Autenticacao, entrada na turma e escopo
+
+**Status:** concluida
+
+**O que foi feito:** TDD nos dois blocos, na ordem do plano. `TurmaScopeTest` primeiro (falhou por
+`TurmaScopeResolver` inexistente), depois o resolver; `AuthFlowTest` depois (falhou por
+`GoogleTokenVerifier` inexistente), depois auth por senha, auth por Google, reset de senha e
+entrada na turma por convite. Nasceu aqui o `TurmaScopeResolver`, unico lugar do sistema que
+resolve turma — as tarefas 4 a 8 dependem dele para nao vazar dado entre turmas. A API deixou de
+estar aberta: so `/api/v1/auth/**` e publico.
+
+**Arquivos principais:**
+`security/` — `TurmaScopeResolver` (interface) + `TurmaScopeResolverJpa`, `JwtService`, `JwtFilter`,
+`UsuarioAtual`, `GoogleTokenVerifier` + `GoogleIdentidade` + `GoogleTokenVerifierImpl`.
+`erro/` — `ErroDeNegocio`, `AcessoNegadoException`, `TokenInvalidoException`.
+`service/` — `AuthService`, `TurmaService`, `EmailSender` + `LogEmailSender` + `SmtpEmailSender`.
+`web/` — `ProblemDetailHandler`, `controller/AuthController`, `controller/TurmaController`, 11 DTOs.
+`config/SegurancaConfig` (reescrito), `application.yml`.
+Testes: `security/TurmaScopeTest`, `auth/AuthFlowTest`, `support/FakeGoogleTokenVerifier`.
+
+**Criterio de aceite — ATINGIDO.** 13 testes novos verdes (4 de escopo + 9 de auth), suite inteira
+em 20/20. `cd backend && ./mvnw test`:
+
+```
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 21.79 s -- in com.projetofans.auth.AuthFlowTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.567 s -- in com.projetofans.domain.SchemaTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.196 s -- in com.projetofans.security.TurmaScopeTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.039 s -- in com.projetofans.SmokeTest
+[INFO] Results:
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+Nenhuma credencial real usada: Google entra pelo `FakeGoogleTokenVerifier` e o link de reset sai no
+console pelo `LogEmailSender`.
+
+**Decisoes que eu tomei:**
+
+*Pacote `erro/` novo, que o plano nao listava.* O plano cita `AcessoNegadoException(404)` e
+`TokenInvalidoException` sem dizer onde moram. Coloquei-as em `com.projetofans.erro`, junto de uma
+base `ErroDeNegocio` que carrega o `HttpStatus`. O ganho e o `ProblemDetailHandler` ser **um**
+metodo em vez de um `@ExceptionHandler` por excecao: quem sabe o que aconteceu escolhe o status na
+hora de lancar, e a tabela de status do plano nao precisa ser mantida em dois lugares. Poe-las em
+`web/` faria `security/` depender de `web/`; poe-las em `security/` nao serviria para erro de
+auth. Se o review preferir outro pacote, e um move de tres arquivos.
+
+*O unico `catch` do projeto que nao relanca esta em `AuthService.esqueciSenha`, e e deliberado.*
+Falha de SMTP subindo viraria 500 para quem tem conta e 204 para quem nao tem — ou seja, o endpoint
+voltaria a ser enumeravel, que e exatamente o que o setimo teste existe para impedir. Ele loga em
+ERROR (nao e `catch` vazio) e responde 204 assim mesmo. Registrado aqui porque contraria a leitura
+literal da regra "nenhum catch que nao relance", e o review precisa saber que foi escolha, nao
+descuido.
+
+*Token de reset guardado como SHA-256, nao BCrypt.* BCrypt e salgado e nao permitiria achar a linha
+pelo hash. O token e um UUID aleatorio, nao senha escolhida por gente, entao nao ha dicionario a
+temer. O valor em claro so existe no e-mail.
+
+*Login por Google em conta que ja existia por e-mail+senha liga o `google_sub` na conta existente*
+em vez de criar uma segunda. Criar a segunda esbarraria no UNIQUE de `email` e daria 500 numa
+situacao comum (aluno que se cadastrou por senha e depois toca em "entrar com Google"). A entidade
+`Usuario` ja tinha `vincularGoogle` prevendo isso.
+
+*`entrar` na turma e idempotente.* Tocar duas vezes no botao devolve o membro que ja existe em vez
+de estourar o UNIQUE `(usuario_id, turma_id)`.
+
+*`TurmaScopeResolver` responde 404 tambem para usuario sem vinculo nenhum*, nao so para registro de
+outra turma. Quem nao esta em turma alguma nao tem registro algum a ver; devolver `null` so
+empurraria NullPointerException para o proximo metodo.
+
+*Duas chaves novas em `application.yml`:* `spring.mvc.problemdetails.enabled: true` (para que erro
+do proprio Spring MVC tambem saia em RFC 7807, e o contrato de erro nao tenha duas formas) e
+`app.reset-senha-url-base`, com default de dev e `${RESET_SENHA_URL_BASE}` em prod. Essa variavel
+nao esta na tabela da Secao 11 do spec — nao bloqueia nada, mas vale acrescentar la quando alguem
+mexer no spec.
+
+*O aviso de multiplos vinculos virou requisito testado.* O plano dizia "e loga aviso"; o teste
+`comDoisVinculosPegaOMaisRecente` captura o log e exige o WARN. Sem isso o aviso poderia ser
+apagado sem nada ficar vermelho — e ele e o sensor de "alguem implementou multiplas turmas por
+engano".
+
+**Nao fiz o Step 8 (commit) de proposito.** Ha outro agente trabalhando na mesma arvore nesta
+execucao; `git add -A` levaria o trabalho dele pela metade. Quem commita e o orquestrador.
+
+**Travas / duvidas:** nenhuma. `GoogleTokenVerifierImpl` e `SmtpEmailSender` sao os dois arquivos
+que nunca rodam em teste (`@Profile("!test")` e `@Profile("prod")`); eles compilam e as libs estao
+no classpath, mas so serao exercitados de verdade no aceite da Secao 8, com conta no Google Cloud e
+SMTP de verdade. Isso e o esperado pelo desenho, nao uma pendencia desta tarefa.

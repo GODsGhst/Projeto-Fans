@@ -3,7 +3,9 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  /** Prefixo da API. O backend serve tudo sob /api/v1 (Secao 6 do spec). */
+  apiUrl: 'http://localhost:8080/api/v1',
 };
 
 /*
