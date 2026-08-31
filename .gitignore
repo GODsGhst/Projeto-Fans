@@ -32,3 +32,6 @@ Thumbs.db
 .swarm/
 ruvector.db
 *.db
+
+# Postgres embutido do perfil dev — dados locais, nunca versionados
+backend/.dev-db/

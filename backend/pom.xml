@@ -123,11 +123,16 @@
          valendo — nada de H2 em modo de compatibilidade.
          Para voltar ao Testcontainers quando o Docker viver: troque esta
          dependencia pelas tres antigas e o TesteComPostgres pelo do git. -->
+    <!-- Sem <scope>test</scope> de proposito: o perfil dev tambem usa o Postgres
+         embutido, porque o Docker desta maquina nao sobe e sem banco o
+         spring-boot:run nem inicia. <optional>true</optional> impede que ele vaze
+         como dependencia transitiva para quem consumir este artefato. Em prod o
+         DATABASE_URL manda e a classe BancoDeDesenvolvimento nem e instanciada. -->
     <dependency>
       <groupId>io.zonky.test</groupId>
       <artifactId>embedded-postgres</artifactId>
       <version>${embedded-postgres.version}</version>
-      <scope>test</scope>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 

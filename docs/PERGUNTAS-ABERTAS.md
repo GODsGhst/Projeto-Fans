@@ -254,6 +254,23 @@ resto do backend, ou deixar para a Task 11 e aceitar que ela vai ter trabalho de
 
 **Levantada em 2026-08-31**, na entrega da Task 7.
 
+
+#### Atualização de 2026-08-31, na entrega da Task 11
+
+A Task 11 chegou e o buraco é maior do que a A15 descreveu: **não existe `MateriaController`
+nenhum**. Não é só `GET /materias/{id}` que falta — `GET /materias`, que a lista da aba Matérias
+consome, também não existe. `grep '"/materia'` em `backend/src/main/java` não devolve uma linha.
+
+As duas telas foram entregues ligadas ao contrato da Seção 6.2 do spec, com teste contra
+`HttpTestingController`. Contra o servidor de verdade elas levam 404 e mostram a falha — não
+fingem que a turma não tem matéria. **Mas a aba Matérias está vazia na prática até alguém escrever
+o controller.**
+
+Não escrevi na Task 11: seria backend dentro de uma tarefa de wiring, contra a regra número zero.
+**A pergunta continua sendo só de ordem** — cabe numa tarefa de backend própria (um service, um
+controller, dois DTOs) ou fica pendurada na Task 14, que já congelou a assinatura de
+`MateriaResponse`.
+
 ### A16. Ocultar não aparece no `/sync`, e isso deixa notificação fantasma no aparelho
 
 `EventoRepository.alteradosDesde` — o delta que alimenta o reagendador local — filtra por
@@ -277,6 +294,29 @@ quem a pegar não descubra tarde.
   edição" de pé e reusa dado que já existe.
 
 **Levantada em 2026-08-31**, na entrega da Task 7.
+
+
+### A17. Não há como chegar na tela de um evento a partir da Home nem do Calendário
+
+A Task 11 entregou a tela de um evento (`/tabs/eventos/:id`), e ela só é alcançável pela tela da
+matéria. Na Home e no Calendário o cartão continua sendo um bloco que não responde a toque.
+
+**A razão é de fronteira, não de esquecimento:** `EventoCardComponent` não emite clique, `shared/`
+é zona proibida, e envolver o cartão num link na Home e no Calendário seria alterar o que a Task 10
+entregou — o que a regra número zero proíbe. Na tela da matéria não há esse conflito, e lá o cartão
+já é um link.
+
+**Default aplicado: só a tela da matéria navega.** Nenhuma tela mente por causa disso; o custo é
+que o caminho mais natural — "vi a prova na Home, quero ver os materiais dela" — não existe.
+
+Duas saídas, e é decisão sua:
+
+1. **Envolver o cartão num link também na Home e no Calendário.** Três linhas de template em cada
+   uma, sem tocar em `shared/`. É o que eu faria, mas é editar entrega de tarefa anterior.
+2. **`EventoCardComponent` ganha um `output` de clique.** Mais limpo e mais correto a longo prazo,
+   e é alteração em `shared/` — só o dono do design faz.
+
+**Levantada em 2026-08-31**, na entrega da Task 11.
 
 ---
 ## B. Contas e credenciais — você precisa criar, mas nada está travado

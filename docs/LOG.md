@@ -1369,3 +1369,146 @@ como limite conhecido, não consertado — a falha aqui é 500 em ação concorr
 **Travas / dúvidas:** a Task 8 (push) e a revisão da Task 7 não rodaram — morreram no limite de
 sessão. A Task 8 tem uma decisão herdada da Task 7 (A16): `ocultar` não toca `atualizado_em`,
 então o `/sync` não avisa o aparelho de que o evento sumiu.
+
+---
+
+### [2026-08-31] Tarefa 11 — Wiring de Matérias e da tela de evento
+
+**Status:** concluída
+
+**O que foi feito:** três telas ligadas aos repositories da Task 9, sem tocar em `shared/`:
+`MateriasPage` (lista de `GET /materias`), `MateriaPage` (`GET /materias/{id}`, material de aula e
+material adicional **separados** por tipo mais os eventos da matéria) e `EventoPage`
+(`GET /eventos/{id}`, **somente** os materiais vinculados). Duas rotas novas dentro das abas,
+`materias/:id` e `eventos/:id`. Suíte do app de 27 para **38 testes**, lint limpo, build passa.
+
+**Arquivos principais:**
+- `app/src/app/features/materias/materias.page.ts` + `.spec.ts`
+- `app/src/app/features/materias/materia.page.ts` + `.spec.ts`
+- `app/src/app/features/evento/evento.page.ts` + `.spec.ts`
+- `app/src/app/features/material-vm.ts` (novo), `app/src/app/features/evento-vm.ts` (`assinatura` exportada)
+- `app/src/app/tabs/tabs.routes.ts`, `app/src/app/data/models.ts`
+
+**Critério de aceite:**
+
+```
+cd app && npx ng test --watch=false --browsers=ChromeHeadless && npx ng lint && npx ng build
+
+TOTAL: 38 SUCCESS
+Linting "app"... All files pass linting.
+Build at: 2026-08-31T17:52:53.288Z - Hash: 15a5b33bfc2f0336 - Time: 19288ms
+```
+
+**Verificado por mutação, não por teste verde.** Os três testes que carregam a tarefa foram
+quebrados de propósito e acusaram:
+
+```
+MateriaPage material de aula e material adicional aparecem separados FAILED
+  Expected $[0] = 'Formas normais' to equal 'Lista extra'.
+EventoPage material nao vinculado nao aparece na tela do evento FAILED
+EventoPage evento oculto ou excluido responde 404 e a tela diz que nao existe mais FAILED
+  Expected null not to be null.
+```
+
+Restaurados, 38/38.
+
+**Decisões que eu tomei:**
+
+*A tela do evento nunca pergunta duas vezes.* O teste obrigatório não se contenta em conferir o
+que apareceu: ele também exige `backend.expectNone(r => r.url.includes('/materia'))`. Assertar só
+o DOM deixaria passar a tela que busca a matéria inteira e depois filtra no cliente — que é
+exatamente o não-negociável 11, e sobreviveria a um teste de conteúdo.
+
+*404 virou um estado próprio, não uma mensagem de erro.* Com a mudança do backend de hoje, evento
+oculto ou excluído responde 404 para quem não é o autor. A tela mostra `.pf-sumiu` ("Isso não
+existe mais.") e **não** mostra o aviso de falha nem o vazio — são quatro telas diferentes agora:
+carregando, falhou, sumiu, e sem material vinculado.
+
+*O rótulo de formato do material sai da extensão do arquivo.* `MaterialLinhaComponent` exige
+`tipo` ("pdf", "slide", "foto", "link") e a API não manda esse campo — `material.tipo` é
+AULA/ADICIONAL, que já é o agrupamento da tela. Deduzo da extensão de `arquivoRef ?? url`, e caio
+em "LINK" quando não dá para saber, em vez de chutar "PDF". Fica em `features/material-vm.ts`,
+fora do template, como o `evento-vm` da Task 10.
+
+*Não mexi no `MateriaRepository` para degradar offline com snapshot.* A Home faz isso porque o
+`HomeRepository` da Task 9 já traz a lógica; o de matérias não traz, e escrevê-la aqui seria
+refatorar entrega anterior. Offline hoje cai no estado "falhou" com "Sem conexão." — honesto, mas
+sem o "dados de <hora>" que a Home tem. O snapshot local **já guarda** `materias`, então o custo
+de ligar depois é pequeno.
+
+*Corrigi `AtualizarEventoRequest`/`AtualizarMaterialRequest` (A13).* Eram `Partial<>`; o backend
+substitui o objeto inteiro e um parcial leva 400. Agora são alias dos `Criar*`, que têm exatamente
+os campos dos records do backend. Nenhuma tela desta tarefa faz PATCH — a correção é para a
+próxima não cair na armadilha.
+
+*Wrapper de link em vez de componente clicável.* `EventoCardComponent` não emite clique e
+`shared/` é zona proibida. Envolvi o cartão num `<a routerLink>` na tela da matéria. Não fiz o
+mesmo na Home nem no Calendário: mexer neles seria refatorar a Task 10. Ver A17.
+
+**Travas / dúvidas:**
+
+1. **`GET /materias` e `GET /materias/{id}` não existem no backend.** Confirmei: não há
+   `MateriaController`, e `grep "\"/materia"` em `src/main/java` não devolve nada. A A15 previu
+   isso para `/materias/{id}`; na prática **a lista também** está sem endpoint. As duas telas
+   desta tarefa estão corretas contra o contrato da Seção 6.2 do spec, e vão levar 404 contra o
+   servidor de verdade até alguém escrever o controller. Não escrevi: seria backend dentro de uma
+   tarefa de wiring, contra a regra número zero. Registrado na A15.
+
+2. **Não há como chegar na tela de um evento a partir da Home nem do Calendário.** Só pela tela da
+   matéria. Registrado como A17.
+
+3. **Não rodei git.** Quem commita é o orquestrador, depois de verificar.
+
+---
+
+### [2026-08-31] O backend passa a subir nesta máquina — Postgres embutido também em dev (Claude)
+
+**Status:** concluída, verificada por HTTP real.
+
+O dono perguntou se já dava para instalar e rodar o app no celular. Fui verificar e achei um
+bloqueio que ninguém tinha visto: **o backend não subia nesta máquina.**
+
+Os testes rodavam desde 30/08 com Postgres embutido, mas o perfil `dev` continuava apontando para
+`jdbc:postgresql://localhost:5432/projetofans`, que vem do `docker-compose` — e o Docker está morto
+desde 03/08. Ou seja: dava para rodar a suíte, mas **não** para subir o servidor com que o celular
+precisa conversar. O caminho inteiro até "APK na mão de um colega" estava travado nisso.
+
+**Conserto:** `BancoDeDesenvolvimento`, um `@Configuration @Profile("dev")` que sobe o mesmo
+binário do Postgres 16 e expõe o `DataSource`. Declarar o bean faz o autoconfigure do Boot recuar,
+então o `spring.datasource.url` do perfil dev saiu do `application.yml` — duas fontes para a mesma
+resposta divergem na primeira vez que alguém mexe numa e esquece a outra.
+
+**Os dados persistem**, e isso não é detalhe: `setCleanDataDirectory(false)` com diretório fixo em
+`backend/.dev-db`. Banco de dev que esquece tudo a cada restart seria pior que banco nenhum — o
+testador cadastraria uma prova, fecharia o app, e ela sumiria sem explicação.
+
+O bean tem `destroyMethod = "close"`. Sem isso o processo do Postgres sobreviveria ao Ctrl+C e a
+próxima subida encontraria porta ocupada e diretório travado — falha confusa que custa meia hora.
+
+**Verificado com o servidor rodando, não por teste unitário:**
+
+```
+Postgres de desenvolvimento embutido na porta 65456 — dados em ...\backend\.dev-db
+Successfully applied 1 migration to schema "public", now at version v1
+Tomcat started on port 8080 (http)
+Started ProjetoFansApplication in 17.387 seconds
+
+POST /api/v1/auth/registrar  -> 200, JWT + usuario criado
+POST /api/v1/auth/login      -> 200, MESMO id (a persistencia funciona)
+GET  /api/v1/home sem token  -> 401
+```
+
+**Decisões que eu tomei:**
+
+*`embedded-postgres` saiu do escopo `test` e ganhou `<optional>true</optional>`.* Precisa existir em
+runtime no perfil dev. `optional` impede que vaze como dependência transitiva. Em prod o
+`DATABASE_URL` manda e a classe nem é instanciada.
+
+*Não apaguei o `docker-compose.yml`.* Ele continua sendo a forma canônica em qualquer máquina onde
+o Docker funcione. Para usar ele no lugar, apaga-se a classe nova.
+
+**Travas / dúvidas:** faltam três coisas para o APK: (1) `capacitor.config.ts` ainda está com os
+defaults do scaffold — `appId: io.ionic.starter`, `appName: app`. O spec já define
+`com.projetofans.app`, e trocar package depois amarra credencial de Google/Firebase, então tem de
+ser antes do `cap add android`. (2) o projeto Android nunca foi gerado. (3) o `apiUrl` do app
+aponta para `localhost`, que do celular é o próprio celular — precisa do IP da LAN.

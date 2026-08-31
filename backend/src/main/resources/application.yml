@@ -50,10 +50,10 @@ spring:
   config:
     activate:
       on-profile: dev
-  datasource:
-    url: jdbc:postgresql://localhost:5432/projetofans
-    username: projetofans
-    password: dev
+  # Sem datasource aqui: o bean BancoDeDesenvolvimento sobe um Postgres 16
+  # embutido e persistente, e o autoconfigure do Boot recua diante dele. Duas
+  # fontes para a mesma resposta divergem na primeira vez que alguem mexe numa e
+  # esquece a outra. Para usar o docker-compose no lugar, apague aquela classe.
   flyway:
     locations: classpath:db/migration
 # O seed de dev e o componente SeedDev (@Profile("dev")), nao uma migration:
