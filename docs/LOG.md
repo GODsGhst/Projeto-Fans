@@ -777,3 +777,301 @@ execucao; `git add -A` levaria o trabalho dele pela metade. Quem commita e o orq
 que nunca rodam em teste (`@Profile("!test")` e `@Profile("prod")`); eles compilam e as libs estao
 no classpath, mas so serao exercitados de verdade no aceite da Secao 8, com conta no Google Cloud e
 SMTP de verdade. Isso e o esperado pelo desenho, nao uma pendencia desta tarefa.
+
+---
+
+### [2026-08-30] Tarefa 4 — CRUD de evento e material, vinculo, locking e historico
+
+**Status:** concluida
+
+**O que foi feito:** TDD nos tres blocos, na ordem do plano. Escrevi `EventoCrudTest` (11),
+`VinculoMaterialTest` (6) e `MaterialCrudTest` (8) primeiro; a primeira execucao deu 25/25
+vermelhos com 404 em toda rota, porque nenhum controller existia. So entao vieram `EventoService`,
+`MaterialService`, `RevisaoService`, os dois controllers, os 8 DTOs e as tres excecoes novas
+(`NaoAutorException` 403, `ConflitoVersaoException` 409, `IfMatchAusenteException` 428). Os
+predicados de visibilidade ja existiam no repository desde a Task 2 e foram reusados como estao —
+nenhum controller ou service reescreve aquelas condicoes.
+
+**Arquivos principais:**
+`service/EventoService.java`, `service/MaterialService.java`, `service/RevisaoService.java`;
+`web/controller/EventoController.java`, `web/controller/MaterialController.java`;
+`web/dto/` — `AutoriaResponse`, `CriarEventoRequest`, `AtualizarEventoRequest`, `EventoResponse`,
+`EventoDetalheResponse`, `CriarMaterialRequest`, `AtualizarMaterialRequest`, `MaterialResponse`;
+`erro/NaoAutorException.java`, `erro/ConflitoVersaoException.java`, `erro/IfMatchAusenteException.java`;
+testes em `evento/EventoCrudTest.java`, `evento/VinculoMaterialTest.java`,
+`material/MaterialCrudTest.java`, mais a base nova `support/TesteDeApi.java`.
+
+**Criterio de aceite — ATINGIDO.** 25 testes novos verdes, suite inteira em 45/45.
+`cd backend && ./mvnw test`:
+
+```
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 13.57 s -- in com.projetofans.auth.AuthFlowTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.365 s -- in com.projetofans.domain.SchemaTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.524 s -- in com.projetofans.evento.EventoCrudTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.394 s -- in com.projetofans.evento.VinculoMaterialTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.238 s -- in com.projetofans.material.MaterialCrudTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.065 s -- in com.projetofans.security.TurmaScopeTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in com.projetofans.SmokeTest
+[INFO] Results:
+[INFO] Tests run: 45, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+Nenhum `DELETE` fisico em `evento` nem em `material`: as duas exclusoes chamam
+`excluirLogicamente`. O unico `delete` do codigo e o do vinculo `evento_material`, que e uma linha
+de ligacao — desvincular precisa de fato desvincular, e o historico do evento continua intacto.
+
+**Decisoes que eu tomei:**
+
+*`PATCH` substitui os campos editaveis por inteiro; nao e merge parcial.* O plano nao diz qual das
+duas semanticas vale, e `models.ts` (Task 9) declara `AtualizarEventoRequest = Partial<...>`, que
+sugere merge. Escolhi substituicao por causa de `hora`: num merge, "ausente ou nulo mantem o atual"
+tornaria **impossivel apagar** a hora de um evento, e o aluno que corrige "na verdade nao tem
+horario" ficaria preso a um dado errado, em silencio. Com substituicao, `hora: null` significa uma
+coisa so. O custo e que o app precisa mandar o objeto inteiro; se mandar parcial, recebe 400 —
+erro barulhento, que e melhor que o bug silencioso. **Isso precisa de um ajuste em `models.ts` na
+Task 11** (ver Travas).
+
+*Services concretos, sem interface + impl.* O plano escreve `public interface EventoService`. Fiz
+classe `@Service` concreta com exatamente as assinaturas que ele congela. Interface com uma unica
+implementacao nao ganha nada aqui, e o precedente do projeto e esse: `AuthService` e `TurmaService`
+sao concretos. `TurmaScopeResolver` tem interface por um motivo documentado — e o ponto de troca
+para suportar instituicoes. Se o review preferir a interface, sao tres arquivos de extracao.
+
+*O snapshot da revisao e a entidade serializada pelo `ObjectMapper` do app, nao um DTO proprio.*
+E o snapshot mais fiel possivel (todos os campos, inclusive `version` e `visivel_turma`) e nao
+custa codigo nenhum. `Evento` e `Material` nao tem associacao JPA, entao nao ha proxy a serializar.
+Nenhum endpoint le `revisao` no MVP, entao o formato ainda nao e contrato com o cliente.
+
+*So `EDITAR` e `EXCLUIR` gravam revisao; `CRIAR` nao.* Criar nao tem estado anterior, e a coluna
+`snapshot` e `NOT NULL` — gravaria `{}` para nada. A linha de criacao ja existe: e o proprio
+registro, com `criado_em` e `autor_id`.
+
+*`RevisaoService.registrar` recebe `RegistroTipo`, nao `String`.* O plano escreve `String
+registroTipo`, mas o enum ja existe desde a Task 2 e e o tipo da coluna na entidade. String ali so
+adicionaria uma conversao e a chance de escrever "evento" minusculo e descobrir no runtime.
+
+*`DELETE` tambem exige `If-Match`, nao so o `PATCH`.* A tabela de status do plano so cita `PATCH`,
+mas a assinatura `excluirLogicamente(usuario, eventoId, versionEsperada)` exige a version vinda de
+algum lugar, e o `EventoRepository` do app ja a manda (`api.delete(rota, version)`). Excluir sem
+checar version teria o mesmo furo que editar sem checar.
+
+*`GET /eventos?de=&ate=` entrou aqui.* Nenhuma tarefa do plano cria esse endpoint explicitamente,
+mas ele esta na Secao 6.2 do spec, alimenta o Calendario (Task 10) e o `EventoController` so nasce
+nesta tarefa. Sao seis linhas reusando `visiveisDaTurmaNoPeriodo`, que ja existia. Deixar o buraco
+significaria a Task 10 travar por falta de rota.
+
+*`support/TesteDeApi.java` novo, base das tres suites.* As tres montavam o mesmo cenario (turma,
+usuario, vinculo, materia, Bearer). O JWT sai do `JwtService` real e passa pelo filtro de verdade,
+porque testar com principal falso nao provaria que o `UsuarioAtual` do controller e o de producao.
+
+*`em.refresh` depois de `saveAndFlush` no criar.* `criado_em` tem `DEFAULT` no banco e e
+`insertable=false`; sem o refresh, a resposta de criacao sairia com `criadoEm` nulo e violaria R1
+justamente no caminho mais comum. Descobri isso porque `save()` com id atribuido a mao vira
+`merge`, e a instancia gerenciada e a **devolvida**, nao a local — o primeiro `refresh` estourou
+`Entity not managed`.
+
+*Verifiquei que os testes-guarda mordem, com mutacao.* Anulei o `exigirAutor` e troquei
+`vinculadosAoEvento` por "todos os materiais da materia" (que e exatamente a violacao da regra 11)
+e rodei: `liderTambemRecebe403AoEditarEventoAlheio`, `naoAutorRecebe403AoAtualizar`,
+`buscarEventoDevolveApenasMateriaisVinculados`, `materialNaoVinculadoNaoApareceNoEvento` e
+`desvincularRemoveDoEvento` ficaram vermelhos. Desfiz a mutacao e a suite voltou a 45/45.
+
+**Nao fiz o Step 6 (commit) de proposito**, conforme a instrucao desta execucao: quem commita e o
+orquestrador, depois de verificar.
+
+**Travas / duvidas:**
+
+1. **`models.ts` do app precisa deixar de declarar `AtualizarEventoRequest` e
+   `AtualizarMaterialRequest` como `Partial<>`.** O servidor exige o objeto inteiro (decisao acima).
+   Nao mexi em `app/` nesta execucao. Enquanto isso nao for ajustado, um PATCH parcial vindo do app
+   recebe 400 com `ProblemDetail` — falha visivel, nao corrupcao de dado.
+2. **`GET /eventos/{id}` nao filtra visibilidade nesta tarefa.** Um evento oculto ou logicamente
+   excluido ainda responde 200 para qualquer membro da turma que saiba o id. R14 cita `/home`,
+   `/eventos` e `/materias/{id}` — todos por lista, e todos ja usam os predicados nomeados — mas
+   nao o detalhe por id. Se a Task 7 (moderacao) entender que o detalhe tambem deve sumir para quem
+   nao e o autor, e uma linha no `buscar` e um teste; deixei sem porque nenhuma assercao da Secao 7
+   pede, e adivinhar aqui mudaria o comportamento de "Nao listados".
+3. **Nenhuma chamada ao `Notifier` em `POST /eventos`** (R20). E a Task 8 que cria a interface; o
+   ponto de insercao e `EventoService.criar`.
+
+---
+
+### [2026-08-30] Tarefa 5 — A Home: teto, janela e ordenacao no servidor
+
+**Status:** concluída
+
+**O que foi feito:** `GET /api/v1/home` devolve a lista pronta — janela de hoje a hoje+14, teto de
+6 e ordenacao por urgencia — tudo em um unico SQL nativo em `EventoRepository.home`. O `LIMIT 6`
+esta na query, nao num `subList` em Java, e o criterio de tipo e o **terceiro** do `order by`
+(atras de data e de hora com nulos por ultimo), justamente para nao virar agrupamento por tipo.
+`feitoPeloUsuario` sai do `left join estado_pessoal` filtrado pelo usuario autenticado; nao existe
+coluna `feito` em `evento` e nenhuma foi criada. `HomeService` nao ordena, nao filtra data e nao
+corta lista: se essas regras aparecessem tambem em Java, passariam a ter duas implementacoes.
+
+**Arquivos principais:**
+
+- `backend/src/main/java/com/projetofans/service/HomeService.java` (novo)
+- `backend/src/main/java/com/projetofans/web/controller/HomeController.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/ItemHomeResponse.java` (novo)
+- `backend/src/main/java/com/projetofans/repo/EventoRepository.java` (metodo `home`)
+- `backend/src/test/java/com/projetofans/home/HomeServiceTest.java` (novo, 9 testes)
+
+**Critério de aceite:** `cd backend && ./mvnw test -Dtest=HomeServiceTest`
+
+```
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.40 s -- in com.projetofans.home.HomeServiceTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+Suite inteira (`./mvnw test`), para garantir que nada das tarefas anteriores quebrou:
+
+```
+[INFO] Tests run: 54, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+*O vermelho antes do verde:* com o teste escrito e `HomeService` ainda lancando
+`UnsupportedOperationException`, a rodada deu `Tests run: 9, Failures: 0, Errors: 9`. So depois
+disso a query entrou.
+
+**Decisões que eu tomei:**
+
+1. **`HomeService` e classe concreta, nao interface.** O plano escreve
+   `public interface HomeService` mas lista **um** arquivo em "Files" — nao existe arquivo de
+   implementacao no plano. Interface com uma unica implementacao so adiciona um arquivo para
+   navegar. A assinatura publica (`List<ItemHomeResponse> home(UsuarioAtual usuario)`) e
+   exatamente a do plano, entao trocar para interface depois e uma extracao mecanica se algum dia
+   houver uma segunda implementacao.
+2. **Conversores defensivos de tipo na leitura do `Object[]`.** Query nativa devolve o que o driver
+   entregar, e `DATE`/`TIME`/`TIMESTAMPTZ` mudam de tipo Java conforme a versao do Hibernate/PgJDBC.
+   `data()`, `hora()` e `instante()` aceitam tanto `java.time` quanto o `java.sql` legado — um cast
+   direto quebraria numa troca de versao como `ClassCastException` em runtime.
+3. **Nao escrevi um decimo teste para `feitoPeloUsuario`.** O criterio de aceite da tarefa e
+   "9 testes verdes" e o plano lista os nove nomes. O `left join` esta implementado e o campo sai
+   na resposta, mas quem **escreve** em `estado_pessoal` e a Task 6 — e o teste natural desse campo
+   e o dela. Ver trava 1.
+4. **`HomeServiceTest` estende `TesteDeApi`, nao `TesteComPostgres` direto.** Ele nao usa MockMvc,
+   mas reusa `novaTurma`/`novaMateria`/`membroDe` — montar de novo o mesmo cenario seria copia.
+5. **Datas do teste sao todas relativas a `LocalDate.now()`.** A janela usa `current_date` no banco;
+   o PgJDBC ajusta o `TimeZone` da sessao pelo default da JVM, entao os dois concordam. Data fixa
+   no teste quebraria sozinha amanha.
+
+**Travas / dúvidas:**
+
+1. **`feitoPeloUsuario` sai sempre `false` hoje**, porque nada grava em `estado_pessoal` ainda —
+   `PUT /eventos/{id}/estado-pessoal` e a Task 6. O `left join` esta no lugar e o `coalesce` cobre a
+   ausencia de linha; quando a Task 6 entrar, vale um teste que marca feito e confere que a Home
+   reflete. Nao e bloqueio: hoje o valor esta correto, so nao ha como ser `true`.
+2. **Nao rodei o Step 5 (commit) de proposito**, conforme a instrucao desta execucao: quem commita e
+   o orquestrador, depois de verificar.
+
+---
+
+### [2026-08-30] Tarefa 6 — Estado pessoal, Meu quadro e Nao listados
+
+**Status:** concluída
+
+**O que foi feito:** TDD na ordem do plano. `EstadoPessoalTest` primeiro, com os seis nomes exatos
+que o plano lista; a primeira rodada deu 6/6 vermelhos (1 falha de status 500 no endpoint e 5
+`UnsupportedOperationException`). So entao veio `EstadoPessoalService`, o `QuadroController` com as
+tres rotas e os tres DTOs. O service escreve em **uma** tabela, `estado_pessoal`, e nenhum caminho
+dele toca em `evento` — e esse o nao-negociavel 3 virando codigo. "Nao listados" nao reescreve
+predicado nenhum: chama `naoListadosDoAutor` dos dois repositories, que existem desde a Task 2.
+Nada aqui filtra `turma_id` a mao; quem resolve turma continua sendo o `TurmaScopeResolver`.
+
+**Arquivos principais:**
+
+- `backend/src/main/java/com/projetofans/service/EstadoPessoalService.java` (novo)
+- `backend/src/main/java/com/projetofans/web/controller/QuadroController.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/MeuQuadroResponse.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/NaoListadosResponse.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/EstadoPessoalRequest.java` (novo, ver decisao 3)
+- `backend/src/test/java/com/projetofans/quadro/EstadoPessoalTest.java` (novo, 6 testes)
+
+**Critério de aceite — ATINGIDO.** `cd backend && ./mvnw test -Dtest=EstadoPessoalTest`:
+
+```
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.13 s -- in com.projetofans.quadro.EstadoPessoalTest
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+```
+
+Suite inteira (`cd backend && ./mvnw test`), para garantir que nada das tarefas anteriores quebrou:
+
+```
+[INFO] Tests run: 60, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+*O vermelho antes do verde:* com os seis testes escritos e o service ainda lancando
+`UnsupportedOperationException`, a rodada deu `Tests run: 6, Failures: 1, Errors: 5`.
+
+*Os testes-guarda mordem, verificado com mutacao.* (a) Fiz o `marcar` chamar `evento.editar` +
+`saveAndFlush` depois de gravar o estado — a violacao literal do nao-negociavel 3 — e
+`marcarFeitoNaoAlteraNenhumaColunaDeEvento` ficou vermelho. (b) Troquei `findByChaveUsuarioId` por
+`findAll` no quadro e `estadoDeAdoNaoApareceNoQuadroDeB` ficou vermelho (R16). (c) Troquei
+`naoListadosDoAutor` por um filtro em `findAll` sem autor e `naoListadosDeOutroAutorNaoAparece`
+ficou vermelho (R15). Desfiz as tres e a suite voltou a 60/60.
+
+**Decisões que eu tomei:**
+
+1. **O quadro nao tem teto de 6 nem janela de 14 dias.** O plano nao diz qual e o conjunto de
+   origem do kanban; diz so que `MeuQuadroResponse` e feito de `ItemHomeResponse`. Reusar a query da
+   Home traria o teto e a janela junto, e um quadro cortado em 6 esconderia entrega atrasada — que e
+   exatamente o que o aluno vem procurar aqui. O conjunto e `visiveisDaTurma`, o predicado nomeado
+   que ja existia, ordenado por data. Teto e janela continuam sendo regra **da Home**, com uma
+   implementacao so, no SQL dela (nao-negociavel 5).
+2. **O quadro monta `ItemHomeResponse` em Java, sem SQL novo.** A alternativa era clonar a query
+   nativa da Home sem o `limit` e sem a janela, o que reescreveria a condicao de visibilidade uma
+   terceira vez em SQL — justamente o que a Secao 5.1 do spec proibe. O custo e um `findById` de
+   materia e de autor por item, mesmo padrao (e mesmo teto documentado) do `EventoService`; o cache
+   de primeiro nivel do Hibernate absorve as repeticoes dentro da transacao.
+3. **`EstadoPessoalRequest` e um record novo que o plano nao lista, com `Boolean` + `@NotNull`.** O
+   plano da a assinatura do service (`boolean feito`) mas nao o corpo do PUT. Usei `Boolean` em
+   caixa alta de proposito: com `boolean` primitivo, um corpo sem o campo viraria `false` em
+   silencio e desmarcaria a tarefa de quem so queria salvar. Ausente agora vira 400.
+4. **`EstadoPessoalService` e classe concreta, nao interface.** Mesmo precedente das tarefas 4 e 5,
+   pelo mesmo motivo: interface com uma unica implementacao so adiciona arquivo. As tres assinaturas
+   publicas sao exatamente as do plano.
+5. **Marcar feito exige turma, mas nao exige autoria.** Escopo de turma passa pelo
+   `TurmaScopeResolver` (evento de outra turma vira 404). Autoria nao entra: o quadro e de quem le, e
+   qualquer membro marca qualquer evento da propria turma como feito. Exigir autoria aqui faria so o
+   autor da prova poder marca-la como estudada.
+6. **`PUT /eventos/{id}/estado-pessoal` nao exige `If-Match`.** Nao ha `version` a conflitar porque
+   nenhuma coluna do fato compartilhado e tocada. E a razao de a rota ser um PUT no sub-recurso e nao
+   um PATCH no evento.
+7. **`naoListados` usa `usuario.nome()` como nome do autor em vez de reconsultar `usuario`.** Por
+   definicao so devolve registro do proprio usuario autenticado, entao o nome ja esta no principal.
+8. **O teste central compara a linha inteira de `evento` lida com `select *`, nao campos
+   escolhidos.** E o que faz ele continuar valendo quando a tabela ganhar coluna nova — inclusive uma
+   coluna `feito`, que e a violacao que ele existe para pegar. O teste tambem afirma explicitamente
+   que a linha nao tem chave `feito`.
+9. **Um dos seis testes passa pelo HTTP de verdade (MockMvc + JWT real), os outros cinco chamam o
+   service.** O plano lista seis testes e o criterio de aceite e "6 testes verdes", entao nao
+   acrescentei um setimo so para cobrir o controller; em vez disso o teste central faz o PUT pela
+   rota e exige 204, o que cobre rota, desserializacao e filtro de auth sem inflar a contagem.
+
+**Travas / dúvidas:**
+
+1. **`GET /meu-quadro` inclui evento passado nao marcado.** Uma entrega de tres meses atras que
+   ninguem marcou fica em "a fazer" para sempre. E o comportamento correto para "atrasado", mas com
+   um semestre inteiro a coluna cresce. Isso e decisao de produto (esconder depois de N dias? mover
+   para uma terceira secao? nao ha terceira coluna, ver Secao 9.2 do spec), entao nao inventei corte.
+   Se o dono quiser um limite, e um `where` no predicado do quadro e um teste.
+2. **`naoListadosDoAutor` filtra so por autor, nao por turma** — e o predicado literal da Secao 5.1
+   do spec. Consequencia: alguem que trocasse de turma continuaria vendo os proprios registros
+   ocultos da turma anterior. Hoje isso e inalcancavel (nao ha troca de turma na UI, e o app resolve
+   uma turma so), mas registro porque a leitura muda se instituicoes entrarem.
+3. **`feitoPeloUsuario` na Home agora tem como ser `true`** — a trava 1 da Task 5 esta destravada. Nao
+   escrevi o teste de integracao "marca feito e a Home reflete" porque ele nao esta em nenhuma das
+   duas tarefas; o `left join` da Home e o `estado_pessoal` que este service grava sao a mesma linha,
+   e os dois lados tem teste proprio. Vale uma linha em `HomeServiceTest` quando alguem passar por la.
+4. **Nao rodei o Step 3 (commit) de proposito**, conforme a instrucao desta execucao: quem commita e
+   o orquestrador, depois de verificar.
