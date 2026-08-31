@@ -179,6 +179,95 @@ nao pode morar so no `docs/LOG.md`.
 
 ---
 
+### A13. PATCH substitui o objeto inteiro — o `models.ts` do app ainda diz `Partial<>`
+
+O backend da Task 4 decidiu que `PATCH /eventos/{id}` e `PATCH /materiais/{id}` **substituem os
+campos editáveis por inteiro**, não fazem merge parcial.
+
+**Razão:** num merge, "campo ausente mantém o atual" tornaria impossível **apagar** a hora de um
+evento. O aluno ficaria preso a um horário errado sem forma de limpá-lo, em silêncio.
+
+**Consequência que atinge a Task 11 diretamente:** `app/src/app/data/models.ts` declara
+`AtualizarEventoRequest` e `AtualizarMaterialRequest` como `Partial<>`. Se o app mandar um objeto
+parcial, leva **400 com ProblemDetail**. É falha visível, não corrupção — mas é falha.
+
+**Default aplicado:** o servidor exige o objeto inteiro. Quem faz o wiring precisa mandar todos os
+campos editáveis, inclusive os que não mudaram.
+
+**Custo se mudar:** transformar em merge real exige um marcador explícito de "apagar este campo"
+(um `null` distinguível de "ausente"), o que em JSON exige JSON Merge Patch ou um DTO com
+`Optional`. Não é meia hora.
+
+### A14. Evento oculto ou excluído ainda responde pelo id direto
+
+`GET /eventos/{id}` verifica escopo de turma, mas **não** visibilidade. Um evento com
+`excluido_em` preenchido ou `visivel_turma = false` responde 200 com título, data, autor e
+materiais para qualquer membro da turma que saiba o id.
+
+**Isto fura a moderação do líder.** A Seção 6.5 do handoff diz que pedido não acatado deixa o
+registro "oculto para a turma e visível apenas para o autor" — sem restringir a listas. E o
+`AGENTS.md` diz que o handoff ganha do spec em regra de negócio.
+
+**Não é risco teórico:** o `DELETE` que cria `excluido_em` foi entregue na mesma Task 4, e a
+Seção 8 do spec guarda snapshot local por turma no aparelho — então os ids já estão em todo
+dispositivo que sincronizou.
+
+**Default aplicado hoje: nenhum.** O furo existe no código neste momento. **Levantado pelo revisor
+adversarial em 2026-08-30 e marcado para conserto**, não para decisão: exigir autoria quando
+`estaExcluido()` ou `!isVisivelTurma()`, senão 404. A pergunta que sobra para você é só se o
+**autor** deve continuar vendo o próprio registro oculto pelo id — o default que vou aplicar é
+**sim**, coerente com "Não listados".
+
+---
+
+### A15. `GET /materias/{id}` não é criado por tarefa nenhuma do plano
+
+R14 exige que registro oculto não apareça em `/home`, `/eventos` **nem `/materias/{id}`**. Os dois
+primeiros existem. O terceiro está na Seção 6.2 do spec e a Task 11 (wiring de Matérias) vai
+consumi-lo, mas **nenhuma tarefa de backend o cria** — mesmo buraco que a Task 4 encontrou em
+`GET /eventos?de=&ate=` e tapou na hora.
+
+**Default aplicado: não criei o endpoint na Task 7.** A lista de Files da tarefa tem três arquivos,
+e inventar `MateriaController`/`MateriaService` ali seria começar a Task 11 pelo backend, contra a
+regra número zero do `AGENTS.md`. O teste `registroOcultoNaoApareceNaTelaDeMateria` morde, em vez
+disso, os dois predicados nomeados que a tela usaria — `EventoRepository.visiveisDaMateria` e
+`MaterialRepository.visiveisDaMateriaPorTipo`, ambos entregues na Task 2.
+
+**Limite conhecido do default:** se alguém escrever o `MateriaController` sem usar esses dois
+métodos, o teste continua verde e R14 fica sem guarda na tela de matéria.
+
+**Custo se mudar:** um service, um controller e dois DTOs (`MateriaResponse` já tem assinatura
+congelada na Task 14 do plano, linha 1098), mais um teste de ponta a ponta que troque a asserção de
+repositório por HTTP. Uma a duas horas. **A pergunta é só de ordem:** criar na Task 8, junto do
+resto do backend, ou deixar para a Task 11 e aceitar que ela vai ter trabalho de backend.
+
+**Levantada em 2026-08-31**, na entrega da Task 7.
+
+### A16. Ocultar não aparece no `/sync`, e isso deixa notificação fantasma no aparelho
+
+`EventoRepository.alteradosDesde` — o delta que alimenta o reagendador local — filtra por
+`atualizado_em > :desde`. Mas `ocultar` **não toca em `atualizado_em`**: a entidade `Evento` foi
+escrita na Task 2 com o comentário "ocultar não é edição de conteúdo", e a Task 7 manteve.
+
+**Consequência real:** o líder oculta uma prova, e o aparelho de quem já sincronizou continua com a
+notificação da véspera agendada para ela. O evento some da Home de todo mundo e mesmo assim o
+celular avisa às 19h. É exatamente o fantasma que o teste `syncIncluiEventoOcultoParaQueOAppOReMova`
+(Task 8) existe para impedir — e ele **não passa** com o predicado de hoje.
+
+**Default aplicado: nenhum ainda** — o `/sync` é a Task 8 e não foi escrito. Registro aqui para que
+quem a pegar não descubra tarde.
+
+**As duas saídas, e a recomendação:**
+
+- (a) `ocultar` passa a tocar `atualizado_em`. Contraria o comentário da entidade e derruba uma das
+  colunas comparadas no teste de R13.
+- (b) `alteradosDesde` passa a olhar também `acao_moderacao.em` para os registros daquela turma —
+  a linha de auditoria que a moderação **sempre** grava. **Recomendo esta:** mantém "ocultar não é
+  edição" de pé e reusa dado que já existe.
+
+**Levantada em 2026-08-31**, na entrega da Task 7.
+
+---
 ## B. Contas e credenciais — você precisa criar, mas nada está travado
 
 Todas têm fake ou fallback, então **o Codex trabalha e testa sem nenhuma delas**. Elas viram necessárias só no momento de rodar em dois aparelhos reais, que é o aceite da Seção 8.

@@ -92,3 +92,18 @@
   line-height: 1.5;
   color: var(--ink-3);
 }
+
+/* aviso de estado da tela: carregando, sem conexao, falhou.
+   Tracejado e nomeando a falha de proposito — vazio e offline nao podem se
+   parecer, e uma tela limpa que finge que a semana esta vazia e o pior bug
+   possivel deste app. Vem do estado "cache" de docs/design/telas-v3.html. */
+.pf-aviso {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--rule-soft);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.4;
+}

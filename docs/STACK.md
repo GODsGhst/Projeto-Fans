@@ -134,6 +134,23 @@ parte do furo do push. Ver A7 em `PERGUNTAS-ABERTAS.md`.
 
 ---
 
+## Armadilhas conhecidas desta arvore
+
+**O cache do Angular mente.** Em 2026-08-31 o `home.page.spec.ts` acusou falha num teste cujo
+codigo-fonte estava correto: `vazia()` checava `erro() === null` no disco, mas o bundle
+compilado ainda era o anterior, e a tela renderizava o estado vazio junto com o aviso de erro.
+Instrumentar os sinais confirmou `erro = "Sem conexao."` no exato momento da assercao — fonte e
+runtime discordando.
+
+Se um teste do app falhar de um jeito que o codigo torna impossivel, **limpe o cache antes de
+investigar**:
+
+```bash
+cd app && rm -rf .angular/cache && npx ng test --watch=false --browsers=ChromeHeadless
+```
+
+Custa 40 segundos e ja economizou uma sessao inteira de agente perseguindo bug que nao existia.
+
 ## Design
 
 Tokens em `docs/design/design-system-v1.html`, validador em `docs/design/validar-paleta.mjs`.

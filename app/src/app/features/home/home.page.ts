@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 import { AulaCardComponent } from '../../shared/aula-card.component';
 import { EventoCardComponent } from '../../shared/evento-card.component';
-import type { Materia, TipoEvento } from '../../shared/tipos';
+import type { Materia } from '../../shared/tipos';
+import { HomeRepository } from '../../data/home.repository';
+import { diaPorExtenso, eventoVm } from '../evento-vm';
 
 /** Uma aula da grade do dia. */
 export interface AulaVm {
@@ -16,17 +18,6 @@ export interface AulaVm {
   readonly agora?: boolean;
 }
 
-/** Prova ou entrega dos proximos 14 dias. */
-export interface EventoVm {
-  readonly tipo: TipoEvento;
-  readonly dia: string;
-  readonly mes: string;
-  readonly quando: string;
-  readonly titulo: string;
-  readonly materia: Materia;
-  readonly autoria: string;
-}
-
 /**
  * Entrada do app.
  *
@@ -38,9 +29,8 @@ export interface EventoVm {
  * Ordem e urgencia, nunca tipo: uma entrega de amanha vem antes de uma prova de
  * daqui a quatro dias. Nao agrupar por tipo e nao-negociavel.
  *
- * PARA O CODEX: os signals abaixo estao com dados de exemplo so para a tela
- * existir. Troque a origem por HomeService (`GET /api/v1/home`) mantendo o mesmo
- * shape. Nao mexa nos componentes de shared/ nem na ordem de renderizacao.
+ * Tres telas diferentes, e elas nao podem se parecer: carregando, falhou, e
+ * vazio. "Nao ha provas" e "falhei ao buscar as provas" sao coisas opostas.
  */
 @Component({
   selector: 'app-home',
@@ -56,6 +46,12 @@ export interface EventoVm {
 
     <ion-content [fullscreen]="true">
       <div class="pf-pilha">
+        @if (carregando()) {
+          <p class="pf-aviso">Carregando…</p>
+        } @else if (aviso(); as a) {
+          <p class="pf-aviso">{{ a }}</p>
+        }
+
         @if (aulas().length) {
           <p class="pf-rotulo">próximas aulas</p>
           @for (a of aulas(); track a.nome + a.hora) {
@@ -106,57 +102,63 @@ export interface EventoVm {
   `,
 })
 export class HomePage {
-  // --- dados de exemplo. Trocar por HomeService, mantendo o shape. ---
-  protected readonly hoje = signal('Sexta, 21 ago');
+  private readonly repo = inject(HomeRepository);
 
-  protected readonly aulas = signal<readonly AulaVm[]>([
-    {
-      materia: { sigla: 'BD', cor: 'var(--m-02-azul-celeste)' },
-      nome: 'Banco de Dados',
-      hora: '19:00–20:40',
-      sala: 'B-204',
-      detalhe: 'agora · prof. Marcos',
-      atividade: 'entregar hoje · Lista 4',
-      agora: true,
-    },
-    {
-      materia: { sigla: 'ESOFT', cor: 'var(--m-03-teal)' },
-      nome: 'Eng. de Software',
-      hora: '20:50–22:30',
-      sala: 'B-204',
-      detalhe: 'em 1 h 50 · prof. Lúcia',
-    },
-    {
-      materia: { sigla: 'REDES', cor: 'var(--m-04-verde)' },
-      nome: 'Redes de Computadores',
-      hora: 'seg · 19:00',
-      sala: 'LAB-3',
-      detalhe: 'próxima segunda · lab. de redes',
-    },
-  ]);
+  protected readonly hoje = signal(diaPorExtenso(new Date()));
 
-  protected readonly eventos = signal<readonly EventoVm[]>([
-    {
-      tipo: 'ENTREGA',
-      dia: '21',
-      mes: 'ago',
-      quando: '23:59',
-      titulo: 'Lista 4 — normalização',
-      materia: { sigla: 'BD', cor: 'var(--m-02-azul-celeste)' },
-      autoria: 'Otávio · há 5 h',
-    },
-    {
-      tipo: 'PROVA',
-      dia: '25',
-      mes: 'ago',
-      quando: '19:00',
-      titulo: 'Prova 2 — integrais',
-      materia: { sigla: 'CALC2', cor: 'var(--m-01-azul)' },
-      autoria: 'Ana Beatriz · há 2 dias',
-    },
-  ]);
+  /**
+   * A grade de aulas nao tem origem de dado ainda — a tabela `aula` e o
+   * `GET /grade` chegam nas Tasks 13 e 16. Ate la a lista fica vazia, e o bloco
+   * inteiro nao renderiza. Aula inventada aqui seria pior que aula nenhuma:
+   * uma grade que mente sobre onde a pessoa precisa estar agora e o risco que a
+   * A8 escreveu.
+   */
+  protected readonly aulas = signal<readonly AulaVm[]>([]);
 
+  protected readonly carregando = this.repo.carregando;
+
+  /** Renderiza na ordem que veio do servidor. Sem `sort`, sem `filter`, sem `slice`. */
+  protected readonly eventos = computed(() => {
+    const agora = new Date();
+    return this.repo.itens().map((i) => eventoVm(i, agora));
+  });
+
+  /**
+   * Falhou. Offline com snapshot diz de quando e o dado; offline sem snapshot
+   * admite que nao ha o que mostrar. Em nenhum dos dois a tela finge que a
+   * semana esta vazia.
+   */
+  protected readonly aviso = computed(() => {
+    const erro = this.repo.erro();
+    if (erro === null) {
+      return null;
+    }
+    if (!this.repo.offline()) {
+      return erro;
+    }
+    const sync = this.repo.ultimoSync();
+    return sync === null
+      ? 'Sem conexão · nenhum dado salvo neste aparelho'
+      : `Sem conexão · mostrando dados de ${hora(sync)}`;
+  });
+
+  /** Vazio de verdade: carregou, nao falhou, e nao ha nada. */
   protected readonly vazia = computed(
-    () => this.aulas().length === 0 && this.eventos().length === 0,
+    () =>
+      !this.carregando() &&
+      this.repo.erro() === null &&
+      this.aulas().length === 0 &&
+      this.eventos().length === 0,
   );
+
+  constructor() {
+    void this.repo.carregar();
+  }
+}
+
+function hora(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? 'antes'
+    : d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }

@@ -615,6 +615,54 @@
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
+
+  /* ---------- FLUXO DE ENTRADA ----------
+     Nenhum token novo: campo, botao e superficie sao os mesmos da v3. O que
+     muda e o arranjo — sem abas, porque quem nao entrou ainda nao tem turma. */
+  .marca { display: flex; flex-direction: column; gap: 4px; padding: 22px 2px 6px; }
+  .marca b { font-size: 26px; font-weight: 700; letter-spacing: -.03em; }
+  .marca span { font-size: 14px; color: var(--ink-3); line-height: 1.4; }
+
+  .campo--linha {
+    min-height: 0; padding: 12px 13px; font-size: 15px;
+    font-family: inherit; width: 100%; display: block;
+    border: 1px solid var(--rule); border-radius: var(--r-md);
+    background: var(--surface); color: var(--ink); box-shadow: var(--pressao);
+  }
+  .campo--linha::placeholder { color: var(--ink-3); }
+  .campo--linha:focus {
+    outline: 0; border-color: var(--accent-line);
+    box-shadow: var(--pressao), 0 0 0 3px var(--accent-soft);
+  }
+  .campo--codigo {
+    text-align: center; font-family: var(--mono); font-size: 22px;
+    letter-spacing: .28em; text-transform: uppercase; padding: 16px 13px;
+  }
+
+  .rot-campo { font-size: 12.5px; font-weight: 600; color: var(--ink-3); padding: 2px 2px 0; }
+
+  .botao--fantasma {
+    background: transparent; color: var(--ink); border: 1px solid var(--rule);
+    box-shadow: var(--e1);
+  }
+  @media (hover: hover) { .botao--fantasma:hover { filter: none; background: var(--rule-soft); } }
+
+  .link-txt {
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--accent);
+    background: none; border: 0; padding: 8px 4px; cursor: pointer; align-self: center;
+    border-radius: var(--r-sm); -webkit-tap-highlight-color: transparent;
+  }
+  .link-txt:active { transform: scale(.96); }
+  .link-txt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .divisor { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .divisor::before, .divisor::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .divisor span { font-size: 12px; color: var(--ink-3); }
+
+  /* Google fica desligado ate existir o Client ID (B1). Botao presente e morto
+     mente sobre o que o app faz; entao ele aparece explicitamente indisponivel. */
+  .botao[disabled] { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .botao[disabled]:active { transform: none; }
 </style>
 
 <div class="wrap">
@@ -640,7 +688,119 @@
     <div class="fone">
 
       <!-- ==================== HOME ==================== -->
-      <div class="tela" data-tela="home" data-ativa>
+      <!-- ==================== LOGIN ==================== -->
+      <div class="tela" data-tela="login" data-sem-abas data-ativa>
+        <div class="t-corpo">
+          <div class="marca">
+            <b>projetoFans</b>
+            <span>O que cai na semana e o que foi dado em cada aula, mantido pela turma.</span>
+          </div>
+
+          <p class="rot-campo">e-mail</p>
+          <input class="campo--linha" type="email" inputmode="email" autocomplete="email"
+                 placeholder="voce@exemplo.com" aria-label="E-mail">
+
+          <p class="rot-campo">senha</p>
+          <input class="campo--linha" type="password" autocomplete="current-password"
+                 placeholder="sua senha" aria-label="Senha">
+
+          <button class="botao" type="button" data-ir="home">Entrar</button>
+          <button class="link-txt" type="button" data-ir="recuperar">Esqueci a senha</button>
+
+          <div class="divisor"><span>ou</span></div>
+
+          <button class="botao botao--fantasma" type="button" data-ir="cadastro">Criar conta</button>
+
+          <button class="botao botao--fantasma" type="button" disabled>Entrar com Google</button>
+          <p class="cache-aviso">O login por Google fica disponível quando o projeto no Google
+            Cloud existir. Enquanto isso, e-mail e senha funcionam normalmente.</p>
+        </div>
+      </div>
+
+      <!-- ==================== CADASTRO ==================== -->
+      <div class="tela" data-tela="cadastro" data-sem-abas>
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="login" aria-label="Voltar para o login">&larr;</button>
+            <h3>Criar conta</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <p class="rot-campo">seu nome</p>
+          <input class="campo--linha" type="text" autocomplete="name"
+                 placeholder="como a turma vai te ver" aria-label="Nome">
+
+          <p class="rot-campo">e-mail</p>
+          <input class="campo--linha" type="email" inputmode="email" autocomplete="email"
+                 placeholder="voce@exemplo.com" aria-label="E-mail">
+
+          <p class="rot-campo">senha</p>
+          <input class="campo--linha" type="password" autocomplete="new-password"
+                 placeholder="mínimo 8 caracteres" aria-label="Senha">
+
+          <div class="alerta" data-tom="turma">
+            <span class="glyph glyph--prova" style="margin-top:3px"></span>
+            <span>Seu nome aparece em tudo que você postar. É assim que a turma sabe de quem veio
+              a informação — não existe registro anônimo aqui.</span>
+          </div>
+
+          <button class="botao" type="button" data-ir="entrar-turma">Criar conta</button>
+        </div>
+      </div>
+
+      <!-- ==================== ENTRAR NA TURMA ==================== -->
+      <div class="tela" data-tela="entrar-turma" data-sem-abas>
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="cadastro" aria-label="Voltar">&larr;</button>
+            <h3>Entrar na turma</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <div class="marca" style="padding-top:8px">
+            <span>Peça o código para alguém que já está na turma. Ele tem 6 caracteres e não
+              expira.</span>
+          </div>
+
+          <p class="rot-campo">código da turma</p>
+          <input class="campo--linha campo--codigo" type="text" maxlength="6"
+                 placeholder="ABC123" aria-label="Código da turma">
+
+          <button class="botao" type="button" data-ir="home">Entrar na turma</button>
+
+          <div class="divisor"><span>ou</span></div>
+
+          <button class="botao botao--fantasma" type="button" data-ir="home">Criar uma turma nova</button>
+          <p class="cache-aviso">Quem cria a turma vira o líder dela. O líder não edita registro de
+            ninguém — ele só oculta o que não devia estar ali e transfere a liderança.</p>
+        </div>
+      </div>
+
+      <!-- ==================== RECUPERAR SENHA ==================== -->
+      <div class="tela" data-tela="recuperar" data-sem-abas>
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="login" aria-label="Voltar para o login">&larr;</button>
+            <h3>Esqueci a senha</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <div class="marca" style="padding-top:8px">
+            <span>Manda o e-mail da conta e o link de reset chega nele.</span>
+          </div>
+
+          <p class="rot-campo">e-mail</p>
+          <input class="campo--linha" type="email" inputmode="email" autocomplete="email"
+                 placeholder="voce@exemplo.com" aria-label="E-mail">
+
+          <button class="botao" type="button" data-ir="login">Enviar link</button>
+
+          <p class="cache-aviso">A resposta é a mesma exista a conta ou não. Isso é de propósito:
+            resposta diferente transformaria esta tela num jeito de descobrir quem tem conta no app.</p>
+        </div>
+      </div>
+
+      <div class="tela" data-tela="home">
         <div class="t-barra">
           <h3>Sexta, 21 ago</h3>
           <span>3 aulas</span>
@@ -1164,9 +1324,14 @@
       if (b.dataset.ir === aba) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
     }
+    // Quem ainda nao entrou nao tem turma, entao nao tem aba nenhuma para tocar.
+    abas.style.display = alvo.hasAttribute('data-sem-abas') ? 'none' : '';
     const corpo = alvo.querySelector('.t-corpo');
     if (corpo) corpo.scrollTop = 0;
   }
+
+  // O app abre no login, porque e a primeira tela que um aluno ve de verdade.
+  irPara('login');
 
   // delegado global: aba, botao de enviar e seta de voltar usam o mesmo caminho
   document.addEventListener('click', (e) => {

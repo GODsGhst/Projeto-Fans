@@ -1140,3 +1140,163 @@ aplicado. O revisor tinha razão: decisão de produto não pode morar só no LOG
 **Travas / dúvidas:** a Task 4 continua **sem revisão** — o revisor dela morreu com erro de API.
 É a maior tarefa do plano (45 testes, `If-Match`, revisão, exclusão lógica, autor-only) e a que
 mais concentra não-negociáveis. Revisar antes de considerar o backend fechado.
+
+---
+
+### [2026-08-31] Tarefa 7 — Moderacao do lider
+
+**Status:** concluída
+
+**O que foi feito:** TDD na ordem do plano, com os 11 nomes exatos que ele lista. `ModeracaoTest`
+primeiro: a primeira rodada deu **11/11 vermelhos**, todos com 404, porque nenhuma rota de
+moderacao existia. So entao vieram `ModeracaoService`, `ModeracaoController`, a excecao
+`NaoLiderException` (403) e dois DTOs. O service tem um unico ponto que escreve no registro
+moderado, e ele so sabe chamar `definirVisibilidadeTurma` — que ja existia em `Evento` e
+`Material` desde a Task 2. Nao ha caminho daqui que toque em titulo, data, materia ou autor.
+A transferencia de lideranca rebaixa e promove na mesma transacao, com flush entre as duas, porque
+o indice parcial `membro_um_lider_por_turma` e verificado a cada statement.
+
+**Arquivos principais:**
+
+- `backend/src/main/java/com/projetofans/service/ModeracaoService.java` (novo)
+- `backend/src/main/java/com/projetofans/web/controller/ModeracaoController.java` (novo)
+- `backend/src/main/java/com/projetofans/erro/NaoLiderException.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/MotivoRequest.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/TransferirLiderancaRequest.java` (novo)
+- `backend/src/test/java/com/projetofans/moderacao/ModeracaoTest.java` (novo, 11 testes)
+
+**Critério de aceite — ATINGIDO.** `cd backend && ./mvnw test -Dtest=ModeracaoTest`:
+
+```
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 26.54 s -- in com.projetofans.moderacao.ModeracaoTest
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  35.502 s
+```
+
+Suite inteira (`cd backend && ./mvnw test`), de 62 para **73 testes**:
+
+```
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.542 s -- in com.projetofans.moderacao.ModeracaoTest
+[INFO] Results:
+[INFO] Tests run: 73, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+*O vermelho antes do verde:* `Tests run: 11, Failures: 11` — cada rota respondendo 404 por nao
+existir.
+
+*Os testes-guarda mordem, verificado com tres mutacoes.*
+
+(a) Troquei a condicao de `exigirLider` por `if (false)` — o papel deixou de valer.
+`alunoRecebe403AoTentarOcultar` ficou `expected:<403> but was:<200>` e
+`alunoRecebe403AoTentarTransferirLideranca` ficou `expected:<403> but was:<500>`. O 500 do segundo
+e informativo: sem a guarda da aplicacao, quem barrou a promocao indevida foi o **indice unico do
+banco**, o que confirma R19 nos dois niveis.
+
+(b) Fiz o `ocultar` chamar tambem `evento.editar(...)` trocando o titulo — a violacao literal do
+nao-negociavel 10, "o lider virou editor". `ocultarNaoAlteraAutorTituloNemData` ficou vermelho, e
+junto dele `registroOcultoApareceEmNaoListadosDoAutor`, que procura o titulo original.
+
+(c) Inverti a ordem da transferencia (promover antes de rebaixar).
+`transferirLiderancaMantemExatamenteUmLider` e `todaAcaoDeModeracaoGravaLinhaEmAcaoModeracao`
+ficaram `expected:<200> but was:<500>`: o indice parcial estourou no meio da transacao, exatamente
+como o plano avisa. Desfiz as tres e a suite voltou a 73/73.
+
+**Decisões que eu tomei:**
+
+1. **A assinatura usa `RegistroTipo`, nao `String`.** O plano escreve `String registroTipo`, mas o
+   enum ja existe desde a Task 2, e a Task 4 abriu esse precedente em `RevisaoService.registrar`
+   pelo mesmo motivo: `String` ali so adiciona uma conversao e a chance de escrever "evento"
+   minusculo e descobrir em runtime. A conversao acontece **uma vez**, no controller, num metodo
+   de cinco linhas que aceita `evento` e `EVENTO` e devolve **400** para tipo desconhecido — 404
+   ali faria parecer que o registro sumiu, quando quem esta errado e a rota.
+
+2. **`ModeracaoService` e classe concreta, sem interface.** Mesmo precedente das tarefas 4, 5 e 6.
+   As quatro assinaturas publicas sao as do plano, a menos do tipo do item 1.
+
+3. **`ocultar` bumpa a `version` do registro, e o teste de R13 exclui essa coluna da comparacao.**
+   O plano diz "compare a linha antes e depois: so `visivel_turma` muda". Na pratica sao duas
+   colunas, porque `@Version` incrementa em qualquer update da linha. O teste compara a linha
+   **inteira** e exige que as unicas diferencas sejam `visivel_turma` e `version` — `titulo`,
+   `data_evento`, `autor_id`, `materia_id`, `tipo`, `hora_evento`, `criado_em`, `atualizado_em` e
+   `excluido_em` continuam sob comparacao, entao a guarda contra "lider virou editor" fica intacta
+   (mutacao (b) prova). Evitar o bump exigiria um `@Modifying` bulk update em cada um dos dois
+   repositories, duplicando o caminho de escrita que `definirVisibilidadeTurma` ja e. **A
+   consequencia visivel:** o autor com a tela de edicao aberta leva 409 no proximo PATCH depois de
+   uma moderacao, com a mensagem "alguem editou antes de voce salvar" — que e enganosa, porque
+   ninguem editou conteudo. Se isso incomodar, o conserto e o bulk update.
+
+4. **`ocultar` nao toca em `atualizado_em`** — comportamento herdado de `definirVisibilidadeTurma`,
+   que a Task 2 escreveu com o comentario "ocultar nao e edicao de conteudo". Mantive. Isso tem
+   uma consequencia para a Task 8, registrada nas Travas.
+
+5. **`pedirExclusao` nao oculta e nao exclui.** So grava a linha em `acao_moderacao`. Exclusao e do
+   autor (nao-negociavel 10); um pedido que ja escondesse o registro seria uma exclusao com outro
+   nome, e o autor perderia o registro sem ter concordado.
+
+6. **Ordem das checagens: turma (404) antes de papel (403).** E a mesma ordem do `EventoService`,
+   pela mesma razao — checar o papel primeiro faria um ALUNO distinguir, pelo status, um registro
+   de outra turma de um id inexistente.
+
+7. **`POST /turmas/lideranca/transferir` mora no `ModeracaoController`,** apesar do prefixo
+   `/turmas` que o spec fixa. Ela e uma acao de moderacao, sai registrada em `acao_moderacao` junto
+   das outras tres, e separa-la deixaria metade da regra do papel em outro arquivo. O
+   `@RequestMapping` fica em `/api/v1` e cada metodo declara seu caminho — mesmo formato que o
+   `QuadroController` ja usa.
+
+8. **As quatro rotas devolvem 200 com corpo vazio.** O plano pede 200 (nao 204) no primeiro teste;
+   nao ha DTO de resposta porque o cliente ja sabe o que pediu, e o registro atualizado chega na
+   proxima leitura da Home ou de Nao listados.
+
+9. **`motivo` e opcional, inclusive o corpo inteiro.** Exigi-lo faria o lider inventar texto, e
+   motivo inventado nao informa ninguem. O que nao e opcional e a linha em `acao_moderacao`.
+
+10. **`registroOcultoNaoApareceNaHome` passa pelo HTTP de verdade** (`GET /api/v1/home` com Bearer),
+    o que de quebra cobre o `HomeController`, que a revisao de 30/08 apontou como sem teste de
+    ponta a ponta. Nao foi teste extra: e um dos 11 do plano.
+
+**Travas / dúvidas:**
+
+1. **`GET /materias/{id}` nao e criado por tarefa nenhuma do plano, e R14 o cita.** O endpoint esta
+   na Secao 6.2 do spec e a Task 11 (wiring de Materias) vai precisar dele, mas nenhuma tarefa de
+   backend o cria — o mesmo buraco que a Task 4 encontrou em `GET /eventos?de=&ate=` e tapou.
+   **Default aplicado:** nao criei o endpoint (a lista de Files da Task 7 tem tres arquivos, e
+   inventar `MateriaController` aqui seria comecar a Task 11 pelo backend). O teste
+   `registroOcultoNaoApareceNaTelaDeMateria` morde os dois predicados nomeados que a tela usaria —
+   `EventoRepository.visiveisDaMateria` e `MaterialRepository.visiveisDaMateriaPorTipo`, ambos da
+   Task 2. **Limite conhecido:** se alguem escrever o `MateriaController` sem usar esses dois
+   metodos, este teste continua verde. Virou **A15** em `PERGUNTAS-ABERTAS.md` — a numeracao ja
+   estava em A14, nao em A12 como a instrucao desta execucao supunha.
+
+2. **Ocultar nao entra em `EventoRepository.alteradosDesde`, e a Task 8 depende disso.** O delta do
+   `/sync` filtra por `atualizado_em > :desde`, e `ocultar` nao toca em `atualizado_em` (decisao 4,
+   herdada da Task 2). O teste `syncIncluiEventoOcultoParaQueOAppOReMova`, que a Task 8 lista, nao
+   passa com o predicado atual: o aparelho manteria a notificacao agendada para um evento que a
+   turma nao ve mais. Sao duas saidas, e a escolha e da Task 8, nao desta: (a) `ocultar` passa a
+   tocar `atualizado_em`, o que contraria o comentario da entidade e derruba uma das colunas
+   comparadas no teste de R13; ou (b) `alteradosDesde` passa a olhar tambem `acao_moderacao.em`,
+   que e o registro que a moderacao **sempre** grava. Recomendo (b): mantem "ocultar nao e edicao"
+   de pe e usa a linha de auditoria que ja existe. Virou **A16** em `PERGUNTAS-ABERTAS.md`.
+
+   Vizinho disto, e **nao consertado por esta tarefa**: a **A14** ja registrada — `GET /eventos/{id}`
+   nao filtra visibilidade, entao o registro que o lider acabou de ocultar continua respondendo 200
+   pelo id direto para qualquer membro da turma. Isso fura a moderacao que esta tarefa entrega. Nao
+   mexi porque o conserto e no `EventoService` (Task 4) e a regra numero zero do `AGENTS.md` proibe
+   refatorar o que a tarefa anterior entregou — mas quem revisar a Task 4 deve tratar isso como
+   parte do mesmo furo.
+
+3. **`pedirExclusao` ainda nao notifica o autor.** O spec diz "Notifica o autor" e o `Notifier` e a
+   Task 8. Hoje a acao fica so registrada em `acao_moderacao`, e o registro continua visivel na
+   Home (decisao 5, correta), entao **enquanto a Task 8 nao entra, pedir exclusao e uma acao
+   invisivel para quem deveria receber o pedido.** O ponto de insercao e
+   `ModeracaoService.pedirExclusao`, na linha seguinte ao `registrar`.
+
+4. **Nao rodei o Step 3 (commit) de proposito**, conforme a instrucao desta execucao: quem commita
+   e o orquestrador, depois de verificar.
