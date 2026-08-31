@@ -1300,3 +1300,72 @@ como o plano avisa. Desfiz as tres e a suite voltou a 73/73.
 
 4. **Nao rodei o Step 3 (commit) de proposito**, conforme a instrucao desta execucao: quem commita
    e o orquestrador, depois de verificar.
+
+---
+
+### [2026-08-31] Dois furos de segurança fechados, e um bug que não existia (Claude)
+
+**Status:** concluída. Backend de 73 para **76 testes**, app de 18 para **27**, tudo verde.
+
+**1. Evento oculto respondia pelo id direto (A14). Consertado.**
+
+`GET /eventos/{id}` checava escopo de turma mas não visibilidade. O líder ocultava uma prova e
+qualquer colega que soubesse o id continuava lendo o registro inteiro — e os ids já estão em todo
+aparelho que sincronizou, por causa do snapshot local da Seção 8. Isso furava a moderação que a
+própria Task 7 acabou de entregar.
+
+Agora exige autoria quando `estaExcluido()` ou `!isVisivelTurma()`. **404, não 403**: 403
+confirmaria que o registro está lá e a moderação vazaria pelo status. O autor continua vendo o
+próprio, coerente com "Não listados".
+
+**2. Qualquer membro desvinculava material da prova alheia. Consertado.**
+
+`desvincularMaterial` só checava turma. Dava para arrancar todos os materiais da prova de outra
+pessoa, e sumia sem rastro: a linha do vínculo é apagada de verdade, e o CHECK de `revisao` só
+aceita EVENTO e MATERIAL, então nem histórico ficava.
+
+Agora exige autoria do evento. **A assimetria com `vincular` é deliberada** e tem teste próprio:
+juntar material na prova de alguém é o espírito do app (qualquer membro posta, e a coluna
+`vinculado_por` existe para isso); arrancar é alteração destrutiva de registro alheio, que o
+não-negociável 10 proíbe.
+
+**Os dois verificados por mutação, não por teste verde.** Com as guardas desligadas:
+
+```
+EventoCrudTest.eventoExcluidoSoRespondeParaOAutor      Status expected:<404> but was:<200>
+VinculoMaterialTest.naoAutorNaoDesvinculaMaterialDeEventoAlheio  Status expected:<403> but was:<204>
+```
+
+Os dois furos eram reais e exploráveis. Restauradas, 76/76.
+
+**3. O bug da Task 10 não existia — era cache do Angular.**
+
+A Task 10 morreu no limite de sessão deixando `home.page.spec.ts` com 1 teste vermelho:
+`falha sem cache nao vira estado vazio`. O código-fonte estava correto — `vazia()` checa
+`erro() === null` — mas a tela renderizava o estado vazio junto com o aviso de erro.
+
+Instrumentei os sinais do repository no momento exato da asserção: `erro = "Sem conexão."`,
+`carregando = false`. Fonte e runtime discordando. `rm -rf .angular/cache` e a suíte foi para
+**27/27**, lint limpo, build passa.
+
+Ou seja: **a Task 10 estava completa**. Registrei a armadilha em `docs/STACK.md` — se um teste do
+app falhar de um jeito que o código torna impossível, limpe o cache antes de investigar. Custa 40
+segundos e já ia custando uma tarefa inteira refeita.
+
+**4. Fluxo de entrada no mockup.** O app não tinha como alguém entrar — sem login, cadastro ou
+código de turma, não há APK para mandar a ninguém. Quatro telas novas em `telas-v3.html`, sem token
+novo nenhum: os mesmos campo, botão e superfície da v3. Navegação verificada por clique real.
+
+**Decisões que eu tomei:**
+
+*Vincular continua aberto, desvincular fechou.* O revisor sugeriu "autoria do evento ou de quem
+vinculou". Fiquei só com o autor do evento: é a leitura estrita do não-negociável 10, e afrouxar
+depois é seguro enquanto apertar depois quebra fluxo de quem já usava.
+
+*Não coloquei `If-Match` no vínculo.* O revisor notou que desvincular não confere versão nem
+incrementa a do evento. É real, mas mexe no contrato da API e no repository do app. Registrado
+como limite conhecido, não consertado — a falha aqui é 500 em ação concorrente, não corrupção.
+
+**Travas / dúvidas:** a Task 8 (push) e a revisão da Task 7 não rodaram — morreram no limite de
+sessão. A Task 8 tem uma decisão herdada da Task 7 (A16): `ocultar` não toca `atualizado_em`,
+então o `/sync` não avisa o aparelho de que o evento sumiu.

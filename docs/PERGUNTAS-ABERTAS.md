@@ -212,7 +212,18 @@ registro "oculto para a turma e visível apenas para o autor" — sem restringir
 Seção 8 do spec guarda snapshot local por turma no aparelho — então os ids já estão em todo
 dispositivo que sincronizou.
 
-**Default aplicado hoje: nenhum.** O furo existe no código neste momento. **Levantado pelo revisor
+#### RESOLVIDA em 2026-08-31
+
+Consertado. `GET /eventos/{id}` passa a exigir autoria quando o registro está oculto ou
+logicamente excluído — 404 para os outros, não 403, senão a moderação vazaria pelo status. O autor
+continua vendo o próprio registro oculto, coerente com "Não listados".
+
+Verificado por mutação: com a guarda desligada, o teste `eventoExcluidoSoRespondeParaOAutor` acusa
+`Status expected:<404> but was:<200>` — o furo era real.
+
+**Texto original abaixo, para histórico.**
+
+**Default aplicado hoje: nenhum.** O furo existia no código quando isto foi escrito. **Levantado pelo revisor
 adversarial em 2026-08-30 e marcado para conserto**, não para decisão: exigir autoria quando
 `estaExcluido()` ou `!isVisivelTurma()`, senão 404. A pergunta que sobra para você é só se o
 **autor** deve continuar vendo o próprio registro oculto pelo id — o default que vou aplicar é

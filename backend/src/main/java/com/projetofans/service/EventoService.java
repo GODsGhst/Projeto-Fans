@@ -121,6 +121,17 @@ public class EventoService {
     @Transactional(readOnly = true)
     public EventoDetalheResponse buscar(UsuarioAtual usuario, UUID eventoId) {
         Evento evento = daTurmaDoUsuario(usuario, eventoId);
+        // Oculto pelo lider ou excluido pelo autor existe SO para o autor — Secao
+        // 6.5 do handoff, que ganha do spec em regra de negocio. Sem isto a
+        // moderacao da Task 7 e reversivel por quem souber o id, e os ids ja estao
+        // em todo aparelho que sincronizou (snapshot local, Secao 8).
+        //
+        // 404 e nao 403: 403 confirmaria que o registro esta la, e a moderacao
+        // vazaria pelo status. As listas ja se comportam assim; faltava o detalhe.
+        if ((evento.estaExcluido() || !evento.isVisivelTurma())
+                && !evento.getAutorId().equals(usuario.usuarioId())) {
+            throw new AcessoNegadoException();
+        }
         List<MaterialResponse> vinculados = materiais.vinculadosAoEvento(eventoId).stream()
                 .map(m -> MaterialResponse.de(m, nomeDoAutor(m.getAutorId())))
                 .toList();
@@ -151,9 +162,22 @@ public class EventoService {
         vinculos.save(new EventoMaterial(evento.getId(), material.getId(), usuario.usuarioId()));
     }
 
+    /**
+     * Vincular e de qualquer membro; DESVINCULAR e so do autor do evento.
+     *
+     * A assimetria e deliberada. Juntar material na prova de alguem e o espirito
+     * do app — qualquer membro posta, e a coluna vinculado_por existe para isso.
+     * Arrancar material e o oposto: e alteracao destrutiva do conteudo de registro
+     * alheio, que o nao-negociavel 10 proibe, e some sem rastro porque a linha do
+     * vinculo e apagada de verdade (o CHECK de revisao so aceita EVENTO e MATERIAL,
+     * entao registrar vinculo exigiria migration).
+     *
+     * Sem esta guarda, qualquer um da turma esvaziava a prova de outra pessoa.
+     */
     @Transactional
     public void desvincularMaterial(UsuarioAtual usuario, UUID eventoId, UUID materialId) {
         Evento evento = daTurmaDoUsuario(usuario, eventoId);
+        exigirAutor(usuario, evento);
         Material material = materialDaTurmaDoUsuario(usuario, materialId);
         vinculos.deleteByChaveEventoIdAndChaveMaterialId(evento.getId(), material.getId());
     }

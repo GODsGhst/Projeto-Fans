@@ -150,6 +150,46 @@ class VinculoMaterialTest extends TesteDeApi {
     }
 
     @Test
+    @DisplayName("quem nao e autor do evento nao consegue desvincular material dele")
+    void naoAutorNaoDesvinculaMaterialDeEventoAlheio() throws Exception {
+        // O furo que este teste fecha: ate 2026-08-31 desvincular so checava
+        // escopo de turma. Qualquer colega arrancava todos os materiais da prova
+        // de outra pessoa, e sumia sem rastro — a linha do vinculo e apagada de
+        // verdade, entao nem revisao ficava. Nao-negociavel 10.
+        UUID evento = novoEvento();
+        UUID material = novoMaterial(bearerAutor, materia, "Slides aula 3");
+        http.perform(post("/api/v1/eventos/" + evento + "/materiais/" + material)
+                        .header("Authorization", bearerAutor))
+                .andExpect(status().isNoContent());
+
+        Usuario intruso = membroDe(turma, "Intruso", PapelMembro.ALUNO);
+
+        http.perform(delete("/api/v1/eventos/" + evento + "/materiais/" + material)
+                        .header("Authorization", bearer(intruso)))
+                .andExpect(status().isForbidden());
+
+        assertThat(vinculos.existsByChaveEventoIdAndChaveMaterialId(evento, material))
+                .as("o vinculo tem de continuar la depois da tentativa")
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("qualquer membro ainda pode VINCULAR material — a assimetria e deliberada")
+    void qualquerMembroVinculaMaterial() throws Exception {
+        // Contrapeso do teste acima: juntar material na prova de alguem e o
+        // espirito do app (qualquer membro posta) e nao pode ser barrado junto.
+        UUID evento = novoEvento();
+        Usuario colega = membroDe(turma, "Colega", PapelMembro.ALUNO);
+        UUID material = novoMaterial(bearer(colega), materia, "Foto do quadro");
+
+        http.perform(post("/api/v1/eventos/" + evento + "/materiais/" + material)
+                        .header("Authorization", bearer(colega)))
+                .andExpect(status().isNoContent());
+
+        assertThat(vinculos.existsByChaveEventoIdAndChaveMaterialId(evento, material)).isTrue();
+    }
+
+    @Test
     @DisplayName("vincular material de outra turma devolve 404")
     void vincularMaterialDeOutraTurmaDevolve404() throws Exception {
         UUID evento = novoEvento();

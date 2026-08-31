@@ -224,6 +224,34 @@ class EventoCrudTest extends TesteDeApi {
     }
 
     @Test
+    @DisplayName("evento excluido some pelo id direto para quem nao e o autor, e continua para o autor")
+    void eventoExcluidoSoRespondeParaOAutor() throws Exception {
+        // O furo que este teste fecha: ate 2026-08-31 GET /eventos/{id} checava
+        // turma mas nao visibilidade. O lider ocultava, ou o autor excluia, e
+        // qualquer colega que soubesse o id continuava lendo o registro inteiro —
+        // e os ids ja estao em todo aparelho que sincronizou (snapshot local).
+        // Secao 6.5 do handoff: "visivel apenas para o autor", sem restringir a
+        // listas. 404 e nao 403, senao a moderacao vazaria pelo status.
+        JsonNode criado = eventoCriado();
+        UUID id = UUID.fromString(criado.get("id").asText());
+        Usuario colega = membroDe(turma, "Colega", PapelMembro.ALUNO);
+
+        http.perform(get("/api/v1/eventos/" + id).header("Authorization", bearer(colega)))
+                .andExpect(status().isOk());
+
+        http.perform(delete("/api/v1/eventos/" + id)
+                        .header("Authorization", bearerAutor)
+                        .header("If-Match", criado.get("version").asInt()))
+                .andExpect(status().isNoContent());
+
+        http.perform(get("/api/v1/eventos/" + id).header("Authorization", bearer(colega)))
+                .andExpect(status().isNotFound());
+
+        http.perform(get("/api/v1/eventos/" + id).header("Authorization", bearerAutor))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("editar grava revisao com o snapshot ANTERIOR a mudanca")
     void editarGravaRevisaoComSnapshotAnterior() throws Exception {
         JsonNode criado = eventoCriado();
