@@ -8,4 +8,8 @@ public class TokenInvalidoException extends ErroDeNegocio {
     public TokenInvalidoException(String mensagem) {
         super(HttpStatus.UNAUTHORIZED, mensagem);
     }
+
+    public TokenInvalidoException(String mensagem, Throwable causa) {
+        super(HttpStatus.UNAUTHORIZED, mensagem, causa);
+    }
 }

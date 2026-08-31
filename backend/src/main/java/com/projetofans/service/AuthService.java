@@ -3,6 +3,7 @@ package com.projetofans.service;
 import com.projetofans.domain.TokenResetSenha;
 import com.projetofans.domain.Usuario;
 import com.projetofans.erro.ErroDeNegocio;
+import com.projetofans.erro.TokenInvalidoException;
 import com.projetofans.repo.TokenResetSenhaRepository;
 import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.GoogleIdentidade;
@@ -81,6 +82,17 @@ public class AuthService {
     @Transactional
     public AuthResponse entrarComGoogle(String idToken) {
         GoogleIdentidade identidade = google.verificar(idToken);
+
+        // Sem email_verified nao da para tratar o e-mail como identidade — e e
+        // exatamente isso que o vinculo automatico abaixo faz ao converter
+        // "mesmo e-mail" em "mesma pessoa". Um dominio Workspace pode emitir
+        // token com e-mail nao confirmado; sem esta guarda, quem apresentasse
+        // esse token assumiria a conta de quem entrou por senha com aquele
+        // e-mail. Checar aqui, e nao so no verificador, porque a consequencia
+        // mora aqui — e porque assim o teste alcanca a regra pelo fake.
+        if (!identidade.emailVerificado()) {
+            throw new TokenInvalidoException("o Google nao confirmou este e-mail");
+        }
 
         Optional<Usuario> porSub = usuarios.findByGoogleSub(identidade.sub());
         if (porSub.isPresent()) {

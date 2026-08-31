@@ -158,6 +158,47 @@ class AuthFlowTest extends TesteComPostgres {
     }
 
     @Test
+    @DisplayName("Google com e-mail nao verificado nao assume a conta de quem entrou por senha")
+    void googleComEmailNaoVerificadoNaoAssumeContaExistente() throws Exception {
+        String vitima = email();
+        registra(vitima, "senha-boa-123");
+        UUID idOriginal = usuarios.findByEmail(vitima).orElseThrow().getId();
+
+        // O atacante apresenta um sub proprio, mas declarando o e-mail da vitima
+        // com email_verified = false. Um dominio Workspace consegue emitir isso.
+        String tokenDoAtacante = "sub-atacante-" + UUID.randomUUID() + "|" + vitima + "|false";
+
+        http.perform(post("/api/v1/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("idToken", tokenDoAtacante))))
+                .andExpect(status().isUnauthorized());
+
+        Usuario intacta = usuarios.findByEmail(vitima).orElseThrow();
+        assertThat(intacta.getId()).isEqualTo(idOriginal);
+        assertThat(intacta.getGoogleSub()).isNull();
+    }
+
+    @Test
+    @DisplayName("Google com e-mail verificado vincula na conta que ja existia por senha")
+    void googleComEmailVerificadoVinculaNaContaExistente() throws Exception {
+        String dono = email();
+        registra(dono, "senha-boa-123");
+        UUID idOriginal = usuarios.findByEmail(dono).orElseThrow().getId();
+
+        String sub = "sub-dono-" + UUID.randomUUID();
+
+        String idDepois = corpoDe(postJson("/api/v1/auth/google",
+                        Map.of("idToken", sub + "|" + dono + "|true")))
+                .get("usuario").get("id").asText();
+
+        // Mesma pessoa, mesma conta: o vinculo por e-mail continua valendo quando
+        // o Google confirma o e-mail. Este teste existe para que a guarda contra
+        // e-mail nao verificado nao seja "consertada" virando bloqueio geral.
+        assertThat(idDepois).isEqualTo(idOriginal.toString());
+        assertThat(usuarios.findByEmail(dono).orElseThrow().getGoogleSub()).isEqualTo(sub);
+    }
+
+    @Test
     @DisplayName("esqueci a senha devolve 204 mesmo para e-mail inexistente")
     void esqueciSenhaDevolve204MesmoParaEmailInexistente() throws Exception {
         String existente = email();

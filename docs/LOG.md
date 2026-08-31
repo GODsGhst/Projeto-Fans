@@ -1075,3 +1075,68 @@ ficou vermelho (R15). Desfiz as tres e a suite voltou a 60/60.
    e os dois lados tem teste proprio. Vale uma linha em `HomeServiceTest` quando alguem passar por la.
 4. **Nao rodei o Step 3 (commit) de proposito**, conforme a instrucao desta execucao: quem commita e
    o orquestrador, depois de verificar.
+
+---
+
+### [2026-08-30] Revisao das tarefas 3 a 6 — uma tomada de conta e um knob que nao girava (Claude)
+
+**Status:** concluída. Suíte de 60 para **62 testes**, todos verdes.
+
+Os revisores adversariais das tarefas 3, 5 e 6 aprovaram sem violação que bloqueasse, mas
+deixaram seis observações. Duas mereciam conserto agora; as outras viraram registro.
+
+**1. Tomada de conta pelo Google Sign-In. Consertado.**
+
+`GoogleTokenVerifierImpl` lia `dados.getEmail()` sem olhar a claim `email_verified`, e
+`AuthService.entrarComGoogle` usa o e-mail para decidir que dois logins são a mesma pessoa —
+vinculando o `google_sub` numa conta que já existia por senha. Um domínio Workspace pode emitir
+ID token com e-mail não confirmado. Quem apresentasse esse token com o e-mail da vítima assumia
+a conta dela.
+
+A guarda ficou no `AuthService`, não no verificador, por dois motivos: a consequência mora ali
+(é ali que "mesmo e-mail" vira "mesma pessoa"), e ali o teste alcança a regra pelo fake — dentro
+do `GoogleTokenVerifierImpl`, que é `@Profile("!test")`, nenhum teste chegaria.
+
+**Verificado por mutação, não só por teste verde:** desliguei a guarda (`if (false)`) e o teste
+`googleComEmailNaoVerificadoNaoAssumeContaExistente` ficou vermelho com
+`Status expected:<401> but was:<200>` — ou seja, a tomada de conta acontecia de verdade e o teste
+morde. Restaurada, 62/62.
+
+Entrou também um teste do caminho feliz (`googleComEmailVerificadoVinculaNaContaExistente`), para
+que ninguém "conserte" isto virando bloqueio geral do login por Google.
+
+De quebra, o `catch` do verificador passou a encadear a causa e logar em ERROR. Sem isso, uma
+indisponibilidade do Google apareceria para todo mundo como "seu token é inválido", indistinguível
+de credencial errada.
+
+**2. `app.janela-home-dias` e `app.teto-home-itens` eram knobs que não giravam. Removidos.**
+
+Estavam declarados no `application.yml` e nenhum código os lia — a janela de 14 dias e o teto de 6
+estão literais no SQL de `EventoRepository.home`, que é onde o plano manda que estejam. Knob que
+não gira é pior que knob nenhum: quem editasse acharia que mudou alguma coisa. Removi as duas
+chaves e deixei escrito no lugar onde os valores realmente moram.
+
+**3. Falso alarme que eu levantei e derrubei.** A query da Home tem
+`case e.tipo when 'PROVA' then 0 else 1 end` no `order by`, o que parece violar o não-negociável 4
+("ordem é urgência, nunca tipo"). Fui ao plano: é o terceiro critério, depois de data e hora, e o
+critério de aceite da Task 5 diz literalmente *"o critério de tipo é o terceiro na cláusula order
+by"*. Desempata dentro do mesmo dia e hora; não agrupa. Está correto.
+
+**Observações que NÃO consertei, e por quê:**
+
+- *`HomeController` não tem teste de ponta a ponta.* `HomeServiceTest` chama o service direto.
+  Ninguém exercita `GET /api/v1/home` pelo HTTP — nem o 401 sem Bearer, nem a serialização do
+  `LocalDate`/`LocalTime`. Não é violação de regra escrita e o plano pediu 9 testes de service,
+  que existem. Vale uma suíte de controller quando alguém passar por lá.
+- *`EstadoPessoalService.marcar` é find-then-insert, não upsert.* Sequencialmente é idempotente e
+  o teste prova. Sob concorrência — duplo toque disparando dois PUT — as duas transações podem
+  passar pelo `find` antes de qualquer `insert` e uma leva violação de unicidade. O resultado é
+  500 numa ação repetida, não corrupção. Registrado; o conserto é `ON CONFLICT DO NOTHING`.
+
+**Documentado:** a dúvida de produto que a Task 6 tinha deixado só no log virou **A12** em
+`docs/PERGUNTAS-ABERTAS.md` (entrega atrasada fica em "a fazer" para sempre?), com o default
+aplicado. O revisor tinha razão: decisão de produto não pode morar só no LOG.
+
+**Travas / dúvidas:** a Task 4 continua **sem revisão** — o revisor dela morreu com erro de API.
+É a maior tarefa do plano (45 testes, `If-Match`, revisão, exclusão lógica, autor-only) e a que
+mais concentra não-negociáveis. Revisar antes de considerar o backend fechado.

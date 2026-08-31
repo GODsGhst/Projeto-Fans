@@ -5,6 +5,8 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.projetofans.erro.TokenInvalidoException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -23,6 +25,8 @@ import java.util.List;
 @Profile("!test")
 public class GoogleTokenVerifierImpl implements GoogleTokenVerifier {
 
+    private static final Logger log = LoggerFactory.getLogger(GoogleTokenVerifierImpl.class);
+
     private final GoogleIdTokenVerifier verificador;
 
     public GoogleTokenVerifierImpl(@Value("${app.google-oauth-client-id}") String clientId) {
@@ -39,14 +43,21 @@ public class GoogleTokenVerifierImpl implements GoogleTokenVerifier {
             token = verificador.verify(idToken);
         } catch (GeneralSecurityException | IOException e) {
             // Relanca traduzido, nunca engole: falha de rede aqui nao pode virar
-            // "login invalido" silencioso nem lista vazia.
-            throw new TokenInvalidoException("falha ao verificar o ID token do Google");
+            // "login invalido" silencioso nem lista vazia. A causa vai junto e o
+            // ERROR fica no log porque, sem eles, uma indisponibilidade do Google
+            // apareceria para todo mundo como "seu token e invalido" e ninguem
+            // saberia distinguir de credencial errada de verdade.
+            log.error("falha ao verificar o ID token do Google", e);
+            throw new TokenInvalidoException("falha ao verificar o ID token do Google", e);
         }
         if (token == null) {
             throw new TokenInvalidoException("ID token do Google invalido");
         }
         GoogleIdToken.Payload dados = token.getPayload();
         String nome = dados.get("name") instanceof String texto ? texto : dados.getEmail();
-        return new GoogleIdentidade(dados.getSubject(), dados.getEmail(), nome);
+        // getEmailVerified() e Boolean e pode vir null: Boolean.TRUE.equals trata
+        // null como nao verificado, que e o lado seguro.
+        return new GoogleIdentidade(dados.getSubject(), dados.getEmail(), nome,
+                Boolean.TRUE.equals(dados.getEmailVerified()));
     }
 }

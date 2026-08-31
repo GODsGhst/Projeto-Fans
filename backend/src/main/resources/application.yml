@@ -26,9 +26,15 @@ app:
   # Base do link que vai no e-mail de reset. Em dev/test o LogEmailSender so
   # imprime; em prod o SMTP manda.
   reset-senha-url-base: http://localhost:8100/senha/reset
+  # Lida pelo reagendador de notificacao (Task 8).
   notificacao-hora-vespera: "19:00"
-  janela-home-dias: 14
-  teto-home-itens: 6
+  # A janela de 14 dias e o teto de 6 itens da Home NAO estao aqui, de proposito.
+  # Eles vivem literais no SQL de EventoRepository.home, que e o unico lugar onde
+  # as tres regras da Home moram juntas. Estiveram declarados neste bloco ate
+  # 2026-08-30 como chaves que nenhum codigo lia: knob que nao gira e pior que
+  # knob nenhum, porque quem edita acha que mudou alguma coisa. Para mudar de
+  # verdade, mexa na query — e os testes de teto e de janela em HomeServiceTest
+  # vao junto.
 
 server:
   port: 8080

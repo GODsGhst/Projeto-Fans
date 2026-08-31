@@ -22,6 +22,12 @@ public class ErroDeNegocio extends RuntimeException {
         this.status = status;
     }
 
+    /** Com causa: usar sempre que houver excecao original a preservar. */
+    public ErroDeNegocio(HttpStatus status, String mensagem, Throwable causa) {
+        super(mensagem, causa);
+        this.status = status;
+    }
+
     public HttpStatus getStatus() {
         return status;
     }

@@ -160,6 +160,25 @@ Custa uma linha mudar: a rota está isolada em `ROTA_LOGIN`, em `app/src/app/cor
 Vale responder antes da Task 10, porque é a primeira que roda o app com dados de verdade.
 
 
+### A12. Entrega atrasada fica em "a fazer" para sempre?
+
+`GET /meu-quadro` inclui evento com data passada que ninguem marcou. Uma entrega de tres meses
+atras que voce nunca resolveu continua na coluna "a fazer". Com um semestre inteiro, a coluna
+cresce sem limite.
+
+**Default aplicado: nao cortar nada.** O item fica. E o comportamento correto para "atrasado" —
+e coerente com a A3, onde o atrasado some da Home justamente porque continua visivel em Meu
+quadro. Se o quadro tambem cortasse, o item desapareceria do app inteiro.
+
+**Custo se mudar:** um `where` no predicado do quadro e um teste. Meia hora. Mas a alternativa
+obvia — uma terceira secao "atrasados" — esbarra na Secao 9.2 do spec, que fixa duas colunas.
+Entao a mudanca provavel e "esconder depois de N dias", e ai a pergunta e qual N.
+
+**Levantada em 2026-08-30**, na entrega da Task 6, e registrada aqui porque decisao de produto
+nao pode morar so no `docs/LOG.md`.
+
+---
+
 ## B. Contas e credenciais — você precisa criar, mas nada está travado
 
 Todas têm fake ou fallback, então **o Codex trabalha e testa sem nenhuma delas**. Elas viram necessárias só no momento de rodar em dois aparelhos reais, que é o aceite da Seção 8.
@@ -230,3 +249,4 @@ Se ele já responde "o que foi dado no período", o app perde a razão de existi
 | 2026-08-22 | A4 Upload de arquivo | Revertida: entra no escopo, R2 pré-assinado em duas fases |
 | 2026-08-26 | A9 Nota da turma é do líder? | Não. Qualquer membro — não-negociável 9 ganha do rótulo do mockup |
 | 2026-08-26 | Uma tabela de anotação ou duas? | Uma, com coluna `alcance`. `tipos.ts` já congelou um tipo só |
+| 2026-08-30 | Google Sign-In confia no e-mail sem `email_verified`? | Não. Sem a claim, o vínculo automático por e-mail vira tomada de conta — login recusado com 401 |
