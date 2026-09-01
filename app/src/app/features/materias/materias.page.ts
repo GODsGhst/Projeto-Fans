@@ -30,6 +30,12 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
 
     <ion-content [fullscreen]="true">
       <div class="pf-pilha">
+        <!-- Antes disto o estado vazio dizia "qualquer pessoa da turma pode
+             cadastrar" e nao oferecia como. Convite sem porta e crueldade.
+             Fica fora do @if de proposito: existe cheia e vazia. -->
+        <a class="add-linha" routerLink="/tabs/materias/nova">
+          +&nbsp;&nbsp;Nova matéria
+        </a>
         @if (carregando()) {
           <p class="pf-aviso">Carregando…</p>
         } @else if (erro(); as e) {

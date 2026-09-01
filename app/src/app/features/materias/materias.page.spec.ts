@@ -102,4 +102,20 @@ describe('MateriasPage', () => {
       .withContext('falhar ao buscar NAO e "nao ha materias"')
       .toBeNull();
   });
+
+  it('a aba oferece como cadastrar — inclusive quando esta vazia', async () => {
+    // O estado vazio dizia "qualquer pessoa da turma pode cadastrar" e nao
+    // oferecia como. Convite sem porta e crueldade.
+    await abrir((r) => r.flush([]));
+
+    expect(fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]'))
+      .withContext('a entrada tem de existir no estado vazio')
+      .not.toBeNull();
+  });
+
+  it('a entrada continua ali com a lista cheia', async () => {
+    await abrir((r) => r.flush([materia('m1', 'BD', 'Banco de Dados')]));
+
+    expect(fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]')).not.toBeNull();
+  });
 });

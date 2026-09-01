@@ -2182,3 +2182,76 @@ segmentado, campos de data e hora presentes, 4 membros com o líder marcado, có
 
 **Travas / dúvidas:** falta o endpoint que a tela da turma consome — não existe nada que liste
 membros. É backend, e entra na leva de implementação junto das telas.
+
+---
+
+### [2026-09-01] Fora do plano — `GET /api/v1/turmas/minha`
+
+**Status:** concluída
+
+**O que foi feito:** o endpoint que a tela `data-tela="turma"` do `telas-v3.html` consome. Responde
+de uma vez quem está na turma, quem é o líder e qual é o código de convite — o código, que antes só
+existia na resposta do `POST /turmas` e sumia para sempre quando alguém fechava o app naquela tela.
+Escopo pelo `TurmaScopeResolver`, sem nenhum filtro de `turma_id` à mão; quem não é membro leva
+**404**, nunca 403. Os nomes saem resolvidos em DTO — a entidade `Usuario` não cruza o controller,
+e ela carrega `senhaHash`.
+
+**Arquivos principais:**
+- `backend/src/main/java/com/projetofans/web/controller/TurmaController.java` (+ `GET /minha`)
+- `backend/src/main/java/com/projetofans/service/TurmaService.java` (+ `minha`)
+- `backend/src/main/java/com/projetofans/web/dto/MinhaTurmaResponse.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/MembroDaTurmaResponse.java` (novo)
+- `backend/src/main/java/com/projetofans/domain/Membro.java` (`@Generated` em `entrouEm`)
+- `backend/src/test/java/com/projetofans/turma/MinhaTurmaTest.java` (novo, 6 testes)
+
+**Critério de aceite:** `cd backend && ./mvnw test`
+
+```
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.auth.AuthFlowTest
+[INFO] Tests run:  6, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.domain.SchemaTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.evento.EventoCrudTest
+[INFO] Tests run:  8, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.evento.VinculoMaterialTest
+[INFO] Tests run:  9, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.home.HomeServiceTest
+[INFO] Tests run:  9, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.materia.MateriaTest
+[INFO] Tests run:  8, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.material.MaterialCrudTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.moderacao.ModeracaoTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.notify.NotificacaoTest
+[INFO] Tests run:  6, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.quadro.EstadoPessoalTest
+[INFO] Tests run:  4, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.security.TurmaScopeTest
+[INFO] Tests run:  4, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.seguranca.CorsTest
+[INFO] Tests run:  1, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.SmokeTest
+[INFO] Tests run:  6, Failures: 0, Errors: 0, Skipped: 0 -- in com.projetofans.turma.MinhaTurmaTest
+[INFO] Tests run: 109, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+103 → **109**, os 6 novos são desta tarefa. Nada no `app/` foi tocado.
+
+**Decisões que eu tomei:**
+
+*O código de convite é visível para TODO membro, não só para o líder.* É o não-negociável 9 levado
+até o fim: se qualquer membro posta sem aprovação, qualquer membro convida. Esconder o código do
+aluno faria a entrada de um calouro depender de o líder estar por perto com o celular na mão — um
+gate de fato, montado com outro nome. O teste `alunoComumVeCodigoDeConvite` prende essa decisão,
+para que ela precise ser desfeita de propósito, e não por descuido.
+
+*Quem não é membro leva 404, nunca 403.* Não é só coerência com o resto: aqui o corpo da resposta
+**é** o segredo. 403 diria "esta turma existe" a quem só tem um palpite, e o código de convite é a
+única coisa que separa a turma de qualquer pessoa com o link.
+
+*Ordem por `entrouEm`, com nome e id desempatando.* O desempate não é enfeite. `entrou_em` tem
+`DEFAULT now()`, e no Postgres `now()` é o instante da **transação** — dois membros gravados na
+mesma transação empatam. Sem o segundo critério a ordem viria do plano de execução do banco e
+mudaria a cada abertura; lista que se reordena parece lista que mudou de conteúdo.
+
+*`@Generated` em `Membro.entrouEm`.* O campo saía **nulo** no JSON com a coluna preenchida no
+banco: `insertable = false` impede o Hibernate de escrever a coluna, mas não o manda relê-la depois
+do INSERT. Corrigi na entidade em vez de remendar no service, porque o remendo protege só a chamada
+remendada. As outras nove colunas com o mesmo padrão ficaram como estavam — são A22.
+
+*Membro sem usuário estoura, não vira nome em branco.* A FK torna isso impossível; se acontecer, o
+banco está corrompido, e uma pessoa sem nome na lista é pior que um erro visível.
+
+**Travas / dúvidas:** nenhuma para este endpoint. Uma dívida vizinha virou **A22** em
+`docs/PERGUNTAS-ABERTAS.md`: nove entidades ainda leem `null` na coluna que o banco preenche
+sozinho, e o `EventoService` contorna a sua à mão.

@@ -6,6 +6,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -37,6 +39,15 @@ public class Membro {
     @Column(nullable = false)
     private PapelMembro papel;
 
+    /**
+     * `insertable = false` sozinho deixa o campo NULO no objeto depois do INSERT:
+     * o banco preenche o DEFAULT now(), mas o Hibernate nunca le o valor de volta,
+     * e qualquer leitura na mesma transacao devolve a instancia em cache — sem
+     * data. Foi assim que GET /turmas/minha saiu sem `entrouEm`, com a coluna
+     * preenchida no banco. `@Generated` manda o Hibernate reler apos gravar; e o
+     * mesmo conserto que o EventoService faz a mao com `em.refresh`.
+     */
+    @Generated(event = EventType.INSERT)
     @Column(name = "entrou_em", nullable = false, insertable = false, updatable = false)
     private Instant entrouEm;
 

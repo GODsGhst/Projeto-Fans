@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 
 import { MaterialLinhaComponent } from '../../shared/material-linha.component';
@@ -50,7 +51,7 @@ export interface CartaoVm {
     IonContent,
     MiniCardComponent,
     MaterialLinhaComponent,
-  ],
+    RouterLink,],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -60,6 +61,9 @@ export interface CartaoVm {
 
     <ion-content [fullscreen]="true">
       <div class="pf-pilha">
+        <!-- A turma e o codigo de convite moram aqui: e a partir do quadro que
+             alguem procura "quem esta na turma". -->
+        <a class="link-turma" routerLink="/tabs/turma">a turma &rarr;</a>
         @if (carregando()) {
           <p class="pf-aviso">Carregando…</p>
         } @else if (erro(); as e) {
@@ -139,6 +143,15 @@ export interface CartaoVm {
     </ion-content>
   `,
   styles: `
+    .link-turma {
+      align-self: flex-end;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 2px;
+    }
+
     .kanban {
       display: grid;
       grid-template-columns: 1fr 1fr;

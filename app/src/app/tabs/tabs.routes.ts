@@ -25,6 +25,14 @@ export const tabsRoutes: Routes = [
         loadComponent: () =>
           import('../features/materias/materias.page').then((m) => m.MateriasPage),
       },
+      // ANTES de 'materias/:id' de proposito. O Angular casa na ordem: se esta
+      // rota viesse depois, /tabs/materias/nova abriria a tela de uma materia
+      // com id="nova" e o app pediria ao servidor uma materia que nao existe.
+      {
+        path: 'materias/nova',
+        loadComponent: () =>
+          import('../features/materias/nova-materia.page').then((m) => m.NovaMateriaPage),
+      },
       {
         path: 'materias/:id',
         loadComponent: () =>
@@ -33,6 +41,12 @@ export const tabsRoutes: Routes = [
       // A tela de um evento vive dentro das abas de proposito: sair do app para
       // ver uma prova, e voltar sem contexto, seria pior que o custo de manter
       // a barra visivel.
+      // Mesma armadilha da rota acima: 'novo' antes de ':id'.
+      {
+        path: 'eventos/novo',
+        loadComponent: () =>
+          import('../features/evento/novo-evento.page').then((m) => m.NovoEventoPage),
+      },
       {
         path: 'eventos/:id',
         loadComponent: () => import('../features/evento/evento.page').then((m) => m.EventoPage),
@@ -41,6 +55,10 @@ export const tabsRoutes: Routes = [
         path: 'quadro',
         loadComponent: () =>
           import('../features/quadro/quadro.page').then((m) => m.QuadroPage),
+      },
+      {
+        path: 'turma',
+        loadComponent: () => import('../features/turma/turma.page').then((m) => m.TurmaPage),
       },
       { path: '', redirectTo: '/tabs/home', pathMatch: 'full' },
     ],

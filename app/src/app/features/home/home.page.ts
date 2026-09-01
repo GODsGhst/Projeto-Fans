@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 import { AulaCardComponent } from '../../shared/aula-card.component';
 import { EventoCardComponent } from '../../shared/evento-card.component';
@@ -36,7 +37,7 @@ export interface AulaVm {
   selector: 'app-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, AulaCardComponent, EventoCardComponent],
+  imports: [IonHeader, IonToolbar, IonTitle, IonContent, AulaCardComponent, EventoCardComponent, RouterLink],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -97,6 +98,13 @@ export interface AulaVm {
             </span>
           </div>
         }
+
+        <!-- Sempre visivel, inclusive na tela vazia: e exatamente quando alguem
+             precisa cadastrar. O dono instalou o APK, entrou na turma e nao tinha
+             como cadastrar nada — o app so lia. -->
+        <a class="add-linha" routerLink="/tabs/eventos/novo">
+          +&nbsp;&nbsp;Cadastrar prova ou entrega
+        </a>
       </div>
     </ion-content>
   `,

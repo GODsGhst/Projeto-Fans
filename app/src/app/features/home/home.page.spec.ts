@@ -151,4 +151,12 @@ describe('HomePage', () => {
       .toBeNull();
     expect(fixture.nativeElement.querySelectorAll('app-evento-card').length).toBe(0);
   });
+
+  it('a Home oferece cadastrar prova ou entrega, mesmo vazia', async () => {
+    // O dono instalou o APK, entrou na turma e nao conseguiu cadastrar nada: o
+    // app so lia. Esta e a porta que faltava.
+    await abrir((r) => r.flush([]));
+
+    expect(fixture.nativeElement.querySelector('a[href="/tabs/eventos/novo"]')).not.toBeNull();
+  });
 });

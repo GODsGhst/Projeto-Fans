@@ -505,6 +505,35 @@ líder sabe que apertou.
 
 **Levantada em 2026-09-01**, na entrega da Task 8.
 
+### A22. Sete entidades ainda leem `null` na coluna que o banco preenche sozinho
+
+`GET /turmas/minha` saiu sem `entrouEm` na primeira execução, com a coluna **preenchida no banco**.
+A causa não é da turma: `@Column(insertable = false)` diz ao Hibernate para não escrever a coluna,
+mas não diz para **lê-la de volta** depois do INSERT. O objeto fica com `null`, e qualquer leitura
+na mesma transação recebe a instância em cache — sem data. Em produção some na maioria dos casos,
+porque a leitura seguinte costuma vir de outra transação; em teste, e em qualquer fluxo que grave e
+leia junto, aparece.
+
+**Corrigido só em `Membro.entrouEm`**, com `@Generated(event = INSERT)`. As outras nove colunas com
+o mesmo padrão continuam como estavam:
+
+`Evento.criadoEm` · `Material.criadoEm` · `Materia.criadoEm` · `Turma.criadoEm` · `Usuario.criadoEm`
+· `Revisao.criadaEm` · `AcaoModeracao.criadaEm` · `EventoMaterial.vinculadoEm` ·
+`TokenResetSenha.criadoEm`
+
+O `EventoService` já contorna a sua com `em.refresh(salvo)` na criação — um remendo por chamada,
+que só protege o caminho que alguém lembrou de remendar. `MateriaService.criar` **não** remenda: o
+`criadoEm` da matéria recém-criada sai nulo, e hoje isso não quebra nada só porque nenhum DTO de
+matéria expõe a data.
+
+**Default aplicado: não mexi nas outras.** Trocar nove entidades de uma vez, numa tarefa que pediu
+um endpoint, é exatamente o refactor oportunista que o AGENTS.md proíbe. Mas é dívida real e com
+data de vencimento: a primeira tela que mostrar "criado em" numa resposta imediata vai encontrar
+o mesmo nulo.
+
+**Levantada em 2026-09-01**, implementando `GET /turmas/minha`.
+
+
 
 ---
 

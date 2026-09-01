@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { routes } from './app.routes';
+import { tabsRoutes } from './tabs/tabs.routes';
 import { erroHttpInterceptor } from './core/http-error.interceptor';
 import { StorageService } from './core/storage.service';
 import { StorageFake, USUARIO } from './features/auth/auth-teste';
@@ -60,6 +61,33 @@ describe('rotas do app', () => {
     for (const rota of ['/login', '/cadastro', '/entrar-turma', '/recuperar']) {
       await router.navigateByUrl(rota);
       expect(router.url).withContext(`${rota} nao exige sessao`).toBe(rota);
+    }
+  });
+
+  it('as telas alcancadas por link tem rota', () => {
+    // Sem isto o teste de ordem abaixo aprova rota AUSENTE: `indexOf` devolve
+    // -1 para o que nao existe, e -1 e menor que qualquer indice. A tela some do
+    // app inteiro e a suite continua verde.
+    const caminhos = (tabsRoutes[0].children ?? []).map((r) => r.path);
+    for (const rota of ['materias/nova', 'eventos/novo', 'turma']) {
+      expect(caminhos)
+        .withContext(`${rota} nao registrada — a tela existe mas nao abre`)
+        .toContain(rota);
+    }
+  });
+
+  it('as rotas de criar vem ANTES das rotas com parametro', () => {
+    // `materias/:id` casa com `materias/nova` e abriria a tela de detalhe
+    // pedindo GET /materias/nova. O router usa a primeira que casar, entao a
+    // ordem aqui e a regra — e ela some sem barulho num reordenamento.
+    const caminhos = (tabsRoutes[0].children ?? []).map((r) => r.path);
+    for (const [criar, detalhe] of [
+      ['materias/nova', 'materias/:id'],
+      ['eventos/novo', 'eventos/:id'],
+    ]) {
+      expect(caminhos.indexOf(criar))
+        .withContext(`${criar} tem de vir antes de ${detalhe}`)
+        .toBeLessThan(caminhos.indexOf(detalhe));
     }
   });
 });

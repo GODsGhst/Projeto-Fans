@@ -217,4 +217,13 @@ describe('QuadroPage', () => {
     expect(coluna(0)).toEqual([]);
     expect(coluna(1)).toEqual(['Lista 4']);
   });
+
+  it('a barra leva para a turma', async () => {
+    await abrir(
+      (r) => r.flush({ aFazer: [], feito: [] }),
+      (r) => r.flush(VAZIO),
+    );
+
+    expect(fixture.nativeElement.querySelector('a[href="/tabs/turma"]')).not.toBeNull();
+  });
 });
