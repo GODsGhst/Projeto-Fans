@@ -1,9 +1,11 @@
 package com.projetofans.service;
 
+import com.projetofans.domain.Membro;
 import com.projetofans.domain.TokenResetSenha;
 import com.projetofans.domain.Usuario;
 import com.projetofans.erro.ErroDeNegocio;
 import com.projetofans.erro.TokenInvalidoException;
+import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.TokenResetSenhaRepository;
 import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.GoogleIdentidade;
@@ -41,15 +43,17 @@ public class AuthService {
     private static final Duration VALIDADE_TOKEN_RESET = Duration.ofHours(1);
 
     private final UsuarioRepository usuarios;
+    private final MembroRepository membros;
     private final TokenResetSenhaRepository tokensReset;
     private final PasswordEncoder senhas;
     private final JwtService jwt;
     private final GoogleTokenVerifier google;
     private final EmailSender email;
 
-    public AuthService(UsuarioRepository usuarios, TokenResetSenhaRepository tokensReset,
+    public AuthService(UsuarioRepository usuarios, MembroRepository membros, TokenResetSenhaRepository tokensReset,
                        PasswordEncoder senhas, JwtService jwt,
                        GoogleTokenVerifier google, EmailSender email) {
+        this.membros = membros;
         this.usuarios = usuarios;
         this.tokensReset = tokensReset;
         this.senhas = senhas;
@@ -152,8 +156,18 @@ public class AuthService {
         tokensReset.save(registro);
     }
 
+    /**
+     * O turmaId sai daqui e nao do TurmaScopeResolver de proposito: o resolver
+     * estoura 404 para quem nao tem vinculo, e aqui NAO ter turma e resposta
+     * legitima — e o estado de todo mundo que acabou de se cadastrar.
+     */
     private AuthResponse resposta(Usuario usuario) {
-        return new AuthResponse(jwt.emitir(usuario.getId(), usuario.getNome()), UsuarioDto.de(usuario));
+        UUID turmaId = membros.findByUsuarioIdOrderByEntrouEmDesc(usuario.getId()).stream()
+                .findFirst()
+                .map(Membro::getTurmaId)
+                .orElse(null);
+        return new AuthResponse(jwt.emitir(usuario.getId(), usuario.getNome()),
+                UsuarioDto.de(usuario), turmaId);
     }
 
     /**

@@ -142,22 +142,37 @@ continua de pé: 2 GB por turma, aviso em 80%.
 
 ---
 
-### A11. Existe tela de entrada, ou o app assume que já está autenticado?
+### A11. Existe tela de entrada, ou o app assume que já está autenticado? — **RESOLVIDA em 2026-09-01**
 
-**Default aplicado:** o interceptor de 401 limpa a sessão e navega para `/login`, como a Seção 10
-do spec manda. Essa rota **não existe** — o plano não lista tela de login em tarefa nenhuma, nem
-nas 10-12. Hoje a navegação falha e cai num `console.error`; a sessão é limpa de qualquer jeito,
-então nada fica em estado sujo.
+**Resposta: saída 1.** As telas de entrada existem, em `app/src/app/features/auth/`: login,
+cadastro, entrar na turma por código e esqueci a senha. Todas **fora das abas** — quem não entrou
+não tem turma, e o `TurmaScopeResolver` responderia 404 em toda aba. `/login` agora existe, então o
+`console.error` do interceptor de 401 acabou junto: ele navega para uma rota de verdade.
 
-Duas saídas, e é decisão sua:
+O fluxo implementado:
 
-1. **Entra uma tarefa de tela de entrada** (login, cadastro, esqueci a senha, entrar na turma por
-   código). O backend da Task 3 já prevê os quatro endpoints; falta só a tela.
-2. **O app assume que só roda autenticado** — por exemplo, o convite vem por link e a sessão nunca
-   expira em uso normal. Nesse caso o 401 vira uma mensagem, não um redirecionamento.
+```
+login  --entrar-->          /tabs/home
+login  --criar conta-->     /cadastro --> /entrar-turma --> /tabs/home
+login  --esqueci a senha--> /recuperar --voltar--> /login
+/entrar-turma: código de alguém da turma, ou criar turma nova (quem cria vira LÍDER)
+```
 
-Custa uma linha mudar: a rota está isolada em `ROTA_LOGIN`, em `app/src/app/core/auth.service.ts`.
-Vale responder antes da Task 10, porque é a primeira que roda o app com dados de verdade.
+Cadastro **nunca** cai direto nas abas: conta nova não tem vínculo, e ver 404 em tudo sem
+explicação era o jeito mais fácil de errar isto.
+
+A guarda `guardaSessao` (`app/src/app/core/auth.guard.ts`) fecha as rotas de tabs. Ela chama
+`restaurar()` antes de decidir, porque o `provideAppInitializer` é assíncrono: sem isso, reabrir o
+app com sessão gravada expulsaria a pessoa para `/login`. As duas falhas opostas têm teste, e os
+dois testes foram conferidos por mutação.
+
+**Ficou de fora:** botão de sair, tela de `resetarSenha(token, novaSenha)` (o link do e-mail ainda
+não abre o app) e mostrar o código de convite depois de criar a turma.
+
+**Ficou uma divergência entre mockup e backend:** `telas-v3.html` diz que o código de convite tem
+6 caracteres e limita o campo a 6; o `TurmaService` gera 8 e o seed usa `TURMA01`, de 7. O app foi
+pelo backend (`maxlength="8"`), senão ninguém digitaria um código real. Alguém precisa decidir se
+o mockup se corrige ou se o gerador encurta.
 
 
 ### A12. Entrega atrasada fica em "a fazer" para sempre?

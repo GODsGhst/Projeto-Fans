@@ -1927,3 +1927,147 @@ pooling de transação. Desligado antes de copiar a string.
 **Travas / dúvidas:** o app ainda não tem tela de entrada implementada (A11) — o fluxo existe no
 mockup `telas-v3.html`, não em código. Quem instalar o APK abre direto nas abas e não tem como
 criar conta pelo app. É o próximo passo para o teste com um colega valer.
+
+---
+
+### [2026-09-01] Fora do plano — telas de entrada (A11)
+
+**Status:** concluída
+
+**O que foi feito:** o app tinha as quatro abas mas nenhuma porta: sem login não havia token, toda
+chamada voltava 401 e nenhuma tela mostrava dado. Entraram quatro páginas standalone em
+`app/src/app/features/auth/` — login, cadastro, entrar na turma e esqueci a senha —, todas
+**fora** das abas, mais a guarda `guardaSessao` nas rotas de tabs. `/login` passou a existir, o que
+conserta de quebra o `console.error` do interceptor de 401, que já navegava para `ROTA_LOGIN` sem
+destino. O `AuthService` não foi tocado: ele já expunha tudo.
+
+O fluxo é o do mockup: login → abas; login → cadastro → **entrar-turma** → abas; login → recuperar
+→ volta. Cadastro nunca cai direto nas abas — conta nova não tem vínculo, e o `TurmaScopeResolver`
+responderia 404 em tudo sem a pessoa entender por quê.
+
+**Arquivos principais:**
+
+- `app/src/app/features/auth/{login,cadastro,entrar-turma,recuperar}.page.ts`
+- `app/src/app/features/auth/auth.scss` — estilos das quatro telas, tirados de `telas-v3.html`
+- `app/src/app/features/auth/erro.ts` — mensagem da tela sai de `ErroApi.message`, sem inventar texto
+- `app/src/app/core/auth.guard.ts`
+- `app/src/app/app.routes.ts` — quatro rotas públicas antes do `''` guardado
+- specs: `login`, `cadastro`, `entrar-turma`, `recuperar` e `app/src/app/app.routes.spec.ts`
+
+**Critério de aceite:**
+
+```
+cd app && npx ng test --watch=false --browsers=ChromeHeadless && npx ng lint && npx ng build
+
+TOTAL: 65 SUCCESS          (eram 51; 14 testes novos)
+All files pass linting.
+Build at: 2026-09-01T18:04:33.257Z - Hash: 67e786ba41bc2bcd - Time: 5163ms
+```
+
+Os dois testes de guarda foram verificados por mutação, não só por ficarem verdes: tirar o
+`canActivate` quebra `Expected '/tabs/home' to be '/login'`, e tirar o `restaurar()` de dentro da
+guarda quebra `Expected '/login' to be '/tabs/home'`. As duas falhas possíveis são opostas e as
+duas doem.
+
+**Decisões que eu tomei:**
+
+1. **A guarda chama `restaurar()` de novo em vez de esperar um sinal de "boot pronto".** `restaurar()`
+   roda no `provideAppInitializer` e lê disco; uma guarda que só olhasse `autenticado()` poderia
+   expulsar para `/login` quem tem sessão válida, e reabrir o app viraria um login. `restaurar()` é
+   idempotente e lê a mesma chave, então chamar outra vez custa uma leitura e fecha a corrida — sem
+   alterar o `AuthService`.
+2. **O código de convite tem até 8 caracteres, não 6.** O mockup diz "6 caracteres" e põe
+   `maxlength="6"`; o `TurmaService` gera 8 (`UUID` truncado, caixa alta) e o seed usa `TURMA01`,
+   que tem 7. Com o campo do mockup ninguém conseguiria digitar um código real. Fui pelo backend:
+   `maxlength="8"` e o texto virou "Ele tem até 8 caracteres e não expira". **O mockup está errado
+   nesse ponto** — vale corrigir lá.
+3. **"Criar uma turma nova" abre dois campos na própria tela.** `POST /turmas` exige `nome` e
+   `semestre`, e o mockup tem só o botão, sem formulário. Revelar os dois campos ali custa menos que
+   uma quinta tela e não muda a navegação desenhada.
+4. **A tela de recuperar senha confirma na própria tela em vez de voltar para o login.** O
+   `data-ir="login"` do mockup é o clique de demonstração; navegar de volta em silêncio faria a
+   pessoa sair sem saber se o e-mail saiu. A confirmação não distingue conta existente de
+   inexistente — isso continua igual ao backend (204 sempre).
+5. **O texto de erro é sempre `ErroApi.message`, cru.** Código inválido mostra "Registro nao
+   encontrado", que é a mensagem do servidor. Feio, mas a regra é não inventar texto por status; se
+   incomodar, o conserto é no `ProblemDetail` do backend, não em cada tela.
+6. **Sem `FormsModule`.** Os campos são lidos por referência de template (`#email.value`) no envio.
+   Quatro formulários curtos não pagam `ngModel`, e nenhum deles valida em tempo real — quem valida
+   é o backend, e a mensagem dele é a que aparece.
+
+**O que ficou de fora, de propósito:** botão de sair (o `AuthService.sair()` existe, falta onde
+tocar), tela de `resetarSenha(token, novaSenha)` — o link do e-mail ainda não abre o app —, e
+mostrar o código de convite depois de criar a turma. Nenhum bloqueia o teste com um colega.
+
+**Travas / dúvidas:** o mockup e o backend discordam no tamanho do código de convite (decisão 2).
+Segui o backend porque o outro caminho não funciona; quem mantém o `telas-v3.html` decide se
+corrige lá ou muda o gerador.
+
+---
+
+### [2026-09-01] Tela de entrada — e o beco sem saída que o revisor achou (Claude)
+
+**Status:** concluída. Backend **103 testes**, app **67**, tudo verde.
+
+O app ganhou login, cadastro, entrar na turma e recuperar senha. A A11 fecha aqui.
+
+O agente entregou com 65 testes e o revisor **reprovou**. Estava certo, e o que ele achou é o tipo
+de bug que não aparece em teste feliz nenhum.
+
+**1. Beco sem saída permanente. BLOQUEAVA.**
+
+`registrar()` grava a sessão em disco **antes** de a pessoa ter turma — e é assim que tem de ser,
+o token vem da própria resposta do cadastro. A tela então navegava para `/entrar-turma`.
+
+Se alguém fechasse o app nesse instante — trocar de app, botão de voltar, bateria acabando — o
+disco ficava com token válido e nenhum vínculo. Na abertura seguinte a guarda via `autenticado()`,
+liberava, e o app caía nas abas. Aí **toda** rota protegida responde 404 pelo `TurmaScopeResolver`,
+as quatro telas viram erro, e não havia saída: `sair()` não tinha chamador na UI e nenhuma aba
+linkava para `/entrar-turma`. Só reinstalando.
+
+O revisor confirmou contra o backend rodando: `GET /home` → 404, `GET /materias` → 404.
+
+Consertado em três lugares, porque um só não bastava:
+
+- **O servidor passou a dizer.** `AuthResponse` ganhou `turmaId`, nulo para quem não tem turma —
+  e nulo aqui é resposta legítima, não erro. Resolvido pelo `MembroRepository`, não pelo
+  `TurmaScopeResolver`, que estoura 404 justamente no caso que interessa.
+- **A guarda passou a fazer duas perguntas**, não uma: tem sessão? tem turma? Sem turma vai para
+  `/entrar-turma`, nunca para as abas.
+- **A tela ganhou saída.** "Sair desta conta" limpa a sessão e volta ao login. O botão de voltar do
+  Ionic não servia: navega sem limpar, e a guarda traz a pessoa de volta.
+
+Verificado por mutação: desligando a checagem de turma, o teste novo acusa
+`Expected '/tabs/home' to be '/entrar-turma'`.
+
+**2. O código de convite era descartado. Isso não era observação.**
+
+`POST /turmas` devolve o `codigoConvite` no corpo, e a tela jogava a resposta fora e ia para as
+abas. Quem criava a turma virava líder de uma turma que **não conseguia convidar ninguém**: o
+código existia no banco, passou pela mão do app, e a pessoa nunca o via.
+
+O revisor classificou como observação porque o log declarava fora de escopo. Mas o objetivo do
+dono é um colega entrar na turma dele — sem o código, o teste inteiro não acontece. Agora a tela
+mostra o código em destaque, com botão de copiar, e **não navega sozinha**: sair dali sem ler é
+perdê-lo.
+
+**3. Mensagens que colapsavam.** Toda falha de validação do backend devolve o mesmo
+`"Invalid request content."`, em inglês, num app em português. Cinco erros diferentes viravam uma
+frase que não nomeia campo nenhum. Resolvido no cliente, onde dói: campo vazio agora é barrado
+antes de enviar, com texto que diz o que falta. Os erros que já eram distintos (401, 409, 404,
+offline) continuam vindo do servidor.
+
+**Decisões que eu tomei:**
+
+*Não mexi na precedência do `ProblemDetailHandler` para traduzir as mensagens de validação.* Seria
+o conserto de raiz e serviria a todo cliente, mas o `ProblemDetailsExceptionHandler` do Boot tem
+ordem 0, e elevar a minha advice acima dele faria o meu `@ExceptionHandler(Exception.class)`
+passar a capturar as exceções de MVC que o Boot formata bem hoje — 405, 415, 404 sem handler
+viravam 500. Troca ruim. Validar no cliente resolve os cinco casos reais sem esse risco.
+
+*Dois testes existentes foram REESCRITOS, não consertados.* Eles afirmavam o comportamento antigo:
+"criar turma leva para as abas" e "sessão restaurada entra nas abas". Os dois descreviam o bug.
+
+**Travas / dúvidas:** o código de convite só aparece no momento em que a turma é criada. Quem
+fechar o app nessa tela não tem onde vê-lo de novo — não há tela de "minha turma". Não bloqueia o
+teste (o líder anota), mas é a próxima coisa que alguém vai pedir.

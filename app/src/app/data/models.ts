@@ -33,6 +33,14 @@ export interface Usuario {
 export interface SessaoResponse {
   jwt: string;
   usuario: Usuario;
+  /**
+   * Nulo (ausente no JSON) para quem ainda nao entrou em turma nenhuma — que e o
+   * estado normal de quem acabou de se cadastrar, nao um erro.
+   *
+   * O app precisa disto ANTES de abrir as abas: sem turma, toda rota protegida
+   * responde 404 e as quatro telas viram erro sem explicacao.
+   */
+  turmaId?: string | null;
 }
 
 export interface Membro {

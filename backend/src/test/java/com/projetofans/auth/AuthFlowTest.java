@@ -199,6 +199,51 @@ class AuthFlowTest extends TesteComPostgres {
     }
 
     @Test
+    @DisplayName("quem acabou de se cadastrar recebe turmaId nulo — e isso nao e erro")
+    void cadastroRecebeTurmaIdNulo() throws Exception {
+        // O app precisa saber a diferenca ANTES de abrir as abas. Sem este campo, o
+        // unico jeito de descobrir era chamar rota protegida e ler o 404 do
+        // TurmaScopeResolver — e ai quem so nao entrou na turma ainda veria quatro
+        // telas de erro sem entender por que.
+        MvcResult r = http.perform(post("/api/v1/auth/registrar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "nome", "Sem Turma", "email", email(), "senha", "senha-boa-123"))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode corpo = corpoDe(r);
+        assertThat(corpo.has("turmaId"))
+                .as("o campo tem de existir na resposta, mesmo nulo")
+                .isFalse();  // jackson non_null: nulo some do JSON, e ausencia E a resposta
+        assertThat(corpo.get("jwt").asText()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("depois de entrar na turma, o login devolve o turmaId")
+    void loginDevolveTurmaIdDepoisDeEntrar() throws Exception {
+        String endereco = email();
+        String bearer = "Bearer " + registra(endereco, "senha-boa-123");
+
+        // Cria a turma pela propria API: quem cria vira LIDER e ja fica vinculado,
+        // que e o mesmo estado de quem entrou por codigo — e e o caminho que a tela
+        // "Criar uma turma nova" usa.
+        MvcResult criada = http.perform(post("/api/v1/turmas")
+                        .header("Authorization", bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(
+                                Map.of("nome", "Turma de Teste", "semestre", "2026.2"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        String turmaId = corpoDe(criada).get("id").asText();
+
+        JsonNode depois = corpoDe(postJson("/api/v1/auth/login",
+                Map.of("email", endereco, "senha", "senha-boa-123")));
+
+        assertThat(depois.get("turmaId").asText()).isEqualTo(turmaId);
+    }
+
+    @Test
     @DisplayName("esqueci a senha devolve 204 mesmo para e-mail inexistente")
     void esqueciSenhaDevolve204MesmoParaEmailInexistente() throws Exception {
         String existente = email();

@@ -19,6 +19,8 @@ export interface SnapshotLocal {
 interface SessaoLocal {
   jwt: string;
   usuario: Usuario;
+  /** Ausente = tem sessao e nao tem turma. Estado real, nao corrompido. */
+  turmaId?: string | null;
 }
 
 const CHAVE_SNAPSHOT = 'pf.snapshot';
@@ -59,8 +61,11 @@ export class StorageService {
     return this.lerJson<SessaoLocal>(CHAVE_SESSAO);
   }
 
-  async gravarSessao(jwt: string, usuario: Usuario): Promise<void> {
-    await Preferences.set({ key: CHAVE_SESSAO, value: JSON.stringify({ jwt, usuario }) });
+  async gravarSessao(jwt: string, usuario: Usuario, turmaId?: string | null): Promise<void> {
+    await Preferences.set({
+      key: CHAVE_SESSAO,
+      value: JSON.stringify({ jwt, usuario, turmaId: turmaId ?? null }),
+    });
   }
 
   async limparSessao(): Promise<void> {
