@@ -1885,3 +1885,45 @@ leste — uma tela sozinha faz várias queries.
 
 **Travas / dúvidas:** A20 e A21 continuam abertas (moderação não dispara push; `pedirExclusao` não
 avisa o autor). Nenhuma bloqueia o teste.
+
+---
+
+### [2026-09-01] A API está no ar, e o APK fala com ela (Claude)
+
+**Status:** concluída. **B3 fechada** — a pergunta aberta desde 29/07 sobre onde a API roda.
+
+O dono criou as contas (Neon + Render) e apontou o Blueprint para o branch `acelera-backend`. O
+deploy subiu no commit `234ee42`.
+
+**URL: `https://projetofans-api.onrender.com`**
+
+**Verificado contra o servidor de verdade, não contra teste:**
+
+```
+GET  /api/v1/saude            -> 200 {"status":"ok"}
+POST /api/v1/auth/registrar   -> 200, JWT + usuario criado   (o Flyway rodou, o Neon responde)
+POST /api/v1/auth/login       -> 200, MESMO id                (os dados persistem)
+GET  /api/v1/home sem token   -> 401                          (a seguranca esta ligada)
+POST /api/v1/auth/login errada-> 401
+```
+
+O primeiro registro levou 7,9 s — cold start do free tier. Os seguintes, imediatos.
+
+**Duas armadilhas evitadas no caminho, as duas na configuração do Neon:**
+
+*Região.* O Neon oferece São Paulo, e a intuição diz para usar. Seria pior: o Render não tem
+região na América do Sul, então a API fica nos EUA de qualquer jeito. O que importa é a distância
+**API↔banco**, não celular↔API — o celular fala uma vez por tela, a API fala várias vezes com o
+banco na mesma tela. Ohio para os dois dá ~140 ms por tela; banco em São Paulo daria ~490 ms.
+
+*Connection pooling.* O Neon liga por padrão, e o host ganha `-pooler`. É PgBouncer em modo de
+transação, que briga com duas coisas nossas: o Flyway pega *advisory lock* de sessão para rodar a
+migration, e o Hikari usa prepared statements do lado do servidor. Nenhum dos dois sobrevive a
+pooling de transação. Desligado antes de copiar a string.
+
+**O APK agora fala com a API.** `environment.prod.ts` aponta para o Render, e a URL foi conferida
+**dentro** do `.apk` — descompactei o bundle e procurei a string, em vez de confiar no build.
+
+**Travas / dúvidas:** o app ainda não tem tela de entrada implementada (A11) — o fluxo existe no
+mockup `telas-v3.html`, não em código. Quem instalar o APK abre direto nas abas e não tem como
+criar conta pelo app. É o próximo passo para o teste com um colega valer.

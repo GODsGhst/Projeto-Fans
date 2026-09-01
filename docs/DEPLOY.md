@@ -99,13 +99,12 @@ e a autenticação funciona — o caminho inteiro está de pé.
 
 ## Passo 4 — apontar o app para lá
 
-Em `app/src/environments/environment.prod.ts`:
+**FEITO em 2026-09-01.** `app/src/environments/environment.prod.ts` aponta para
+`https://projetofans-api.onrender.com/api/v1`, e o APK foi gerado com ela dentro — conferido
+descompactando o `.apk` e procurando a URL no bundle.
 
-```ts
-apiUrl: 'https://projetofans-api.onrender.com/api/v1'
-```
-
-Depois é `npx cap add android` e gerar o APK. Esse passo tem guia próprio quando chegar a hora.
+Se um dia a URL mudar, é trocar essa linha, rodar `npx ng build && npx cap sync android` e gerar
+o APK de novo. Ver `docs/ANDROID.md` para os comandos, e a armadilha dos dois `JAVA_HOME`.
 
 ---
 
