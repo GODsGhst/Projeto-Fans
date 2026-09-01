@@ -367,6 +367,59 @@ return { vaziaId: vazia.id, offlineId: off.id };
 
 ---
 
+---
+
+## Telas novas — set/2026
+
+Três telas entraram depois do MVP e precisam existir aqui também: **Nova matéria**,
+**O que vai cair** (nova prova/entrega) e **A turma** (código de convite + membros).
+
+### Importar
+
+Importe `docs/design/telas-figma.html`, **não** `telas-v3.html`.
+
+O mockup navegável tem uma casca de celular só e alterna as telas com `display:none`.
+Todo importador renderiza o DOM como ele está: 12 das 13 telas chegariam vazias, e o
+import *parece* ter funcionado. O arquivo de import é gerado:
+
+```
+python docs/design/gerar-telas-figma.py
+```
+
+Cada tela vira um quadro próprio de 390px, visível, com a própria barra de abas.
+As que passam de 844px de altura crescem em vez de cortar — medido: Matérias tem 976.
+
+### Ligar o fluxo
+
+`docs/design/figma-fluxo.js`, no plugin Scripter. Ele foi **reescrito**: a versão com ids
+literais (`24:152`) funcionava exatamente uma vez, porque todo id muda no reimport — e
+reimportar é o que se faz ao adicionar tela. Agora ele acha tudo pelo texto desenhado.
+
+Liga 48 coisas: 36 abas, as 3 entradas novas, as setas de voltar e o caminho de entrada
+(login → cadastro → turma → home). Dois pontos de partida: fluxo completo e só as abas.
+
+### O que foi verificado, e o que não foi
+
+A lógica de resolução foi rodada contra o DOM de `telas-figma.html`, que tem a mesma forma
+que o Figma monta: 13/13 telas e 48/48 ligações resolvem, e marcador inexistente devolve
+`null` em vez de chutar outro nó. Isso pegou três bugs reais antes de qualquer chamada:
+
+1. o rótulo da aba é **"Cal"**, não "Calendário";
+2. a barra de título também tem 390 de largura, então largura sozinha não identifica tela —
+   `telaDe` parava nela e procurava os botões dentro do cabeçalho;
+3. a barra de abas é **irmã** do corpo da tela, não filha: subindo até o *primeiro*
+   ancestral de 390, 34 das 36 abas ficavam de fora. Agora sobe até o mais externo.
+
+**Não foi rodado no Figma** — a árvore de nós de lá não é idêntica à do DOM (o importador
+agrupa coisas, e textos podem se juntar ou separar). Se algo não ligar, o relatório do
+script diz qual marcador falhou; o conserto é o marcador aqui, não o desenho lá.
+
+### Uma ligação que não existe
+
+`calendário → nova anotação` ficou de fora de propósito. No mockup esse botão é montado por
+JavaScript depois de tocar num dia, então não existe no HTML estático e não chega no import.
+Para ligá-lo, ele precisa primeiro ser desenhado.
+
 ## Depois das telas
 
 O próximo passo do `LOG.md` continua valendo e não depende do Figma: converter o mockup
