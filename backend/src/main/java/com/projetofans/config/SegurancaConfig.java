@@ -13,7 +13,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * A API deixou de estar aberta na Task 3.
@@ -32,10 +38,55 @@ public class SegurancaConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * De onde o app pode chamar a API.
+     *
+     * Lista explicita, nunca "*". Com origem coringa o navegador recusa enviar
+     * credencial, e mesmo que aceitasse, qualquer pagina da internet poderia
+     * disparar chamadas autenticadas contra esta API a partir do navegador de
+     * quem estiver logado.
+     *
+     * As origens do Capacitor sao estranhas de proposito: o app empacotado nao
+     * roda em `https://projetofans.com`, ele roda num WebView que serve os
+     * arquivos locais sob um esquema proprio. No Android e `https://localhost`;
+     * no iOS, `capacitor://localhost`. Sao literais, nao exemplos.
+     *
+     * `http://localhost:8100` e o `ionic serve` de quem desenvolve.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+                "https://localhost",      // Capacitor Android
+                "capacitor://localhost",  // Capacitor iOS
+                "http://localhost",       // WebView em configuracao antiga
+                "http://localhost:8100")); // ionic serve
+        config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"));
+        // If-Match nao e header simples: sem ele aqui, todo PATCH e DELETE do app
+        // morre no preflight, e so eles — um bug que aparece semanas depois,
+        // quando alguem tenta editar.
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "If-Match"));
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource fonte = new UrlBasedCorsConfigurationSource();
+        fonte.registerCorsConfiguration("/api/**", config);
+        return fonte;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtFilter jwtFilter,
                                            ObjectMapper json) throws Exception {
         http
+            // Sem isto o app nao fala com a API, e falha do jeito mais confuso
+            // possivel: o WebView manda o preflight OPTIONS por causa do header
+            // Authorization, o Spring Security responde 401 (OPTIONS nao esta no
+            // permitAll e nao ha token), o navegador bloqueia, e o app registra
+            // "sem conexao" — indistinguivel de servidor fora do ar.
+            //
+            // O CorsFilter roda ANTES da autenticacao, entao o preflight e
+            // respondido sem passar pelo JWT. E por isso que ligar o cors aqui
+            // resolve sozinho, sem precisar liberar OPTIONS no permitAll.
+            .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(reg -> reg
