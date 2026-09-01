@@ -61,11 +61,28 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
      * Delta para o reagendador local do app. Inclui ocultos e excluidos de proposito:
      * sem eles o aparelho manteria notificacao agendada para evento que a turma nao
      * ve mais — um fantasma que so some reinstalando.
+     *
+     * O EXISTS sobre acao_moderacao e a resposta a A16, e sem ele o paragrafo acima
+     * seria mentira: `ocultar` NAO toca em `atualizado_em` (a entidade diz, desde a
+     * Task 2, que "ocultar nao e edicao de conteudo"), entao o registro que o lider
+     * escondeu nunca entrava neste delta. A alternativa era fazer ocultar carimbar
+     * `atualizado_em`, o que apagaria essa distincao e mexeria numa das colunas que
+     * o teste de R13 compara. A linha de auditoria ja existe e a moderacao SEMPRE a
+     * grava: da para ler a mudanca de visibilidade dali sem inventar coluna nova.
+     *
+     * `>=` e nao `>`: o app usa `servidorEm` da resposta anterior como `desde`, e
+     * num delta de notificacao reenviar um item ja conhecido nao custa nada (o
+     * aparelho regrava a mesma linha), enquanto pular um item por empate de
+     * timestamp deixa a notificacao errada agendada.
      */
     @Query("""
         select e from Evento e
         where e.turmaId = :turmaId
-          and e.atualizadoEm > :desde
+          and (e.atualizadoEm >= :desde
+               or exists (select 1 from AcaoModeracao a
+                          where a.registroTipo = com.projetofans.domain.RegistroTipo.EVENTO
+                            and a.registroId = e.id
+                            and a.em >= :desde))
         """)
     List<Evento> alteradosDesde(@Param("turmaId") UUID turmaId,
                                 @Param("desde") java.time.Instant desde);

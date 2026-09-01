@@ -39,7 +39,11 @@ ele **não sobe**, e isso é correto para produção de verdade. O `teste` é o 
 ## Passo 1 — banco no Neon (~3 min)
 
 1. Entre em **neon.tech** e crie conta (GitHub serve).
-2. Crie um projeto. Região: escolha a mais perto — `AWS us-east-1` está ok para o Brasil.
+2. Crie um projeto. **Região: `AWS US East 2 (Ohio)`**, que é o padrão do Neon.
+   O `render.yaml` está fixado em `ohio` para casar com ela. A latência que importa é
+   API↔banco, não celular↔API: uma tela sozinha faz várias queries, e pôr os dois em
+   pontas opostas dos EUA custa mais que os ~130 ms do Brasil até a costa leste. Se você
+   escolher outra região aqui, mude a linha `region:` do `render.yaml` junto.
 3. Na tela de conexão, escolha o formato **Java / JDBC**. Você vai ver algo como:
 
 ```

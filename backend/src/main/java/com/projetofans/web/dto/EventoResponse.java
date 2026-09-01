@@ -28,6 +28,27 @@ public record EventoResponse(
         boolean visivelTurma,
         Instant excluidoEm) {
 
+    /**
+     * Lapide: diz que o registro existiu e sumiu, sem dizer o que ele era.
+     *
+     * O /sync PRECISA devolver evento oculto e excluido — sem eles o aparelho
+     * mantem agendada a notificacao de um evento que a turma nao ve mais. Mas
+     * precisar do ITEM nao e precisar do CONTEUDO: para desagendar, o aparelho so
+     * usa id, visivelTurma e excluidoEm.
+     *
+     * Sem isto, GET /sync?desde=1970-01-01 devolvia titulo, data, materia e autoria
+     * de todo registro moderado para qualquer membro da turma — reabrindo por outra
+     * rota o que EventoService.buscar fecha com 404, e sem nem precisar saber o id.
+     *
+     * O reagendador do app filtra pelas flags antes de olhar o conteudo, entao os
+     * nulos aqui nao chegam a ser lidos.
+     */
+    public static EventoResponse lapide(Evento evento) {
+        return new EventoResponse(
+                evento.getId(), null, null, null, null, null, null, null, null,
+                evento.getVersion(), evento.isVisivelTurma(), evento.getExcluidoEm());
+    }
+
     public static EventoResponse de(Evento evento, Materia materia, String autorNome) {
         return new EventoResponse(
                 evento.getId(),

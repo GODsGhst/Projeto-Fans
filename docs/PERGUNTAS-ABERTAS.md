@@ -295,6 +295,26 @@ quem a pegar não descubra tarde.
 
 **Levantada em 2026-08-31**, na entrega da Task 7.
 
+#### RESOLVIDA em 2026-09-01, na Task 8 — saída (b), como recomendado
+
+`EventoRepository.alteradosDesde` passou a incluir o registro que tem linha em `acao_moderacao`
+mais nova que `desde`, além do filtro por `atualizado_em`. `ocultar` continua sem tocar em
+`atualizado_em`, o comentário da entidade continua verdadeiro e o teste de R13 continua comparando
+as mesmas colunas.
+
+A saída (a) — carimbar `atualizado_em` no ocultar — foi descartada por dois motivos, não um: ela
+apaga a distinção entre "mudou o conteúdo" e "mudou a visibilidade", que é o que impede o líder de
+aparecer como editor no histórico; e derrubaria uma das colunas que `ocultarNaoAlteraAutorTituloNemData`
+compara, ou seja, trocaria uma guarda de não-negociável por conveniência de query.
+
+Verificado por mutação: sem o `EXISTS`, `syncIncluiEventoOcultoParaQueOAppOReMova` fica vermelho —
+o fantasma era real.
+
+**Limite conhecido:** `reexibir` entra no delta pelo mesmo caminho (também grava em
+`acao_moderacao`), o que é correto. Mas o evento que o líder ocultou **antes** do `desde` do
+aparelho e nunca mais tocou não volta — só que esse o aparelho também nunca soube que existia, ou
+já recebeu a remoção no delta em que ela aconteceu.
+
 
 ### A17. Não há como chegar na tela de um evento a partir da Home nem do Calendário
 
@@ -423,6 +443,53 @@ Não muda arquitetura. Muda se vale fazer o teste de aceite com 2 aparelhos ou c
 Esta é a única pergunta que pode invalidar o projeto inteiro, e ela é de fora do código: **confirmar com a coordenação o que o diário eletrônico já entrega**.
 
 Se ele já responde "o que foi dado no período", o app perde a razão de existir para a turma. Não bloqueia o scaffold nem as primeiras tarefas do Codex. **Bloqueia investir semanas.** Vale perguntar antes da tarefa 6.
+
+### A20. Ocultar não dispara push — só o próximo sync de foreground limpa o fantasma
+
+A Task 8 fez `POST/PATCH/DELETE /eventos` publicarem no `Notifier`. **Moderação não publica.** O
+delta do `/sync` já devolve o registro oculto (A16), então o aparelho *aprende* a desagendar — mas
+só quando alguém abrir o app, fizer login ou puxar para atualizar. Entre o ocultar e esse momento,
+a notificação da véspera continua agendada.
+
+**Default aplicado: não notifiquei na moderação.** A lista de Files da Task 8 diz "Modify:
+`service/EventoService.java`", e enfiar a chamada no `ModeracaoService` seria alterar a entrega da
+Task 7, contra a regra número zero. O caminho é um pedaço grande do problema: quem cadastra, edita
+ou exclui é o autor, e isso é a maioria esmagadora das mudanças.
+
+**Custo se mudar:** uma linha em `ModeracaoService.ocultar` e outra em `reexibir`, mais um teste.
+Quinze minutos. É a única coisa que separa "o fantasma some em minutos" de "o fantasma some quando
+a pessoa abrir o app".
+
+**Levantada em 2026-09-01**, na entrega da Task 8.
+
+### A21. `pedirExclusao` continua sem avisar o autor, e a interface `Notifier` não sabe endereçar uma pessoa
+
+A Seção 6.2 do spec diz que `POST /moderacao/{tipo}/{id}/pedir-exclusao` "Notifica o autor". A
+Task 7 registrou isso como trava esperando a Task 8. A Task 8 chegou — e o `Notifier` que o plano
+especifica tem **um método só**, `avisarMudancaNaTurma`, que é broadcast para a turma *exceto* uma
+pessoa. Não existe caminho para o oposto: avisar **exatamente** uma pessoa.
+
+Então o pedido de exclusão continua sendo uma ação invisível para quem deveria recebê-la: ela fica
+só em `acao_moderacao`, e o registro continua na Home.
+
+**Default aplicado: não inventei o segundo método.** A assinatura do `Notifier` está escrita no
+plano e é a fronteira que o não-negociável "notificação sempre via a interface" protege; alargá-la
+por conta própria numa tarefa que não pede isso é decidir sozinho o desenho de push individual.
+
+**As duas saídas:**
+
+1. `Notifier` ganha `avisarPessoa(UUID usuarioId, PayloadSync payload)`. Barato (o repository já
+   sabe resolver token por usuário), mas o payload atual só diz "sync" — o aparelho sincronizaria
+   e não teria como mostrar *o que* aconteceu, porque nenhuma tela lista pedidos recebidos.
+2. O pedido vira algo que a UI mostra: uma marca no registro em "Não listados" ou uma lista de
+   pedidos. É mais trabalho e é decisão de produto, não de backend.
+
+Sugiro a **2**, com a **1** junto — push sem tela para pousar é um toque no bolso que não leva a
+lugar nenhum. Mas é escolha sua, e enquanto ela não vier, "pedir exclusão" é um botão que só o
+líder sabe que apertou.
+
+**Levantada em 2026-09-01**, na entrega da Task 8.
+
 
 ---
 

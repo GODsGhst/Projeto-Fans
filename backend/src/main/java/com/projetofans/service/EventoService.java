@@ -9,6 +9,8 @@ import com.projetofans.domain.RegistroTipo;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ConflitoVersaoException;
 import com.projetofans.erro.NaoAutorException;
+import com.projetofans.notify.Notifier;
+import com.projetofans.notify.PayloadSync;
 import com.projetofans.repo.EventoMaterialRepository;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.repo.MateriaRepository;
@@ -55,12 +57,13 @@ public class EventoService {
     private final UsuarioRepository usuarios;
     private final RevisaoService revisoes;
     private final TurmaScopeResolver escopo;
+    private final Notifier avisos;
     private final EntityManager em;
 
     public EventoService(EventoRepository eventos, MateriaRepository materias,
                          MaterialRepository materiais, EventoMaterialRepository vinculos,
                          UsuarioRepository usuarios, RevisaoService revisoes,
-                         TurmaScopeResolver escopo, EntityManager em) {
+                         TurmaScopeResolver escopo, Notifier avisos, EntityManager em) {
         this.eventos = eventos;
         this.materias = materias;
         this.materiais = materiais;
@@ -68,6 +71,7 @@ public class EventoService {
         this.usuarios = usuarios;
         this.revisoes = revisoes;
         this.escopo = escopo;
+        this.avisos = avisos;
         this.em = em;
     }
 
@@ -75,14 +79,16 @@ public class EventoService {
     @Transactional
     public EventoResponse criar(UsuarioAtual autor, CriarEventoRequest req) {
         Materia materia = materiaDaTurmaDoUsuario(autor, req.materiaId());
+        Instant agora = Instant.now();
         Evento evento = new Evento(UUID.randomUUID(), materia.getTurmaId(), materia.getId(),
-                req.tipo(), req.titulo(), req.data(), req.hora(), autor.usuarioId(), Instant.now());
+                req.tipo(), req.titulo(), req.data(), req.hora(), autor.usuarioId(), agora);
         // save() aqui vira merge (id atribuido a mao), entao a instancia gerenciada
         // e a devolvida, nao a local. E criado_em tem DEFAULT no banco e e
         // insertable=false: sem o refresh a resposta sairia com criadoEm nulo e
         // violaria R1 em silencio.
         Evento salvo = eventos.saveAndFlush(evento);
         em.refresh(salvo);
+        avisar(salvo.getTurmaId(), autor, agora);
         return EventoResponse.de(salvo, materia, autor.nome());
     }
 
@@ -98,8 +104,10 @@ public class EventoService {
         revisoes.registrar(RegistroTipo.EVENTO, evento.getId(), usuario.usuarioId(),
                 AcaoRevisao.EDITAR, evento);
 
-        evento.editar(materia.getId(), req.tipo(), req.titulo(), req.data(), req.hora(), Instant.now());
+        Instant agora = Instant.now();
+        evento.editar(materia.getId(), req.tipo(), req.titulo(), req.data(), req.hora(), agora);
         Evento salvo = eventos.saveAndFlush(evento);
+        avisar(salvo.getTurmaId(), usuario, agora);
         return EventoResponse.de(salvo, materia, nomeDoAutor(salvo.getAutorId()));
     }
 
@@ -113,8 +121,29 @@ public class EventoService {
         revisoes.registrar(RegistroTipo.EVENTO, evento.getId(), usuario.usuarioId(),
                 AcaoRevisao.EXCLUIR, evento);
 
-        evento.excluirLogicamente(Instant.now());
+        Instant agora = Instant.now();
+        evento.excluirLogicamente(agora);
         eventos.saveAndFlush(evento);
+        avisar(evento.getTurmaId(), usuario, agora);
+    }
+
+    /**
+     * O aviso que faz o aparelho de quem NAO abriu o app reagendar a notificacao
+     * local — e o furo que a decisao 2.3 do spec fecha.
+     *
+     * Sai pela interface Notifier, nunca pelo SDK do Firebase, e vale para os tres
+     * caminhos de escrita: cadastro, edicao e exclusao. Exclusao e o caso menos
+     * obvio e o mais importante — sem ele o celular avisa as 19h de uma prova que
+     * o proprio autor ja apagou.
+     *
+     * Roda DENTRO da transacao, e nao depois do commit. Um rollback depois daqui
+     * mandaria um push a mais, e o pior que isso causa e um sync que nao traz nada;
+     * ja um afterCommit nunca dispararia num teste transacional, e a guarda de R20
+     * viraria decoracao. A implementacao de prod nao deixa falha de FCM derrubar a
+     * escrita.
+     */
+    private void avisar(UUID turmaId, UsuarioAtual autor, Instant agora) {
+        avisos.avisarMudancaNaTurma(turmaId, autor.usuarioId(), PayloadSync.agora(agora));
     }
 
     /** Inclui SOMENTE os materiais vinculados. Nunca a materia inteira. */

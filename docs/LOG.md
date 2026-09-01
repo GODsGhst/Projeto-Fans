@@ -1648,3 +1648,240 @@ onde se descobre regressão.
 **Travas / dúvidas:** falta `npx cap add android`. Antes dele, o `capacitor.config.ts` precisa sair
 de `appId: io.ionic.starter` / `appName: app` para `com.projetofans.app` — trocar package depois
 amarra credencial de Google e Firebase.
+
+---
+
+### [2026-09-01] Tarefa 8 — Push: device tokens, notifier e sync
+
+**Status:** concluída
+
+**O que foi feito:** TDD na ordem do plano, com os 7 nomes exatos. `NotificacaoTest` primeiro: a
+primeira rodada deu **7/7 vermelhos** — três com `Expected size: 1 but was: 0` (nenhum service
+publicava nada) e quatro com 404 (`/devices` e `/sync` não existiam). Só então vieram a interface
+`Notifier`, `PayloadSync`, as três implementações (`FcmNotifier` em prod, `NotifierDeLog` em
+dev/teste, `FakeNotifier` em test), `SyncService`, `DeviceService` e os dois controllers. O
+`EventoService` passou a avisar nos três caminhos de escrita — criar, editar e excluir.
+
+**A16 fechada pela saída (b), como a Task 7 recomendou.** `EventoRepository.alteradosDesde` agora
+inclui também o evento com linha em `acao_moderacao` mais nova que `desde`. `ocultar` continua sem
+tocar em `atualizado_em`, o comentário da entidade continua verdadeiro, e o teste de R13 continua
+comparando as mesmas colunas de antes.
+
+**Arquivos principais:**
+
+- `backend/src/main/java/com/projetofans/notify/Notifier.java` (novo)
+- `backend/src/main/java/com/projetofans/notify/PayloadSync.java` (novo)
+- `backend/src/main/java/com/projetofans/notify/FcmNotifier.java` (novo, `@Profile("prod")`)
+- `backend/src/main/java/com/projetofans/notify/NotifierDeLog.java` (novo, `@Profile({"dev","teste"})`)
+- `backend/src/main/java/com/projetofans/service/SyncService.java` (novo)
+- `backend/src/main/java/com/projetofans/service/DeviceService.java` (novo)
+- `backend/src/main/java/com/projetofans/web/controller/SyncController.java` (novo)
+- `backend/src/main/java/com/projetofans/web/controller/DeviceController.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/SyncResponse.java` (novo)
+- `backend/src/main/java/com/projetofans/web/dto/RegistrarDeviceRequest.java` (novo)
+- `backend/src/main/java/com/projetofans/repo/EventoRepository.java` (A16: `alteradosDesde`)
+- `backend/src/main/java/com/projetofans/service/EventoService.java` (publica no `Notifier`)
+- `backend/src/test/java/com/projetofans/support/FakeNotifier.java` (novo)
+- `backend/src/test/java/com/projetofans/notify/NotificacaoTest.java` (novo, 7 testes)
+
+**Critério de aceite — ATINGIDO.** `cd backend && ./mvnw test`:
+
+```
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.330 s -- in com.projetofans.notify.NotificacaoTest
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 92, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  31.006 s
+```
+
+Suíte de 85 para **92 testes**, tudo verde. Nenhuma tarefa anterior quebrou.
+
+*O vermelho antes do verde:*
+
+```
+[ERROR]   NotificacaoTest.criarEventoChamaNotifierUmaVez:128 Expected size: 1 but was: 0 in: []
+[ERROR]   NotificacaoTest.editarEventoChamaNotifier:164 Expected size: 1 but was: 0 in: []
+[ERROR]   NotificacaoTest.excluirEventoChamaNotifier:179 Expected size: 1 but was: 0 in: []
+[ERROR]   NotificacaoTest.notifierNaoRecebeOTokenDoProprioAutor:139->registrarDevice:102 Status expected:<204> but was:<404>
+[ERROR]   NotificacaoTest.registrarDeviceTokenDuasVezesNaoDuplica:222->registrarDevice:102 Status expected:<204> but was:<404>
+[ERROR]   NotificacaoTest.syncDevolveEventosAlteradosDepoisDoTimestamp:189->sync:109 Status expected:<200> but was:<404>
+[ERROR]   NotificacaoTest.syncIncluiEventoOcultoParaQueOAppOReMova:213->sync:109 Status expected:<200> but was:<404>
+[ERROR] Tests run: 7, Failures: 7, Errors: 0, Skipped: 0
+```
+
+*Os testes-guarda mordem, verificado com três mutações.*
+
+(a) Tirei o `EXISTS` sobre `acao_moderacao` de `alteradosDesde`, deixando só
+`atualizado_em >= :desde` — que é exatamente o predicado de antes da A16.
+`syncIncluiEventoOcultoParaQueOAppOReMova` ficou vermelho. **O fantasma era real**: o evento que o
+líder acabou de ocultar não aparecia no delta, e o aparelho manteria a notificação da véspera
+agendada para uma prova que sumiu da Home de todo mundo.
+
+(b) Tirei o `d.usuarioId <> :autorId` de `DeviceTokenRepository.daTurmaExcetoAutor`.
+`notifierNaoRecebeOTokenDoProprioAutor` ficou vermelho — quem cadastrou receberia push do próprio
+cadastro. Esta mutação também mostra por que o `FakeNotifier` resolve os tokens de verdade em vez
+de só contar chamadas: a regra mora na query, e um fake que guardasse apenas `(turmaId, autorId)`
+passaria verde com a query furada.
+
+(c) Fiz `DeviceService.registrar` sempre inserir, em vez de fazer upsert.
+`registrarDeviceTokenDuasVezesNaoDuplica` ficou
+`DataIntegrityViolation ... "device_token_fcm_token_key"` — o app que reabre e re-registra o mesmo
+token levaria 500 na segunda vez.
+
+Desfiz as três e a suíte voltou a 92/92.
+
+**Decisões que eu tomei:**
+
+1. **A16 pela saída (b), e a (a) descartada por dois motivos, não um.** Carimbar `atualizado_em` no
+   ocultar apagaria a distinção entre "mudou conteúdo" e "mudou visibilidade" — que é o que impede
+   o líder de aparecer como editor no histórico — **e** derrubaria uma das colunas que
+   `ocultarNaoAlteraAutorTituloNemData` compara. Seria trocar uma guarda de não-negociável por
+   conveniência de query. A linha de auditoria já existe, a moderação sempre a grava, e ler a
+   mudança de visibilidade dali não inventa coluna nenhuma.
+
+2. **`alteradosDesde` usa `>=`, não `>`.** O app manda de volta o `servidorEm` da resposta
+   anterior. Num delta de notificação, reenviar um item já conhecido custa zero (o aparelho regrava
+   a mesma linha do snapshot), enquanto pular um por empate de timestamp deixa notificação errada
+   agendada. Em feed de sincronização, sobreposição é sempre mais barata que buraco.
+
+3. **`SyncService` e `DeviceService` são classes concretas, sem interface.** O plano escreve
+   `public interface SyncService`, mas o precedente das tarefas 4 a 7 é o contrário e o `AGENTS.md`
+   é explícito: interface só quando há mais de uma implementação de verdade. O `Notifier` é a
+   exceção porque tem três. Interface de implementação única é indireção que faz o leitor abrir
+   dois arquivos para achar uma linha.
+
+4. **`SyncResponse` mora em `web/dto`, não junto do service.** O plano o declara no bloco do
+   `SyncService`; todo DTO de resposta deste projeto vive em `web/dto`, e o contrato do app
+   (`app/src/app/data/models.ts`, linha 124) já estava escrito com estes três campos e estes nomes.
+   Bati o record contra ele: `eventosAlterados`, `materias`, `servidorEm`.
+
+5. **Existe um `DeviceService`, que o plano não lista.** A alternativa era o `DeviceController`
+   falar com o repository e carregar `@Transactional`, e nenhum controller deste projeto decide
+   nada. O upsert por `fcm_token` é lógica de verdade: o FCM devolve o mesmo token a cada abertura
+   do app, a coluna é UNIQUE, e o token pode trocar de dono (aparelho emprestado) — por isso
+   `renovar` regrava o `usuario_id`, senão o colega passaria a receber push endereçado a quem usou
+   o celular antes.
+
+6. **`DELETE /devices/{token}` só apaga token do próprio dono, e responde 204 nos dois casos.** Sem
+   a checagem, qualquer autenticado calaria o push de qualquer pessoa mandando o token dela. Sem a
+   resposta uniforme, o status diria se um token existe.
+
+7. **`GET /sync` aceita `desde` ausente, tratando como `Instant.EPOCH`.** O aparelho recém-instalado
+   não tem `ultimoSync` para mandar, e transformar a primeira sincronização da vida dele num 400
+   seria uma pedra no caminho mais comum de todos: alguém que acabou de instalar o APK.
+
+8. **O `Notifier` resolve os device tokens; o service não.** O `EventoService` sabe *que* algo mudou
+   na turma, nunca em quais aparelhos isso vira push. É o que permite trocar o FCM por outra coisa
+   sem tocar em service nenhum.
+
+9. **O aviso sai DENTRO da transação, não depois do commit.** Um rollback depois do aviso manda um
+   push a mais, e o pior que isso causa é um sync que não traz nada. Já um `afterCommit` nunca
+   dispararia dentro de um teste transacional, e a guarda de R20 viraria decoração — teste que não
+   pode falhar não é teste. Em prod, falha do FCM é registrada e engolida de propósito: quem chega
+   lá já persistiu o evento, e transformar "o FCM está fora do ar" em "não consegui cadastrar sua
+   prova" trocaria atraso de sync por perda de dado. Não é `catch` vazio — sai stacktrace no log.
+
+10. **Data-message pura, sem bloco `notification`.** É a decisão 2.3 e não detalhe: um bloco de
+    notificação faria o Android desenhar o aviso na hora do cadastro, e o aviso que importa é o da
+    véspera às 19h, agendado localmente. Se alguém adicionar título e corpo no `FcmNotifier`, a
+    notificação virou remota e volta a depender de o servidor estar acordado.
+
+11. **`NotifierDeLog` é quem responde em dev e no perfil `teste`,** não o `FakeNotifier` — este vive
+    em `src/test` e não existe fora dali. É o mesmo par que a Task 3 já usa no Google Sign-In
+    (`GoogleTokenVerifierDesligado` em main, `FakeGoogleTokenVerifier` em test). Os perfis estão
+    listados explicitamente (`{"dev","teste"}`, `"prod"`, `"test"`), nunca por `!alguma-coisa`: foi
+    assim que `teste` quase carregou o verificador do Google em 31/08.
+
+12. **`FakeNotifier` resolve os tokens de verdade,** pelo mesmo método de repository que o
+    `FcmNotifier` usa. Guardar só a chamada deixaria "o autor não recebe o próprio cadastro" sem
+    guarda nenhuma — ver mutação (b).
+
+13. **Material não notifica; só evento.** É o que o plano pede, e é coerente: o reagendador local
+    agenda em cima de `data_evento`, e material não tem data. O `SyncResponse` carrega `materias`
+    (sigla e cor) porque sem elas o app não desenha o evento novo que acabou de receber.
+
+**Travas / dúvidas:**
+
+1. **Moderação não dispara push** — virou **A20**. O `/sync` já devolve o registro oculto, então o
+   aparelho aprende a desagendar, mas só no próximo foreground, login ou pull-to-refresh. Não
+   coloquei a chamada no `ModeracaoService` porque a lista de Files da Task 8 diz "Modify:
+   `EventoService`", e mexer ali seria alterar a entrega da Task 7. **Custo de fechar: duas linhas e
+   um teste.**
+
+2. **`pedirExclusao` continua sem avisar o autor** — virou **A21**. O spec diz "Notifica o autor",
+   mas o `Notifier` que o plano especifica tem um método só, e ele é broadcast *exceto uma pessoa*;
+   não há como endereçar **exatamente** uma. Não inventei o segundo método: a assinatura está
+   escrita no plano, e não existe tela onde um pedido recebido possa pousar. As duas saídas estão
+   na A21.
+
+3. **`FcmNotifier` não tem teste, e isso é o desenho, não pendência.** Ele é `@Profile("prod")` e
+   exige `FCM_SERVICE_ACCOUNT_JSON`. Exercitá-lo pediria conta no Firebase, que o `AGENTS.md`
+   garante que nenhuma tarefa precisa. O que está sob teste é a fronteira: R20 pelo `FakeNotifier` e
+   a query de destino pela mutação (b). **O que fica sem cobertura é a chamada ao SDK** — a primeira
+   vez que ela roda de verdade é no aceite da Seção 8, com dois aparelhos.
+
+4. **A18 continua aberta e agora tem prazo.** O `android/` é ignorado pelo git e o FCM exige um
+   `google-services.json` dentro de `android/app/`. Nada disso bloqueou esta tarefa, que é backend,
+   mas bloqueia o wiring do push no app. A sugestão da própria A18 continua sendo a saída 3:
+   versionar só o arquivo, com exceção no `.gitignore`.
+
+5. **Não rodei o Step 3 (commit) de propósito**, conforme a instrução desta execução: quem commita é
+   o orquestrador, depois de verificar.
+
+---
+
+### [2026-09-01] Task 8 revisada — o /sync reabria o furo que a Task 7 fechou (Claude)
+
+**Status:** concluída. Backend de 92 para **97 testes**, todos verdes.
+
+A Task 8 entregou push, device tokens e `/sync` com 92 testes. O revisor adversarial **reprovou**,
+e tinha razão nos dois pontos.
+
+**1. O `/sync` entregava o conteúdo de tudo que foi moderado, para qualquer membro.**
+
+Ele mapeava todo evento alterado para o `EventoResponse` completo — título, data, matéria, autoria
+— incluindo os ocultos pelo líder e os excluídos pelo autor. Isso reabria, por outra rota, o que
+`EventoService.buscar` recusa com 404 desde 31/08. E era **pior**: lá era preciso saber o id; aqui
+bastava `GET /sync?desde=1970-01-01`.
+
+O item **tem** que continuar no delta — sem ele o aparelho nunca aprende que o evento sumiu e a
+notificação da véspera vira fantasma. Mas precisar do item não é precisar do conteúdo: para
+desagendar, o app usa `id`, `visivelTurma` e `excluidoEm`.
+
+Entrou `EventoResponse.lapide()`. Como o projeto serializa com `default-property-inclusion:
+non_null`, os campos nulos **somem do JSON** — nem o nome do campo viaja.
+
+**2. `DeviceService.registrar` deixava tomar o token de outra pessoa.**
+
+Fazia upsert por `fcm_token` e regravava o dono sem checar. Um `POST /devices` com o token da
+vítima transferia a linha, e ela parava de receber os avisos da própria turma. O método irmão,
+`remover()`, documenta exatamente essa guarda duas linhas abaixo — *"qualquer autenticado calaria
+o push de qualquer pessoa mandando o token dela"*. Registrar dava o mesmo poder pela outra porta.
+
+Agora responde **409**. O caso legítimo continua coberto: o app manda `DELETE /devices` no logout
+(já estava em `sync.repository.ts` desde a Task 9), então o token fica livre antes do próximo
+login.
+
+**Cinco testes novos**, e cada furo tem o par positivo junto — a lápide não pode cegar o autor, e
+a guarda de token não pode pegar o próprio dono renovando (o app faz `POST /devices` a cada
+abertura).
+
+**Decisões que eu tomei:**
+
+*A observação 3 do revisor — token do FCM no path do `DELETE`, indo para log de acesso — não
+consertei.* Ela era perigosa **combinada** com a 2: token vazado permitia sequestro. Com a 2
+fechada, um token vazado não serve para nada — `remover()` filtra por dono, então mandar o token
+alheio é no-op. Mudar o contrato HTTP agora mexeria nos dois lados por um risco que virou
+informativo.
+
+*Corrigi a região do `render.yaml`: Oregon → Ohio.* Descuido meu. O Neon cria em Ohio por padrão,
+e deixar API e banco em pontas opostas dos EUA custa mais que os ~130 ms do Brasil até a costa
+leste — uma tela sozinha faz várias queries.
+
+**Travas / dúvidas:** A20 e A21 continuam abertas (moderação não dispara push; `pedirExclusao` não
+avisa o autor). Nenhuma bloqueia o teste.

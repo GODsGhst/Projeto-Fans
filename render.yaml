@@ -16,7 +16,11 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
-    region: oregon
+    # Ohio, e nao Oregon, para casar com a regiao do Neon. A latencia que importa
+    # aqui e API<->banco, nao celular<->API: uma tela sozinha faz varias queries, e
+    # atravessar os EUA em cada uma custa mais que os 130ms do Brasil ate a costa
+    # leste. Se voce criar o banco em outra regiao, mude esta linha junto.
+    region: ohio
 
     # O Render so considera o deploy saudavel quando esta rota responde 200. Sem
     # ela, ele checa apenas se a porta abriu — e uma aplicacao que subiu e quebrou
