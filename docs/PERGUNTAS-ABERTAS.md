@@ -319,6 +319,59 @@ Duas saídas, e é decisão sua:
 **Levantada em 2026-08-31**, na entrega da Task 11.
 
 ---
+### A18. `android/` é descartável — e o FCM vai precisar de um arquivo dentro dele
+
+O `.gitignore` ignora `android/` e `ios/` sob o comentário "Capacitor nativo". A decisão é
+defensável: o projeto nativo é regenerável com `npx cap add android`, e a identidade que importa
+(`appId`, `appName`) vive no `capacitor.config.ts`, que **é** versionado. Repo limpo, sem centenas
+de arquivos gerados.
+
+**O contrato que isso cria:** tudo que o app precisa no projeto nativo tem que sair do
+`capacitor.config.ts` ou de um passo escrito. O que alguém editar à mão dentro de `android/` some
+na próxima regeneração, e some em silêncio.
+
+**Onde isso vai doer: a Task 8 (push).** O Firebase exige um `google-services.json` dentro de
+`android/app/`. Ele não cabe no `capacitor.config.ts`, e ainda por cima casa com a regra
+`*-service-account*.json` da seção "Segredos — NUNCA commitar"… mas o `google-services.json` do
+**cliente** não é segredo (ele vai dentro do APK, que qualquer um descompacta).
+
+Três saídas, e é decisão sua:
+
+1. **Parar de ignorar `android/`.** É o que a documentação do Capacitor recomenda hoje. Custo:
+   ~100 arquivos gerados no repo, e conflitos de merge chatos neles.
+2. **Manter ignorado e escrever um passo de setup** — um `docs/ANDROID.md` dizendo "baixe o
+   `google-services.json` do Firebase e coloque em `android/app/`". Custo: quem clonar o repo não
+   consegue gerar APK sem ler o documento.
+3. **Manter ignorado e versionar só o arquivo**, com uma exceção no `.gitignore`
+   (`!android/app/google-services.json`). Meio-termo: repo limpo e build reproduzível.
+
+**Default aplicado: nenhum ainda**, porque a Task 8 não começou. Levantado em 2026-08-31, quando o
+`android/` foi gerado pela primeira vez. Sugiro a **3** — mas é escolha sua, e é mais barato
+decidir antes da Task 8 do que depois.
+
+### A19. Cleartext HTTP está desligado, e é isso que trava o teste por wifi
+
+Android 9+ bloqueia HTTP sem TLS por padrão. O `apiUrl` de produção aponta para o Render, que é
+HTTPS — então o caminho real funciona.
+
+Mas o plano B que discutimos (celular e notebook na mesma wifi, `http://192.168.x.x:8080`)
+**falharia em silêncio**: o app tentaria conectar e receberia erro de rede, indistinguível de
+servidor fora do ar.
+
+**Default aplicado: cleartext continua desligado.** Ligar globalmente para uma conveniência que
+não vamos usar é piorar a segurança de graça.
+
+**Se precisar do teste por wifi**, é uma linha temporária no `capacitor.config.ts`:
+
+```ts
+server: { cleartext: true }
+```
+
+…seguida de `npx cap sync android` e novo APK. Tire depois — APK distribuído com cleartext ligado
+aceita qualquer intermediário na rede da faculdade.
+
+---
+
 ## B. Contas e credenciais — você precisa criar, mas nada está travado
 
 Todas têm fake ou fallback, então **o Codex trabalha e testa sem nenhuma delas**. Elas viram necessárias só no momento de rodar em dois aparelhos reais, que é o aceite da Seção 8.

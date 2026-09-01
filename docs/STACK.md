@@ -22,7 +22,7 @@ o que roda, com o quê, e o que ainda não.
 | Push | Firebase Admin (só FCM) | 9.9.0 | ⬜ Task 8 |
 | Arquivos | Cloudflare R2 (S3-compatível) | — | ⬜ Task 15 |
 | App | Ionic + Angular standalone/signals | Ionic 8 / Angular 20 | ✅ build passa |
-| Empacotamento | Capacitor | — | ⬜ Android primeiro |
+| Empacotamento | Capacitor | 8.5.0 | ✅ APK debug gera |
 
 ✅ de pé · ⬜ planejado, não começado
 
@@ -135,6 +135,25 @@ parte do furo do push. Ver A7 em `PERGUNTAS-ABERTAS.md`.
 ---
 
 ## Armadilhas conhecidas desta arvore
+
+**Esta máquina precisa de DOIS `JAVA_HOME` diferentes.** Não é preferência, é incompatibilidade
+real, e já quebrou um build de cada lado:
+
+| O que você roda | `JAVA_HOME` obrigatório | Por quê |
+|---|---|---|
+| Backend (`./mvnw`) | `dev-tools\jdk-17` | o `pom.xml` compila com `release 17` |
+| Android (`./gradlew`) | `C:\Program Files\Zulu\zulu-25` | o Capacitor 8 compila com `source release 21` |
+
+O `JAVA_HOME` global aponta para o 17, então o backend funciona sozinho e o Android **não**:
+
+```
+error: invalid source release: 21
+```
+
+É a mesma classe de erro que quebrou o backend quando o `pom` foi para Java 25 sem mexer no
+`JAVA_HOME` — Maven e Gradle usam o `JAVA_HOME`, nunca o `java` do `PATH`. Não há JDK 21 nem 24
+aqui, só 17 e 25; o Gradle 8.14.3 suporta oficialmente até o 24, mas **roda no 25** nesta
+configuração, verificado com build completo. Detalhes em `docs/ANDROID.md`.
 
 **O cache do Angular mente.** Em 2026-08-31 o `home.page.spec.ts` acusou falha num teste cujo
 codigo-fonte estava correto: `vazia()` checava `erro() === null` no disco, mas o bundle
