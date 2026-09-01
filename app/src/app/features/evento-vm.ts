@@ -99,7 +99,7 @@ function iso(d: Date): string {
  * nome aparece sempre: se o timestamp vier ilegivel, cai para so o nome em vez
  * de exibir "NaN" ou sumir com a linha.
  */
-function assinatura(a: Autoria, agora: Date): string {
+export function assinatura(a: Autoria, agora: Date): string {
   const quando = desde(a.criadoEm, agora);
   return quando === null ? a.autorNome : `${a.autorNome} · ${quando}`;
 }

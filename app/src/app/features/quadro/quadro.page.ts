@@ -1,15 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+
+import { MaterialLinhaComponent } from '../../shared/material-linha.component';
 import { MiniCardComponent } from '../../shared/mini-card.component';
 import type { Materia, TipoEvento } from '../../shared/tipos';
+import type { Evento, ItemHome } from '../../data/models';
+import { QuadroRepository } from '../../data/quadro.repository';
+import { materialVm } from '../material-vm';
+import type { MaterialVm } from '../material-vm';
 
+/** O que o MiniCard precisa, mais o id para a acao de marcar. */
 export interface CartaoVm {
+  readonly id: string;
   readonly materia: Materia;
   readonly titulo: string;
   readonly tipo: TipoEvento;
-  /** Estado pessoal: nao muda nada para mais ninguem. */
-  readonly feito?: boolean;
-  /** So em "Nao listados": "oculto pelo lider · so voce ve". */
+  /** So em "Nao listados": diz por que o registro sumiu do feed da turma. */
   readonly aviso?: string;
 }
 
@@ -20,18 +26,31 @@ export interface CartaoVm {
  * turma enxerga: o dado mora em tabela separada, nunca como coluna no fato
  * compartilhado.
  *
- * "Nao listados" e secao RECOLHIDA ABAIXO do kanban, nunca uma terceira coluna.
- * Ela so aparece quando o lider ocultou algum registro seu — a maioria das
- * pessoas nunca a ve. Duas colunas e literal no handoff; nao virar tres.
+ * **As colunas vem prontas do servidor.** A pagina nao separa feito de a-fazer
+ * olhando `feitoPeloUsuario`: ela renderiza as duas listas que a API mandou. Se
+ * refizesse a separacao aqui, a regra teria duas implementacoes e elas
+ * divergiriam — e o teste "as duas colunas saem do servidor" existe justamente
+ * para ficar vermelho se alguem tentar.
  *
- * PARA O CODEX: os signals estao com dados de exemplo. Troque por QuadroService
- * mantendo o shape. As duas colunas e a posicao de "Nao listados" nao mudam.
+ * "Nao listados" e secao RECOLHIDA ABAIXO do kanban, nunca uma terceira coluna.
+ * So aparece quando ha algo — a maioria das pessoas nunca a ve.
+ *
+ * Quatro estados, e nenhum se parece com o outro: carregando, falhou, quadro
+ * vazio, e quadro cheio. Falhar ao buscar o que esta pendente nao pode virar
+ * "nada pendente" — sao frases opostas, e a segunda faz alguem perder prova.
  */
 @Component({
   selector: 'app-quadro',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, MiniCardComponent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    MiniCardComponent,
+    MaterialLinhaComponent,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -41,40 +60,78 @@ export interface CartaoVm {
 
     <ion-content [fullscreen]="true">
       <div class="pf-pilha">
-        <div class="kanban">
-          <div class="coluna">
-            <p class="pf-rotulo">a fazer</p>
-            @for (c of aFazer(); track c.titulo) {
-              <app-mini-card [materia]="c.materia" [titulo]="c.titulo" [tipo]="c.tipo" />
-            } @empty {
-              <p class="nada">Nada pendente.</p>
-            }
-          </div>
+        @if (carregando()) {
+          <p class="pf-aviso">Carregando…</p>
+        } @else if (erro(); as e) {
+          <p class="pf-aviso">{{ e }}</p>
+        }
 
-          <div class="coluna">
-            <p class="pf-rotulo">feito</p>
-            @for (c of feitos(); track c.titulo) {
-              <app-mini-card
-                [materia]="c.materia"
-                [titulo]="c.titulo"
-                [tipo]="c.tipo"
-                [feito]="true" />
-            } @empty {
-              <p class="nada">Nada ainda.</p>
-            }
-          </div>
-        </div>
+        <!--
+          Sem o kanban quando a busca falhou. Colunas vazias aqui diriam "voce
+          nao tem nada pendente", que e o oposto de "nao consegui descobrir o que
+          voce tem pendente".
+        -->
+        @if (!erro() && !carregando()) {
+          <div class="kanban">
+            <div class="coluna">
+              <p class="pf-rotulo">a fazer</p>
+              @for (c of aFazer(); track c.id) {
+                <app-mini-card [materia]="c.materia" [titulo]="c.titulo" [tipo]="c.tipo" />
+                <button class="marcar" type="button" (click)="marcar(c.id, true)">
+                  marcar como resolvido
+                </button>
+              } @empty {
+                <p class="nada">Nada pendente.</p>
+              }
+            </div>
 
-        @if (naoListados().length) {
+            <div class="coluna">
+              <p class="pf-rotulo">feito</p>
+              @for (c of feitos(); track c.id) {
+                <app-mini-card
+                  [materia]="c.materia"
+                  [titulo]="c.titulo"
+                  [tipo]="c.tipo"
+                  [feito]="true" />
+                <button class="marcar" type="button" (click)="marcar(c.id, false)">
+                  desmarcar
+                </button>
+              } @empty {
+                <p class="nada">Nada ainda.</p>
+              }
+            </div>
+          </div>
+        }
+
+        <!--
+          Falhar ao buscar os ocultos nao e "voce nao tem nenhum oculto". Aviso
+          proprio, e a secao NAO renderiza — senao a ausencia dela mentiria.
+        -->
+        @if (!erro() && erroNaoListados()) {
+          <p class="aviso-nao-listados">Não deu para carregar os não listados.</p>
+        }
+
+        @if (temNaoListados()) {
           <section class="nao-listados">
-            <p class="pf-rotulo">não listados · {{ naoListados().length }}</p>
-            @for (c of naoListados(); track c.titulo) {
+            <p class="pf-rotulo">não listados · {{ totalNaoListados() }}</p>
+
+            @for (c of eventosOcultos(); track c.id) {
               <app-mini-card
                 class="oculto"
                 [materia]="c.materia"
                 [titulo]="c.titulo"
                 [tipo]="c.tipo"
                 [aviso]="c.aviso ?? null" />
+            }
+
+            @for (m of materiaisOcultos(); track m.vm.id) {
+              <div class="material-oculto">
+                <app-material-linha
+                  [tipo]="m.vm.tipo"
+                  [titulo]="m.vm.titulo"
+                  [autoria]="m.vm.autoria" />
+                <span class="aviso">{{ m.aviso }}</span>
+              </div>
             }
           </section>
         }
@@ -103,6 +160,33 @@ export interface CartaoVm {
       padding: 2px;
     }
 
+    .marcar {
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: none;
+      border: 0;
+      padding: 2px 2px 6px;
+      text-align: left;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .marcar:active {
+      transform: scale(0.97);
+    }
+    .marcar:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .aviso-nao-listados {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--ink-2);
+      padding: 2px;
+    }
+
     /* recolhida ABAIXO do kanban, separada por fio tracejado — nunca terceira coluna */
     .nao-listados {
       display: flex;
@@ -117,50 +201,88 @@ export interface CartaoVm {
       opacity: 0.72;
       max-width: 250px;
     }
+
+    .material-oculto {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      opacity: 0.72;
+    }
+    .material-oculto .aviso {
+      font-size: 10.5px;
+      color: var(--ink-3);
+    }
   `,
 })
 export class QuadroPage {
-  // --- dados de exemplo. Trocar por QuadroService, mantendo o shape. ---
-  private readonly cartoes = signal<readonly CartaoVm[]>([
-    {
-      materia: { sigla: 'CALC2', cor: 'var(--m-01-azul)' },
-      titulo: 'Prova 2 — integrais',
-      tipo: 'PROVA',
-    },
-    {
-      materia: { sigla: 'ESOFT', cor: 'var(--m-03-teal)' },
-      titulo: 'Diagrama de casos de uso',
-      tipo: 'ENTREGA',
-    },
-    {
-      materia: { sigla: 'REDES', cor: 'var(--m-04-verde)' },
-      titulo: 'Prova 1 — enlace',
-      tipo: 'PROVA',
-    },
-    {
-      materia: { sigla: 'BD', cor: 'var(--m-02-azul-celeste)' },
-      titulo: 'Lista 4 — normalização',
-      tipo: 'ENTREGA',
-      feito: true,
-    },
-    {
-      materia: { sigla: 'SO', cor: 'var(--m-05-oliva)' },
-      titulo: 'Trabalho de escalonamento',
-      tipo: 'ENTREGA',
-      feito: true,
-    },
-  ]);
+  private readonly repo = inject(QuadroRepository);
 
-  private readonly ocultos = signal<readonly CartaoVm[]>([
-    {
-      materia: { sigla: 'ALG', cor: 'var(--m-09-vermelho)' },
-      titulo: 'Prova de grafos — 30 jul',
-      tipo: 'PROVA',
-      aviso: 'oculto pelo líder · só você vê',
-    },
-  ]);
+  protected readonly carregando = this.repo.carregando;
+  protected readonly erro = this.repo.erro;
+  protected readonly erroNaoListados = this.repo.erroNaoListados;
 
-  protected readonly aFazer = computed(() => this.cartoes().filter((c) => !c.feito));
-  protected readonly feitos = computed(() => this.cartoes().filter((c) => c.feito));
-  protected readonly naoListados = this.ocultos.asReadonly();
+  protected readonly aFazer = computed(() => this.repo.aFazer().map(cartaoDeItem));
+  protected readonly feitos = computed(() => this.repo.feito().map(cartaoDeItem));
+
+  protected readonly eventosOcultos = computed(
+    () => this.repo.naoListados()?.eventos.map(cartaoDeEvento) ?? [],
+  );
+
+  protected readonly materiaisOcultos = computed(() => {
+    const agora = new Date();
+    return (this.repo.naoListados()?.materiais ?? []).map((m) => ({
+      vm: materialVm(m, agora),
+      aviso: porQueSumiu(m.visivelTurma, m.excluidoEm),
+    }));
+  });
+
+  protected readonly totalNaoListados = computed(
+    () => this.eventosOcultos().length + this.materiaisOcultos().length,
+  );
+
+  /** So aparece quando ha algo. Secao vazia seria ruido para quase todo mundo. */
+  protected readonly temNaoListados = computed(() => this.totalNaoListados() > 0);
+
+  constructor() {
+    void this.repo.carregar();
+    void this.repo.carregarNaoListados();
+  }
+
+  protected marcar(eventoId: string, feito: boolean): void {
+    void this.repo.marcar(eventoId, feito);
+  }
+}
+
+function cartaoDeItem(i: ItemHome): CartaoVm {
+  return {
+    id: i.eventoId,
+    materia: { sigla: i.materiaSigla, cor: i.materiaCorHex },
+    titulo: i.titulo,
+    tipo: i.tipo,
+  };
+}
+
+function cartaoDeEvento(e: Evento): CartaoVm {
+  return {
+    id: e.id,
+    materia: { sigla: e.materiaSigla, cor: e.materiaCorHex },
+    titulo: e.titulo,
+    tipo: e.tipo,
+    aviso: porQueSumiu(e.visivelTurma, e.excluidoEm),
+  };
+}
+
+/**
+ * As duas razoes nao podem se confundir: "o lider ocultou" e uma decisao de
+ * outra pessoa sobre o seu registro, e "voce excluiu" foi voce. Quem le precisa
+ * saber com quem falar.
+ *
+ * A exclusao ganha da ocultacao quando as duas valem: o registro excluido nao
+ * volta por reexibicao.
+ */
+function porQueSumiu(visivelTurma: boolean, excluidoEm: string | null): string {
+  if (excluidoEm !== null) {
+    return 'excluído por você · só você vê';
+  }
+  return visivelTurma ? 'só você vê' : 'oculto pelo líder · só você vê';
 }

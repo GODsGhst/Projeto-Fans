@@ -9,6 +9,11 @@ import type { ItemHome, MeuQuadro, NaoListados } from './models';
  * `feito` e estado pessoal: vive em `estado_pessoal`, nunca no fato
  * compartilhado. Marcar feito nao altera nada do evento da turma — e por isso
  * que a chamada e `PUT /eventos/{id}/estado-pessoal`, e nao um PATCH no evento.
+ *
+ * Os dois erros sao SEPARADOS de proposito. Sao duas chamadas independentes, e
+ * falhar em "nao listados" — secao que a maioria das pessoas nunca ve — nao pode
+ * derrubar o quadro inteiro. Com um signal so, a segunda falha apagava a
+ * primeira e a tela escondia dado que tinha chegado bem.
  */
 @Injectable({ providedIn: 'root' })
 export class QuadroRepository {
@@ -20,6 +25,7 @@ export class QuadroRepository {
   readonly naoListados = signal<NaoListados | null>(null);
   readonly carregando = signal(false);
   readonly erro = signal<string | null>(null);
+  readonly erroNaoListados = signal<string | null>(null);
 
   async carregar(): Promise<void> {
     this.carregando.set(true);
@@ -29,22 +35,26 @@ export class QuadroRepository {
       this.aFazer.set(quadro.aFazer);
       this.feito.set(quadro.feito);
     } catch (e) {
+      // Nao relanca, e isso NAO e engolir: o erro fica no signal, e ler o signal
+      // e o tratamento. Mesmo padrao do HomeRepository. O que a regra proibe e
+      // catch que devolve lista vazia como se fosse sucesso — aqui as listas
+      // ficam como estavam e a tela decide o que mostrar olhando `erro()`.
       this.erro.set(mensagem(e, 'Não deu para carregar o quadro.'));
-      throw e;
     } finally {
       this.carregando.set(false);
     }
   }
 
   async carregarNaoListados(): Promise<void> {
+    this.erroNaoListados.set(null);
     try {
       this.naoListados.set(await this.api.get<NaoListados>('/nao-listados'));
     } catch (e) {
-      this.erro.set(mensagem(e, 'Não deu para carregar os não listados.'));
-      throw e;
+      this.erroNaoListados.set(mensagem(e, 'Não deu para carregar os não listados.'));
     }
   }
 
+  /** Marca e rele o quadro: o servidor e quem diz em qual coluna o item cai. */
   async marcar(eventoId: string, feito: boolean): Promise<void> {
     await this.api.put<void>(`/eventos/${eventoId}/estado-pessoal`, { feito });
     await this.carregar();

@@ -1,0 +1,220 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideIonicAngular } from '@ionic/angular/standalone';
+
+import { environment } from '../../../environments/environment';
+import { erroHttpInterceptor } from '../../core/http-error.interceptor';
+import type { Evento, ItemHome, Material, MeuQuadro, NaoListados } from '../../data/models';
+import { QuadroPage } from './quadro.page';
+
+const AUTORIA = {
+  autorId: 'u1',
+  autorNome: 'Otavio',
+  criadoEm: '2026-08-30T12:00:00Z',
+  atualizadoEm: '2026-08-30T12:00:00Z',
+};
+
+function item(id: string, titulo: string, feitoPeloUsuario = false): ItemHome {
+  return {
+    eventoId: id,
+    tipo: 'ENTREGA',
+    titulo,
+    data: '2026-09-10',
+    hora: null,
+    materiaSigla: 'BD',
+    materiaCorHex: '#0369A1',
+    autoria: AUTORIA,
+    feitoPeloUsuario,
+  };
+}
+
+function evento(titulo: string, patch: Partial<Evento> = {}): Evento {
+  return {
+    id: 'ev-oculto',
+    tipo: 'PROVA',
+    titulo,
+    data: '2026-09-12',
+    hora: null,
+    materiaId: 'm1',
+    materiaSigla: 'ALG',
+    materiaCorHex: '#B91C1C',
+    autoria: AUTORIA,
+    version: 1,
+    visivelTurma: false,
+    excluidoEm: null,
+    ...patch,
+  };
+}
+
+function material(titulo: string, patch: Partial<Material> = {}): Material {
+  return {
+    id: 'mat-oculto',
+    tipo: 'ADICIONAL',
+    titulo,
+    url: 'https://exemplo.test/resumo.pdf',
+    arquivoRef: null,
+    materiaId: 'm1',
+    autoria: AUTORIA,
+    version: 1,
+    visivelTurma: false,
+    excluidoEm: null,
+    ...patch,
+  };
+}
+
+const VAZIO: NaoListados = { eventos: [], materiais: [] };
+
+describe('QuadroPage', () => {
+  let backend: HttpTestingController;
+  let fixture: ComponentFixture<QuadroPage>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideIonicAngular(),
+        provideHttpClient(withInterceptors([erroHttpInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(QuadroPage);
+  });
+
+  afterEach(() => backend.verify());
+
+  /** Cria a tela e responde as duas chamadas que ela dispara ao abrir. */
+  async function abrir(
+    quadro: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+    naoListados: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+  ) {
+    fixture.detectChanges();
+    quadro(backend.expectOne(`${environment.apiUrl}/meu-quadro`));
+    naoListados(backend.expectOne(`${environment.apiUrl}/nao-listados`));
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function coluna(indice: number): string[] {
+    const colunas = fixture.nativeElement.querySelectorAll('.coluna');
+    return Array.from(
+      (colunas[indice] as HTMLElement).querySelectorAll('app-mini-card .titulo'),
+    ).map((e) => (e as HTMLElement).textContent!.trim());
+  }
+
+  it('as duas colunas saem do servidor, nao de filtro no cliente', async () => {
+    // O item de "feito" vem com feitoPeloUsuario=false de proposito: se a pagina
+    // remontar as colunas por conta propria em vez de usar as listas que o
+    // servidor mandou, ele cai na coluna errada e isto fica vermelho.
+    const quadro: MeuQuadro = {
+      aFazer: [item('e1', 'Lista 4'), item('e2', 'Prova 2')],
+      feito: [item('e3', 'Diagrama', false)],
+    };
+
+    await abrir(
+      (r) => r.flush(quadro),
+      (r) => r.flush(VAZIO),
+    );
+
+    expect(coluna(0)).toEqual(['Lista 4', 'Prova 2']);
+    expect(coluna(1)).toEqual(['Diagrama']);
+  });
+
+  it('nao listados nao aparece quando nao ha nada', async () => {
+    await abrir(
+      (r) => r.flush({ aFazer: [item('e1', 'Lista 4')], feito: [] }),
+      (r) => r.flush(VAZIO),
+    );
+
+    expect(fixture.nativeElement.querySelector('.nao-listados'))
+      .withContext('a maioria das pessoas nunca ve esta secao')
+      .toBeNull();
+  });
+
+  it('nao listados separa o que o lider ocultou do que o autor excluiu', async () => {
+    const ocultos: NaoListados = {
+      eventos: [
+        evento('Prova de grafos'),
+        evento('Prova velha', {
+          id: 'ev-excluido',
+          visivelTurma: true,
+          excluidoEm: '2026-08-20T10:00:00Z',
+        }),
+      ],
+      materiais: [material('Resumo de grafos')],
+    };
+
+    await abrir(
+      (r) => r.flush({ aFazer: [], feito: [] }),
+      (r) => r.flush(ocultos),
+    );
+
+    const secao = fixture.nativeElement.querySelector('.nao-listados') as HTMLElement | null;
+    expect(secao).not.toBeNull();
+    expect(secao!.textContent).toContain('oculto pelo líder');
+    expect(secao!.textContent).toContain('excluído');
+    // Material oculto tambem e do autor: some do feed e ele precisa saber.
+    expect(secao!.textContent).toContain('Resumo de grafos');
+  });
+
+  it('falha ao carregar o quadro nao vira quadro vazio', async () => {
+    // "Nada pendente." e "nao consegui buscar o que esta pendente" sao telas
+    // opostas. Esta e a segunda, e ela nao pode se parecer com a primeira.
+    await abrir(
+      (r) => r.error(new ProgressEvent('error')),
+      (r) => r.error(new ProgressEvent('error')),
+    );
+
+    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain(
+      'Sem conexão',
+    );
+    expect(fixture.nativeElement.querySelector('.kanban'))
+      .withContext('sem dado nao ha kanban: coluna vazia aqui seria mentira')
+      .toBeNull();
+  });
+
+  it('falha so em nao-listados nao esconde o quadro', async () => {
+    await abrir(
+      (r) => r.flush({ aFazer: [item('e1', 'Lista 4')], feito: [] }),
+      (r) => r.error(new ProgressEvent('error')),
+    );
+
+    expect(coluna(0)).toEqual(['Lista 4']);
+    expect(fixture.nativeElement.querySelector('.aviso-nao-listados')!.textContent).toContain(
+      'não listados',
+    );
+    expect(fixture.nativeElement.querySelector('.nao-listados'))
+      .withContext('falhar ao buscar os ocultos nao e "voce nao tem nenhum oculto"')
+      .toBeNull();
+  });
+
+  it('marcar feito manda estado pessoal e rele o quadro', async () => {
+    await abrir(
+      (r) => r.flush({ aFazer: [item('e1', 'Lista 4')], feito: [] }),
+      (r) => r.flush(VAZIO),
+    );
+
+    (fixture.nativeElement.querySelector('.coluna .marcar') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    // PUT em /eventos/{id}/estado-pessoal, nunca PATCH no evento: feito e
+    // estado pessoal e nao toca no fato compartilhado.
+    const put = backend.expectOne(`${environment.apiUrl}/eventos/e1/estado-pessoal`);
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({ feito: true });
+    put.flush(null);
+
+    await fixture.whenStable();
+    backend.expectOne(`${environment.apiUrl}/meu-quadro`).flush({
+      aFazer: [],
+      feito: [item('e1', 'Lista 4', true)],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(coluna(0)).toEqual([]);
+    expect(coluna(1)).toEqual(['Lista 4']);
+  });
+});

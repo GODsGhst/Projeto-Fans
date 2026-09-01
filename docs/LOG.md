@@ -1512,3 +1512,61 @@ defaults do scaffold — `appId: io.ionic.starter`, `appName: app`. O spec já d
 `com.projetofans.app`, e trocar package depois amarra credencial de Google/Firebase, então tem de
 ser antes do `cap add android`. (2) o projeto Android nunca foi gerado. (3) o `apiUrl` do app
 aponta para `localhost`, que do celular é o próprio celular — precisa do IP da LAN.
+
+---
+
+### [2026-08-31] Tarefa 12 fechada — e um teste que acusava a função de um erro dele mesmo (Claude)
+
+**Status:** concluída. App de 38 para **51 testes**, lint limpo, build passa. Backend em 76.
+
+A Task 12 morreu no limite de sessão deixando 7 testes vermelhos: 1 do reagendador e 6 do Quadro.
+Ela tinha escrito os testes (TDD, vermelho primeiro) e não chegou a implementar.
+
+**1. O teste do reagendador estava errado, não a função.**
+
+`agenda 19h do dia anterior` falhava com `Cannot read properties of undefined`. Tracei a conta à
+mão: o segundo caso testa a virada de mês — véspera de 01/09 é 31/08 — mas reusava o mesmo `agora`
+do primeiro caso, `2026-09-01T15:00Z`. A véspera de 31/08 às 19h em São Paulo é
+`2026-08-31T22:00Z`, ou seja **já passou** em relação àquele `agora`. O reagendador filtrava
+corretamente e devolvia lista vazia; o teste é que se contradizia.
+
+Corrigi o teste, não a função: `agora` próprio para o caso da virada. A intenção original (provar
+que `dia - 1` não vira `"2026-09-00"`) fica preservada.
+
+*Vale registrar porque é a segunda vez hoje que um teste acusa código correto.* A primeira foi o
+cache do Angular. Nas duas, a saída certa foi instrumentar antes de "consertar" o código.
+
+**2. O Quadro: seis testes, um repository com um defeito de desenho.**
+
+O `QuadroRepository` da Task 9 tinha **um único** signal de erro compartilhado entre `/meu-quadro`
+e `/nao-listados`. São duas chamadas independentes, e o teste
+`falha so em nao-listados nao esconde o quadro` exige exatamente isso: falhar na seção que quase
+ninguém vê não pode derrubar o quadro que carregou bem. Com um signal só, a segunda falha apagava
+a primeira.
+
+Separei em `erro` e `erroNaoListados`. E parei de relançar: o erro fica no signal, e ler o signal
+**é** o tratamento — mesmo padrão que o `HomeRepository` já usava. O que a regra proíbe é `catch`
+que devolve lista vazia como sucesso; aqui as listas ficam como estavam e a tela decide olhando o
+erro.
+
+**Decisões que eu tomei:**
+
+*As colunas vêm prontas do servidor, e a página não as remonta.* O teste manda um item em `feito`
+com `feitoPeloUsuario: false` de propósito — se a página separasse por conta própria, ele cairia na
+coluna errada. Renderizo as duas listas como vieram.
+
+*Sem kanban quando a busca falhou.* Colunas vazias diriam "você não tem nada pendente", que é o
+oposto de "não consegui descobrir o que você tem pendente".
+
+*Material oculto entra com `MaterialLinha`, não com `MiniCard`.* `MiniCard` exige `tipo` que é
+`PROVA | ENTREGA`, e material é `AULA | ADICIONAL`. Passar um tipo de evento para desenhar material
+seria mentir para o componente. O aviso de "por que sumiu" vai num `span` irmão, porque
+`MaterialLinha` não tem esse input e `shared/` é zona proibida.
+
+*"Excluído por você" ganha de "oculto pelo líder" quando as duas valem.* Registro excluído não
+volta por reexibição, e quem lê precisa saber com quem falar.
+
+**Travas / dúvidas:** o bloqueio que a Task 11 registrou continua de pé — **não existe
+`MateriaController` no backend**. Nem `GET /materias`, nem `/materias/{id}`. As duas telas de
+matéria estão corretas contra o contrato do spec e testadas contra `HttpTestingController`, mas
+contra o servidor de verdade levam 404. É a próxima coisa a fazer.

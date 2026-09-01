@@ -1,0 +1,140 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { provideIonicAngular } from '@ionic/angular/standalone';
+
+import { environment } from '../../../environments/environment';
+import { erroHttpInterceptor } from '../../core/http-error.interceptor';
+import type { Evento, Material, MateriaDetalhe, TipoMaterial } from '../../data/models';
+import { MateriaPage } from './materia.page';
+
+const AUTORIA = {
+  autorId: 'u1',
+  autorNome: 'Otavio',
+  criadoEm: '2026-08-31T12:00:00Z',
+  atualizadoEm: '2026-08-31T12:00:00Z',
+};
+
+function material(id: string, tipo: TipoMaterial, titulo: string, url: string): Material {
+  return {
+    id,
+    tipo,
+    titulo,
+    url,
+    arquivoRef: null,
+    materiaId: 'm1',
+    autoria: AUTORIA,
+    version: 1,
+    visivelTurma: true,
+    excluidoEm: null,
+  };
+}
+
+function evento(id: string, titulo: string): Evento {
+  return {
+    id,
+    tipo: 'PROVA',
+    titulo,
+    data: '2026-09-10',
+    hora: null,
+    materiaId: 'm1',
+    materiaSigla: 'BD',
+    materiaCorHex: '#0369A1',
+    autoria: AUTORIA,
+    version: 1,
+    visivelTurma: true,
+    excluidoEm: null,
+  };
+}
+
+function detalhe(parcial: Partial<MateriaDetalhe> = {}): MateriaDetalhe {
+  return {
+    materia: { id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' },
+    materiaisAula: [],
+    materiaisAdicionais: [],
+    eventos: [],
+    ...parcial,
+  };
+}
+
+describe('MateriaPage', () => {
+  let backend: HttpTestingController;
+  let fixture: ComponentFixture<MateriaPage>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideIonicAngular(),
+        provideHttpClient(withInterceptors([erroHttpInterceptor])),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: 'm1' }) } },
+        },
+      ],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(MateriaPage);
+  });
+
+  afterEach(() => backend.verify());
+
+  async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
+    fixture.detectChanges();
+    responder(backend.expectOne(`${environment.apiUrl}/materias/m1`));
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function textos(seletor: string): string[] {
+    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map((e) =>
+      (e as HTMLElement).textContent!.trim(),
+    );
+  }
+
+  it('material de aula e material adicional aparecem separados', async () => {
+    // R4: os dois tipos existem para nao se misturarem. Se a tela juntasse
+    // tudo numa lista so, o tipo nao serviria para nada.
+    await abrir((r) =>
+      r.flush(
+        detalhe({
+          materiaisAula: [material('a1', 'AULA', 'Formas normais', 'https://x/fn.pdf')],
+          materiaisAdicionais: [
+            material('x1', 'ADICIONAL', 'Lista extra', 'https://x/extra.pdf'),
+          ],
+        }),
+      ),
+    );
+
+    expect(textos('app-material-linha.aula .titulo')).toEqual(['Formas normais']);
+    expect(textos('app-material-linha.adicional .titulo')).toEqual(['Lista extra']);
+  });
+
+  it('os eventos da materia aparecem junto', async () => {
+    await abrir((r) => r.flush(detalhe({ eventos: [evento('e1', 'Prova 2 — normalização')] })));
+
+    expect(textos('app-evento-card .titulo')).toEqual(['Prova 2 — normalização']);
+  });
+
+  it('materia sem material e sem evento mostra o estado vazio', async () => {
+    await abrir((r) => r.flush(detalhe()));
+
+    expect(fixture.nativeElement.querySelector('.pf-vazio')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.pf-aviso'))
+      .withContext('materia vazia de verdade nao mostra aviso de falha')
+      .toBeNull();
+  });
+
+  it('falha ao buscar a materia nao vira materia vazia', async () => {
+    await abrir((r) => r.error(new ProgressEvent('error')));
+
+    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain(
+      'Sem conexão',
+    );
+    expect(fixture.nativeElement.querySelector('.pf-vazio'))
+      .withContext('falhar ao buscar NAO e "esta materia nao tem nada"')
+      .toBeNull();
+  });
+});

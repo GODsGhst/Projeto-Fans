@@ -135,7 +135,16 @@ export interface CriarEventoRequest {
   hora: string | null;
 }
 
-export type AtualizarEventoRequest = Partial<CriarEventoRequest>;
+/**
+ * PATCH SUBSTITUI os campos editaveis por inteiro — nao e merge parcial (A13).
+ *
+ * `Partial<>` aqui era uma armadilha: objeto parcial leva 400 com ProblemDetail.
+ * O motivo do backend e `hora` — num merge, "campo ausente mantem o atual"
+ * tornaria impossivel APAGAR a hora de um evento, e quem corrigisse "na verdade
+ * nao tem horario" ficaria preso a um dado errado. Mande todos os campos,
+ * inclusive os que nao mudaram.
+ */
+export type AtualizarEventoRequest = CriarEventoRequest;
 
 export interface CriarMaterialRequest {
   materiaId: string;
@@ -145,7 +154,8 @@ export interface CriarMaterialRequest {
   url: string;
 }
 
-export type AtualizarMaterialRequest = Partial<CriarMaterialRequest>;
+/** Substituicao por inteiro, pelo mesmo motivo de `AtualizarEventoRequest`. */
+export type AtualizarMaterialRequest = CriarMaterialRequest;
 
 export interface CriarMateriaRequest {
   nome: string;
