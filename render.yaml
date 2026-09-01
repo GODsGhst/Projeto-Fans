@@ -36,11 +36,11 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-      # sync: false = "pergunte no painel, nao guarde no git". Sao as credenciais
-      # do Neon, e elas nao entram em arquivo versionado em hipotese nenhuma.
+      # sync: false = "pergunte no painel, nao guarde no git". E a credencial do
+      # Neon, e ela nao entra em arquivo versionado em hipotese nenhuma.
+      #
+      # UMA variavel: o Neon entrega a connection string no formato Java com user e
+      # password ja dentro da URL. Um campo para colar em vez de tres, e sem a
+      # chance de esquecer o prefixo jdbc:.
       - key: DATABASE_URL
-        sync: false
-      - key: DATABASE_USER
-        sync: false
-      - key: DATABASE_PASSWORD
         sync: false

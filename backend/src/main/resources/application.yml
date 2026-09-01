@@ -94,9 +94,15 @@ spring:
     activate:
       on-profile: teste
   datasource:
+    # UMA variavel, nao tres. O Neon oferece a connection string no formato Java e
+    # ela ja vem com user e password como parametros da propria URL:
+    #   jdbc:postgresql://HOST/BANCO?user=X&password=Y&sslmode=require
+    # Copiar um campo em vez de tres tira duas chances de errar, e tira o erro mais
+    # comum de todos — esquecer o prefixo jdbc: — porque o formato Java ja o traz.
+    #
+    # Quem preferir separado nao fica de fora: SPRING_DATASOURCE_USERNAME e
+    # SPRING_DATASOURCE_PASSWORD continuam funcionando por binding relaxado do Boot.
     url: ${DATABASE_URL}
-    username: ${DATABASE_USER:}
-    password: ${DATABASE_PASSWORD:}
   flyway:
     locations: classpath:db/migration
 

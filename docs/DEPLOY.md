@@ -50,10 +50,8 @@ ele **não sobe**, e isso é correto para produção de verdade. O `teste` é o 
 jdbc:postgresql://ep-nome-123456.us-east-1.aws.neon.tech/neondb?sslmode=require
 ```
 
-4. Guarde três coisas, separadas:
-   - a **URL** acima (é o `DATABASE_URL`)
-   - o **usuário** (algo como `neondb_owner`)
-   - a **senha**
+4. **Copie essa linha inteira.** É só ela — o formato Java já traz usuário e senha dentro da
+   própria URL, então não há três campos para separar. Ela é o `DATABASE_URL`.
 
 > **Não use o Postgres gratuito do próprio Render.** Ele expira em 30 dias e apaga os dados junto.
 > Num app que a turma vai usar por um semestre, isso é uma armadilha com data marcada. O do Neon
@@ -66,13 +64,7 @@ jdbc:postgresql://ep-nome-123456.us-east-1.aws.neon.tech/neondb?sslmode=require
 1. Entre em **render.com** e crie conta com o GitHub.
 2. Vá em **Blueprints → New Blueprint Instance**.
 3. Aponte para o repositório `GODsGhst/Projeto-Fans`. Ele acha o `render.yaml` sozinho.
-4. Ele vai pedir as três variáveis que ficaram marcadas como "pergunte no painel":
-
-   | Variável | O que colar |
-   |---|---|
-   | `DATABASE_URL` | a URL JDBC do Neon, inteira |
-   | `DATABASE_USER` | o usuário do Neon |
-   | `DATABASE_PASSWORD` | a senha do Neon |
+4. Ele vai pedir **uma** variável: `DATABASE_URL`. Cole a linha que você copiou do Neon.
 
    O `JWT_SECRET` ele gera sozinho — não invente um à mão, e não cole em conversa nenhuma.
 
@@ -154,7 +146,7 @@ Consciente, e cada um por um motivo:
 | Sintoma | Causa provável |
 |---|---|
 | Build falha no Maven | o `Dockerfile` compila com Java 17; se alguém mexeu no `pom.xml`, as duas versões precisam bater |
-| Sobe e morre em seguida | `DATABASE_URL` sem `jdbc:` na frente, ou usuário/senha em branco |
+| Sobe e morre em seguida | `DATABASE_URL` sem `jdbc:` na frente — você copiou o formato errado no Neon. Tem que ser o **Java**, não o "connection string" |
 | `502` que não passa | veja os logs no Render: Flyway falhando aparece lá com o nome da migration |
 | `401` em tudo, inclusive login | `JWT_SECRET` ausente ou curto demais (precisa de 256 bits) |
 | Funciona no `curl` e não no app | `apiUrl` do `environment.prod.ts` ainda apontando para `localhost` |
