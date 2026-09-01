@@ -2125,3 +2125,60 @@ provaria menos do que custa. Registrado aqui para ninguém supor cobertura que n
 **Travas / dúvidas:** o cold start continua de pé, e é do plano gratuito, não do app. Quem abrir o
 app primeiro no dia espera ~45 s; os outros não. Sair disso custa dinheiro — um host que não
 hiberne. Para um teste de turma, o aviso honesto resolve.
+
+---
+
+### [2026-09-01] As telas de cadastro — o buraco que o plano nunca teve (Claude)
+
+**Status:** desenho pronto e navegável. Implementação em código é a próxima leva.
+
+O dono instalou o APK, criou a conta, entrou na turma — e não conseguiu **fazer nada**. Sem tela
+para criar matéria, sem tela para cadastrar prova, sem saber quem está na turma nem quem é o líder.
+
+**A causa não é execução, é o plano.** As 16 tarefas são backend mais *wiring de leitura*:
+"Wiring da Home", "Wiring de Matérias", "Wiring de Meu quadro". **Nenhuma cria nada.** E o critério
+de aceite do próprio handoff diz:
+
+> "Aluno A **cadastra** uma prova; aluno B vê ela na Home em outro aparelho."
+
+O lado "vê" foi construído inteiro. O lado "cadastra" não existe em tarefa nenhuma. É o mesmo tipo
+de buraco do `MateriaController` que faltava — e é o segundo desta natureza, o que sugere olhar o
+plano com desconfiança onde ele fala em "wiring".
+
+**Levantamento, contra o código:**
+
+| | |
+|---|---|
+| Telas no app | 10 |
+| Telas que criam evento, matéria ou material | **zero** |
+| Único `POST` disparado por tela | criar turma |
+| Endpoint que lista membros | **não existe** |
+
+O calendário vazio **não é bug**: sem matéria não há evento, sem evento não há o que mostrar. Ele
+está correto; o que falta é poder criar.
+
+**Três telas novas em `telas-v3.html`**, sem token novo nenhum — só arranjo do que já existia:
+
+- **Nova matéria** — nome, sigla e as 12 cores em grade. A escolhida ganha **anel**, não brilho:
+  em escala de cinza o anel sobrevive e o brilho não, que é a mesma regra do resto do sistema. Tem
+  prévia do chip, porque cor de matéria se escolhe uma vez e fica.
+- **O que vai cair** — prova ou entrega no segmentado, matéria por chip, título, data, e hora
+  **opcional** com o aviso de que a véspera continua às 19h sem ela.
+- **A turma** — o código de convite em destaque com botão de copiar, e quem está, com o líder
+  marcado. Responde de uma vez três perguntas que o dono fez separadas.
+
+**Decisões que eu tomei:**
+
+*O líder recebe marca discreta, não coroa.* Um selo pequeno no accent, sem destaque de cor nem
+ícone de hierarquia. Líder aqui é papel, não posto — ele não edita registro de ninguém, e a tela
+não pode sugerir que edita.
+
+*A grade de cores não é livre.* As 12 foram medidas para dar ≥ 4.5:1 com o texto branco do chip, e
+o backend já recusa qualquer outra. Um seletor livre na tela prometeria o que o servidor nega.
+
+**Verificado por clique, não por leitura:** Home → cadastrar prova → voltar; Matérias → nova
+matéria → voltar; Meu quadro → a turma → voltar. 12 cores na paleta, prova e entrega no
+segmentado, campos de data e hora presentes, 4 membros com o líder marcado, código visível.
+
+**Travas / dúvidas:** falta o endpoint que a tela da turma consome — não existe nada que liste
+membros. É backend, e entra na leva de implementação junto das telas.

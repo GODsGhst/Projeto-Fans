@@ -663,6 +663,60 @@
      mente sobre o que o app faz; entao ele aparece explicitamente indisponivel. */
   .botao[disabled] { opacity: .45; cursor: not-allowed; box-shadow: none; }
   .botao[disabled]:active { transform: none; }
+
+  /* ---------- TELAS DE CADASTRO ----------
+     Nenhum token novo. O que entra aqui é arranjo: grade de cores, linha de
+     membro e o bloco do código de convite. */
+  .cores-pick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .cores-pick button {
+    aspect-ratio: 1; border: 0; border-radius: var(--r-sm); cursor: pointer;
+    background: var(--c); padding: 0; position: relative;
+    box-shadow: 0 1px 2px rgba(16,20,22,.16);
+    transition: transform .16s var(--mola);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cores-pick button:active { transform: scale(.9); }
+  /* A escolhida ganha anel, não só brilho: em escala de cinza o anel sobrevive
+     e o brilho não. Mesma regra do resto do sistema. */
+  .cores-pick button[aria-pressed="true"] {
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink);
+  }
+  .cores-pick button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .previa-chip { display: flex; align-items: center; gap: 9px; padding: 4px 2px; }
+  .previa-chip span:last-child { font-size: 12.5px; color: var(--ink-3); }
+
+  .membro {
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 13px; border-radius: var(--r-md);
+    background: var(--surface); border: 1px solid var(--rule); box-shadow: var(--e1);
+  }
+  .membro .inicial {
+    flex: 0 0 auto; width: 34px; height: 34px; border-radius: var(--r-pill);
+    display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 14px; font-weight: 700;
+  }
+  .membro .quem { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .membro .nome { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+  .membro .desde { font-size: 11.5px; color: var(--ink-3); }
+  /* Líder é papel, não posto: marca discreta, sem coroa nem destaque de cor. */
+  .membro .papel {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-soft);
+    padding: 3px 8px; border-radius: var(--r-pill);
+  }
+
+  .bloco-codigo {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 15px; border-radius: var(--r-md);
+    background: var(--surface-2); border: 1px solid var(--accent-line); box-shadow: var(--e1);
+  }
+  .bloco-codigo .valor {
+    font-family: var(--mono); font-size: 26px; font-weight: 700;
+    letter-spacing: .2em; text-align: center; color: var(--ink);
+    user-select: all;
+  }
 </style>
 
 <div class="wrap">
@@ -688,6 +742,162 @@
     <div class="fone">
 
       <!-- ==================== HOME ==================== -->
+      <!-- ==================== CRIAR MATÉRIA ==================== -->
+      <div class="tela" data-tela="nova-materia" data-aba="materias">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="materias" aria-label="Voltar">&larr;</button>
+            <h3>Nova matéria</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <p class="rot-campo">nome</p>
+          <input class="campo--linha" type="text" placeholder="Banco de Dados"
+                 aria-label="Nome da matéria" value="Banco de Dados">
+
+          <p class="rot-campo">sigla</p>
+          <input class="campo--linha" type="text" maxlength="12" placeholder="BD"
+                 aria-label="Sigla" style="text-transform:uppercase" value="BD">
+
+          <p class="rot-campo">cor</p>
+          <div class="cores-pick" role="group" aria-label="Cor da matéria" id="pick-cor">
+            <button type="button" aria-pressed="false" style="--c:#1D4ED8" aria-label="azul"></button>
+            <button type="button" aria-pressed="true"  style="--c:#0369A1" aria-label="azul-petróleo"></button>
+            <button type="button" aria-pressed="false" style="--c:#0F766E" aria-label="verde-azulado"></button>
+            <button type="button" aria-pressed="false" style="--c:#15803D" aria-label="verde"></button>
+            <button type="button" aria-pressed="false" style="--c:#4D7C0F" aria-label="oliva"></button>
+            <button type="button" aria-pressed="false" style="--c:#A16207" aria-label="âmbar"></button>
+            <button type="button" aria-pressed="false" style="--c:#B45309" aria-label="laranja-queimado"></button>
+            <button type="button" aria-pressed="false" style="--c:#C2410C" aria-label="laranja"></button>
+            <button type="button" aria-pressed="false" style="--c:#B91C1C" aria-label="vermelho"></button>
+            <button type="button" aria-pressed="false" style="--c:#BE185D" aria-label="rosa"></button>
+            <button type="button" aria-pressed="false" style="--c:#A21CAF" aria-label="magenta"></button>
+            <button type="button" aria-pressed="false" style="--c:#6D28D9" aria-label="violeta"></button>
+          </div>
+
+          <div class="previa-chip">
+            <span class="chip" id="previa-chip" style="--c: var(--m-bd)">BD</span>
+            <span>é assim que ela vai aparecer</span>
+          </div>
+
+          <p class="cache-aviso">
+            As 12 cores foram medidas para dar contraste suficiente com o texto branco do chip.
+            Por isso a escolha é entre elas, e não livre.
+          </p>
+
+          <button class="botao" type="button" data-ir="materias">Criar matéria</button>
+        </div>
+      </div>
+
+      <!-- ==================== NOVA PROVA OU ENTREGA ==================== -->
+      <div class="tela" data-tela="novo-evento" data-aba="home">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="home" aria-label="Voltar">&larr;</button>
+            <h3>O que vai cair</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <p class="rot-campo">tipo</p>
+          <div class="seg" id="seg-tipo-evento">
+            <button type="button" data-tipo="prova" aria-pressed="true">Prova</button>
+            <button type="button" data-tipo="entrega" aria-pressed="false">Entrega</button>
+          </div>
+
+          <p class="rot-campo">matéria</p>
+          <div class="chips-pick" role="group" aria-label="Matéria" id="pick-materia-evento">
+            <button type="button" aria-pressed="true"><span class="chip" style="--c: var(--m-bd)">BD</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-calc)">CALC2</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-esoft)">ESOFT</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-redes)">REDES</span></button>
+          </div>
+
+          <p class="rot-campo">o que é</p>
+          <input class="campo--linha" type="text" placeholder="Prova 2 — normalização"
+                 aria-label="Título" value="Prova 2 — normalização">
+
+          <p class="rot-campo">quando</p>
+          <input class="campo--linha" type="date" aria-label="Data" value="2026-09-10">
+
+          <p class="rot-campo">hora <span style="font-weight:400">— opcional</span></p>
+          <input class="campo--linha" type="time" aria-label="Hora">
+
+          <p class="cache-aviso">
+            Sem hora, o aviso da véspera continua saindo às 19h. A hora só entra se a turma
+            precisar saber dela.
+          </p>
+
+          <div class="alerta" data-tom="turma">
+            <span class="glyph glyph--prova" style="margin-top:3px"></span>
+            <span>Vai aparecer para a turma toda com o seu nome. Só você pode editar ou apagar
+              depois.</span>
+          </div>
+
+          <button class="botao" type="button" data-ir="home">Cadastrar</button>
+        </div>
+      </div>
+
+      <!-- ==================== A TURMA ==================== -->
+      <div class="tela" data-tela="turma" data-aba="quadro">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="quadro" aria-label="Voltar">&larr;</button>
+            <h3>Fans 2026.2</h3>
+          </span>
+          <span>4 pessoas</span>
+        </div>
+        <div class="t-corpo">
+          <p class="rotulo">código de convite</p>
+          <div class="bloco-codigo">
+            <span class="valor">93EB9244</span>
+            <button class="botao botao--fantasma" type="button">Copiar código</button>
+            <span style="font-size:12px;color:var(--ink-3);text-align:center">
+              Quem tiver este código entra na turma. Ele não expira.
+            </span>
+          </div>
+
+          <p class="rotulo">quem está aqui</p>
+
+          <div class="membro">
+            <span class="inicial">O</span>
+            <span class="quem">
+              <span class="nome">Otávio</span>
+              <span class="desde">entrou em 1 set</span>
+            </span>
+            <span class="papel">líder</span>
+          </div>
+
+          <div class="membro">
+            <span class="inicial">A</span>
+            <span class="quem">
+              <span class="nome">Ana Beatriz</span>
+              <span class="desde">entrou em 1 set</span>
+            </span>
+          </div>
+
+          <div class="membro">
+            <span class="inicial">B</span>
+            <span class="quem">
+              <span class="nome">Bruno</span>
+              <span class="desde">entrou em 1 set</span>
+            </span>
+          </div>
+
+          <div class="membro">
+            <span class="inicial">M</span>
+            <span class="quem">
+              <span class="nome">prof. Marcos</span>
+              <span class="desde">entrou em 28 ago</span>
+            </span>
+          </div>
+
+          <p class="cache-aviso">
+            O líder não edita nem apaga registro de ninguém. Ele só oculta o que não devia estar
+            ali, e pode transferir a liderança.
+          </p>
+        </div>
+      </div>
+
       <!-- ==================== LOGIN ==================== -->
       <div class="tela" data-tela="login" data-sem-abas data-ativa>
         <div class="t-corpo">
@@ -896,6 +1106,10 @@
             </div>
           </div>
 
+          <button class="add-linha" type="button" data-ir="novo-evento">
+            +&nbsp;&nbsp;Cadastrar prova ou entrega
+          </button>
+
         </div>
       </div>
 
@@ -956,6 +1170,10 @@
           <span>bd · b-204</span>
         </div>
         <div class="t-corpo">
+          <button class="add-linha" type="button" data-ir="nova-materia">
+            +&nbsp;&nbsp;Nova matéria
+          </button>
+
           <p class="rotulo">grade</p>
           <div class="aula">
             <div class="quadro-sala">
@@ -1025,6 +1243,8 @@
         <div class="t-barra">
           <h3>Meu quadro</h3>
           <span>só seu</span>
+          <button class="link-txt" type="button" data-ir="turma"
+                  style="align-self:center;padding:4px 0">a turma &rarr;</button>
         </div>
         <div class="t-corpo">
           <div class="kan">
