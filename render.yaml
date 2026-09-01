@@ -1,0 +1,42 @@
+# Blueprint do Render para a API do projetoFans.
+#
+# Com este arquivo no repo, o Render monta o servico sozinho: em
+# https://dashboard.render.com/blueprints voce aponta para este repositorio e ele
+# le tudo daqui. Nada de configurar campo por campo na interface e torcer para
+# lembrar de todos.
+#
+# O banco NAO esta aqui de proposito. O Postgres gratuito do Render expira em 30
+# dias e some com os dados junto — o que, num app que a turma vai usar por um
+# semestre, e uma armadilha com data marcada. O Neon nao expira. Ver docs/DEPLOY.md.
+
+services:
+  - type: web
+    name: projetofans-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+
+    # O Render so considera o deploy saudavel quando esta rota responde 200. Sem
+    # ela, ele checa apenas se a porta abriu — e uma aplicacao que subiu e quebrou
+    # no Flyway passaria por "no ar".
+    healthCheckPath: /api/v1/saude
+
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: teste
+
+      # generateValue: o Render sorteia um segredo forte e nunca o mostra em log.
+      # Melhor que um valor escolhido a mao, que costuma acabar colado num chat.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # sync: false = "pergunte no painel, nao guarde no git". Sao as credenciais
+      # do Neon, e elas nao entram em arquivo versionado em hipotese nenhuma.
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USER
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false

@@ -18,11 +18,16 @@ import java.util.List;
 /**
  * O unico arquivo do projeto que toca no SDK do Google.
  *
- * Fora do perfil test, para que o FakeGoogleTokenVerifier ocupe o lugar sem
- * conflito de bean. O client id vem de GOOGLE_OAUTH_CLIENT_ID; nada hardcoded.
+ * So em dev e prod, e a lista e explicita de proposito. Cada outro perfil tem o
+ * seu substituto, e trocar isto por um "!alguma-coisa" faria um perfil novo cair
+ * aqui por acidente — que foi exatamente o risco quando o perfil teste nasceu:
+ * ele casava com !test e exigiria um OAuth Client ID que ninguem tem.
+ *   test  -> FakeGoogleTokenVerifier (src/test)
+ *   teste -> GoogleTokenVerifierDesligado, que recusa com mensagem clara
+ * O client id vem de GOOGLE_OAUTH_CLIENT_ID; nada hardcoded.
  */
 @Component
-@Profile("!test")
+@Profile({"dev", "prod"})
 public class GoogleTokenVerifierImpl implements GoogleTokenVerifier {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleTokenVerifierImpl.class);

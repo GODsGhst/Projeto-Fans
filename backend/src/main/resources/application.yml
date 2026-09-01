@@ -79,6 +79,44 @@ app:
   google-oauth-client-id: test-client-id-fake
 
 ---
+# Perfil do ambiente HOSPEDADO de teste (Render + Neon).
+#
+# Diferenca para prod: aqui NADA que exija conta externa e obrigatorio. E-mail cai
+# no LogEmailSender (@Profile("!prod")) e o login por Google entra desligado, com
+# mensagem clara. So o Postgres e real, porque sem banco compartilhado o app nao
+# testa o que ele e: uma turma vendo a mesma coisa.
+#
+# Duas variaveis obrigatorias, e so:
+#   DATABASE_URL   jdbc:postgresql://HOST/BANCO?sslmode=require
+#   JWT_SECRET     >= 256 bits; o Render gera sozinho se voce deixar
+spring:
+  config:
+    activate:
+      on-profile: teste
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER:}
+    password: ${DATABASE_PASSWORD:}
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  # O Render injeta PORT e espera que a aplicacao escute nela. Fixar 8080 aqui
+  # faria o deploy subir e o health check nunca responder.
+  port: ${PORT:8080}
+
+app:
+  jwt-secret: ${JWT_SECRET}
+  jwt-expiracao-horas: 720
+  # Nao ha login por Google neste ambiente; o valor existe so para o bean construir.
+  google-oauth-client-id: desligado-no-ambiente-de-teste
+  reset-senha-url-base: ${RESET_SENHA_URL_BASE:https://exemplo.invalid/senha/reset}
+
+logging:
+  level:
+    com.projetofans: INFO
+
+---
 spring:
   config:
     activate:

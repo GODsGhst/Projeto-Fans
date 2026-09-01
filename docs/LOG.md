@@ -1570,3 +1570,81 @@ volta por reexibição, e quem lê precisa saber com quem falar.
 `MateriaController` no backend**. Nem `GET /materias`, nem `/materias/{id}`. As duas telas de
 matéria estão corretas contra o contrato do spec e testadas contra `HttpTestingController`, mas
 contra o servidor de verdade levam 404. É a próxima coisa a fazer.
+
+---
+
+### [2026-08-31] MateriaController e o deploy hospedado (Claude)
+
+**Status:** concluída. Backend de 76 para **85 testes**, todos verdes.
+
+**1. O `MateriaController` não existia — e a aba Matérias levava 404.**
+
+A Task 11 fez o wiring das duas telas de matéria contra o contrato da Seção 6.2 do spec, testou
+contra `HttpTestingController` e registrou: o outro lado não existe. Nem `GET /materias`, nem
+`/materias/{id}`, nem `POST`. **Nenhuma tarefa do plano criou esse controller** — é um buraco do
+plano, não de execução.
+
+Escrito agora: `MateriaService`, `MateriaController`, três DTOs e duas exceções. Nove testes.
+
+**Uma regra nova, e é de acessibilidade.** O `CHECK` do banco (`materia_cor_hex_valida`) valida só
+o **formato** — qualquer `#RRGGBB` passa. `#FFFF00` passaria, e o chip da matéria usa texto branco:
+amarelo com texto branco é ilegível. As 12 hues do design system foram medidas uma a uma para dar
+≥ 4.5:1 com branco, então `Paleta.HUES` passa a ser regra de servidor.
+
+Validar só no app não bastaria: o app é um cliente entre outros, e regra de acessibilidade não
+pode morar num lugar que se contorna com `curl`. Cor de matéria também é escolhida uma vez e fica —
+o dano seria permanente.
+
+**Verificado por mutação.** Com as duas guardas desligadas:
+
+```
+corForaDaPaletaResponde400      Status expected:<400> but was:<201>   ← amarelo aceito
+siglaRepetidaNaTurmaResponde409 Status expected:<409> but was:<500>
+```
+
+O segundo é informativo: sem a checagem explícita, sigla duplicada vira violação crua da constraint
+e sai 500. A constraint continua sendo a garantia real — ela pega a corrida entre dois cadastros
+simultâneos, que a checagem sozinha deixaria passar. A checagem existe para a mensagem ser legível.
+
+**2. Deploy hospedado — a B3, aberta desde 29/07, agora tem resposta.**
+
+O dono perguntou por que o backend estava no notebook dele, já que quem vai testar é um colega, no
+celular do colega, e ninguém vai deixar máquina ligada 24h. Está certo, e o plano anterior servia
+para ele testar, não para distribuir.
+
+Não dá para rodar o backend no celular — é uma JVM servindo HTTP. E mesmo que desse, não adiantaria:
+o app existe para a turma compartilhar dados. Backend por aparelho é cada um sozinho com o que
+digitou.
+
+Escolha dele: **Render + Neon**, ambos gratuitos e sem cartão.
+
+- `backend/Dockerfile` — duas fases, imagem final só com JRE e o jar
+- `render.yaml` — blueprint; o Render monta o serviço sozinho
+- `GET /api/v1/saude` — health check público, sem expor nada
+- `docs/DEPLOY.md` — passo a passo, com o que esperar e o que fazer quando der errado
+
+**Perfil `teste`, e por que ele existe.** O `prod` não sobe sem `SMTP_*`, `GOOGLE_OAUTH_CLIENT_ID` e
+`FCM_SERVICE_ACCOUNT_JSON` — sem default nenhum, o que é correto para produção de verdade. Mas
+significaria **quatro contas** antes de um colega conseguir abrir o app. O `teste` mantém o Postgres
+real e troca o resto por fallback: e-mail no log, Google desligado. Uma conta só.
+
+**Armadilha de perfil que quase passou:** `GoogleTokenVerifierImpl` era `@Profile("!test")`, e
+`teste` casa com `!test`. Ele carregaria no ambiente hospedado e exigiria um OAuth Client ID que
+ninguém tem. Troquei para `@Profile({"dev","prod"})` — lista explícita, porque um `!alguma-coisa`
+faz perfil novo cair ali por acidente, que é exatamente o que ia acontecer.
+
+**Decisões que eu tomei:**
+
+*O `GoogleTokenVerifierDesligado` recusa em vez de fingir.* Um verificador que aceitasse qualquer
+token seria buraco de autenticação com cara de conveniência — e este perfil roda na internet aberta.
+
+*Banco no Neon, não no Postgres do Render.* O gratuito do Render expira em 30 dias e leva os dados
+junto. Num app que a turma usaria por um semestre, é armadilha com data marcada.
+
+*`-DskipTests` no Dockerfile.* A suíte precisa do binário do Postgres embutido, e rodar 85 testes
+dentro do build de deploy dobraria o tempo sem dizer nada novo. Build de deploy empacota; não é
+onde se descobre regressão.
+
+**Travas / dúvidas:** falta `npx cap add android`. Antes dele, o `capacitor.config.ts` precisa sair
+de `appId: io.ionic.starter` / `appName: app` para `com.projetofans.app` — trocar package depois
+amarra credencial de Google e Firebase.

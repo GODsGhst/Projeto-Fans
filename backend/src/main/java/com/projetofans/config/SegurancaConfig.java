@@ -40,6 +40,8 @@ public class SegurancaConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(reg -> reg
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                // "a API esta no ar?" nao pode exigir conta. Nao expoe nada alem disso.
+                .requestMatchers("/api/v1/saude").permitAll()
                 .anyRequest().authenticated())
             .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint(json)))
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
