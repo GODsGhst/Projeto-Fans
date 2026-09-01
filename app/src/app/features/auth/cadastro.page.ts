@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonBackButton,
@@ -10,6 +10,7 @@ import {
 } from '@ionic/angular/standalone';
 
 import { AuthService } from '../../core/auth.service';
+import { Espera } from './espera';
 import { mensagemDeErro } from './erro';
 
 /**
@@ -81,7 +82,7 @@ import { mensagemDeErro } from './erro';
           type="button"
           [disabled]="enviando()"
           (click)="criar(nome.value, email.value, senha.value)">
-          {{ enviando() ? 'Criando…' : 'Criar conta' }}
+          {{ rotuloDoBotao() }}
         </button>
       </div>
     </ion-content>
@@ -92,6 +93,18 @@ export class CadastroPage {
   private readonly router = inject(Router);
 
   protected readonly enviando = signal(false);
+  private readonly espera = new Espera();
+
+  /**
+   * O servidor gratuito dorme e leva ate ~45 s para acordar. Um botao que so
+   * diz "Criando…" nesse tempo comunica travamento, nao espera.
+   */
+  protected readonly rotuloDoBotao = computed(() => {
+    if (!this.enviando()) {
+      return 'Criar conta';
+    }
+    return this.espera.demorando() ? 'Acordando o servidor…' : 'Criando…';
+  });
   protected readonly erro = signal<string | null>(null);
 
   protected async criar(nome: string, email: string, senha: string): Promise<void> {
@@ -100,6 +113,7 @@ export class CadastroPage {
     }
     this.enviando.set(true);
     this.erro.set(null);
+    this.espera.comecar();
     try {
       await this.auth.registrar(nome.trim(), email.trim(), senha);
       await this.router.navigateByUrl('/entrar-turma');
@@ -107,6 +121,7 @@ export class CadastroPage {
       this.erro.set(mensagemDeErro(e));
     } finally {
       this.enviando.set(false);
+      this.espera.terminar();
     }
   }
 }

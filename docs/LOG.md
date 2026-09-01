@@ -2071,3 +2071,57 @@ viravam 500. Troca ruim. Validar no cliente resolve os cinco casos reais sem ess
 **Travas / dúvidas:** o código de convite só aparece no momento em que a turma é criada. Quem
 fechar o app nessa tela não tem onde vê-lo de novo — não há tela de "minha turma". Não bloqueia o
 teste (o líder anota), mas é a próxima coisa que alguém vai pedir.
+
+---
+
+### [2026-09-01] O botão que parecia travado — e não existia timeout em lugar nenhum (Claude)
+
+**Status:** concluída. App de 67 para **73 testes**, verdes.
+
+O dono instalou o APK, foi criar a conta, e o botão ficou em **"Criando…" para sempre**.
+
+**O código estava certo.** `cadastro.page.ts` tem `try/catch/finally` com `enviando.set(false)` no
+`finally` — o botão destravaria sozinho quando a resposta chegasse. O problema era que ela não
+chegava, e nada limitava a espera.
+
+**Medido contra a API no ar, no momento do relato:**
+
+```
+GET /api/v1/saude       HTTP 200 em 45,6 s   <- servidor dormindo
+POST /auth/registrar    HTTP 200 em  7,5 s   <- ja acordado
+```
+
+O plano gratuito do Render hiberna depois de 15 minutos parado. A primeira chamada paga o cold
+start, e **45 segundos olhando para um rótulo que não muda lê como app travado**. A pessoa fecha o
+app antes de a resposta chegar — e nunca descobre que teria funcionado.
+
+**Dois defeitos, e o segundo é o que doía:**
+
+*Não havia timeout nenhum.* `firstValueFrom(http.post(...))` espera para sempre. Uma requisição que
+nunca responde prende a tela indefinidamente, sem erro e sem saída. Entrou o `timeoutInterceptor`,
+com teto de **75 s** — número escolhido a partir da medição, não por palpite: 30 s, que seria o
+chute natural, abortaria requisição legítima durante o cold start e ensinaria a pessoa que o app
+não funciona. O `TimeoutError` que ele produz é traduzido pelo interceptor de erro em mensagem que
+diz o que houve e que vale tentar de novo — timeout mudo seria só outra forma de travar.
+
+*O botão mentia por omissão.* Agora, passados 4 s, ele troca para **"Acordando o servidor…"**. A
+espera continua a mesma; o que muda é que ela deixa de parecer defeito. A classe `Espera` só marca
+a passagem do tempo — quem decide o texto é a tela, e o texto diz a verdade.
+
+**Verificado por mutação:** desligando o `espera.comecar()`, o teste acusa
+`Expected 'Criando…' to be 'Acordando o servidor…'`.
+
+**Decisões que eu tomei:**
+
+*O aviso entrou só no login e no cadastro.* São as duas telas onde alguém encontra o app pela
+primeira vez, e onde o servidor tem mais chance de estar dormindo. As telas de dentro herdam o
+timeout, que é a parte que impede o travamento; o rótulo explicativo pode esperar por evidência de
+que incomoda lá também.
+
+*Não medi o caminho de 75 s em teste automatizado.* O que está sob teste é a tradução do erro e a
+troca de rótulo — o teto em si é uma constante, e um teste que esperasse 75 s de relógio falso
+provaria menos do que custa. Registrado aqui para ninguém supor cobertura que não existe.
+
+**Travas / dúvidas:** o cold start continua de pé, e é do plano gratuito, não do app. Quem abrir o
+app primeiro no dia espera ~45 s; os outros não. Sair disso custa dinheiro — um host que não
+hiberne. Para um teste de turma, o aviso honesto resolve.

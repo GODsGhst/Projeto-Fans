@@ -22,6 +22,34 @@ describe('CadastroPage', () => {
 
   afterEach(() => backend.verify());
 
+  it('o botao diz que o servidor esta acordando quando a espera passa de 4s', () => {
+    // O bug relatado em 2026-09-01: o botao ficou em "Criando…" por 45 s porque o
+    // plano gratuito do Render dorme e paga cold start. O codigo estava certo, mas
+    // um rotulo que nao muda por 45 s le como app travado, e a pessoa fecha.
+    jasmine.clock().install();
+    try {
+      const req = enviar();
+      fixture.detectChanges();
+      expect(botao().textContent!.trim()).toBe('Criando…');
+
+      jasmine.clock().tick(4000);
+      fixture.detectChanges();
+      expect(botao().textContent!.trim())
+        .withContext('depois de 4s o rotulo tem de explicar a demora')
+        .toBe('Acordando o servidor…');
+
+      req.flush({ jwt: 'j', usuario: USUARIO });
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  function botao(): HTMLButtonElement {
+    return (
+      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+    ).find((b) => /Criar conta|Criando|Acordando/.test(b.textContent!))!;
+  }
+
   function digitar(seletor: string, valor: string): void {
     const campo = fixture.nativeElement.querySelector(seletor) as HTMLInputElement;
     campo.value = valor;

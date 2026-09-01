@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
 
 import { AuthService } from '../../core/auth.service';
+import { Espera } from './espera';
 import { mensagemDeErro } from './erro';
 
 /**
@@ -59,7 +60,7 @@ import { mensagemDeErro } from './erro';
           type="button"
           [disabled]="enviando()"
           (click)="entrar(email.value, senha.value)">
-          {{ enviando() ? 'Entrando…' : 'Entrar' }}
+          {{ rotuloDoBotao() }}
         </button>
 
         <button class="link-txt" type="button" (click)="ir('/recuperar')">
@@ -86,6 +87,18 @@ export class LoginPage {
   private readonly router = inject(Router);
 
   protected readonly enviando = signal(false);
+  private readonly espera = new Espera();
+
+  /**
+   * O servidor gratuito dorme e leva ate ~45 s para acordar. Um botao que so
+   * diz "Entrando…" nesse tempo comunica travamento, nao espera.
+   */
+  protected readonly rotuloDoBotao = computed(() => {
+    if (!this.enviando()) {
+      return 'Entrar';
+    }
+    return this.espera.demorando() ? 'Acordando o servidor…' : 'Entrando…';
+  });
   protected readonly erro = signal<string | null>(null);
 
   protected async entrar(email: string, senha: string): Promise<void> {
@@ -94,6 +107,7 @@ export class LoginPage {
     }
     this.enviando.set(true);
     this.erro.set(null);
+    this.espera.comecar();
     try {
       await this.auth.entrar(email.trim(), senha);
       await this.router.navigateByUrl('/tabs/home');
@@ -102,6 +116,7 @@ export class LoginPage {
       this.erro.set(mensagemDeErro(e));
     } finally {
       this.enviando.set(false);
+      this.espera.terminar();
     }
   }
 

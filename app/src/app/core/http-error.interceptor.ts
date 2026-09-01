@@ -1,11 +1,12 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { TimeoutError, catchError, throwError } from 'rxjs';
 
 import { ROTA_LOGIN, AuthService } from './auth.service';
 
 export type ClasseErro =
+  | 'DEMOROU'
   | 'AUTH'
   | 'PROIBIDO'
   | 'NAO_ENCONTRADO'
@@ -45,7 +46,25 @@ export const erroHttpInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
   return next(req).pipe(
-    catchError((resposta: HttpErrorResponse) => {
+    catchError((resposta: unknown) => {
+      // O teto de espera do timeoutInterceptor chega aqui como TimeoutError, nao
+      // como HttpErrorResponse. Sem este ramo ele cairia no `traduzir` como
+      // status undefined e viraria "Nao deu para completar a acao" — mudo sobre a
+      // unica coisa que a pessoa precisa saber, que e que vale tentar de novo.
+      if (resposta instanceof TimeoutError) {
+        return throwError(
+          () =>
+            new ErroApi(
+              'DEMOROU',
+              0,
+              'O servidor demorou demais para responder. Tente de novo.',
+              true,
+            ),
+        );
+      }
+      if (!(resposta instanceof HttpErrorResponse)) {
+        return throwError(() => resposta);
+      }
       if (resposta.status === 401) {
         auth.encerrarSessao();
         router

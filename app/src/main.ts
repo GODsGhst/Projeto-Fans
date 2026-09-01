@@ -13,6 +13,7 @@ import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { authInterceptor } from './app/core/auth.interceptor';
 import { erroHttpInterceptor } from './app/core/http-error.interceptor';
+import { timeoutInterceptor } from './app/core/timeout.interceptor';
 import { AuthService } from './app/core/auth.service';
 
 bootstrapApplication(AppComponent, {
@@ -20,8 +21,12 @@ bootstrapApplication(AppComponent, {
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular(),
     provideRouter(routes, withPreloading(PreloadAllModules)),
-    // Ordem: o de auth poe o Bearer na ida; o de erro traduz o que voltar.
-    provideHttpClient(withInterceptors([authInterceptor, erroHttpInterceptor])),
+    // Ordem importa: auth poe o Bearer na ida; timeout limita a espera; erro
+    // traduz o que voltar. O timeout vem ANTES do de erro na lista para que o
+    // TimeoutError que ele produz passe pelo tradutor, e nao escape cru.
+    provideHttpClient(
+      withInterceptors([authInterceptor, timeoutInterceptor, erroHttpInterceptor]),
+    ),
     // Sessao gravada sobrevive a fechar o app.
     provideAppInitializer(() => inject(AuthService).restaurar()),
   ],
