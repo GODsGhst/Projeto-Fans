@@ -60,6 +60,13 @@ import { materialVm } from '../material-vm';
           <p class="pf-aviso">{{ e }}</p>
         }
 
+        <!-- Fora dos @if de proposito: existe com a materia cheia e vazia. O
+             estado vazio dizia "assim que alguem da turma adicionar" e nao
+             oferecia como — convite sem porta. -->
+        <a class="add-botao" [routerLink]="['/tabs/materias', id, 'material', 'novo']">
+          Adicionar material
+        </a>
+
         @if (aula().length) {
           <p class="pf-rotulo">material de aula</p>
           @for (m of aula(); track m.id) {
@@ -110,9 +117,35 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    .add-botao {
+      display: block;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      padding: 15px;
+      border-radius: var(--r-md);
+      background: var(--accent);
+      color: var(--accent-ink);
+      text-decoration: none;
+      box-shadow: var(--e2);
+      transition: transform 0.14s var(--mola);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .add-botao:active {
+      transform: scale(0.985);
+    }
+    .add-botao:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
   `,
 })
 export class MateriaPage {
+  /** Usado no link de adicionar material; vem da rota, como o resto da tela. */
+  protected readonly id: string;
+
   private readonly repo = inject(MateriaRepository);
 
   private readonly detalhe = signal<MateriaDetalhe | null>(null);
@@ -147,6 +180,7 @@ export class MateriaPage {
 
   constructor() {
     const id = inject(ActivatedRoute).snapshot.paramMap.get('id');
+    this.id = id ?? '';
     void this.carregar(id ?? '');
   }
 

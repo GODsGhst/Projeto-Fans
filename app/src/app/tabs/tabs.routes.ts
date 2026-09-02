@@ -33,6 +33,14 @@ export const tabsRoutes: Routes = [
         loadComponent: () =>
           import('../features/materias/nova-materia.page').then((m) => m.NovaMateriaPage),
       },
+      // Antes de 'materias/:id' pelo mesmo motivo das outras: o Angular casa na
+      // primeira que serve, e um caminho de 3 segmentos nao colide com um de 2 —
+      // mas manter a regra visivel evita alguem reordenar sem perceber.
+      {
+        path: 'materias/:id/material/novo',
+        loadComponent: () =>
+          import('../features/materias/novo-material.page').then((m) => m.NovoMaterialPage),
+      },
       {
         path: 'materias/:id',
         loadComponent: () =>
