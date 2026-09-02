@@ -159,4 +159,23 @@ describe('HomePage', () => {
 
     expect(fixture.nativeElement.querySelector('a[href="/tabs/eventos/novo"]')).not.toBeNull();
   });
+
+  it('tocar num evento abre a tela dele', async () => {
+    // A17: a tela de um evento existia, tinha rota, e so era alcancavel por
+    // Materias -> uma materia -> o evento. Da Home, que e onde a prova aparece
+    // primeiro, tocar no card nao fazia nada. O primeiro gesto de quem abre o
+    // app e tocar no que esta na frente; nao responder a ele parece app quebrado.
+    await abrir((r) =>
+      r.flush([item('e-1', 'PROVA', '2026-09-01'), item('e-2', 'ENTREGA', '2026-09-02')]),
+    );
+
+    const destinos = Array.from(
+      fixture.nativeElement.querySelectorAll('a.ir') as NodeListOf<HTMLAnchorElement>,
+    ).map((a) => a.getAttribute('href'));
+
+    expect(destinos).toEqual(['/tabs/eventos/e-1', '/tabs/eventos/e-2']);
+    expect(fixture.nativeElement.querySelector('a.ir app-evento-card'))
+      .withContext('o card inteiro e o alvo do toque, nao um "ver mais" ao lado')
+      .not.toBeNull();
+  });
 });

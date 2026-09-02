@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 
 import { EventoCardComponent } from '../../shared/evento-card.component';
@@ -21,7 +22,7 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
   selector: 'app-calendario',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, EventoCardComponent],
+  imports: [IonHeader, IonToolbar, IonTitle, IonContent, EventoCardComponent, RouterLink],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -39,15 +40,17 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
 
         @if (eventos().length) {
           <p class="pf-rotulo">{{ mes() }}</p>
-          @for (e of eventos(); track e.titulo + e.dia) {
-            <app-evento-card
-              [tipo]="e.tipo"
-              [dia]="e.dia"
-              [mes]="e.mes"
-              [quando]="e.quando"
-              [titulo]="e.titulo"
-              [materia]="e.materia"
-              [autoria]="e.autoria" />
+          @for (e of eventos(); track e.id) {
+            <a class="ir" [routerLink]="['/tabs/eventos', e.id]">
+              <app-evento-card
+                [tipo]="e.tipo"
+                [dia]="e.dia"
+                [mes]="e.mes"
+                [quando]="e.quando"
+                [titulo]="e.titulo"
+                [materia]="e.materia"
+                [autoria]="e.autoria" />
+            </a>
           }
         }
 
@@ -72,7 +75,7 @@ export class CalendarioPage {
 
   protected readonly eventos = computed(() => {
     const agora = new Date();
-    return this.repo.eventos().map((e) => eventoVm(e, agora));
+    return this.repo.eventos().map((e) => ({ id: e.id, ...eventoVm(e, agora) }));
   });
 
   /** Vazio de verdade: carregou, nao falhou, e o mes nao tem nada. */

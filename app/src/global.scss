@@ -107,3 +107,14 @@
   font-size: 12.5px;
   line-height: 1.4;
 }
+
+/* Envelope de toque: transforma um card inteiro em link sem mudar como ele se
+   parece. O alvo e o card todo de proposito — num celular, um "ver mais" de
+   12px ao lado do card e um alvo que erra. Usada por Home, Calendario e a tela
+   de uma materia; se ficasse em cada componente seriam tres copias da mesma
+   regra, divergindo na primeira vez que alguem mexesse em uma. */
+.ir {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}

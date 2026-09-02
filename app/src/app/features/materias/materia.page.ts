@@ -110,11 +110,6 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
-    .ir {
-      display: block;
-      text-decoration: none;
-      color: inherit;
-    }
   `,
 })
 export class MateriaPage {

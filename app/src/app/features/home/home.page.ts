@@ -69,15 +69,20 @@ export interface AulaVm {
 
         @if (eventos().length) {
           <p class="pf-rotulo">o que vem aí</p>
-          @for (e of eventos(); track e.titulo + e.dia) {
-            <app-evento-card
-              [tipo]="e.tipo"
-              [dia]="e.dia"
-              [mes]="e.mes"
-              [quando]="e.quando"
-              [titulo]="e.titulo"
-              [materia]="e.materia"
-              [autoria]="e.autoria" />
+          <!-- A17: o card inteiro leva ao evento. A tela existia e so era
+               alcancavel por Materias -> uma materia -> o evento; da Home, que e
+               onde a prova aparece primeiro, tocar nela nao fazia nada. -->
+          @for (e of eventos(); track e.id) {
+            <a class="ir" [routerLink]="['/tabs/eventos', e.id]">
+              <app-evento-card
+                [tipo]="e.tipo"
+                [dia]="e.dia"
+                [mes]="e.mes"
+                [quando]="e.quando"
+                [titulo]="e.titulo"
+                [materia]="e.materia"
+                [autoria]="e.autoria" />
+            </a>
           }
         }
 
@@ -128,7 +133,9 @@ export class HomePage {
   /** Renderiza na ordem que veio do servidor. Sem `sort`, sem `filter`, sem `slice`. */
   protected readonly eventos = computed(() => {
     const agora = new Date();
-    return this.repo.itens().map((i) => eventoVm(i, agora));
+    // O id nao entra no EventoVm: a Home o chama de `eventoId` e o Calendario de
+    // `id`, e o vm serve aos dois. Mesmo formato usado em materia.page.ts.
+    return this.repo.itens().map((i) => ({ id: i.eventoId, ...eventoVm(i, agora) }));
   });
 
   /**

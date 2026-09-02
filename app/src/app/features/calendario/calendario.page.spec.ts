@@ -83,4 +83,18 @@ describe('CalendarioPage', () => {
       .withContext('erro e estado vazio sao telas diferentes')
       .toBeNull();
   });
+
+  it('tocar num evento abre a tela dele', async () => {
+    // Mesma porta que faltava na Home (A17). O calendario mostra o evento no
+    // dia; tocar nele tem de levar ao evento.
+    await abrir((r) =>
+      r.flush([evento('c-1', 'PROVA', '2026-08-12'), evento('c-2', 'ENTREGA', '2026-08-19')]),
+    );
+
+    const destinos = Array.from(
+      fixture.nativeElement.querySelectorAll('a.ir') as NodeListOf<HTMLAnchorElement>,
+    ).map((a) => a.getAttribute('href'));
+
+    expect(destinos).toEqual(['/tabs/eventos/c-1', '/tabs/eventos/c-2']);
+  });
 });
