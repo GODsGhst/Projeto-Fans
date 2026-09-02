@@ -35,3 +35,7 @@ ruvector.db
 
 # Postgres embutido do perfil dev — dados locais, nunca versionados
 backend/.dev-db/
+
+# Sujeira de ferramentas locais (ruflo/claude-flow), nao do projeto
+.claude-flow/
+.swarm/

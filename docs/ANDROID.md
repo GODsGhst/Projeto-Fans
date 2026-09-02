@@ -109,6 +109,33 @@ ambiente — que é justamente o que falhou aqui.
 
 ---
 
+## O JDK do Android mudou — 2026-09-02, 15h50
+
+**Não use mais o zulu-25 para o Android.** Ele passou a falhar assim:
+
+```
+A problem occurred evaluating settings 'android'.
+> BUG! exception in phase 'semantic analysis' ... Unsupported class file major version 69
+```
+
+`major version 69` é Java 25. O Gradle 8.14.3 (o do wrapper deste projeto) não entende bytecode
+25 nos próprios scripts de build. Isso **não** apareceu antes porque havia um daemon do Gradle já
+aquecido com outra JVM sendo reaproveitado — o erro só saiu quando `npx cap sync` mexeu no
+`capacitor.settings.gradle` e forçou a reavaliação com daemon novo. É o tipo de falha que parece
+intermitente e não é.
+
+**O JDK que funciona hoje é o 24:**
+
+```
+cd app/android && JAVA_HOME="C:/Program Files/Java/jdk-24" ./gradlew assembleDebug
+```
+
+A tabela dos dois `JAVA_HOME` continua valendo na ideia — backend e Android precisam de JDKs
+diferentes —, só mudou qual é o do Android: **jdk-24**, não zulu-25. Se um dia o Gradle subir de
+versão, o 25 volta a servir.
+
+---
+
 ## Instalar no celular
 
 **Por cabo**, com depuração USB ligada:

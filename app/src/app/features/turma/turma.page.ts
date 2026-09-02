@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Share } from '@capacitor/share';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 
 import { ApiService } from '../../core/api.service';
@@ -62,6 +63,12 @@ interface MinhaTurma {
           <p class="pf-rotulo">código de convite</p>
           <div class="bloco-codigo">
             <span class="valor" data-testid="codigo-convite">{{ t.codigoConvite }}</span>
+            <!-- Compartilhar vem primeiro porque e o que a pessoa quer fazer:
+                 mandar o convite no grupo da turma. Copiar so serve para quem ja
+                 esta com o app aberto e vai colar em algum lugar. -->
+            <button class="botao-compartilhar" type="button" (click)="compartilhar(t)">
+              Compartilhar convite
+            </button>
             <button class="botao-copiar" type="button" (click)="copiar(t.codigoConvite)">
               {{ copiado() ? 'Copiado ✓' : 'Copiar código' }}
             </button>
@@ -119,6 +126,28 @@ interface MinhaTurma {
       font-size: 12px;
       color: var(--ink-3);
       text-align: center;
+    }
+
+    .botao-compartilhar {
+      font: inherit;
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 12px;
+      border-radius: var(--r-md);
+      border: 0;
+      background: var(--accent);
+      color: var(--accent-ink);
+      box-shadow: var(--e2);
+      transition: transform 0.14s var(--mola);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .botao-compartilhar:active {
+      transform: scale(0.98);
+    }
+    .botao-compartilhar:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
     }
 
     .botao-copiar {
@@ -231,6 +260,26 @@ export class TurmaPage {
     }
   }
 
+  /**
+   * Manda o convite pelo compartilhamento do proprio celular.
+   *
+   * O codigo vai DENTRO do texto, nao anexado de outro jeito: quem recebe le uma
+   * mensagem que ja diz de que turma se trata e como entrar. Mensagem sem o
+   * codigo obriga o convidado a voltar e perguntar, que e o oposto de convidar.
+   *
+   * Sem `Share` — WebView antigo, navegador, permissao negada — cai para a area
+   * de transferencia. Nao vira erro de tela: o objetivo e a pessoa SAIR daqui
+   * com o codigo na mao, e o clipboard cumpre isso. Falhar os dois tambem nao
+   * vira erro, porque o codigo continua escrito na tela e selecionavel.
+   */
+  protected async compartilhar(turma: MinhaTurma): Promise<void> {
+    try {
+      await Share.share(convite(turma));
+    } catch {
+      await this.copiar(turma.codigoConvite);
+    }
+  }
+
   protected async copiar(codigo: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(codigo);
@@ -241,6 +290,27 @@ export class TurmaPage {
       this.copiado.set(false);
     }
   }
+}
+
+/**
+ * O texto do convite.
+ *
+ * Função pura, exportada, porque é aqui que o defeito moraria: uma mensagem sem
+ * o código chega bonita e não convida ninguém — quem recebe tem de voltar e
+ * perguntar como entra. `Share` é um proxy criado por `registerPlugin` e não
+ * aceita spy, então testar pela chamada do plugin não prova nada; testar esta
+ * função prova o que importa.
+ */
+export function convite(turma: Pick<MinhaTurma, 'nome' | 'codigoConvite'>): {
+  title: string;
+  text: string;
+} {
+  return {
+    title: `Entrar na turma ${turma.nome}`,
+    text:
+      `Entra na turma ${turma.nome} no projetoFans — é onde a gente anota as provas e ` +
+      `entregas. O código é ${turma.codigoConvite}.`,
+  };
 }
 
 /** "entrou em 1 set". Data ilegível vira texto vazio, nunca "Invalid Date". */

@@ -6,7 +6,7 @@ import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
-import { TurmaPage } from './turma.page';
+import { TurmaPage, convite } from './turma.page';
 
 const TURMA = {
   id: 't1',
@@ -34,6 +34,18 @@ const TURMA = {
     },
   ],
 };
+
+describe('convite', () => {
+  it('a mensagem carrega o codigo e o nome da turma', () => {
+    // Este e o defeito possivel: mensagem bonita que chega sem o codigo, e quem
+    // recebe tem de voltar e perguntar como entra.
+    const m = convite({ nome: 'Fans 2026.2', codigoConvite: '93EB9244' });
+
+    expect(m.text).withContext('sem o codigo nao convida ninguem').toContain('93EB9244');
+    expect(m.text).withContext('e precisa dizer de que turma se trata').toContain('Fans 2026.2');
+    expect(m.title).toContain('Fans 2026.2');
+  });
+});
 
 describe('TurmaPage', () => {
   let backend: HttpTestingController;
@@ -98,5 +110,28 @@ describe('TurmaPage', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="codigo-convite"]'))
       .withContext('codigo inventado seria pior que codigo nenhum')
       .toBeNull();
+  });
+
+  it('ha um botao de compartilhar, e sem compartilhamento o codigo cai no clipboard', async () => {
+    // No navegador do teste o `Share` do Capacitor nao existe e a chamada falha
+    // — que e exatamente o caminho de fallback que precisa funcionar. Nao ha spy
+    // aqui de proposito: `Share` e um proxy do registerPlugin e spyOn nao o
+    // intercepta, entao um teste com spy passaria sem provar nada.
+    const copia = spyOn(navigator.clipboard, 'writeText').and.resolveTo();
+    await abrir((r) => r.flush(TURMA));
+
+    const botao = (
+      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+    ).find((b) => b.textContent!.includes('Compartilhar'));
+    expect(botao).withContext('sem botao de compartilhar nao ha como convidar').toBeDefined();
+
+    botao!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(copia)
+      .withContext('falhar o compartilhamento tem de deixar a pessoa com o codigo mesmo assim')
+      .toHaveBeenCalledWith('93EB9244');
+    expect(fixture.nativeElement.textContent as string).toContain('Copiado');
   });
 });
