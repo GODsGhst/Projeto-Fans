@@ -110,8 +110,19 @@ o APK de novo. Ver `docs/ANDROID.md` para os comandos, e a armadilha dos dois `J
 
 ## O que esperar do plano gratuito
 
-**O serviço dorme depois de 15 minutos parado**, e a primeira chamada depois disso leva **30 a 50
-segundos** para responder. Isso é do free tier do Render, não do app.
+**O serviço dorme depois de 15 minutos parado**, e a primeira chamada depois disso paga o cold
+start. Isso é do free tier do Render, não do app.
+
+**O número varia mais do que a documentação sugere, e isso importa.** Medido neste projeto:
+**45,6 s** em 2026-09-01 e **mais de 120 s** em 2026-09-02. O app aborta em 75 s
+(`app/src/app/core/timeout.interceptor.ts`), então a segunda medição vira erro na tela — foi
+exatamente o sintoma relatado no dia 1º, o botão preso em "Criando…". Subir o teto não resolve:
+um spinner de dois minutos é indistinguível de app travado.
+
+**A saída de graça é não deixar dormir.** `.github/workflows/manter-acordado.yml` faz um ping a
+cada 10 minutos. Ele está no repositório mas **não está rodando**: o GitHub só executa `schedule`
+a partir do branch padrão (`master`), e o arquivo hoje vive em `acelera-backend`. Mesclar liga.
+Antes de pedir para alguém abrir o app, dá para acordar na hora pela aba Actions → Run workflow.
 
 Na prática, para a turma: quem abre o app primeiro no dia espera; os outros não. O app guarda
 snapshot local, então quem já usou continua vendo o que tinha mesmo enquanto o servidor acorda.
@@ -120,8 +131,7 @@ snapshot local, então quem já usou continua vendo o que tinha mesmo enquanto o
 pelo servidor — decisão 2.3 do spec, tomada justamente porque um job `@Scheduled` às 19h não roda
 num servidor dormindo. O furo que essa hibernação criaria já estava fechado antes de existir.
 
-Se o cold start incomodar de verdade, a saída é um host que não hiberne — e aí passa a custar.
-Para um teste de turma, os 40 s da primeira abertura são o preço de não pagar nada.
+Se o ping não bastar, a saída é um host que não hiberne — e aí passa a custar.
 
 ---
 

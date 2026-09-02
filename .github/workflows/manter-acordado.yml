@@ -1,0 +1,57 @@
+# Mantém o backend acordado durante a janela de teste.
+#
+# POR QUE ISTO EXISTE
+# O plano gratuito do Render dorme depois de 15 minutos sem tráfego, e a primeira
+# chamada depois disso paga o cold start. Medido neste projeto: 45,6 s numa vez,
+# e MAIS DE 120 s noutra. O app aborta em 75 s (`timeout.interceptor.ts`), então
+# a segunda medição vira erro na tela de quem está tentando criar conta — que foi
+# exatamente o sintoma relatado em 2026-09-01: o botão ficou preso em "Criando…".
+#
+# Um ping a cada 10 minutos mantém a instância de pé, e aí toda chamada do colega
+# responde em menos de 1 s. Não custa nada: Actions é gratuito em repositório
+# público, e a requisição é um GET num endpoint que não toca o banco.
+#
+# ISTO NÃO ESTÁ RODANDO AINDA. O GitHub só executa `schedule` a partir do branch
+# padrão, que aqui é `master` — enquanto este arquivo viver só em
+# `acelera-backend`, ele é inerte. Para ligar: mescle em `master`.
+# Para desligar depois do teste: apague o arquivo, ou use "Disable workflow" na
+# aba Actions.
+#
+# DUAS RESSALVAS HONESTAS
+# 1. `schedule` do GitHub não é pontual — sob carga, atrasa. Um intervalo de 10
+#    minutos costuma sair a cada 10-20. Se o servidor dormir mesmo assim, a
+#    consequência é uma espera longa, não um dado errado.
+# 2. O GitHub desativa workflows agendados em repositório sem commits por 60
+#    dias. Para uma janela de teste isso não chega a acontecer.
+
+name: manter o backend acordado
+
+on:
+  schedule:
+    # A cada 10 minutos. O Render dorme com 15 de silêncio, então há folga
+    # para um atraso do agendador sem a instância cair.
+    - cron: '*/10 * * * *'
+  # Para acordar na hora, sem esperar o cron: aba Actions -> Run workflow.
+  # Útil minutos antes de pedir para o colega abrir o app.
+  workflow_dispatch:
+
+# Sem permissão nenhuma: este job só faz uma requisição de saída.
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    # O cold start pode passar de 2 minutos. O teto aqui é generoso de
+    # propósito: um job que desiste cedo deixa o servidor dormindo e não
+    # avisa ninguém.
+    timeout-minutes: 6
+    steps:
+      - name: acordar o backend
+        run: |
+          # --max-time cobre o pior cold start medido, com margem.
+          # -f faz o curl falhar em status >= 400, senão um 502 do Render
+          # passaria por sucesso e o job mentiria que está tudo de pé.
+          curl -fsS --max-time 300 \
+            -o /dev/null \
+            -w 'saude: HTTP %{http_code} em %{time_total}s\n' \
+            https://projetofans-api.onrender.com/api/v1/saude
