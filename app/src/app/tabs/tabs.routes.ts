@@ -56,6 +56,11 @@ export const tabsRoutes: Routes = [
           import('../features/evento/novo-evento.page').then((m) => m.NovoEventoPage),
       },
       {
+        path: 'eventos/:id/anexar',
+        loadComponent: () =>
+          import('../features/evento/anexar-material.page').then((m) => m.AnexarMaterialPage),
+      },
+      {
         path: 'eventos/:id',
         loadComponent: () => import('../features/evento/evento.page').then((m) => m.EventoPage),
       },

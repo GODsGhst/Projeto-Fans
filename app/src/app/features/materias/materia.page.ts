@@ -70,22 +70,42 @@ import { materialVm } from '../material-vm';
         @if (aula().length) {
           <p class="pf-rotulo">material de aula</p>
           @for (m of aula(); track m.id) {
-            <app-material-linha
-              class="aula"
-              [tipo]="m.tipo"
-              [titulo]="m.titulo"
-              [autoria]="m.autoria" />
+            @if (m.url; as endereco) {
+              <a class="abrir" [href]="endereco" target="_blank" rel="noopener noreferrer">
+                <app-material-linha
+                  class="aula"
+                  [tipo]="m.tipo"
+                  [titulo]="m.titulo"
+                  [autoria]="m.autoria" />
+              </a>
+            } @else {
+              <app-material-linha
+                class="aula"
+                [tipo]="m.tipo"
+                [titulo]="m.titulo"
+                [autoria]="m.autoria" />
+            }
           }
         }
 
         @if (adicionais().length) {
           <p class="pf-rotulo">material adicional</p>
           @for (m of adicionais(); track m.id) {
-            <app-material-linha
-              class="adicional"
-              [tipo]="m.tipo"
-              [titulo]="m.titulo"
-              [autoria]="m.autoria" />
+            @if (m.url; as endereco) {
+              <a class="abrir" [href]="endereco" target="_blank" rel="noopener noreferrer">
+                <app-material-linha
+                  class="adicional"
+                  [tipo]="m.tipo"
+                  [titulo]="m.titulo"
+                  [autoria]="m.autoria" />
+              </a>
+            } @else {
+              <app-material-linha
+                class="adicional"
+                [tipo]="m.tipo"
+                [titulo]="m.titulo"
+                [autoria]="m.autoria" />
+            }
           }
         }
 
@@ -117,6 +137,16 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    /* Envelope de toque, como o .ir dos cartoes: o material inteiro abre.
+       target=_blank sai para o navegador do sistema — o Capacitor intercepta
+       link externo e abre fora do app, senao a pessoa perderia a tela do app
+       dentro de um PDF sem botao de voltar. */
+    .abrir {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+    }
+
     .add-botao {
       display: block;
       text-align: center;

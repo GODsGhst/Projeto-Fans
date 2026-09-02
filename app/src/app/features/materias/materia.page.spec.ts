@@ -137,4 +137,29 @@ describe('MateriaPage', () => {
       .withContext('falhar ao buscar NAO e "esta materia nao tem nada"')
       .toBeNull();
   });
+
+  it('o material abre — o link estava guardado e nenhuma tela o usava', async () => {
+    // O material aparecia com titulo, tipo e autoria, e nao tinha como abrir:
+    // `materialVm` descartava a `url` e o componente da linha nao tinha href.
+    // Material que nao abre nao serve para estudar, que e a unica razao de ele
+    // existir.
+    await abrir((r) =>
+      r.flush({
+        materia: { id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' },
+        materiaisAula: [material('a1', 'AULA', 'Formas normais', 'https://x/fn.pdf')],
+        materiaisAdicionais: [],
+        eventos: [],
+      }),
+    );
+
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('a.abrir') as NodeListOf<HTMLAnchorElement>,
+    );
+    expect(links.length).withContext('todo material tem de ser abrivel').toBeGreaterThan(0);
+    expect(links[0].getAttribute('href')).toMatch(/^https?:\/\//);
+    expect(links[0].getAttribute('target'))
+      .withContext('sai do app para o navegador, senao a pessoa perde a tela')
+      .toBe('_blank');
+    expect(links[0].getAttribute('rel')).toContain('noopener');
+  });
 });

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   IonBackButton,
   IonButtons,
@@ -40,8 +40,7 @@ import { materialVm } from '../material-vm';
     IonBackButton,
     IonContent,
     EventoCardComponent,
-    MaterialLinhaComponent,
-  ],
+    MaterialLinhaComponent, RouterLink],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -85,10 +84,23 @@ import { materialVm } from '../material-vm';
             [materia]="e.materia"
             [autoria]="e.autoria" />
 
+          <!-- FORA do @if de materiais de proposito. Anexar e mais necessario
+               quando nao ha nada anexado; escondido ali, o botao so aparecia para
+               quem ja tinha resolvido o problema. -->
+          <a class="anexar" [routerLink]="['/tabs/eventos', id, 'anexar']">
+            Anexar material
+          </a>
+
           @if (materiais().length) {
             <p class="pf-rotulo">materiais</p>
             @for (m of materiais(); track m.id) {
-              <app-material-linha [tipo]="m.tipo" [titulo]="m.titulo" [autoria]="m.autoria" />
+              @if (m.url; as endereco) {
+                <a class="abrir" [href]="endereco" target="_blank" rel="noopener noreferrer">
+                  <app-material-linha [tipo]="m.tipo" [titulo]="m.titulo" [autoria]="m.autoria" />
+                </a>
+              } @else {
+                <app-material-linha [tipo]="m.tipo" [titulo]="m.titulo" [autoria]="m.autoria" />
+              }
             }
           }
         }
@@ -104,6 +116,34 @@ import { materialVm } from '../material-vm';
         }
       </div>
     </ion-content>
+  `,
+  styles: `
+    /* Envelope de toque, como o .ir dos cartoes: o material inteiro abre.
+       target=_blank sai para o navegador do sistema — o Capacitor intercepta
+       link externo e abre fora do app, senao a pessoa perderia a tela do app
+       dentro de um PDF sem botao de voltar. */
+    .abrir {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .anexar {
+      display: block;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 13px;
+      border-radius: var(--r-md);
+      border: 1px solid var(--rule);
+      background: transparent;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .anexar:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
   `,
 })
 export class EventoPage {
@@ -141,9 +181,15 @@ export class EventoPage {
       this.materiais().length === 0,
   );
 
+  /**
+   * O id da rota, guardado no componente porque o template precisa dele para o
+   * link de anexar. Antes era so uma variavel local do construtor, e o template
+   * lia um `id` que nao existia — o link saia como `/tabs/eventos//anexar`.
+   */
+  protected readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+
   constructor() {
-    const id = inject(ActivatedRoute).snapshot.paramMap.get('id');
-    void this.carregar(id ?? '');
+    void this.carregar(this.id);
   }
 
   private async carregar(id: string): Promise<void> {

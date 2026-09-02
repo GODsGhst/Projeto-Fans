@@ -135,4 +135,17 @@ describe('EventoPage', () => {
       .toBeNull();
     expect(fixture.nativeElement.querySelector('.pf-sumiu')).toBeNull();
   });
+
+  it('anexar material aparece com e sem material, e o link leva ao id certo', async () => {
+    // Dois defeitos que este teste prende. O botao tinha nascido DENTRO do
+    // bloco que so renderiza quando ja ha material — aparecia so para quem ja
+    // tinha resolvido o problema. E o template lia um `id` que nao existia na
+    // classe (era variavel local do construtor), entao o link saia como
+    // "/tabs/eventos//anexar" e nao levava a lugar nenhum.
+    await abrir((r) => r.flush(detalhe([])));
+
+    const link = fixture.nativeElement.querySelector('a.anexar') as HTMLAnchorElement | null;
+    expect(link).withContext('sem material e justamente quando anexar importa').not.toBeNull();
+    expect(link!.getAttribute('href')).toBe('/tabs/eventos/e1/anexar');
+  });
 });
