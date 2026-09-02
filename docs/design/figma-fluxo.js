@@ -48,6 +48,11 @@ const MARCA_DA_TELA = {
   novaMateria: 'Nova matéria',
   novoEvento: 'O que vai cair',
   turma: 'Fans 2026.2',
+  // "Passar a liderança" aparece DUAS vezes — é o título desta tela e o rótulo do
+  // botão que leva até ela. Marcador tem de ser único, então uso o rótulo do
+  // seletor de pessoa, que só existe aqui.
+  transferir: 'para quem',
+  transferirOk: 'Ana Beatriz agora é a líder.',
 };
 
 const LARGURA_DA_TELA = 390;
@@ -134,6 +139,7 @@ const ABAS = [
 const COM_ABAS = [
   'home', 'cal', 'materias', 'quadro',
   'nota', 'material', 'novaMateria', 'novoEvento', 'turma',
+  'transferir', 'transferirOk',
 ];
 
 const ligacoes = [];
@@ -159,6 +165,14 @@ ligacoes.push(
   [botao(TELAS.novaMateria, '←'), TELAS.materias, 'nova matéria -> voltar'],
   [botao(TELAS.novoEvento, '←'), TELAS.home, 'novo evento -> voltar'],
   [botao(TELAS.turma, '←'), TELAS.quadro, 'a turma -> voltar'],
+
+  // Passar a liderança. O botão na tela da turma e o título da tela de destino
+  // têm o mesmo texto; a busca é restrita a cada tela, então não se confundem.
+  [botao(TELAS.turma, 'Passar a liderança'), TELAS.transferir, 'turma -> passar a liderança'],
+  [botao(TELAS.transferir, 'Ana Beatriz'), TELAS.transferirOk, 'escolher quem recebe'],
+  [botao(TELAS.transferir, '←'), TELAS.turma, 'passar a liderança -> voltar'],
+  [botao(TELAS.transferirOk, 'Voltar para a turma'), TELAS.turma, 'pronto -> turma'],
+  [botao(TELAS.transferirOk, '←'), TELAS.turma, 'pronto -> voltar'],
 
   // Estas duas não têm seta desenhada: a tela inteira volta ao clique. Num
   // protótipo, alvo largo demais é menos ruim que ficar preso.

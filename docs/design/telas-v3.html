@@ -823,8 +823,8 @@
           <input class="campo--linha" type="time" aria-label="Hora">
 
           <p class="cache-aviso">
-            Sem hora, o aviso da véspera continua saindo às 19h. A hora só entra se a turma
-            precisar saber dela.
+            A hora só entra se a turma precisar saber dela. Sem ela, a prova continua
+            aparecendo no dia certo.
           </p>
 
           <div class="alerta" data-tom="turma">
@@ -891,10 +891,98 @@
             </span>
           </div>
 
+          <!-- So o lider ve este botao. Para quem nao e lider ele nao existe —
+               nao aparece desabilitado, porque botao cinza convida a perguntar
+               "por que nao posso?" e a resposta seria "voce nao e o lider",
+               que ja esta escrito abaixo. -->
+          <button class="botao botao--fantasma" type="button" data-ir="transferir">
+            Passar a liderança
+          </button>
+
           <p class="cache-aviso">
             O líder não edita nem apaga registro de ninguém. Ele só oculta o que não devia estar
             ali, e pode transferir a liderança.
           </p>
+        </div>
+      </div>
+
+      <!-- ==================== PASSAR A LIDERANÇA ==================== -->
+      <div class="tela" data-tela="transferir" data-aba="quadro">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="turma" aria-label="Voltar">&larr;</button>
+            <h3>Passar a liderança</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <div class="alerta" data-tom="turma">
+            <span class="glyph glyph--prova" style="margin-top:3px"></span>
+            <span>
+              Quem receber passa a poder ocultar registro impróprio e a passar a liderança adiante.
+              <b>Você deixa de ser líder na hora</b> — para voltar, só se a pessoa devolver.
+            </span>
+          </div>
+
+          <p class="rotulo">para quem</p>
+
+          <button class="membro" type="button" data-ir="transferir-ok" style="width:100%;text-align:left;border:1px solid var(--rule);cursor:pointer">
+            <span class="inicial">A</span>
+            <span class="quem">
+              <span class="nome">Ana Beatriz</span>
+              <span class="desde">entrou em 1 set · 4 registros</span>
+            </span>
+            <span style="color:var(--accent);font-size:12.5px;font-weight:600">passar &rarr;</span>
+          </button>
+
+          <button class="membro" type="button" data-ir="transferir-ok" style="width:100%;text-align:left;border:1px solid var(--rule);cursor:pointer">
+            <span class="inicial">B</span>
+            <span class="quem">
+              <span class="nome">Bruno</span>
+              <span class="desde">entrou em 1 set · 1 registro</span>
+            </span>
+            <span style="color:var(--accent);font-size:12.5px;font-weight:600">passar &rarr;</span>
+          </button>
+
+          <button class="membro" type="button" data-ir="transferir-ok" style="width:100%;text-align:left;border:1px solid var(--rule);cursor:pointer">
+            <span class="inicial">M</span>
+            <span class="quem">
+              <span class="nome">prof. Marcos</span>
+              <span class="desde">entrou em 28 ago · 0 registros</span>
+            </span>
+            <span style="color:var(--accent);font-size:12.5px;font-weight:600">passar &rarr;</span>
+          </button>
+
+          <p class="cache-aviso">
+            A turma não fica sem líder em nenhum instante: a troca é uma operação só, e quem
+            recebe já está na turma. Não há como passar para alguém de fora nem deixar o cargo
+            vago.
+          </p>
+        </div>
+      </div>
+
+      <!-- ==================== LIDERANÇA PASSADA ==================== -->
+      <div class="tela" data-tela="transferir-ok" data-aba="quadro">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="turma" aria-label="Voltar">&larr;</button>
+            <h3>Pronto</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <div class="pf-vazio" style="margin-top:8px">
+            <b>Ana Beatriz agora é a líder.</b>
+            <span>
+              Você continua na turma como aluno, e tudo que você cadastrou continua seu — a
+              liderança nunca muda a autoria de nada.
+            </span>
+          </div>
+
+          <p class="cache-aviso">
+            A troca fica registrada com data e com quem passou. O contrapeso do papel é esse: toda
+            ação de líder é auditável, e essa é a mais séria delas.
+          </p>
+
+          <button class="botao" type="button" data-ir="turma">Voltar para a turma</button>
         </div>
       </div>
 
@@ -995,18 +1083,31 @@
           </span>
         </div>
         <div class="t-corpo">
-          <div class="marca" style="padding-top:8px">
-            <span>Manda o e-mail da conta e o link de reset chega nele.</span>
+          <div class="pf-vazio" style="margin-top:8px">
+            <b>Recuperar senha ainda não está no ar.</b>
+            <span>
+              Esta versão de teste não envia e-mail. Se você perdeu a senha, crie outra conta com
+              outro e-mail e entre na turma de novo com o mesmo código — nada do que a turma
+              cadastrou se perde.
+            </span>
           </div>
 
-          <p class="rot-campo">e-mail</p>
-          <input class="campo--linha" type="email" inputmode="email" autocomplete="email"
-                 placeholder="voce@exemplo.com" aria-label="E-mail">
+          <p class="cache-aviso">
+            <b>Estado de hoje.</b> O servidor de teste não tem SMTP, então a tela não pergunta o
+            e-mail: um formulário que aceita o endereço e responde "o link já está a caminho" sem
+            ter mandado nada é a mesma mentira, só mais educada.
+          </p>
 
-          <button class="botao" type="button" data-ir="login">Enviar link</button>
-
-          <p class="cache-aviso">A resposta é a mesma exista a conta ou não. Isso é de propósito:
-            resposta diferente transformaria esta tela num jeito de descobrir quem tem conta no app.</p>
+          <p class="rotulo" style="margin-top:14px">quando houver e-mail</p>
+          <div style="opacity:.45;pointer-events:none">
+            <p class="rot-campo">e-mail</p>
+            <input class="campo--linha" type="email" placeholder="voce@exemplo.com"
+                   aria-label="E-mail (inativo)" disabled>
+            <button class="botao" type="button" disabled style="margin-top:10px">Enviar link</button>
+            <p class="cache-aviso" style="margin-top:8px">A resposta é a mesma exista a conta ou
+              não — resposta diferente transformaria esta tela num jeito de descobrir quem tem
+              conta no app.</p>
+          </div>
         </div>
       </div>
 
