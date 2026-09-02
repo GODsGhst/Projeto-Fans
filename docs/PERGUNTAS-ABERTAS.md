@@ -331,7 +331,7 @@ aparelho e nunca mais tocou não volta — só que esse o aparelho também nunca
 já recebeu a remoção no delta em que ela aconteceu.
 
 
-### A17. Não há como chegar na tela de um evento a partir da Home nem do Calendário
+### A17. Não há como chegar na tela de um evento a partir da Home nem do Calendário — **RESOLVIDA em 2026-09-02**
 
 A Task 11 entregou a tela de um evento (`/tabs/eventos/:id`), e ela só é alcançável pela tela da
 matéria. Na Home e no Calendário o cartão continua sendo um bloco que não responde a toque.
@@ -352,6 +352,17 @@ Duas saídas, e é decisão sua:
    e é alteração em `shared/` — só o dono do design faz.
 
 **Levantada em 2026-08-31**, na entrega da Task 11.
+
+**Resolvida em 2026-09-02 pela saída 1**, que era a recomendada aqui: o cartão foi envolvido num
+link na Home e no Calendário. `shared/` não foi tocado, e `EventoCardComponent` continua sem emitir
+clique — a saída 2 permanece disponível se um dia o cartão precisar de comportamento próprio.
+
+O envelope `.ir` subiu para `global.scss`: ele já existia em `materia.page.ts` e agora tem três
+usuários. Três cópias da mesma regra divergiriam na primeira vez que alguém mexesse numa delas.
+
+Junto veio um defeito que ninguém tinha visto: o `track` do `@for` era `titulo + dia` nas duas
+telas. Duas provas com o mesmo título no mesmo dia colidem nessa chave, e o Angular reusa o nó
+errado. Agora o `track` é por id — que só existe no template porque o link precisou dele.
 
 ---
 ### A18. `android/` é descartável — e o FCM vai precisar de um arquivo dentro dele
