@@ -74,6 +74,8 @@ describe('HomePage', () => {
 
   /** Cria a tela, responde o `GET /home` e espera o carregamento terminar. */
   async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
+    // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
+    fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
     responder(backend.expectOne(`${environment.apiUrl}/home`));
     await fixture.whenStable();
@@ -177,5 +179,28 @@ describe('HomePage', () => {
     expect(fixture.nativeElement.querySelector('a.ir app-evento-card'))
       .withContext('o card inteiro e o alvo do toque, nao um "ver mais" ao lado')
       .not.toBeNull();
+  });
+
+  it('voltar para a aba recarrega — o que a turma cadastrou enquanto voce estava fora aparece', async () => {
+    // O defeito que este teste prende: a carga vivia no `constructor`, e em abas
+    // do Ionic o componente e criado uma vez e fica vivo. Voltar para a Home
+    // mostrava o que existia na primeira abertura, para sempre. Num teste de
+    // duas pessoas isso e fatal — o colega cadastra e o outro nunca ve.
+    await abrir((r) => r.flush([]));
+    expect(fixture.nativeElement.querySelector('.pf-vazio')).not.toBeNull();
+
+    // sair e voltar: o Ionic chama isto de novo no mesmo componente
+    fixture.componentInstance.ionViewWillEnter();
+    fixture.detectChanges();
+    backend
+      .expectOne(`${environment.apiUrl}/home`)
+      .flush([item('cadastrada-pelo-colega', 'PROVA', '2026-09-05')]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(textos('app-evento-card .titulo')).toEqual(['evento cadastrada-pelo-colega']);
+    expect(fixture.nativeElement.querySelector('.pf-vazio'))
+      .withContext('"nada nos proximos 14 dias" nao pode sobreviver a uma recarga que trouxe prova')
+      .toBeNull();
   });
 });

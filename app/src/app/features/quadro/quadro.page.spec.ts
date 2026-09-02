@@ -90,6 +90,8 @@ describe('QuadroPage', () => {
     quadro: (r: ReturnType<HttpTestingController['expectOne']>) => void,
     naoListados: (r: ReturnType<HttpTestingController['expectOne']>) => void,
   ) {
+    // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
+    fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
     quadro(backend.expectOne(`${environment.apiUrl}/meu-quadro`));
     naoListados(backend.expectOne(`${environment.apiUrl}/nao-listados`));
@@ -225,5 +227,32 @@ describe('QuadroPage', () => {
     );
 
     expect(fixture.nativeElement.querySelector('a[href="/tabs/turma"]')).not.toBeNull();
+  });
+
+  it('recarregar nao apaga o quadro que ja esta na tela', async () => {
+    // Agora que a aba recarrega a cada entrada, um spinner incondicional
+    // esvaziaria o kanban a cada troca de aba — e num servidor que dorme isso
+    // dura dezenas de segundos com a tela em branco. Some so na primeira carga,
+    // quando nao ha nada a preservar.
+    await abrir(
+      (r) => r.flush({ aFazer: [item('e-1', 'Lista 4')], feito: [] }),
+      (r) => r.flush({ eventos: [], materiais: [] }),
+    );
+    expect(fixture.nativeElement.querySelector('.kanban')).not.toBeNull();
+
+    // volta para a aba: as duas chamadas saem de novo e ficam pendentes
+    fixture.componentInstance.ionViewWillEnter();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.kanban'))
+      .withContext('o quadro tem de continuar visivel enquanto revalida')
+      .not.toBeNull();
+
+    backend
+      .expectOne(`${environment.apiUrl}/meu-quadro`)
+      .flush({ aFazer: [item('e-1', 'Lista 4')], feito: [] });
+    backend.expectOne(`${environment.apiUrl}/nao-listados`).flush({ eventos: [], materiais: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
   });
 });

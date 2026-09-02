@@ -1,3 +1,4 @@
+import { environment } from '../../../environments/environment';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import {
   IonBackButton,
@@ -20,6 +21,13 @@ import { mensagemDeErro } from './erro';
  *
  * Falha de rede, porem, e outra coisa e aparece como erro: dizer "enviamos" sem
  * ter enviado seria mentir para quem esta trancado do lado de fora.
+ *
+ * E ha um caso em que NADA e enviado, por configuracao e nao por falha: o deploy
+ * roda no perfil `teste`, onde o `LogEmailSender` so escreve o link no log do
+ * servidor. A tela inteira sai do ar nesse caso — `environment.recuperacaoPorEmail`
+ * —, porque um formulario que aceita o e-mail e responde "ja esta a caminho"
+ * quando nada foi mandado e a mesma mentira, so que mais educada. Quem esqueceu
+ * a senha ficaria esperando um e-mail que nunca existiu.
  */
 @Component({
   selector: 'app-recuperar',
@@ -39,19 +47,30 @@ import { mensagemDeErro } from './erro';
 
     <ion-content [fullscreen]="true">
       <div class="pf-auth">
-        <div class="marca">
-          <span>Manda o e-mail da conta e o link de reset chega nele.</span>
-        </div>
+        @if (!recuperacaoAtiva) {
+          <div class="marca">
+            <b>Recuperar senha ainda não está no ar.</b>
+            <span>
+              Esta versão de teste não envia e-mail. Se você perdeu a senha, crie outra conta com
+              outro e-mail e entre na turma de novo com o mesmo código — nada do que a turma
+              cadastrou se perde.
+            </span>
+          </div>
+        } @else {
+          <div class="marca">
+            <span>Manda o e-mail da conta e o link de reset chega nele.</span>
+          </div>
+        }
 
         @if (erro(); as e) {
           <p class="pf-erro" role="alert">{{ e }}</p>
         }
 
-        @if (enviado()) {
+        @if (recuperacaoAtiva && enviado()) {
           <p class="alerta" role="status">
             Se existe conta com esse e-mail, o link de reset já está a caminho dele.
           </p>
-        } @else {
+        } @else if (recuperacaoAtiva) {
           <p class="rot-campo">e-mail</p>
           <input
             #email
@@ -76,6 +95,8 @@ import { mensagemDeErro } from './erro';
   `,
 })
 export class RecuperarPage {
+  protected readonly recuperacaoAtiva = environment.recuperacaoPorEmail;
+
   private readonly auth = inject(AuthService);
 
   protected readonly enviando = signal(false);

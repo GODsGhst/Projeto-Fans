@@ -64,7 +64,11 @@ export interface CartaoVm {
         <!-- A turma e o codigo de convite moram aqui: e a partir do quadro que
              alguem procura "quem esta na turma". -->
         <a class="link-turma" routerLink="/tabs/turma">a turma &rarr;</a>
-        @if (carregando()) {
+        <!-- Carregando so quando NAO ha o que mostrar. Agora que a aba recarrega
+             a cada entrada, um spinner incondicional apagaria o quadro inteiro a
+             cada troca de aba — e num servidor que dorme isso dura dezenas de
+             segundos com a tela em branco. -->
+        @if (carregando() && !temDados()) {
           <p class="pf-aviso">Carregando…</p>
         } @else if (erro(); as e) {
           <p class="pf-aviso">{{ e }}</p>
@@ -75,7 +79,7 @@ export interface CartaoVm {
           nao tem nada pendente", que e o oposto de "nao consegui descobrir o que
           voce tem pendente".
         -->
-        @if (!erro() && !carregando()) {
+        @if (!erro() && (!carregando() || temDados())) {
           <div class="kanban">
             <div class="coluna">
               <p class="pf-rotulo">a fazer</p>
@@ -234,6 +238,14 @@ export class QuadroPage {
   protected readonly erro = this.repo.erro;
   protected readonly erroNaoListados = this.repo.erroNaoListados;
 
+  /**
+   * Ha algo na tela agora? Separa primeira carga (spinner e certo, nao ha o que
+   * preservar) de revalidacao (o quadro fica, senao pisca a cada troca de aba).
+   */
+  protected readonly temDados = computed(
+    () => this.repo.aFazer().length > 0 || this.repo.feito().length > 0,
+  );
+
   protected readonly aFazer = computed(() => this.repo.aFazer().map(cartaoDeItem));
   protected readonly feitos = computed(() => this.repo.feito().map(cartaoDeItem));
 
@@ -256,7 +268,20 @@ export class QuadroPage {
   /** So aparece quando ha algo. Secao vazia seria ruido para quase todo mundo. */
   protected readonly temNaoListados = computed(() => this.totalNaoListados() > 0);
 
-  constructor() {
+  /**
+   * Recarrega toda vez que a aba aparece — não só quando o componente nasce.
+   *
+   * Em abas do Ionic o componente é criado uma vez e fica vivo. Com a carga no
+   * `constructor`, voltar para a aba mostrava o que existia na primeira
+   * abertura, para sempre. No teste de duas pessoas esse é O defeito: o colega
+   * cadastra uma prova e o outro continua olhando a tela de antes até matar o
+   * app — e o estado vazio, que diz "nada nos próximos 14 dias", passa a mentir.
+   *
+   * A carga saiu do `constructor` em vez de ficar nos dois: `ionViewWillEnter`
+   * roda também na primeira entrada, e duas cargas na abertura seriam duas
+   * chamadas — num servidor que dorme, cada uma custa dezenas de segundos.
+   */
+  ionViewWillEnter(): void {
     void this.repo.carregar();
     void this.repo.carregarNaoListados();
   }

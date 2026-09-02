@@ -92,7 +92,20 @@ export class MateriasPage {
     () => !this.carregando() && this.erro() === null && this.materias().length === 0,
   );
 
-  constructor() {
+  /**
+   * Recarrega toda vez que a aba aparece — não só quando o componente nasce.
+   *
+   * Em abas do Ionic o componente é criado uma vez e fica vivo. Com a carga no
+   * `constructor`, voltar para a aba mostrava o que existia na primeira
+   * abertura, para sempre. No teste de duas pessoas esse é O defeito: o colega
+   * cadastra uma prova e o outro continua olhando a tela de antes até matar o
+   * app — e o estado vazio, que diz "nada nos próximos 14 dias", passa a mentir.
+   *
+   * A carga saiu do `constructor` em vez de ficar nos dois: `ionViewWillEnter`
+   * roda também na primeira entrada, e duas cargas na abertura seriam duas
+   * chamadas — num servidor que dorme, cada uma custa dezenas de segundos.
+   */
+  ionViewWillEnter(): void {
     // O repository relanca de proposito e a tela ja mostra o erro pelo signal.
     // Este catch registra e evita rejeicao solta — nunca transforma falha em
     // "nao ha materias".

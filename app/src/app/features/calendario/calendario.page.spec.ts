@@ -50,6 +50,8 @@ describe('CalendarioPage', () => {
   afterEach(() => backend.verify());
 
   async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
+    // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
+    fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
     responder(backend.expectOne((r) => r.url.endsWith('/eventos')));
     await fixture.whenStable();

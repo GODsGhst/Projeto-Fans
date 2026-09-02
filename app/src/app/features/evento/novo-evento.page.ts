@@ -129,8 +129,14 @@ import { mensagemDeErro } from '../auth/erro';
           <input #hora class="campo--linha" type="time" aria-label="Hora" />
 
           <p class="alerta">
-            Sem hora, o aviso da véspera continua saindo às 19h. A hora só entra se a turma
-            precisar saber dela.
+            <!-- Nao prometa o aviso da vespera aqui. O modulo reagendador.ts
+                 calcula o horario e e testado, mas ninguem o chama e nao ha
+                 plugin de notificacao instalado: o app nunca agendou nada. A
+                 frase antiga dizia que o aviso da vespera saia as 19h — quem
+                 lesse confiaria e perderia a prova. Ela volta quando o
+                 agendamento existir de verdade, nao antes. -->
+            A hora só entra se a turma precisar saber dela. Sem ela, a prova continua aparecendo
+            no dia certo.
           </p>
 
           <p class="alerta alerta--turma">
