@@ -53,6 +53,38 @@ Se a pasta `android/` já existir, pule o `cap add` e use `npx cap sync android`
 
 ---
 
+## O SDK do Android sumiu da máquina — 2026-09-02
+
+`./gradlew assembleDebug` passou a falhar com **"SDK location not found"**. Não é configuração
+errada: o SDK não está mais aqui. Conferido — `%LOCALAPPDATA%\Android` não existe, `ANDROID_HOME` e
+`ANDROID_SDK_ROOT` estão vazias, e as duas instalações do Android Studio
+(`Android Studio` e `Android Studio1`) não trazem SDK dentro.
+
+Em 2026-09-01 o mesmo comando compilou (`BUILD SUCCESSFUL`, 243 tarefas). Então o SDK foi removido
+entre um dia e outro — desinstalação, limpeza de disco, ou a segunda instalação do Studio levando a
+primeira junto.
+
+**Consequência:** o APK não pode ser regerado até isso voltar. O `app-debug.apk` de 01/09 continua
+válido e instalável, mas é anterior aos consertos de 02/09 — ou seja, ainda tem as abas que não
+recarregam e as duas telas que mentem.
+
+**Para voltar a compilar:** abra o Android Studio → *More Actions* → *SDK Manager* e instale a
+plataforma que o projeto pede (veja `compileSdkVersion` em `android/variables.gradle`). Depois:
+
+```
+JAVA_HOME="C:/Program Files/Zulu/zulu-25" ANDROID_HOME="C:/Users/<voce>/AppData/Local/Android/Sdk" ./gradlew assembleDebug
+```
+
+Se preferir não instalar o Studio inteiro, bastam as *command line tools* do Android e um
+`sdkmanager "platform-tools" "platforms;android-XX" "build-tools;XX.Y.Z"`.
+
+**Atalho que evita repetir isso:** crie `app/android/local.properties` com uma linha
+`sdk.dir=C\:\Users\<voce>\AppData\Local\Android\Sdk`. O arquivo é ignorado pelo git
+de propósito (é caminho de máquina), e com ele o Gradle acha o SDK sem depender de variável de
+ambiente — que é justamente o que falhou aqui.
+
+---
+
 ## Instalar no celular
 
 **Por cabo**, com depuração USB ligada:
