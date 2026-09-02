@@ -29,8 +29,15 @@ export class HomeRepository {
   async carregar(): Promise<void> {
     this.carregando.set(true);
     this.erro.set(null);
+    // A chamada sai PRIMEIRO e o disco e lido em paralelo. Aguardar o disco
+    // antes de perguntar atrasaria a resposta do servidor pelo tempo de um I/O
+    // local — pequeno, mas na direcao errada: o objetivo e encurtar a espera.
+    this.servidorRespondeu = false;
+    const doServidorEmVoo = this.api.get<ItemHome[]>('/home');
+    void this.aquecerDoDisco();
     try {
-      const doServidor = await this.api.get<ItemHome[]>('/home');
+      const doServidor = await doServidorEmVoo;
+      this.servidorRespondeu = true;
       this.itens.set(doServidor);
       this.offline.set(false);
       this.ultimoSync.set(null);
@@ -40,6 +47,39 @@ export class HomeRepository {
     } finally {
       this.carregando.set(false);
     }
+  }
+
+  /**
+   * Poe na tela o que ja esta no aparelho, ANTES de perguntar ao servidor.
+   *
+   * O snapshot ja era gravado, e era lido so no `degradar()` — ou seja, so
+   * depois de a requisicao falhar, e ela leva 75 s para desistir. Na pratica o
+   * dado estava no disco enquanto a tela mostrava "Carregando…" por mais de um
+   * minuto, porque o servidor gratuito estava acordando. Ler primeiro e revalidar
+   * atras troca essa espera por conteudo imediato.
+   *
+   * SO quando nao ha nada em tela E o servidor ainda nao respondeu. As duas
+   * guardas sao necessarias e diferentes: a primeira impede piscar de volta para
+   * o disco ao reentrar na aba; a segunda cobre a corrida em que o servidor
+   * responde LISTA VAZIA antes de o disco chegar — sem ela, a semana realmente
+   * vazia seria repintada com provas velhas, que e mentir sobre o presente.
+   *
+   * Nao mexe em `erro` nem em `offline`: isto nao e uma falha, e uma partida
+   * adiantada. Marcar offline aqui faria toda abertura do app anunciar "sem
+   * conexao" antes de ter tentado.
+   */
+  private servidorRespondeu = false;
+
+  private async aquecerDoDisco(): Promise<void> {
+    if (this.itens().length > 0) {
+      return;
+    }
+    const snapshot = await this.storage.ler();
+    if (this.servidorRespondeu || snapshot === null || snapshot.eventos.length === 0) {
+      return;
+    }
+    this.itens.set(snapshot.eventos);
+    this.ultimoSync.set(snapshot.ultimoSync);
   }
 
   /**

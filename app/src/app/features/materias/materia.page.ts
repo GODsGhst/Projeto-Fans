@@ -102,7 +102,7 @@ import { materialVm } from '../material-vm';
           <div class="pf-vazio">
             <b>Nada nesta matéria ainda.</b>
             <span>
-              Material e prova aparecem aqui assim que alguém da turma cadastrar.
+              Material e prova aparecem aqui assim que alguém da turma adicionar.
             </span>
           </div>
         }

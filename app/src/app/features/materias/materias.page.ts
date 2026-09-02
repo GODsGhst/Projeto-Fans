@@ -33,8 +33,8 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
         <!-- Antes disto o estado vazio dizia "qualquer pessoa da turma pode
              cadastrar" e nao oferecia como. Convite sem porta e crueldade.
              Fica fora do @if de proposito: existe cheia e vazia. -->
-        <a class="add-linha" routerLink="/tabs/materias/nova">
-          +&nbsp;&nbsp;Nova matéria
+        <a class="add-botao" routerLink="/tabs/materias/nova">
+          Adicionar matéria
         </a>
         @if (carregando()) {
           <p class="pf-aviso">Carregando…</p>
@@ -54,7 +54,7 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
           <div class="pf-vazio">
             <b>Nenhuma matéria cadastrada.</b>
             <span>
-              Matéria é o que organiza material e prova. Qualquer pessoa da turma pode cadastrar.
+              Matéria é o que organiza material e prova. Qualquer pessoa da turma pode adicionar.
             </span>
           </div>
         }
@@ -62,6 +62,29 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
     </ion-content>
   `,
   styles: `
+    .add-botao {
+      display: block;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      padding: 15px;
+      border-radius: var(--r-md);
+      background: var(--accent);
+      color: var(--accent-ink);
+      text-decoration: none;
+      box-shadow: var(--e2);
+      transition: transform 0.14s var(--mola);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .add-botao:active {
+      transform: scale(0.985);
+    }
+    .add-botao:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
     .linha {
       display: flex;
       align-items: center;

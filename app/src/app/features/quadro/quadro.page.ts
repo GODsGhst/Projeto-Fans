@@ -86,7 +86,11 @@ export interface CartaoVm {
               @for (c of aFazer(); track c.id) {
                 <app-mini-card [materia]="c.materia" [titulo]="c.titulo" [tipo]="c.tipo" />
                 <button class="marcar" type="button" (click)="marcar(c.id, true)">
-                  marcar como resolvido
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <rect x="2.5" y="2.5" width="15" height="15" rx="4.5" />
+                    <path d="M6.4 10.3l2.5 2.5 4.7-5.1" />
+                  </svg>
+                  {{ acao(c.tipo) }}
                 </button>
               } @empty {
                 <p class="nada">Nada pendente.</p>
@@ -101,8 +105,12 @@ export interface CartaoVm {
                   [titulo]="c.titulo"
                   [tipo]="c.tipo"
                   [feito]="true" />
-                <button class="marcar" type="button" (click)="marcar(c.id, false)">
-                  desmarcar
+                <button class="marcar marcar--feito" type="button" (click)="marcar(c.id, false)">
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <rect x="2.5" y="2.5" width="15" height="15" rx="4.5" />
+                    <path d="M6.4 10.3l2.5 2.5 4.7-5.1" />
+                  </svg>
+                  {{ desfazer(c.tipo) }}
                 </button>
               } @empty {
                 <p class="nada">Nada ainda.</p>
@@ -178,6 +186,9 @@ export interface CartaoVm {
     }
 
     .marcar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font: inherit;
       font-size: 11px;
       font-weight: 600;
@@ -191,6 +202,25 @@ export interface CartaoVm {
     }
     .marcar:active {
       transform: scale(0.97);
+    }
+    /* O vetor herda a cor do botao: um traco, sem preenchimento, do mesmo peso
+       dos icones da barra de abas. Marcado ganha o quadro cheio — o estado se le
+       pela forma, nao so pela cor, que e a regra do teste em escala de cinza. */
+    .marcar svg {
+      flex: 0 0 auto;
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .marcar--feito svg rect {
+      fill: currentColor;
+    }
+    .marcar--feito svg path {
+      stroke: var(--paper);
     }
     .marcar:focus-visible {
       outline: 2px solid var(--accent);
@@ -284,6 +314,22 @@ export class QuadroPage {
   ionViewWillEnter(): void {
     void this.repo.carregar();
     void this.repo.carregarNaoListados();
+  }
+
+  /**
+   * O que a pessoa fez, na palavra da coisa.
+   *
+   * "Resolvido" e linguagem de sistema de chamado: ninguem resolve uma prova, faz
+   * — e ninguem resolve um trabalho, entrega. Uma palavra unica para os dois
+   * economiza um `if` e cobra do leitor a traducao toda vez.
+   */
+  protected acao(tipo: TipoEvento): string {
+    return tipo === 'PROVA' ? 'marcar como feita' : 'marcar como entregue';
+  }
+
+  /** O desfazer nomeia o estado atual, nao a operacao: some a duvida do que ele desfaz. */
+  protected desfazer(tipo: TipoEvento): string {
+    return tipo === 'PROVA' ? 'feita' : 'entregue';
   }
 
   protected marcar(eventoId: string, feito: boolean): void {

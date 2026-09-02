@@ -58,7 +58,7 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
           <div class="pf-vazio">
             <b>Nada marcado em {{ mes() }}.</b>
             <span>
-              Prova ou entrega que a turma cadastrar aparece aqui, no dia dela.
+              Prova ou entrega que a turma adicionar aparece aqui, no dia dela.
             </span>
           </div>
         }

@@ -203,4 +203,59 @@ describe('HomePage', () => {
       .withContext('"nada nos proximos 14 dias" nao pode sobreviver a uma recarga que trouxe prova')
       .toBeNull();
   });
+
+  it('o que ja estava no aparelho aparece na hora, sem esperar o servidor', async () => {
+    // O servidor gratuito dorme e a primeira chamada do dia levou mais de 120 s.
+    // O dado da ultima vez ja esta no disco: deixar a tela em "Carregando…"
+    // olhando para ele por um minuto e desperdicio puro. Mostra agora, revalida
+    // atras.
+    storage.snapshot = {
+      eventos: [item('do-disco', 'PROVA', '2026-09-05')],
+      materias: [],
+      ultimoSync: '2026-09-02T14:32:00Z',
+    };
+
+    fixture.componentInstance.ionViewWillEnter();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // a requisicao esta EM VOO — nada foi respondido ainda
+    const req = backend.expectOne(`${environment.apiUrl}/home`);
+    expect(textos('app-evento-card .titulo'))
+      .withContext('o snapshot tem de estar na tela antes de o servidor responder')
+      .toEqual(['evento do-disco']);
+    expect(fixture.nativeElement.querySelector('.pf-vazio'))
+      .withContext('com dado em tela, "nada nos proximos 14 dias" seria mentira')
+      .toBeNull();
+
+    // quando o servidor responde, ele manda
+    req.flush([item('do-servidor', 'ENTREGA', '2026-09-06')]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(textos('app-evento-card .titulo')).toEqual(['evento do-servidor']);
+  });
+
+  it('sem nada no aparelho, a tela nao inventa conteudo enquanto espera', async () => {
+    // O contrario do teste acima, e igualmente importante: quem abre o app pela
+    // primeira vez nao pode ver lista vazia parecendo resposta do servidor.
+    storage.snapshot = null;
+
+    fixture.componentInstance.ionViewWillEnter();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const req = backend.expectOne(`${environment.apiUrl}/home`);
+    expect(fixture.nativeElement.querySelector('.pf-vazio'))
+      .withContext('sem snapshot e sem resposta, "nada nos proximos 14 dias" nao pode aparecer')
+      .toBeNull();
+
+    req.flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.pf-vazio'))
+      .withContext('agora sim: o servidor respondeu e a semana esta mesmo vazia')
+      .not.toBeNull();
+  });
 });

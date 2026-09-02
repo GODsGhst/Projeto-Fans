@@ -16,10 +16,15 @@ const AUTORIA = {
   atualizadoEm: '2026-08-30T12:00:00Z',
 };
 
-function item(id: string, titulo: string, feitoPeloUsuario = false): ItemHome {
+function item(
+  id: string,
+  titulo: string,
+  feitoPeloUsuario = false,
+  tipo: 'PROVA' | 'ENTREGA' = 'ENTREGA',
+): ItemHome {
   return {
     eventoId: id,
-    tipo: 'ENTREGA',
+    tipo,
     titulo,
     data: '2026-09-10',
     hora: null,
@@ -254,5 +259,44 @@ describe('QuadroPage', () => {
     backend.expectOne(`${environment.apiUrl}/nao-listados`).flush({ eventos: [], materiais: [] });
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('a acao diz o que a pessoa fez: prova se faz, entrega se entrega', async () => {
+    // "marcar como resolvido" e linguagem de sistema de chamado, nao de aluno.
+    // Ninguem "resolve" uma prova — faz. E ninguem "resolve" um trabalho —
+    // entrega. Uma palavra so para as duas coisas economiza codigo e cobra do
+    // leitor a traducao.
+    await abrir(
+      (r) =>
+        r.flush({
+          aFazer: [
+            item('p1', 'Prova 2', false, 'PROVA'),
+            item('e1', 'Lista 4', false, 'ENTREGA'),
+          ],
+          feito: [],
+        }),
+      (r) => r.flush({ eventos: [], materiais: [] }),
+    );
+
+    const rotulos = (
+      Array.from(fixture.nativeElement.querySelectorAll('.marcar')) as HTMLElement[]
+    ).map((b) => b.textContent!.trim());
+
+    expect(rotulos[0]).withContext('prova se faz').toContain('feita');
+    expect(rotulos[1]).withContext('entrega se entrega').toContain('entregue');
+    expect(rotulos.join(' ')).not.toContain('resolvido');
+  });
+
+  it('cada acao carrega o vetor de confirmacao, nao so texto', async () => {
+    // Alvo de toque de 11px de texto puro nao parece tocavel, e num quadro cheio
+    // some entre os cartoes. O simbolo torna a acao visivel antes de ser lida.
+    await abrir(
+      (r) => r.flush({ aFazer: [item('p1', 'Prova 2', false, 'PROVA')], feito: [] }),
+      (r) => r.flush({ eventos: [], materiais: [] }),
+    );
+
+    expect(fixture.nativeElement.querySelector('.marcar svg'))
+      .withContext('sem o vetor a acao e so uma linha de texto')
+      .not.toBeNull();
   });
 });

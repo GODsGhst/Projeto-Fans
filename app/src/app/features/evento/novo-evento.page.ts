@@ -67,7 +67,7 @@ import { mensagemDeErro } from '../auth/erro';
           <div class="pf-vazio">
             <b>Nenhuma matéria cadastrada ainda.</b>
             <span>
-              Prova e entrega pertencem a uma matéria — sem matéria não dá para cadastrar. Crie a
+              Prova e entrega pertencem a uma matéria — sem matéria não dá para adicionar. Crie a
               primeira e volte aqui.
             </span>
           </div>
@@ -75,7 +75,7 @@ import { mensagemDeErro } from '../auth/erro';
                de cadastrar quando nao ha materia, e ele tem razao — nao ha o que
                cadastrar. Este link leva embora da tela, nao envia nada dela.
                Visualmente e o mesmo; semanticamente e o oposto. -->
-          <a class="botao-vazio" routerLink="/tabs/materias/nova">Cadastrar matéria</a>
+          <a class="botao-vazio" routerLink="/tabs/materias/nova">Adicionar matéria</a>
         } @else {
           @if (erro(); as e) {
             <p class="pf-erro" role="alert">{{ e }}</p>
@@ -273,9 +273,9 @@ export class NovoEventoPage {
 
   protected readonly rotuloDoBotao = computed(() => {
     if (!this.enviando()) {
-      return 'Cadastrar';
+      return 'Adicionar';
     }
-    return this.espera.demorando() ? 'Acordando o servidor…' : 'Cadastrando…';
+    return this.espera.demorando() ? 'Acordando o servidor…' : 'Adicionando…';
   });
 
   constructor() {
