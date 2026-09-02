@@ -299,8 +299,9 @@ export class NovoEventoPage {
     this.enviando.set(true);
     this.erro.set(null);
     this.espera.comecar();
+    let criado;
     try {
-      await this.eventos.criar({
+      criado = await this.eventos.criar({
         materiaId,
         tipo: this.tipo(),
         titulo: titulo.trim(),
@@ -316,10 +317,15 @@ export class NovoEventoPage {
       this.espera.terminar();
     }
 
-    // Recarregar ANTES de voltar: uma Home que ainda nao mostra a prova recem
-    // cadastrada faz a pessoa cadastrar de novo. `carregar` do HomeRepository
-    // nunca estoura — ele degrada e guarda o proprio erro, que a Home exibe.
-    await this.home.carregar();
-    await this.router.navigateByUrl('/tabs/home');
+    // Abre o que acabou de ser criado, em vez de voltar para a Home.
+    //
+    // Duas razoes. A pessoa acabou de descrever a prova e quer ver que ela
+    // existe — voltar para uma lista e faze-la procurar o proprio registro. E o
+    // passo seguinte natural, anexar o material que ela cobre, esta nessa tela.
+    //
+    // A Home nao precisa mais ser recarregada aqui: ela recarrega sozinha ao
+    // entrar na aba (`ionViewWillEnter`), e uma chamada a menos importa num
+    // servidor que dorme.
+    await this.router.navigateByUrl(`/tabs/eventos/${criado.id}`);
   }
 }

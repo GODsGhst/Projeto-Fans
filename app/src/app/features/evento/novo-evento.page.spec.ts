@@ -129,7 +129,6 @@ describe('NovoEventoPage', () => {
 
     req.flush({});
     await assentar();
-    backend.expectOne(`${environment.apiUrl}/home`).flush([]);
     await assentar();
   });
 
@@ -160,7 +159,6 @@ describe('NovoEventoPage', () => {
 
     req.flush({});
     await assentar();
-    backend.expectOne(`${environment.apiUrl}/home`).flush([]);
     await assentar();
   });
 
@@ -190,23 +188,17 @@ describe('NovoEventoPage', () => {
     expect(irPara).not.toHaveBeenCalled();
   });
 
-  it('depois de cadastrar, a Home e recarregada antes de voltar', async () => {
-    // Voltar para uma Home que ainda nao mostra a prova recem-cadastrada faz a
-    // pessoa cadastrar de novo.
+  it('depois de adicionar, abre a atividade criada', async () => {
+    // Antes voltava para a Home, e a pessoa tinha de procurar o proprio registro
+    // numa lista. Abrir o que ela acabou de descrever confirma que existe — e o
+    // passo seguinte, anexar o material, esta nessa tela.
     await abrir((r) => r.flush([BD]));
-
-    preencher('Prova 1', '2026-09-10');
+    preencher('Prova 2', '2026-09-10');
     cadastrar();
-    backend.expectOne(`${environment.apiUrl}/eventos`).flush({});
+
+    backend.expectOne(`${environment.apiUrl}/eventos`).flush({ id: 'ev-9' });
     await assentar();
 
-    backend.expectOne(`${environment.apiUrl}/home`).flush([]);
-    await assentar();
-    // Mais um: depois do GET o repositorio ainda grava o snapshot,
-    // e essa promessa nao e rastreada pelo whenStable.
-    await assentar();
-
-    expect(irPara).toHaveBeenCalledWith('/tabs/home');
-    expect(erroNaTela()).toBe('');
+    expect(irPara).toHaveBeenCalledWith('/tabs/eventos/ev-9');
   });
 });
