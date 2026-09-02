@@ -2255,3 +2255,46 @@ banco está corrompido, e uma pessoa sem nome na lista é pior que um erro visí
 **Travas / dúvidas:** nenhuma para este endpoint. Uma dívida vizinha virou **A22** em
 `docs/PERGUNTAS-ABERTAS.md`: nove entidades ainda leem `null` na coluna que o banco preenche
 sozinho, e o `EventoService` contorna a sua à mão.
+
+---
+
+## As telas de cadastro, as rotas, e o Figma que quebrava no reimport
+
+**O que estava faltando:** a turma não tinha como cadastrar matéria nem evento pelo app, e o
+código de convite só existia no instante em que a turma era criada. Quem fechasse o app naquela
+tela virava líder de uma turma que não conseguia convidar ninguém.
+
+*A ordem das rotas é comportamento, não estilo.* `materias/nova` e `eventos/novo` foram
+registradas **acima** de `materias/:id` e `eventos/:id`. Fora dessa ordem o router casa na rota com
+parâmetro, o app pede ao servidor uma matéria chamada "nova", e a tela nova simplesmente nunca
+abre — sem erro de build, sem teste vermelho.
+
+*O teste de ordem que já existia aprovava rota ausente.* Ele comparava `indexOf(criar) <
+indexOf(detalhe)`, e `indexOf` devolve `-1` para o que não existe: `-1` é menor que qualquer
+índice, então a rota podia sumir do app inteiro com a suíte verde. Entrou um teste de presença
+antes dele. Verificado por mutação: removida a rota da turma, 1 falha; invertida a ordem, 2.
+
+*O botão que não podia ser botão.* Na tela de novo evento sem matéria cadastrada, o link "Cadastrar
+matéria" usava `class="botao"` — e o teste exige que **não exista botão de cadastrar** ali, porque
+não há o que cadastrar. Ele leva embora da tela, não envia nada dela. Virou `botao-vazio`:
+visualmente igual, semanticamente o oposto.
+
+**O Figma.** O mockup navegável não serve para importar: uma casca de celular só, telas alternando
+com `display:none`. Todo importador renderiza o DOM como ele está, então 12 das 13 telas chegariam
+vazias — e o import *pareceria* ter funcionado. `gerar-telas-figma.py` monta a folha de contato,
+cada tela um quadro de 390px visível.
+
+*`figma-fluxo.js` foi reescrito porque a versão anterior funcionava exatamente uma vez.* Ela tinha
+os ids literais (`24:152`). Todo id muda no reimport, e reimportar é justamente o que se faz ao
+adicionar tela: o script inteiro viraria uma lista de nós inexistentes. Agora acha tudo pelo texto
+desenhado, que sobrevive.
+
+*Rodar a lógica contra o DOM pegou três bugs antes de qualquer chamada ao Figma:* o rótulo da aba é
+"Cal" e não "Calendário"; a barra de título também tem 390 de largura, então largura sozinha não
+identifica tela e a subida parava no cabeçalho; e a barra de abas é **irmã** do corpo da tela, não
+filha — subindo até o primeiro ancestral de 390, 34 das 36 abas ficavam de fora.
+
+**Travas / dúvidas:** `calendário → nova anotação` ficou de fora do fluxo. Aquele botão é montado
+por JavaScript depois de tocar num dia, não existe no HTML estático e não chega no import; para
+ligá-lo, precisa primeiro ser desenhado. E o script **não foi rodado no Figma** — a árvore de nós
+de lá não é idêntica à do DOM.
