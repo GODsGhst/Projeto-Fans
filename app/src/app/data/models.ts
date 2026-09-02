@@ -57,6 +57,15 @@ export interface Materia {
   sigla: string;
   /** Uma das 12 hues validadas da paleta. Vem do servidor, nunca digitada aqui. */
   corHex: string;
+  /**
+   * Sala habitual e quem da a materia.
+   *
+   * `?` alem de `| null` porque o backend OMITE campo nulo do JSON — ele chega
+   * como `undefined`, nao `null`. Tipar so `| null` faria o compilador aceitar
+   * `!== null` num valor que nunca e null, e a tela mostraria "undefined".
+   */
+  sala?: string | null;
+  professor?: string | null;
 }
 
 /** Item de `GET /home`. Ja vem ordenado, dentro da janela e dentro do teto. */
@@ -89,6 +98,8 @@ export interface Evento {
   version: number;
   visivelTurma: boolean;
   excluidoEm: string | null;
+  /** Sala DESTE evento quando difere da habitual. Ausente = na sala da materia. */
+  sala?: string | null;
 }
 
 export interface Material {
@@ -102,6 +113,8 @@ export interface Material {
   version: number;
   visivelTurma: boolean;
   excluidoEm: string | null;
+  /** De que aula este material e, em `AAAA-MM-DD`. Ausente = nao se aplica. */
+  dataAula?: string | null;
 }
 
 /** `GET /eventos/{id}` — traz SOMENTE os materiais vinculados a este evento. */
@@ -141,6 +154,8 @@ export interface CriarEventoRequest {
   titulo: string;
   data: string;
   hora: string | null;
+  /** `null` = na sala de sempre. Preenchida so quando for a excecao daquele dia. */
+  sala: string | null;
 }
 
 /**
@@ -160,6 +175,8 @@ export interface CriarMaterialRequest {
   titulo: string;
   /** Obrigatoria no MVP: `arquivo_ref` so entra na Task 15. */
   url: string;
+  /** De que aula, em `AAAA-MM-DD`. `null` para material que nao e de uma aula. */
+  dataAula: string | null;
 }
 
 /** Substituicao por inteiro, pelo mesmo motivo de `AtualizarEventoRequest`. */
@@ -169,4 +186,7 @@ export interface CriarMateriaRequest {
   nome: string;
   sigla: string;
   corHex: string;
+  /** Opcional: quem cadastra nem sempre sabe a sala, e exigir faria inventar. */
+  sala: string | null;
+  professor: string | null;
 }

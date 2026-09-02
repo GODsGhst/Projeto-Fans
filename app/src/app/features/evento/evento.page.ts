@@ -84,6 +84,10 @@ import { materialVm } from '../material-vm';
             [materia]="e.materia"
             [autoria]="e.autoria" />
 
+          @if (e.sala) {
+            <p class="sala">nesta vez, na sala <b>{{ e.sala }}</b></p>
+          }
+
           <!-- FORA do @if de materiais de proposito. Anexar e mais necessario
                quando nao ha nada anexado; escondido ali, o botao so aparecia para
                quem ja tinha resolvido o problema. -->
@@ -118,6 +122,15 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    /* So aparece quando ha excecao. A sala de sempre nao entra aqui: repetida em
+       toda prova viraria ruido que ninguem le, e ai a excecao passaria batida. */
+    .sala {
+      margin: 0;
+      font-size: 13px;
+      color: var(--ink-2);
+      padding: 0 2px;
+    }
+
     /* Envelope de toque, como o .ir dos cartoes: o material inteiro abre.
        target=_blank sai para o navegador do sistema — o Capacitor intercepta
        link externo e abre fora do app, senao a pessoa perderia a tela do app

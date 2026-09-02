@@ -9,6 +9,8 @@ export interface MaterialVm {
    * abrir. Link com href vazio parece tocavel e nao vai a lugar nenhum.
    */
   readonly url: string | null;
+  /** "aula de 2 set", ou vazio quando o material nao e de uma aula. */
+  readonly daAula: string;
   readonly id: string;
   /** "PDF", "JPG", "LINK" — rotulo de formato, nao o `tipo` AULA/ADICIONAL. */
   readonly tipo: string;
@@ -26,6 +28,7 @@ export function materialVm(m: Material, agora: Date): MaterialVm {
     // fazer. `arquivoRef` ainda e sempre nulo (upload e a Task 15), entao hoje e
     // sempre a url.
     url: m.arquivoRef ?? m.url,
+    daAula: rotuloDaAula(m.dataAula),
     autoria: assinatura(m.autoria, agora),
   };
 }
@@ -38,4 +41,26 @@ export function materialVm(m: Material, agora: Date): MaterialVm {
 function formato(ref: string | null): string {
   const ext = /\.([a-z0-9]{1,5})(?:$|[?#])/i.exec(ref ?? '');
   return ext === null ? 'LINK' : ext[1].toUpperCase();
+}
+
+const MESES_CURTOS = [
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez',
+];
+
+/**
+ * "aula de 2 set". Vazio quando nao ha data — material adicional costuma nao
+ * pertencer a uma aula, e "aula de undefined" seria pior que nada.
+ *
+ * A data e partida como string, sem `new Date`: essa construcao le "2026-09-02"
+ * como UTC e, num fuso negativo, mostra o dia anterior — a aula andaria para
+ * tras na tela.
+ */
+function rotuloDaAula(data: string | null | undefined): string {
+  if (!data) {
+    return '';
+  }
+  const [, mes, dia] = data.split('-');
+  const nome = MESES_CURTOS[Number(mes) - 1];
+  return nome === undefined ? '' : `aula de ${Number(dia)} ${nome}`;
 }

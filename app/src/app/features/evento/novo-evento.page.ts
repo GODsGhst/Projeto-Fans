@@ -128,6 +128,15 @@ import { mensagemDeErro } from '../auth/erro';
           <p class="rot-campo">hora <span class="opcional">— opcional</span></p>
           <input #hora class="campo--linha" type="time" aria-label="Hora" />
 
+          <p class="rot-campo">sala <span class="opcional">— só se for em outra</span></p>
+          <input
+            #sala
+            class="campo--linha"
+            type="text"
+            maxlength="40"
+            placeholder="na sala de sempre"
+            aria-label="Sala, se diferente da habitual" />
+
           <p class="alerta">
             <!-- Nao prometa o aviso da vespera aqui. O modulo reagendador.ts
                  calcula o horario e e testado, mas ninguem o chama e nao ha
@@ -147,7 +156,7 @@ import { mensagemDeErro } from '../auth/erro';
             class="botao"
             type="button"
             [disabled]="enviando()"
-            (click)="cadastrar(titulo.value, data.value, hora.value)">
+            (click)="cadastrar(titulo.value, data.value, hora.value, sala.value)">
             {{ rotuloDoBotao() }}
           </button>
         }
@@ -286,7 +295,12 @@ export class NovoEventoPage {
       .catch((e: unknown) => console.error('[novo-evento] falha ao carregar as matérias', e));
   }
 
-  protected async cadastrar(titulo: string, data: string, hora: string): Promise<void> {
+  protected async cadastrar(
+    titulo: string,
+    data: string,
+    hora: string,
+    sala: string,
+  ): Promise<void> {
     if (this.enviando()) {
       return;
     }
@@ -308,6 +322,10 @@ export class NovoEventoPage {
         data,
         // `null`, nao `''`: hora ausente e um valor, nao um campo mal preenchido.
         hora: hora === '' ? null : hora,
+        // Vazia significa "na sala de sempre" — quem le resolve olhando a
+        // materia. Copiar a sala da materia para ca faria a disciplina mudar de
+        // sala e reescrever onde as provas passadas aconteceram.
+        sala: sala.trim() === '' ? null : sala.trim(),
       });
     } catch (e) {
       this.erro.set(mensagemDeErro(e));

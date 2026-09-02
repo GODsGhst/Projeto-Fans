@@ -104,6 +104,31 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
           aria-label="Sigla"
           (input)="previa.set(sigla.value.trim().toUpperCase() || 'SIGLA')" />
 
+        <p class="rot-campo">sala <span class="opcional">— opcional</span></p>
+        <input
+          #sala
+          class="campo--linha"
+          type="text"
+          name="sala"
+          maxlength="40"
+          placeholder="B-204"
+          aria-label="Sala habitual" />
+
+        <p class="rot-campo">professor <span class="opcional">— opcional</span></p>
+        <input
+          #professor
+          class="campo--linha"
+          type="text"
+          name="professor"
+          maxlength="80"
+          placeholder="prof. Marcos"
+          aria-label="Professor" />
+
+        <p class="cache-aviso">
+          A sala aqui é a de sempre. Quando uma prova cair em outra sala, dá para dizer isso na
+          própria prova — sem mexer na matéria.
+        </p>
+
         <p class="rot-campo">cor</p>
         <div class="cores-pick" role="group" aria-label="Cor da matéria">
           @for (c of paleta; track c.hex) {
@@ -131,7 +156,7 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
           class="botao"
           type="button"
           [disabled]="enviando()"
-          (click)="criar(nome.value, sigla.value)">
+          (click)="criar(nome.value, sigla.value, sala.value, professor.value)">
           {{ rotuloDoBotao() }}
         </button>
       </div>
@@ -207,7 +232,12 @@ export class NovaMateriaPage {
     return this.espera.demorando() ? 'Acordando o servidor…' : 'Criando…';
   });
 
-  protected async criar(nome: string, sigla: string): Promise<void> {
+  protected async criar(
+    nome: string,
+    sigla: string,
+    sala: string,
+    professor: string,
+  ): Promise<void> {
     if (this.enviando()) {
       return;
     }
@@ -224,7 +254,14 @@ export class NovaMateriaPage {
     this.erro.set(null);
     this.espera.comecar();
     try {
-      await this.repo.criar({ ...limpo, corHex: this.cor() });
+      await this.repo.criar({
+        ...limpo,
+        corHex: this.cor(),
+        // Vazio vira null, nao string vazia: o backend normaliza igual, e mandar
+        // "" faria a tela da materia mostrar uma sala em branco como se fosse uma.
+        sala: sala.trim() === '' ? null : sala.trim(),
+        professor: professor.trim() === '' ? null : professor.trim(),
+      });
     } catch (e) {
       // Sigla repetida na turma volta 409 com frase legivel; a paleta violada
       // volta 400 com outra. As duas chegam prontas do interceptor central.

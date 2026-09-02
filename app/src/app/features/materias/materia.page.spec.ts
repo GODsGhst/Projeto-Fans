@@ -162,4 +162,47 @@ describe('MateriaPage', () => {
       .toBe('_blank');
     expect(links[0].getAttribute('rel')).toContain('noopener');
   });
+
+  it('a materia diz onde e com quem, e o material diz de que aula', async () => {
+    // Campo que grava e ninguem ve e campo que nao existe. A sala e o professor
+    // sao a primeira coisa que alguem procura ao abrir a materia, e "de que
+    // aula" e o que faltava para achar o material certo numa lista longa.
+    await abrir((r) =>
+      r.flush({
+        materia: {
+          id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1',
+          sala: 'B-204', professor: 'prof. Marcos',
+        },
+        materiaisAula: [
+          { ...material('a1', 'AULA', 'Formas normais', 'https://x/fn.pdf'),
+            dataAula: '2026-09-02' },
+        ],
+        materiaisAdicionais: [],
+        eventos: [],
+      }),
+    );
+
+    const cabecalho = fixture.nativeElement.querySelector('.onde-e-quem')!.textContent as string;
+    expect(cabecalho).toContain('B-204');
+    expect(cabecalho).toContain('prof. Marcos');
+
+    expect(fixture.nativeElement.querySelector('.da-aula')!.textContent)
+      .withContext('a data identifica a aula sem precisar de entidade de aula')
+      .toContain('2 set');
+  });
+
+  it('materia sem sala nem professor nao mostra a linha vazia', async () => {
+    // O backend OMITE campo nulo, entao aqui eles chegam como `undefined`. Uma
+    // linha com separador e nada em volta seria pior que linha nenhuma.
+    await abrir((r) =>
+      r.flush({
+        materia: { id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' },
+        materiaisAula: [],
+        materiaisAdicionais: [],
+        eventos: [],
+      }),
+    );
+
+    expect(fixture.nativeElement.querySelector('.onde-e-quem')).toBeNull();
+  });
 });

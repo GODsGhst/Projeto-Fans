@@ -60,6 +60,10 @@ import { materialVm } from '../material-vm';
           <p class="pf-aviso">{{ e }}</p>
         }
 
+        @if (ondeEQuem(); as linha) {
+          <p class="onde-e-quem">{{ linha }}</p>
+        }
+
         <!-- Fora dos @if de proposito: existe com a materia cheia e vazia. O
              estado vazio dizia "assim que alguem da turma adicionar" e nao
              oferecia como — convite sem porta. -->
@@ -78,6 +82,9 @@ import { materialVm } from '../material-vm';
                   [titulo]="m.titulo"
                   [autoria]="m.autoria" />
               </a>
+              @if (m.daAula) {
+                <span class="da-aula">{{ m.daAula }}</span>
+              }
             } @else {
               <app-material-linha
                 class="aula"
@@ -99,6 +106,9 @@ import { materialVm } from '../material-vm';
                   [titulo]="m.titulo"
                   [autoria]="m.autoria" />
               </a>
+              @if (m.daAula) {
+                <span class="da-aula">{{ m.daAula }}</span>
+              }
             } @else {
               <app-material-linha
                 class="adicional"
@@ -137,6 +147,21 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    .onde-e-quem {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--ink-3);
+      padding: 0 2px;
+    }
+
+    .da-aula {
+      display: block;
+      font-size: 11px;
+      color: var(--ink-3);
+      padding: 0 2px 2px;
+      margin-top: -4px;
+    }
+
     /* Envelope de toque, como o .ir dos cartoes: o material inteiro abre.
        target=_blank sai para o navegador do sistema — o Capacitor intercepta
        link externo e abre fora do app, senao a pessoa perderia a tela do app
@@ -173,6 +198,18 @@ import { materialVm } from '../material-vm';
   `,
 })
 export class MateriaPage {
+  /**
+   * "B-204 · prof. Marcos", ou vazio.
+   *
+   * Os dois campos sao opcionais e chegam como `undefined` quando ausentes — o
+   * backend omite nulo do JSON. Uma linha com o separador e nada em volta seria
+   * pior que linha nenhuma, entao o separador so entra com os dois lados.
+   */
+  protected readonly ondeEQuem = computed(() => {
+    const m = this.detalhe()?.materia;
+    return [m?.sala, m?.professor].filter(Boolean).join(' · ');
+  });
+
   /** Usado no link de adicionar material; vem da rota, como o resto da tela. */
   protected readonly id: string;
 

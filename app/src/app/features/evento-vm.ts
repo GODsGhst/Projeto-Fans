@@ -16,6 +16,8 @@ export interface EventoVm {
   readonly titulo: string;
   readonly materia: Materia;
   readonly autoria: string;
+  /** Sala deste evento quando difere da habitual; vazio = na sala da materia. */
+  readonly sala: string;
 }
 
 /**
@@ -26,7 +28,14 @@ export interface EventoVm {
 export type FonteEvento = Pick<
   ItemHome,
   'tipo' | 'titulo' | 'data' | 'hora' | 'materiaSigla' | 'materiaCorHex' | 'autoria'
->;
+> & {
+  /**
+   * Opcional porque so o Evento a tem — `ItemHome` (a Home) nao traz sala. O
+   * `?? ''` no mapeamento cobre os dois, e `undefined` chega aqui de verdade: o
+   * backend omite campo nulo do JSON em vez de escrever null.
+   */
+  readonly sala?: string | null;
+};
 
 const MESES = [
   'jan',
@@ -68,6 +77,7 @@ export function eventoVm(e: FonteEvento, agora: Date): EventoVm {
     titulo: e.titulo,
     materia: { sigla: e.materiaSigla, cor: e.materiaCorHex },
     autoria: assinatura(e.autoria, agora),
+    sala: e.sala ?? '',
   };
 }
 

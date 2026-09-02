@@ -66,6 +66,7 @@ describe('NovoMaterialPage', () => {
       tipo: 'AULA',
       titulo: 'Slides da aula 3',
       url: 'https://drive.google.com/arquivo',
+      dataAula: null,
     });
     req.flush({ id: 'x' });
     await assentar();

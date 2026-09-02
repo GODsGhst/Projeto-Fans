@@ -92,6 +92,14 @@ import { mensagemDeErro } from '../auth/erro';
           placeholder="https://…"
           aria-label="Link do material" />
 
+        <p class="rot-campo">de que aula <span class="opcional">— opcional</span></p>
+        <input
+          #dataAula
+          class="campo--linha"
+          type="date"
+          name="dataAula"
+          aria-label="Data da aula" />
+
         <p class="alerta">
           Cole o endereço de onde o material está — Drive, Classroom, site da matéria. Enviar o
           arquivo direto do celular ainda não dá; por enquanto é o link.
@@ -101,7 +109,7 @@ import { mensagemDeErro } from '../auth/erro';
           class="botao"
           type="button"
           [disabled]="enviando()"
-          (click)="adicionar(titulo.value, url.value)">
+          (click)="adicionar(titulo.value, url.value, dataAula.value)">
           {{ rotulo() }}
         </button>
       </div>
@@ -128,7 +136,7 @@ export class NovoMaterialPage {
     return this.espera.demorando() ? 'Acordando o servidor…' : 'Adicionando…';
   }
 
-  protected async adicionar(titulo: string, url: string): Promise<void> {
+  protected async adicionar(titulo: string, url: string, dataAula: string): Promise<void> {
     if (this.enviando()) {
       return;
     }
@@ -154,6 +162,9 @@ export class NovoMaterialPage {
         tipo: this.tipo(),
         titulo: titulo.trim(),
         url: limpo,
+        // Material adicional costuma nao pertencer a uma aula; vazio e resposta
+        // valida, nao campo esquecido.
+        dataAula: dataAula === '' ? null : dataAula,
       });
     } catch (e) {
       this.erro.set(mensagemDeErro(e));

@@ -113,6 +113,8 @@ describe('NovaMateriaPage', () => {
       nome: 'Banco de Dados',
       sigla: 'BD',
       corHex: PALETA[1].hex,
+      sala: null,
+      professor: null,
     });
 
     req.flush({ id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: PALETA[1].hex });

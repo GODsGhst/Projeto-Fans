@@ -148,4 +148,18 @@ describe('EventoPage', () => {
     expect(link).withContext('sem material e justamente quando anexar importa').not.toBeNull();
     expect(link!.getAttribute('href')).toBe('/tabs/eventos/e1/anexar');
   });
+
+  it('a prova em outra sala diz onde e — a de sempre nao vira ruido', async () => {
+    // Caso real: a prova caiu na sala do 2o periodo. Sem isto, quem confia no app
+    // vai para a sala errada. E o contrario tambem importa: a esmagadora maioria
+    // das provas e na sala de sempre, e repetir isso em todas viraria ruido que
+    // ninguem le — entao a linha so aparece quando ha excecao.
+    await abrir((r) => r.flush({ ...detalhe([]), sala: 'A-101' }));
+    expect(fixture.nativeElement.querySelector('.sala')!.textContent).toContain('A-101');
+  });
+
+  it('sem sala propria, nao aparece linha de sala', async () => {
+    await abrir((r) => r.flush(detalhe([])));
+    expect(fixture.nativeElement.querySelector('.sala')).toBeNull();
+  });
 });

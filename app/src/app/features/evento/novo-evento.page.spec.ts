@@ -125,6 +125,7 @@ describe('NovoEventoPage', () => {
       titulo: 'Prova 2 — normalização',
       data: '2026-09-10',
       hora: null,
+      sala: null,
     });
 
     req.flush({});
@@ -155,6 +156,7 @@ describe('NovoEventoPage', () => {
       titulo: 'Lista 4',
       data: '2026-09-12',
       hora: '19:30',
+      sala: null,
     });
 
     req.flush({});
