@@ -4,6 +4,7 @@ import com.projetofans.domain.TipoMaterial;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -15,5 +16,8 @@ public record CriarMaterialRequest(
         @NotNull UUID materiaId,
         @NotNull TipoMaterial tipo,
         @NotBlank String titulo,
-        @NotBlank String url) {
+        @NotBlank String url,
+        // De qual aula este material e. Opcional: material adicional costuma nao
+        // pertencer a uma aula, e obrigar data faria inventar uma.
+        LocalDate dataAula) {
 }

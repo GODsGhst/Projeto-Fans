@@ -90,7 +90,7 @@ public class MateriaService {
 
         // criado_em nao entra: tem DEFAULT no banco e e insertable=false na entidade.
         Materia materia = new Materia(UUID.randomUUID(), turmaId, req.nome(), req.sigla(),
-                req.corHex().toUpperCase());
+                req.corHex().toUpperCase(), req.sala(), req.professor());
         return MateriaResponse.de(materias.saveAndFlush(materia));
     }
 

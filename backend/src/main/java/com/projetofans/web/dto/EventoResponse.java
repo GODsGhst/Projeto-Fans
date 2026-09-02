@@ -20,6 +20,8 @@ public record EventoResponse(
         String titulo,
         LocalDate data,
         LocalTime hora,
+        /** Sala deste evento quando difere da habitual; nulo = na sala da materia. */
+        String sala,
         UUID materiaId,
         String materiaSigla,
         String materiaCorHex,
@@ -45,7 +47,7 @@ public record EventoResponse(
      */
     public static EventoResponse lapide(Evento evento) {
         return new EventoResponse(
-                evento.getId(), null, null, null, null, null, null, null, null,
+                evento.getId(), null, null, null, null, null, null, null, null, null,
                 evento.getVersion(), evento.isVisivelTurma(), evento.getExcluidoEm());
     }
 
@@ -56,6 +58,7 @@ public record EventoResponse(
                 evento.getTitulo(),
                 evento.getDataEvento(),
                 evento.getHoraEvento(),
+                evento.getSala(),
                 materia.getId(),
                 materia.getSigla(),
                 materia.getCorHex(),

@@ -81,7 +81,8 @@ public class EventoService {
         Materia materia = materiaDaTurmaDoUsuario(autor, req.materiaId());
         Instant agora = Instant.now();
         Evento evento = new Evento(UUID.randomUUID(), materia.getTurmaId(), materia.getId(),
-                req.tipo(), req.titulo(), req.data(), req.hora(), autor.usuarioId(), agora);
+                req.tipo(), req.titulo(), req.data(), req.hora(), req.sala(),
+                autor.usuarioId(), agora);
         // save() aqui vira merge (id atribuido a mao), entao a instancia gerenciada
         // e a devolvida, nao a local. E criado_em tem DEFAULT no banco e e
         // insertable=false: sem o refresh a resposta sairia com criadoEm nulo e

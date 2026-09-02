@@ -50,6 +50,17 @@ public class Evento {
     @Column(name = "hora_evento")
     private LocalTime horaEvento;
 
+    /**
+     * Sala DESTE evento, quando difere da habitual da materia.
+     *
+     * Nulo na imensa maioria dos casos, e nulo significa "na sala de sempre" —
+     * quem le resolve olhando a materia. Copiar a sala da materia para ca em
+     * toda criacao faria a disciplina mudar de sala e reescrever onde as provas
+     * passadas aconteceram; elas aconteceram na sala antiga.
+     */
+    @Column(name = "sala")
+    private String sala;
+
     @Column(name = "autor_id", nullable = false, updatable = false)
     private UUID autorId;
 
@@ -77,6 +88,13 @@ public class Evento {
 
     public Evento(UUID id, UUID turmaId, UUID materiaId, TipoEvento tipo, String titulo,
                   LocalDate dataEvento, LocalTime horaEvento, UUID autorId, Instant agora) {
+        this(id, turmaId, materiaId, tipo, titulo, dataEvento, horaEvento, null, autorId, agora);
+    }
+
+    public Evento(UUID id, UUID turmaId, UUID materiaId, TipoEvento tipo, String titulo,
+                  LocalDate dataEvento, LocalTime horaEvento, String sala, UUID autorId,
+                  Instant agora) {
+        this.sala = emBrancoViraNulo(sala);
         this.id = id;
         this.turmaId = turmaId;
         this.materiaId = materiaId;
@@ -87,6 +105,15 @@ public class Evento {
         this.autorId = autorId;
         this.atualizadoEm = agora;
         this.visivelTurma = true;
+    }
+
+    /** Vazio e ausencia sao a mesma coisa; o banco so entende uma delas. */
+    private static String emBrancoViraNulo(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
+    }
+
+    public String getSala() {
+        return sala;
     }
 
     public UUID getId() {

@@ -13,5 +13,9 @@ import jakarta.validation.constraints.Size;
 public record CriarMateriaRequest(
         @NotBlank @Size(max = 80) String nome,
         @NotBlank @Size(max = 12) String sigla,
-        @NotBlank @Pattern(regexp = "^#[0-9A-Fa-f]{6}$") String corHex) {
+        @NotBlank @Pattern(regexp = "^#[0-9A-Fa-f]{6}$") String corHex,
+        // Opcionais: quem cadastra a materia as vezes nao sabe a sala ainda, e
+        // exigir faria inventar. Sala inventada manda alguem para o lugar errado.
+        @Size(max = 40) String sala,
+        @Size(max = 80) String professor) {
 }

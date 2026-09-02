@@ -3,6 +3,7 @@ package com.projetofans.web.dto;
 import com.projetofans.domain.TipoEvento;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,5 +15,8 @@ public record CriarEventoRequest(
         @NotNull TipoEvento tipo,
         @NotBlank String titulo,
         @NotNull LocalDate data,
-        LocalTime hora) {
+        LocalTime hora,
+        // Vazia significa "na sala de sempre", que e o caso normal. Preenchida e
+        // a excecao daquele dia — a prova que caiu na sala de outro periodo.
+        @Size(max = 40) String sala) {
 }

@@ -12,10 +12,12 @@ import java.util.UUID;
  * tela nenhuma. DTO magro tambem e o que impede campo novo da entidade de vazar
  * sozinho para a API.
  */
-public record MateriaResponse(UUID id, String nome, String sigla, String corHex) {
+public record MateriaResponse(
+        UUID id, String nome, String sigla, String corHex, String sala, String professor) {
 
     public static MateriaResponse de(Materia materia) {
         return new MateriaResponse(
-                materia.getId(), materia.getNome(), materia.getSigla(), materia.getCorHex());
+                materia.getId(), materia.getNome(), materia.getSigla(), materia.getCorHex(),
+                materia.getSala(), materia.getProfessor());
     }
 }

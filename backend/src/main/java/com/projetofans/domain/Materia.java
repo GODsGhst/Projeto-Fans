@@ -32,6 +32,20 @@ public class Materia {
     @Column(name = "cor_hex", nullable = false)
     private String corHex;
 
+    /**
+     * Onde a materia cai normalmente. Nulo enquanto ninguem informou.
+     *
+     * O evento tem a propria sala para o caso excepcional (prova em outra sala).
+     * Esta aqui e o padrao, nao um espelho: mudar a sala da disciplina nao pode
+     * reescrever onde as provas passadas aconteceram.
+     */
+    @Column(name = "sala")
+    private String sala;
+
+    /** Quem da a materia. Nulo enquanto ninguem informou. */
+    @Column(name = "professor")
+    private String professor;
+
     @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
     private Instant criadoEm;
 
@@ -39,11 +53,33 @@ public class Materia {
     }
 
     public Materia(UUID id, UUID turmaId, String nome, String sigla, String corHex) {
+        this(id, turmaId, nome, sigla, corHex, null, null);
+    }
+
+    public Materia(UUID id, UUID turmaId, String nome, String sigla, String corHex,
+                   String sala, String professor) {
         this.id = id;
         this.turmaId = turmaId;
         this.nome = nome;
         this.sigla = sigla;
         this.corHex = corHex;
+        this.sala = emBrancoViraNulo(sala);
+        this.professor = emBrancoViraNulo(professor);
+    }
+
+    /**
+     * String vazia e ausencia sao a mesma coisa aqui, e o banco so entende uma.
+     * Sem isto, "" e null conviveriam na coluna e toda leitura precisaria testar
+     * os dois — e alguem esqueceria de testar um deles.
+     */
+    private static String emBrancoViraNulo(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
+    }
+
+    /** Atualiza sala e professor. Nulo e valor valido: significa "nao informado". */
+    public void anotarOndeEQuem(String sala, String professor) {
+        this.sala = emBrancoViraNulo(sala);
+        this.professor = emBrancoViraNulo(professor);
     }
 
     public UUID getId() {
@@ -64,6 +100,14 @@ public class Materia {
 
     public String getCorHex() {
         return corHex;
+    }
+
+    public String getSala() {
+        return sala;
+    }
+
+    public String getProfessor() {
+        return professor;
     }
 
     public Instant getCriadoEm() {

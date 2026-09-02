@@ -59,7 +59,8 @@ public class MaterialService {
         // arquivoRef fica nulo: envio de arquivo e a Task 15, e a constraint
         // material_tem_conteudo do banco exige que url exista neste MVP.
         Material material = new Material(UUID.randomUUID(), materia.getTurmaId(), materia.getId(),
-                req.tipo(), req.titulo(), req.url(), autor.usuarioId(), Instant.now());
+                req.tipo(), req.titulo(), req.url(), req.dataAula(), autor.usuarioId(),
+                Instant.now());
         // Mesmo detalhe do EventoService: save() e merge, e criado_em vem do banco.
         Material salvo = materiais.saveAndFlush(material);
         em.refresh(salvo);

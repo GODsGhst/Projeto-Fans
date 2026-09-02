@@ -51,6 +51,22 @@ class MateriaTest extends TesteDeApi {
         return json.readTree(r.getResponse().getContentAsString());
     }
 
+    /**
+     * O campo nao veio, ou veio nulo.
+     *
+     * Os dois significam a mesma coisa e o Jackson deste projeto AUSENTA o nulo
+     * em vez de escreve-lo, entao `get("sala")` devolve `null` do proprio Jackson
+     * quando a chave nao existe. Testar so `isNull()` estoura com
+     * NullPointerException e esconde o que se queria afirmar.
+     *
+     * Isso tambem e um aviso para o app: la o campo chega como `undefined`, e
+     * comparar com `!== null` daria verdadeiro para material sem sala.
+     */
+    private boolean semValor(JsonNode no, String campo) {
+        JsonNode v = no.get(campo);
+        return v == null || v.isNull();
+    }
+
     private Map<String, Object> pedido(String nome, String sigla, String cor) {
         Map<String, Object> p = new HashMap<>();
         p.put("nome", nome);
@@ -226,5 +242,65 @@ class MateriaTest extends TesteDeApi {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(corpo(p)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("sala e professor sao gravados e devolvidos")
+    void salaEProfessorSaoGravados() throws Exception {
+        Map<String, Object> p = pedido("Banco de Dados", "BD", "#0369A1");
+        p.put("sala", "B-204");
+        p.put("professor", "prof. Marcos");
+
+        MvcResult r = http.perform(post("/api/v1/materias")
+                        .header("Authorization", bearerAluno)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(p)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode criada = json.readTree(r.getResponse().getContentAsString());
+
+        assertThat(criada.get("sala").asText()).isEqualTo("B-204");
+        assertThat(criada.get("professor").asText()).isEqualTo("prof. Marcos");
+    }
+
+    @Test
+    @DisplayName("sala em branco vira nulo, nao string vazia")
+    void salaEmBrancoViraNulo() throws Exception {
+        // Se "" e null convivessem na coluna, toda leitura teria de testar os dois
+        // — e alguem esqueceria de testar um deles. A tela mostraria uma sala
+        // vazia como se fosse uma sala.
+        Map<String, Object> p = pedido("Redes", "REDES", "#15803D");
+        p.put("sala", "   ");
+        p.put("professor", "");
+
+        MvcResult r = http.perform(post("/api/v1/materias")
+                        .header("Authorization", bearerAluno)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(p)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode criada = json.readTree(r.getResponse().getContentAsString());
+
+        assertThat(semValor(criada, "sala"))
+                .as("espaco em branco nao e uma sala")
+                .isTrue();
+        assertThat(semValor(criada, "professor")).isTrue();
+    }
+
+    @Test
+    @DisplayName("materia sem sala nem professor continua valida")
+    void materiaSemSalaContinuaValida() throws Exception {
+        // As materias que ja existem foram criadas sem esses campos. Exigi-los
+        // agora quebraria o cadastro de quem so quer registrar a disciplina.
+        MvcResult r = http.perform(post("/api/v1/materias")
+                        .header("Authorization", bearerAluno)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(pedido("Calculo 2", "CALC2", "#B45309"))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        JsonNode criada = json.readTree(r.getResponse().getContentAsString());
+
+        assertThat(semValor(criada, "sala")).isTrue();
+        assertThat(semValor(criada, "professor")).isTrue();
     }
 }

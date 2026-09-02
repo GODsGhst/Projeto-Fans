@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -40,6 +41,15 @@ public class Material {
      * e limpeza de orfaos — e subsistema, nao campo. A coluna existe para que ligar
      * isso depois seja uma tarefa, e nao uma migration de dados.
      */
+    /**
+     * De que aula este material e, pela data. Nulo = nao se aplica.
+     *
+     * `LocalDate` e nao `Instant` de proposito: "a aula de 2 de setembro" e um
+     * dia, e guardar instante faria o fuso mover a aula de dia.
+     */
+    @Column(name = "data_aula")
+    private LocalDate dataAula;
+
     @Column(name = "arquivo_ref")
     private String arquivoRef;
 
@@ -67,6 +77,12 @@ public class Material {
 
     public Material(UUID id, UUID turmaId, UUID materiaId, TipoMaterial tipo,
                     String titulo, String url, UUID autorId, Instant agora) {
+        this(id, turmaId, materiaId, tipo, titulo, url, null, autorId, agora);
+    }
+
+    public Material(UUID id, UUID turmaId, UUID materiaId, TipoMaterial tipo,
+                    String titulo, String url, LocalDate dataAula, UUID autorId, Instant agora) {
+        this.dataAula = dataAula;
         this.id = id;
         this.turmaId = turmaId;
         this.materiaId = materiaId;
@@ -76,6 +92,10 @@ public class Material {
         this.autorId = autorId;
         this.atualizadoEm = agora;
         this.visivelTurma = true;
+    }
+
+    public LocalDate getDataAula() {
+        return dataAula;
     }
 
     public UUID getId() {

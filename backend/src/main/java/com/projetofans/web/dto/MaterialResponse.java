@@ -4,6 +4,7 @@ import com.projetofans.domain.Material;
 import com.projetofans.domain.TipoMaterial;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record MaterialResponse(
@@ -12,6 +13,7 @@ public record MaterialResponse(
         String titulo,
         String url,
         String arquivoRef,
+        LocalDate dataAula,
         UUID materiaId,
         AutoriaResponse autoria,
         int version,
@@ -25,6 +27,7 @@ public record MaterialResponse(
                 material.getTitulo(),
                 material.getUrl(),
                 material.getArquivoRef(),
+                material.getDataAula(),
                 material.getMateriaId(),
                 new AutoriaResponse(material.getAutorId(), autorNome,
                         material.getCriadoEm(), material.getAtualizadoEm()),
