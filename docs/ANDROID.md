@@ -53,7 +53,7 @@ Se a pasta `android/` já existir, pule o `cap add` e use `npx cap sync android`
 
 ---
 
-## O SDK do Android sumiu da máquina — 2026-09-02
+## O SDK do Android sumiu da máquina — 2026-09-02 · **RESOLVIDO no mesmo dia**
 
 `./gradlew assembleDebug` passou a falhar com **"SDK location not found"**. Não é configuração
 errada: o SDK não está mais aqui. Conferido — `%LOCALAPPDATA%\Android` não existe, `ANDROID_HOME` e
@@ -67,6 +67,30 @@ primeira junto.
 **Consequência:** o APK não pode ser regerado até isso voltar. O `app-debug.apk` de 01/09 continua
 válido e instalável, mas é anterior aos consertos de 02/09 — ou seja, ainda tem as abas que não
 recarregam e as duas telas que mentem.
+
+**Como foi resolvido (02/09, 15h):** instaladas as *command line tools* oficiais
+(`commandlinetools-win-16111833_latest.zip`, 147 MB, de `dl.google.com/android/repository`),
+extraídas em `%LOCALAPPDATA%\Android\Sdk\cmdline-tools\latest`, e daí:
+
+```
+android --no-metrics sdk install platform-tools "platforms;android-36" "build-tools;36.0.0"
+```
+
+Duas surpresas dessa versão: o `sdkmanager` foi substituído pelo CLI `android`, e `--licenses`
+não existe mais — a aceitação virou parte do próprio install. E o `--no-metrics` vem **antes** do
+subcomando, não depois; o CLI manda telemetria por padrão.
+
+O `local.properties` foi criado com `sdk.dir` apontando para o SDK. Ele é ignorado pelo git
+(`.gitignore:27`) porque é caminho de máquina — e é justamente ele que evita depender de
+`ANDROID_HOME`, que foi o que falhou aqui.
+
+Compilar agora é só:
+
+```
+cd app/android && JAVA_HOME="C:/Program Files/Zulu/zulu-25" ./gradlew assembleDebug
+```
+
+---
 
 **Para voltar a compilar:** abra o Android Studio → *More Actions* → *SDK Manager* e instale a
 plataforma que o projeto pede (veja `compileSdkVersion` em `android/variables.gradle`). Depois:
