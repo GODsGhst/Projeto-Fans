@@ -104,8 +104,8 @@ describe('NovoEventoPage', () => {
     expect(fixture.nativeElement.querySelector('.chips-pick'))
       .withContext('seletor vazio nao pode aparecer')
       .toBeNull();
-    expect(fixture.nativeElement.querySelector('.botao'))
-      .withContext('nao ha o que cadastrar sem materia')
+    expect(fixture.nativeElement.querySelector('button.botao'))
+      .withContext('nao ha o que cadastrar sem materia — e `button` porque a distincao real e essa')
       .toBeNull();
     expect(fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]')).not.toBeNull();
   });

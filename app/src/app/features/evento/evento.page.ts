@@ -115,7 +115,7 @@ import { materialVm } from '../material-vm';
           <!-- FORA do @if de materiais de proposito. Anexar e mais necessario
                quando nao ha nada anexado; escondido ali, o botao so aparecia para
                quem ja tinha resolvido o problema. -->
-          <a class="anexar" [routerLink]="['/tabs/eventos', id, 'anexar']">
+          <a class="botao botao--fantasma anexar" [routerLink]="['/tabs/eventos', id, 'anexar']">
             Anexar material
           </a>
 
@@ -203,22 +203,6 @@ import { materialVm } from '../material-vm';
       color: inherit;
     }
 
-    .anexar {
-      display: block;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 700;
-      padding: 13px;
-      border-radius: var(--r-md);
-      border: 1px solid var(--rule);
-      background: transparent;
-      color: var(--ink);
-      text-decoration: none;
-    }
-    .anexar:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
   `,
 })
 export class EventoPage {

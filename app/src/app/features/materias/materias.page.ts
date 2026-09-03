@@ -33,7 +33,7 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
         <!-- Antes disto o estado vazio dizia "qualquer pessoa da turma pode
              cadastrar" e nao oferecia como. Convite sem porta e crueldade.
              Fica fora do @if de proposito: existe cheia e vazia. -->
-        <a class="add-botao" routerLink="/tabs/materias/nova">
+        <a class="botao" routerLink="/tabs/materias/nova">
           Adicionar matéria
         </a>
         @if (carregando()) {
@@ -62,28 +62,6 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
     </ion-content>
   `,
   styles: `
-    .add-botao {
-      display: block;
-      text-align: center;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      padding: 15px;
-      border-radius: var(--r-md);
-      background: var(--accent);
-      color: var(--accent-ink);
-      text-decoration: none;
-      box-shadow: var(--e2);
-      transition: transform 0.14s var(--mola);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .add-botao:active {
-      transform: scale(0.985);
-    }
-    .add-botao:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
-    }
 
     .linha {
       display: flex;

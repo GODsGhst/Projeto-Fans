@@ -68,7 +68,7 @@ export interface MinhaTurma {
             <!-- Compartilhar vem primeiro porque e o que a pessoa quer fazer:
                  mandar o convite no grupo da turma. Copiar so serve para quem ja
                  esta com o app aberto e vai colar em algum lugar. -->
-            <button class="botao-compartilhar" type="button" (click)="compartilhar(t)">
+            <button class="botao" type="button" (click)="compartilhar(t)">
               Compartilhar convite
             </button>
             <button class="botao-copiar" type="button" (click)="copiar(t.codigoConvite)">
@@ -95,7 +95,7 @@ export interface MinhaTurma {
           }
 
           @if (souLider()) {
-            <a class="passar" routerLink="/tabs/turma/transferir">Passar a liderança</a>
+            <a class="botao botao--fantasma" routerLink="/tabs/turma/transferir">Passar a liderança</a>
           }
 
           <p class="cache-aviso">
@@ -107,23 +107,6 @@ export interface MinhaTurma {
     </ion-content>
   `,
   styles: `
-    .passar {
-      display: block;
-      text-align: center;
-      font: inherit;
-      font-size: 14px;
-      font-weight: 700;
-      padding: 12px;
-      border-radius: var(--r-md);
-      border: 1px solid var(--rule);
-      background: transparent;
-      color: var(--ink);
-      text-decoration: none;
-    }
-    .passar:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
 
     .bloco-codigo {
       display: flex;
@@ -152,27 +135,6 @@ export interface MinhaTurma {
       text-align: center;
     }
 
-    .botao-compartilhar {
-      font: inherit;
-      font-size: 14.5px;
-      font-weight: 700;
-      cursor: pointer;
-      padding: 12px;
-      border-radius: var(--r-md);
-      border: 0;
-      background: var(--accent);
-      color: var(--accent-ink);
-      box-shadow: var(--e2);
-      transition: transform 0.14s var(--mola);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .botao-compartilhar:active {
-      transform: scale(0.98);
-    }
-    .botao-compartilhar:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
-    }
 
     .botao-copiar {
       font: inherit;

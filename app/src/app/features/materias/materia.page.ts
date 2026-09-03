@@ -67,7 +67,7 @@ import { materialVm } from '../material-vm';
         <!-- Fora dos @if de proposito: existe com a materia cheia e vazia. O
              estado vazio dizia "assim que alguem da turma adicionar" e nao
              oferecia como — convite sem porta. -->
-        <a class="add-botao" [routerLink]="['/tabs/materias', id, 'material', 'novo']">
+        <a class="botao" [routerLink]="['/tabs/materias', id, 'material', 'novo']">
           Adicionar material
         </a>
 
@@ -172,28 +172,6 @@ import { materialVm } from '../material-vm';
       color: inherit;
     }
 
-    .add-botao {
-      display: block;
-      text-align: center;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      padding: 15px;
-      border-radius: var(--r-md);
-      background: var(--accent);
-      color: var(--accent-ink);
-      text-decoration: none;
-      box-shadow: var(--e2);
-      transition: transform 0.14s var(--mola);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .add-botao:active {
-      transform: scale(0.985);
-    }
-    .add-botao:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
-    }
 
   `,
 })

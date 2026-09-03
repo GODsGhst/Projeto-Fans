@@ -87,7 +87,7 @@ import { mensagemDeErro } from '../auth/erro';
             <b>Esta matéria ainda não tem material.</b>
             <span>Adicione o material na matéria e volte aqui para anexá-lo a esta prova.</span>
           </div>
-          <a class="add-botao" [routerLink]="['/tabs/materias', materiaId(), 'material', 'novo']">
+          <a class="botao" [routerLink]="['/tabs/materias', materiaId(), 'material', 'novo']">
             Adicionar material
           </a>
         }
@@ -156,18 +156,6 @@ import { mensagemDeErro } from '../auth/erro';
       color: var(--ink-3);
     }
 
-    .add-botao {
-      display: block;
-      text-align: center;
-      font-size: 15px;
-      font-weight: 700;
-      padding: 15px;
-      border-radius: var(--r-md);
-      background: var(--accent);
-      color: var(--accent-ink);
-      text-decoration: none;
-      box-shadow: var(--e2);
-    }
   `,
 })
 export class AnexarMaterialPage {

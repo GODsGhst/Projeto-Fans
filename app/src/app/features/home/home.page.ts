@@ -110,36 +110,13 @@ export interface AulaVm {
         <!-- Botao, nao mais a linha discreta. Adicionar prova e a acao principal
              de quem abre o app com algo para registrar; um link fino do tamanho
              de um rodape faz a pessoa procurar por ele. -->
-        <a class="add-botao" routerLink="/tabs/eventos/novo">
+        <a class="botao" routerLink="/tabs/eventos/novo">
           Adicionar prova ou entrega
         </a>
       </div>
     </ion-content>
   `,
   styles: `
-    .add-botao {
-      display: block;
-      text-align: center;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      padding: 15px;
-      margin-top: 4px;
-      border-radius: var(--r-md);
-      background: var(--accent);
-      color: var(--accent-ink);
-      text-decoration: none;
-      box-shadow: var(--e2);
-      transition: transform 0.14s var(--mola);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .add-botao:active {
-      transform: scale(0.985);
-    }
-    .add-botao:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
-    }
   `,
 })
 export class HomePage {

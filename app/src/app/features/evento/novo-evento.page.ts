@@ -71,11 +71,11 @@ import { mensagemDeErro } from '../auth/erro';
               primeira e volte aqui.
             </span>
           </div>
-          <!-- Classe botao-vazio, nao botao: o teste exige que NAO exista botao
-               de cadastrar quando nao ha materia, e ele tem razao — nao ha o que
-               cadastrar. Este link leva embora da tela, nao envia nada dela.
-               Visualmente e o mesmo; semanticamente e o oposto. -->
-          <a class="botao-vazio" routerLink="/tabs/materias/nova">Adicionar matéria</a>
+          <!-- Elemento a, nao button: o teste exige que nao exista BOTAO de cadastrar
+               quando nao ha materia, e ele tem razao — nao ha o que cadastrar.
+               Este elemento leva embora da tela; nao envia nada dela. Aparencia
+               igual, papel oposto, e a tag e o que carrega essa diferenca. -->
+          <a class="botao" routerLink="/tabs/materias/nova">Adicionar matéria</a>
         } @else {
           @if (erro(); as e) {
             <p class="pf-erro" role="alert">{{ e }}</p>
@@ -176,18 +176,6 @@ import { mensagemDeErro } from '../auth/erro';
     </ion-content>
   `,
   styles: `
-    .botao-vazio {
-      display: block;
-      text-align: center;
-      font-size: 14.5px;
-      font-weight: 700;
-      padding: 14px;
-      border-radius: var(--r-md);
-      background: var(--accent);
-      color: var(--accent-ink);
-      text-decoration: none;
-      box-shadow: var(--e2);
-    }
 
     .opcional {
       font-weight: 400;

@@ -118,3 +118,60 @@
   text-decoration: none;
   color: inherit;
 }
+
+/* ---------------------------------------------------------------------------
+   O botão de ação, largura cheia.
+
+   Vivia em `features/auth/auth.scss` e sete telas fora de auth copiaram o
+   desenho com outro nome — `.add-botao`, `.botao-vazio`, `.anexar`, `.passar`,
+   `.botao-compartilhar`. Sete cópias do mesmo botão divergem na primeira vez
+   que alguém ajusta o raio ou o peso numa delas, e o CSS embutido da tela da
+   turma chegou a estourar o orçamento do build por causa disso.
+
+   `<a>` e `<button>` usam a mesma classe de propósito: quem olha a tela não
+   distingue "leva para outro lugar" de "faz algo aqui" pela aparência, e não
+   deveria — o rótulo é que diz.
+--------------------------------------------------------------------------- */
+.botao {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: transform 0.14s var(--mola);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.botao:active {
+  transform: scale(0.975);
+}
+
+.botao:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Botão presente e morto mente sobre o que o app faz; então ele aparece
+   explicitamente indisponível em vez de sumir. */
+.botao[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.botao[disabled]:active {
+  transform: none;
+}
+
+.botao--fantasma {
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+}

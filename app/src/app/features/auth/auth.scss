@@ -78,39 +78,8 @@
   text-transform: uppercase;
 }
 
-.botao {
-  width: 100%;
-  padding: 14px;
-  font: inherit;
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--accent-ink);
-  background: var(--accent);
-  border: 0;
-  border-radius: var(--r-md);
-  cursor: pointer;
-}
-
-.botao:active {
-  transform: scale(0.975);
-}
-
-/* Google fica desligado ate existir o Client ID (B1). Botao presente e morto
-   mente sobre o que o app faz; entao ele aparece explicitamente indisponivel. */
-.botao[disabled] {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.botao[disabled]:active {
-  transform: none;
-}
-
-.botao--fantasma {
-  color: var(--ink);
-  background: transparent;
-  border: 1px solid var(--rule);
-}
+/* `.botao` e `.botao--fantasma` moraram aqui e subiram para o global.scss:
+   sete telas fora de auth precisavam deles e copiavam o desenho. */
 
 .link-txt {
   align-self: center;
