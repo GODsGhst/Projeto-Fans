@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -43,8 +46,12 @@ describe('convite', () => {
     // recebe tem de voltar e perguntar como entra.
     const m = convite({ nome: 'Fans 2026.2', codigoConvite: '93EB9244' });
 
-    expect(m.text).withContext('sem o codigo nao convida ninguem').toContain('93EB9244');
-    expect(m.text).withContext('e precisa dizer de que turma se trata').toContain('Fans 2026.2');
+    expect(m.text)
+      .withContext('sem o codigo nao convida ninguem')
+      .toContain('93EB9244');
+    expect(m.text)
+      .withContext('e precisa dizer de que turma se trata')
+      .toContain('Fans 2026.2');
     expect(m.title).toContain('Fans 2026.2');
   });
 });
@@ -85,8 +92,8 @@ describe('TurmaPage', () => {
   }
 
   function textos(seletor: string): string[] {
-    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map((e) =>
-      (e as HTMLElement).textContent!.trim(),
+    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map(
+      (e) => (e as HTMLElement).textContent!.trim(),
     );
   }
 
@@ -96,7 +103,9 @@ describe('TurmaPage', () => {
     await abrir((r) => r.flush(TURMA));
 
     expect(
-      fixture.nativeElement.querySelector('[data-testid="codigo-convite"]')!.textContent!.trim(),
+      fixture.nativeElement
+        .querySelector('[data-testid="codigo-convite"]')!
+        .textContent!.trim(),
     ).toBe('93EB9244');
     expect(textos('button')).toContain('Copiar código');
   });
@@ -112,11 +121,15 @@ describe('TurmaPage', () => {
   it('falha ao carregar NAO vira turma vazia', async () => {
     await abrir((r) => r.error(new ProgressEvent('error')));
 
-    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain('Sem conexão');
+    expect(
+      fixture.nativeElement.querySelector('.pf-aviso')!.textContent,
+    ).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('.membro'))
       .withContext('sem resposta nao ha lista de membros a mostrar')
       .toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="codigo-convite"]'))
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="codigo-convite"]'),
+    )
       .withContext('codigo inventado seria pior que codigo nenhum')
       .toBeNull();
   });
@@ -130,16 +143,22 @@ describe('TurmaPage', () => {
     await abrir((r) => r.flush(TURMA));
 
     const botao = (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
     ).find((b) => b.textContent!.includes('Compartilhar'));
-    expect(botao).withContext('sem botao de compartilhar nao ha como convidar').toBeDefined();
+    expect(botao)
+      .withContext('sem botao de compartilhar nao ha como convidar')
+      .toBeDefined();
 
     botao!.click();
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(copia)
-      .withContext('falhar o compartilhamento tem de deixar a pessoa com o codigo mesmo assim')
+      .withContext(
+        'falhar o compartilhamento tem de deixar a pessoa com o codigo mesmo assim',
+      )
       .toHaveBeenCalledWith('93EB9244');
     expect(fixture.nativeElement.textContent as string).toContain('Copiado');
   });
@@ -150,12 +169,16 @@ describe('TurmaPage', () => {
     // desabilitado: cinza convida a perguntar "por que não posso?", e a resposta
     // já está escrita logo abaixo.
     await abrir((r) => r.flush(TURMA));
-    expect(fixture.nativeElement.querySelector('a[href="/tabs/turma/transferir"]'))
+    expect(
+      fixture.nativeElement.querySelector('a[href="/tabs/turma/transferir"]'),
+    )
       .withContext('sou o LIDER da fixture — a porta tem de estar aqui')
       .not.toBeNull();
 
     eu.set({ id: 'u2', nome: 'Ana Beatriz', email: 'ana@exemplo.com' });
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('a[href="/tabs/turma/transferir"]')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/tabs/turma/transferir"]'),
+    ).toBeNull();
   });
 });

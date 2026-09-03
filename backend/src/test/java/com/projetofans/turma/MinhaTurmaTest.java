@@ -8,6 +8,7 @@ import com.projetofans.support.TesteDeApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -127,5 +129,57 @@ class MinhaTurmaTest extends TesteDeApi {
         membroDe(turma, "Carla", PapelMembro.ALUNO);
 
         assertThat(nomes(minha(aluno))).isEqualTo(nomes(minha(aluno)));
+    }
+
+    @Test
+    @DisplayName("o lider renomeia a turma e acerta o periodo — o codigo NAO muda")
+    void liderRenomeiaSemTrocarOCodigo() throws Exception {
+        // O periodo envelhece sozinho: no setimo periodo a turma ainda se
+        // chamava "Fans 2026.2" e nao havia como corrigir. Dado que envelhece e
+        // nao pode ser atualizado e pior que dado ausente, porque parece atual.
+        String codigoAntes = turma.getCodigoConvite();
+
+        MvcResult r = http.perform(patch("/api/v1/turmas/minha")
+                        .header("Authorization", bearer(lider))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Fans\",\"semestre\":\"2027.1\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode depois = json.readTree(r.getResponse().getContentAsString());
+
+        assertThat(depois.get("nome").asText()).isEqualTo("Fans");
+        assertThat(depois.get("semestre").asText()).isEqualTo("2027.1");
+        assertThat(depois.get("codigoConvite").asText())
+                .as("o codigo esta anotado no celular de todo mundo — troca-lo expulsaria a turma")
+                .isEqualTo(codigoAntes);
+    }
+
+    @Test
+    @DisplayName("aluno NAO renomeia a turma")
+    void alunoNaoRenomeia() throws Exception {
+        http.perform(patch("/api/v1/turmas/minha")
+                        .header("Authorization", bearer(aluno))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Outra coisa\",\"semestre\":\"2027.1\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("semestre em branco vira nulo — turma sem periodo continua valida")
+    void semestreEmBrancoViraNulo() throws Exception {
+        // Quem nao sabe o periodo nao deve inventar um. E o campo agora pode ser
+        // esvaziado: turma que mudou de periodo e ainda nao sabe o novo fica sem,
+        // em vez de ficar com o antigo mentindo.
+        MvcResult r = http.perform(patch("/api/v1/turmas/minha")
+                        .header("Authorization", bearer(lider))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Fans\",\"semestre\":\"  \"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode depois = json.readTree(r.getResponse().getContentAsString());
+
+        assertThat(depois.get("semestre") == null || depois.get("semestre").isNull())
+                .as("espaco em branco nao e um periodo")
+                .isTrue();
     }
 }

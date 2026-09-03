@@ -30,10 +30,21 @@ export class ApiService {
     return firstValueFrom(this.http.put<T>(this.base + rota, corpo ?? {}));
   }
 
-  /** PATCH exige `If-Match` com a `version`. Sem o header o backend devolve 428. */
-  patch<T>(rota: string, corpo: unknown, version: number): Promise<T> {
+  /**
+   * PATCH em registro versionado exige `If-Match`; sem o header o backend
+   * devolve 428.
+   *
+   * `version` é opcional porque nem todo recurso tem bloqueio otimista: a turma
+   * não tem coluna `version`, e mandar `If-Match` nela seria inventar uma
+   * concorrência que o servidor não valida. Evento, material e matéria têm — e
+   * lá o parâmetro continua obrigatório na prática, porque o backend recusa sem
+   * ele.
+   */
+  patch<T>(rota: string, corpo: unknown, version?: number): Promise<T> {
     return firstValueFrom(
-      this.http.patch<T>(this.base + rota, corpo, { headers: ifMatch(version) }),
+      this.http.patch<T>(this.base + rota, corpo, {
+        headers: version === undefined ? {} : ifMatch(version),
+      }),
     );
   }
 

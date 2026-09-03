@@ -1,7 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Share } from '@capacitor/share';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 
 import { TurmaRepository } from '../../data/turma.repository';
 import type { MinhaTurma } from '../../data/turma.repository';
@@ -45,16 +56,28 @@ import { mensagemDeErro } from '../auth/erro';
         }
 
         @if (turma(); as t) {
+          <!-- O periodo so aparece se alguem informou. Turma sem periodo e uma
+               turma; turma com o periodo do ano passado e uma mentira. -->
+          @if (t.semestre) {
+            <p class="pf-rotulo">período · {{ t.semestre }}</p>
+          }
+
           <p class="pf-rotulo">código de convite</p>
           <div class="bloco-codigo">
-            <span class="valor" data-testid="codigo-convite">{{ t.codigoConvite }}</span>
+            <span class="valor" data-testid="codigo-convite">{{
+              t.codigoConvite
+            }}</span>
             <!-- Compartilhar vem primeiro porque e o que a pessoa quer fazer:
                  mandar o convite no grupo da turma. Copiar so serve para quem ja
                  esta com o app aberto e vai colar em algum lugar. -->
             <button class="botao" type="button" (click)="compartilhar(t)">
               Compartilhar convite
             </button>
-            <button class="botao-copiar" type="button" (click)="copiar(t.codigoConvite)">
+            <button
+              class="botao-copiar"
+              type="button"
+              (click)="copiar(t.codigoConvite)"
+            >
               {{ copiado() ? 'Copiado ✓' : 'Copiar código' }}
             </button>
             <span class="explica">
@@ -78,19 +101,23 @@ import { mensagemDeErro } from '../auth/erro';
           }
 
           @if (souLider()) {
-            <a class="botao botao--fantasma" routerLink="/tabs/turma/transferir">Passar a liderança</a>
+            <a class="botao botao--fantasma" routerLink="/tabs/turma/editar"
+              >Editar turma</a
+            >
+            <a class="botao botao--fantasma" routerLink="/tabs/turma/transferir"
+              >Passar a liderança</a
+            >
           }
 
           <p class="cache-aviso">
-            O líder não edita nem apaga registro de ninguém. Ele só oculta o que não devia estar
-            ali, e pode transferir a liderança.
+            O líder não edita nem apaga registro de ninguém. Ele só oculta o que
+            não devia estar ali, e pode transferir a liderança.
           </p>
         }
       </div>
     </ion-content>
   `,
   styles: `
-
     .bloco-codigo {
       display: flex;
       flex-direction: column;
@@ -117,7 +144,6 @@ import { mensagemDeErro } from '../auth/erro';
       color: var(--ink-3);
       text-align: center;
     }
-
 
     .botao-copiar {
       font: inherit;

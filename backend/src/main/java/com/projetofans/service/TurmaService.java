@@ -4,6 +4,7 @@ import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
 import com.projetofans.domain.Turma;
 import com.projetofans.domain.Usuario;
+import com.projetofans.erro.NaoLiderException;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.TurmaRepository;
@@ -11,6 +12,7 @@ import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.MembroDaTurmaResponse;
+import com.projetofans.web.dto.AtualizarTurmaRequest;
 import com.projetofans.web.dto.MinhaTurmaResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +61,28 @@ public class TurmaService {
      * 404 e nao 403 de proposito — 403 confirmaria que a turma existe, e o codigo
      * de convite e justamente o que nao pode vazar para quem esta de fora.
      */
+    /**
+     * Renomear a turma e acertar o periodo. So o lider.
+     *
+     * Existe porque o periodo envelhece sozinho: no setimo periodo a turma ainda
+     * se chamava "Fans 2026.2" e nao havia como corrigir. O codigo de convite
+     * fica de fora — ele identifica a turma e esta anotado no celular de todo
+     * mundo.
+     */
+    @Transactional
+    public MinhaTurmaResponse atualizar(UsuarioAtual usuario, AtualizarTurmaRequest req) {
+        UUID turmaId = escopo.turmaDoUsuario(usuario.usuarioId());
+        Membro eu = membros.findByUsuarioIdAndTurmaId(usuario.usuarioId(), turmaId)
+                .orElseThrow(AcessoNegadoException::new);
+        if (eu.getPapel() != PapelMembro.LIDER) {
+            throw new NaoLiderException();
+        }
+        Turma turma = turmas.findById(turmaId).orElseThrow(AcessoNegadoException::new);
+        turma.renomear(req.nome(), req.semestre(), Instant.now());
+        turmas.saveAndFlush(turma);
+        return minha(usuario);
+    }
+
     @Transactional(readOnly = true)
     public MinhaTurmaResponse minha(UsuarioAtual usuario) {
         UUID turmaId = escopo.turmaDoUsuario(usuario.usuarioId());

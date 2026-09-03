@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -18,9 +21,24 @@ const TURMA = {
   semestre: '2026.2',
   codigoConvite: '93EB9244',
   membros: [
-    { usuarioId: 'u1', nome: 'Otávio', papel: 'LIDER', entrouEm: '2026-09-01T12:00:00Z' },
-    { usuarioId: 'u2', nome: 'Ana Beatriz', papel: 'ALUNO', entrouEm: '2026-09-01T13:00:00Z' },
-    { usuarioId: 'u3', nome: 'Bruno', papel: 'ALUNO', entrouEm: '2026-09-01T14:00:00Z' },
+    {
+      usuarioId: 'u1',
+      nome: 'Otávio',
+      papel: 'LIDER',
+      entrouEm: '2026-09-01T12:00:00Z',
+    },
+    {
+      usuarioId: 'u2',
+      nome: 'Ana Beatriz',
+      papel: 'ALUNO',
+      entrouEm: '2026-09-01T13:00:00Z',
+    },
+    {
+      usuarioId: 'u3',
+      nome: 'Bruno',
+      papel: 'ALUNO',
+      entrouEm: '2026-09-01T14:00:00Z',
+    },
   ],
 };
 
@@ -90,10 +108,16 @@ describe('TransferirPage', () => {
     fixture.detectChanges();
 
     (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.includes('Passar a liderança'))!.click();
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.includes('Passar a liderança'))!
+      .click();
 
-    const req = backend.expectOne(`${environment.apiUrl}/turmas/lideranca/transferir`);
+    const req = backend.expectOne(
+      `${environment.apiUrl}/turmas/lideranca/transferir`,
+    );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ novoLiderUsuarioId: 'u2' });
     req.flush(null);
@@ -118,12 +142,19 @@ describe('TransferirPage', () => {
     pessoas()[0].click();
     fixture.detectChanges();
     (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.includes('Passar a liderança'))!.click();
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.includes('Passar a liderança'))!
+      .click();
 
     backend
       .expectOne(`${environment.apiUrl}/turmas/lideranca/transferir`)
-      .flush({ detail: 'Servidor fora do ar.' }, { status: 500, statusText: 'Server Error' });
+      .flush(
+        { detail: 'Servidor fora do ar.' },
+        { status: 500, statusText: 'Server Error' },
+      );
     await fixture.whenStable();
     fixture.detectChanges();
 

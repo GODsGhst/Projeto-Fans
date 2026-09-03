@@ -14,7 +14,7 @@ export interface MembroDaTurma {
 export interface MinhaTurma {
   id: string;
   nome: string;
-  semestre: string;
+  semestre: string | null;
   codigoConvite: string;
   membros: MembroDaTurma[];
 }
@@ -52,6 +52,17 @@ export class TurmaRepository {
     }
     return t.membros.some((m) => m.usuarioId === eu.id && m.papel === 'LIDER');
   });
+
+  /**
+   * Renomear a turma e acertar o período. Só o líder.
+   *
+   * O código de convite NÃO muda junto: ele identifica a turma e está anotado no
+   * celular de todo mundo. Trocá-lo na virada de semestre expulsaria a turma
+   * inteira do próprio grupo.
+   */
+  async renomear(nome: string, semestre: string | null): Promise<void> {
+    this.turma.set(await this.api.patch<MinhaTurma>('/turmas/minha', { nome, semestre }));
+  }
 
   async carregar(): Promise<void> {
     this.carregando.set(true);

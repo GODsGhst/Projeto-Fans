@@ -10,7 +10,7 @@ import { mensagemDeErro } from './erro';
 interface TurmaCriada {
   id: string;
   nome: string;
-  semestre: string;
+  semestre: string | null;
   codigoConvite: string;
 }
 
@@ -109,7 +109,7 @@ interface TurmaCriada {
               placeholder="como a turma se chama"
               aria-label="Nome da turma" />
 
-            <p class="rot-campo">semestre</p>
+            <p class="rot-campo">semestre <span class="opcional">— opcional</span></p>
             <input
               #semestre
               class="campo--linha"
@@ -191,14 +191,17 @@ export class EntrarTurmaPage {
   }
 
   protected async criar(nome: string, semestre: string): Promise<void> {
-    if (nome.trim() === '' || semestre.trim() === '') {
-      this.erro.set('Preencha o nome da turma e o semestre.');
+    if (nome.trim() === '') {
+      this.erro.set('Dê um nome à turma.');
       return;
     }
     await this.tentar(async () => {
       const turma = await this.api.post<TurmaCriada>('/turmas', {
         nome: nome.trim(),
-        semestre: semestre.trim(),
+        // Opcional e anulável: a turma é o grupo de pessoas, não o semestre.
+        // Quem cria nem sempre sabe o período, e obrigar faz inventar — e o
+        // valor inventado envelhece sem ninguém poder corrigir.
+        semestre: semestre.trim() === '' ? null : semestre.trim(),
       });
       // Registrar o vínculo ANTES de mostrar o código: sem isto a guarda ainda
       // acha que a pessoa não tem turma e a devolve para cá ao tocar em Continuar.

@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonBackButton,
@@ -39,7 +45,14 @@ import { mensagemDeErro } from '../auth/erro';
   selector: 'app-transferir',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonBackButton,
+    IonContent,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -62,8 +75,8 @@ import { mensagemDeErro } from '../auth/erro';
           <div class="pf-vazio">
             <b>Isto é só o líder que faz.</b>
             <span>
-              Quem passa a liderança é quem a tem. Se precisar do cargo, peça a quem está com
-              ele — a troca é de uma pessoa para outra, sempre.
+              Quem passa a liderança é quem a tem. Se precisar do cargo, peça a
+              quem está com ele — a troca é de uma pessoa para outra, sempre.
             </span>
           </div>
         }
@@ -73,22 +86,36 @@ import { mensagemDeErro } from '../auth/erro';
             <div class="alerta" role="status">
               <b>Passar a liderança para {{ pessoa.nome }}?</b>
               <span>
-                {{ pessoa.nome }} passa a poder ocultar registro impróprio e a passar a
-                liderança adiante. <b>Você deixa de ser líder na hora</b> — para voltar, só se
+                {{ pessoa.nome }} passa a poder ocultar registro impróprio e a
+                passar a liderança adiante.
+                <b>Você deixa de ser líder na hora</b> — para voltar, só se
                 {{ pessoa.nome }} devolver.
               </span>
             </div>
 
-            <button class="botao" type="button" [disabled]="enviando()" (click)="confirmar()">
+            <button
+              class="botao"
+              type="button"
+              [disabled]="enviando()"
+              (click)="confirmar()"
+            >
               {{ enviando() ? 'Passando…' : 'Passar a liderança' }}
             </button>
-            <button class="botao botao--fantasma" type="button" (click)="escolhidoId.set(null)">
+            <button
+              class="botao botao--fantasma"
+              type="button"
+              (click)="escolhidoId.set(null)"
+            >
               Escolher outra pessoa
             </button>
           } @else {
             <p class="pf-rotulo">para quem</p>
             @for (m of candidatos(); track m.usuarioId) {
-              <button class="candidato" type="button" (click)="escolhidoId.set(m.usuarioId)">
+              <button
+                class="candidato"
+                type="button"
+                (click)="escolhidoId.set(m.usuarioId)"
+              >
                 <span class="inicial">{{ m.inicial }}</span>
                 <span class="quem">
                   <span class="nome">{{ m.nome }}</span>
@@ -102,15 +129,15 @@ import { mensagemDeErro } from '../auth/erro';
               <div class="pf-vazio">
                 <b>Não há para quem passar.</b>
                 <span>
-                  Você é a única pessoa na turma. Quando alguém entrar com o código, o nome
-                  aparece aqui.
+                  Você é a única pessoa na turma. Quando alguém entrar com o
+                  código, o nome aparece aqui.
                 </span>
               </div>
             }
 
             <p class="cache-aviso">
-              A autoria não muda de dono junto com o cargo: tudo o que você cadastrou continua
-              seu depois de passar a liderança.
+              A autoria não muda de dono junto com o cargo: tudo o que você
+              cadastrou continua seu depois de passar a liderança.
             </p>
           }
         }
@@ -206,7 +233,9 @@ export class TransferirPage {
 
   protected readonly escolhido = computed(() => {
     const id = this.escolhidoId();
-    return id === null ? null : (this.candidatos().find((c) => c.usuarioId === id) ?? null);
+    return id === null
+      ? null
+      : (this.candidatos().find((c) => c.usuarioId === id) ?? null);
   });
 
   constructor() {

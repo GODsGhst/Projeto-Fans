@@ -2,6 +2,7 @@ package com.projetofans.web.controller;
 
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.service.TurmaService;
+import com.projetofans.web.dto.AtualizarTurmaRequest;
 import com.projetofans.web.dto.CriarTurmaRequest;
 import com.projetofans.web.dto.EntrarNaTurmaRequest;
 import com.projetofans.web.dto.MembroDto;
@@ -10,6 +11,7 @@ import com.projetofans.web.dto.TurmaDto;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +33,13 @@ public class TurmaController {
      * Antes disto o codigo so existia na resposta do POST acima — quem fechava o
      * app naquela tela nunca mais o via. Quem nao e membro leva 404, nunca 403.
      */
+    /** So o lider renomeia. O codigo de convite nao muda junto. */
+    @PatchMapping("/minha")
+    public MinhaTurmaResponse atualizar(@AuthenticationPrincipal UsuarioAtual eu,
+                                        @Valid @RequestBody AtualizarTurmaRequest pedido) {
+        return turmas.atualizar(eu, pedido);
+    }
+
     @GetMapping("/minha")
     public MinhaTurmaResponse minha(@AuthenticationPrincipal UsuarioAtual eu) {
         return turmas.minha(eu);
