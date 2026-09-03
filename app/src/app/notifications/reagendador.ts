@@ -87,7 +87,11 @@ function daTurma(e: EventoAgendavel): boolean {
 }
 
 /** Instante de `horaVespera` no dia anterior a `data` (ISO `AAAA-MM-DD`). */
-function vespera(data: string, horaVespera: string, timezone: string): Date | null {
+function vespera(
+  data: string,
+  horaVespera: string,
+  timezone: string,
+): Date | null {
   const [ano, mes, dia] = data.split('-').map(Number);
   const [h, min] = horaVespera.split(':').map(Number);
   if ([ano, mes, dia, h, min].some((n) => n === undefined || Number.isNaN(n))) {

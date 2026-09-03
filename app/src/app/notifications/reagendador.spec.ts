@@ -53,7 +53,12 @@ describe('calcularAgendamentos', () => {
     // o evento, e o teste da virada de mes acusava a funcao de um erro que era do
     // teste.
     const antesDaVirada = new Date('2026-08-30T12:00:00Z');
-    const [b] = calcularAgendamentos([evento({ data: '2026-09-01' })], antesDaVirada, '19:00', SP);
+    const [b] = calcularAgendamentos(
+      [evento({ data: '2026-09-01' })],
+      antesDaVirada,
+      '19:00',
+      SP,
+    );
     expect(b.dispararEm.toISOString()).toBe('2026-08-31T22:00:00.000Z');
   });
 
@@ -68,14 +73,26 @@ describe('calcularAgendamentos', () => {
     // 06:00 em Sao Paulo do proprio dia do evento. A vespera foi ontem as 19h.
     const agora = new Date('2026-09-10T09:00:00Z');
 
-    expect(calcularAgendamentos([evento({ data: '2026-09-10' })], agora, '19:00', SP)).toEqual([]);
+    expect(
+      calcularAgendamentos(
+        [evento({ data: '2026-09-10' })],
+        agora,
+        '19:00',
+        SP,
+      ),
+    ).toEqual([]);
   });
 
   it('evento de amanha agenda para hoje 19h', () => {
     // 08:00 em Sao Paulo do dia 10; evento no dia 11.
     const agora = new Date('2026-09-10T11:00:00Z');
 
-    const [a] = calcularAgendamentos([evento({ data: '2026-09-11' })], agora, '19:00', SP);
+    const [a] = calcularAgendamentos(
+      [evento({ data: '2026-09-11' })],
+      agora,
+      '19:00',
+      SP,
+    );
 
     expect(a.dispararEm.toISOString()).toBe('2026-09-10T22:00:00.000Z');
   });
@@ -87,14 +104,19 @@ describe('calcularAgendamentos', () => {
     const agora = new Date('2026-09-01T15:00:00Z');
 
     const [semHora, comHora] = calcularAgendamentos(
-      [evento({ eventoId: 'sem', hora: null }), evento({ eventoId: 'com', hora: '08:00' })],
+      [
+        evento({ eventoId: 'sem', hora: null }),
+        evento({ eventoId: 'com', hora: '08:00' }),
+      ],
       agora,
       '19:00',
       SP,
     );
 
     expect(semHora.dispararEm.toISOString()).toBe('2026-09-09T22:00:00.000Z');
-    expect(comHora.dispararEm.toISOString()).toBe(semHora.dispararEm.toISOString());
+    expect(comHora.dispararEm.toISOString()).toBe(
+      semHora.dispararEm.toISOString(),
+    );
   });
 
   it('evento oculto nao gera agendamento', () => {
@@ -104,7 +126,12 @@ describe('calcularAgendamentos', () => {
     const agora = new Date('2026-09-01T15:00:00Z');
 
     expect(
-      calcularAgendamentos([evento({ visivelTurma: false })], agora, '19:00', SP),
+      calcularAgendamentos(
+        [evento({ visivelTurma: false })],
+        agora,
+        '19:00',
+        SP,
+      ),
     ).toEqual([]);
     expect(
       calcularAgendamentos(

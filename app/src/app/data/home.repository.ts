@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { ErroApi } from '../core/http-error.interceptor';
 import { StorageService } from '../core/storage.service';
+import { NotificacoesService } from '../notifications/notificacoes.service';
 import type { ItemHome } from './models';
 
 /**
@@ -17,6 +18,7 @@ import type { ItemHome } from './models';
 export class HomeRepository {
   private readonly api = inject(ApiService);
   private readonly storage = inject(StorageService);
+  private readonly notificacoes = inject(NotificacoesService);
 
   readonly itens = signal<ItemHome[]>([]);
   readonly carregando = signal(false);
@@ -42,6 +44,17 @@ export class HomeRepository {
       this.offline.set(false);
       this.ultimoSync.set(null);
       await this.storage.mesclar({ eventos: doServidor });
+      // Aqui, e so aqui, porque e o unico ponto em que a lista completa e
+      // recem-vinda do servidor esta na mao. Reagendar a partir do snapshot em
+      // disco ressuscitaria aviso de prova que a turma ja tirou do ar.
+      //
+      // Nao segura o `carregar`: a tela nao espera o sistema operacional
+      // responder sobre permissao para mostrar as provas.
+      void this.notificacoes
+        .sincronizar(doServidor)
+        .catch((erro: unknown) =>
+          console.error('[home] falha ao reagendar avisos', erro),
+        );
     } catch (e) {
       await this.degradar(e);
     } finally {
@@ -75,7 +88,11 @@ export class HomeRepository {
       return;
     }
     const snapshot = await this.storage.ler();
-    if (this.servidorRespondeu || snapshot === null || snapshot.eventos.length === 0) {
+    if (
+      this.servidorRespondeu ||
+      snapshot === null ||
+      snapshot.eventos.length === 0
+    ) {
       return;
     }
     this.itens.set(snapshot.eventos);

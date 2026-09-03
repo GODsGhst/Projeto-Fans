@@ -119,7 +119,7 @@ const MINIMO = 8;
           type="button"
           [disabled]="enviando()"
           (click)="
-            salvar(tokenDoLink ?? token.value, senha.value, confirma.value)
+            salvar(tokenDoLink ?? tokenColado(), senha.value, confirma.value)
           "
         >
           {{ rotulo() }}
@@ -138,6 +138,12 @@ export class RedefinirPage {
   protected readonly tokenDoLink =
     inject(ActivatedRoute).snapshot.queryParamMap.get('token') || null;
 
+  /**
+   * O que a pessoa colou. Precisa ser signal e nao `#token.value`: a referencia
+   * de template so existe dentro do proprio `@if`, e o botao esta fora dele —
+   * o JIT do teste deixa passar, o AOT do build nao.
+   */
+  protected readonly tokenColado = signal('');
   protected readonly erro = signal<string | null>(null);
   protected readonly enviando = signal(false);
 
