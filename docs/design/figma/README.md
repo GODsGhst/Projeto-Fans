@@ -420,6 +420,73 @@ script diz qual marcador falhou; o conserto é o marcador aqui, não o desenho l
 JavaScript depois de tocar num dia, então não existe no HTML estático e não chega no import.
 Para ligá-lo, ele precisa primeiro ser desenhado.
 
+---
+
+## Desktop — set/2026
+
+O app é de celular; o desktop é secundário, para abrir e conferir num navegador.
+São as **mesmas 15 telas**, com outra moldura — não um produto diferente.
+
+### O que muda, e por quê
+
+- **Barra lateral no lugar das abas de baixo.** Abas coladas no rodapé existem
+  porque o polegar alcança ali. Num monitor a mão está no mouse e o rodapé é o
+  canto mais longe do olho.
+- **Coluna de conteúdo com teto de largura** (680px, 940 no Quadro e no
+  Calendário). O app é lista de cartões curtos; esticá-los por 1280px faz linha
+  de texto que o olho perde no meio.
+- **A turma no rodapé da lateral**, com o código. No celular ela está atrás do
+  Quadro porque não há onde; aqui há, e o código é o que se procura ao abrir no
+  computador para mandar no grupo.
+- **Calendário: mês à esquerda, dia à direita.** Ver o dia sem perder o mês de
+  vista é a única coisa que o desktop faz melhor que o celular neste app.
+
+Nada de painel de detalhe, tabela densa ou dashboard: seria inventar tela para
+preencher espaço.
+
+### Gerar
+
+```
+python docs/design/gerar-telas-desktop.py   # telas-desktop.html + telas-impressao.html
+python docs/design/gerar-pdf.py             # telas.pdf, uma tela por página
+```
+
+O desktop é **gerado** a partir de `telas-v3.html`, não escrito à mão: o corpo de
+cada tela é reaproveitado byte a byte e só a casca troca. Um arquivo escrito à
+mão seria uma segunda cópia de tudo, e as duas divergiriam na primeira mudança.
+
+### Quatro armadilhas que já custaram tempo aqui
+
+1. **Parte do mockup nasce por JavaScript** — a grade do calendário, o painel do
+   dia. Ler o HTML cru exporta um calendário **vazio, em silêncio**. Por isso
+   `render.py` roda o próprio script do mockup num Chrome sem interface antes de
+   exportar.
+2. **A tela entra com `opacity: 0`.** Numa exportação estática a animação congela
+   no primeiro quadro e o conteúdo sai invisível: saíram 15 páginas de PDF com a
+   moldura do celular e nada dentro. As exportações desligam animação.
+3. **`transform: scale()` não encolhe a caixa de layout**, só o desenho — cada
+   tela de desktop transbordava para uma segunda página em branco, 45 páginas em
+   vez de 30. Use `zoom`.
+4. **O marcador não pode viver na moldura.** "Meu quadro" e "Fans 2026.2" entraram
+   na barra lateral e passaram a existir em 12 quadros; o script achava a tela
+   errada. Marcador tem de ser texto do corpo. Hoje são `não listados · 1` e
+   `quem está aqui`.
+
+### O fluxo cobre os dois tamanhos
+
+`figma-fluxo.js` faz um passe por largura e **nunca cruza** celular com desktop —
+no modo de apresentação isso trocaria de aparelho no meio do caminho. Quatro
+pontos de partida: fluxo completo e só-as-abas, em cada tamanho.
+
+A identificação da tela virou **estrutural**: sobe até o artboard de primeiro
+nível e confere a largura. A regra antiga era métrica ("o ancestral mais externo
+com 390 de largura") e quebrou no dia em que passaram a existir duas larguras
+válidas — um invólucro de 390 sequestrava o quadro de desktop de 1280. Medida
+confunde quando há mais de um tamanho; posição na árvore não.
+
+Verificado contra o DOM, com os 30 quadros como filhos de primeiro nível igual ao
+Figma: **15/15 telas e 124/124 ligações resolvem**.
+
 ## Depois das telas
 
 O próximo passo do `LOG.md` continua valendo e não depende do Figma: converter o mockup

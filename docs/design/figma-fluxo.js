@@ -42,12 +42,15 @@ const MARCA_DA_TELA = {
   home: 'Sexta, 21 ago',
   cal: 'Agosto',
   materias: 'bd · b-204',
-  quadro: 'Meu quadro',
+  // NÃO use 'Meu quadro' nem 'Fans 2026.2': a barra lateral do desktop repete os
+  // dois em TODA tela, e o marcador passou a casar com 12 quadros em vez de um.
+  // O marcador tem de viver no corpo da tela, não na moldura.
+  quadro: 'não listados · 1',
   nota: 'Nova anotação',
   material: 'Enviar material',
   novaMateria: 'Nova matéria',
   novoEvento: 'O que vai cair',
-  turma: 'Fans 2026.2',
+  turma: 'quem está aqui',
   // "Passar a liderança" aparece DUAS vezes — é o título desta tela e o rótulo do
   // botão que leva até ela. Marcador tem de ser único, então uso o rótulo do
   // seletor de pessoa, que só existe aqui.
@@ -55,6 +58,15 @@ const MARCA_DA_TELA = {
   transferirOk: 'Ana Beatriz agora é a líder.',
 };
 
+/**
+ * As duas larguras de artboard. O mesmo script liga os dois tamanhos porque as
+ * telas são as mesmas — muda a moldura, não o fluxo.
+ *
+ * No desktop a navegação é a barra lateral, com os rótulos por extenso
+ * ("Calendário", "Meu quadro"); no celular são as abas de baixo, abreviadas
+ * porque quatro palavras não cabem em 390px. Os dois mapas estão em ABAS.
+ */
+const LARGURAS = [390, 1280];
 const LARGURA_DA_TELA = 390;
 // A barra de título e a de abas também têm 390 de largura. Sem uma altura
 // mínima, subir do texto até "o primeiro ancestral de 390" para na barra, e todo
@@ -78,21 +90,24 @@ function transicao(destinoId) {
 /**
  * Sobe do texto até o quadro da tela.
  *
- * Devolve o ancestral MAIS EXTERNO que serve, não o primeiro. O primeiro seria o
- * corpo da tela — e a barra de abas é IRMÃ dele, não filha. Parando ali, nenhuma
- * das 36 ligações de aba encontra o próprio botão, e o relatório culpa o rótulo
- * em vez da subida. Medido: com o critério antigo, 34 de 36 abas ficavam de fora.
+ * A regra é ESTRUTURAL, não métrica: sobe até o nó de primeiro nível — aquele
+ * cujo pai é a página (ou uma seção) — e confere se ele tem uma das larguras de
+ * artboard. No Figma todo artboard é de primeiro nível, então isso identifica a
+ * tela sem depender de altura.
+ *
+ * A versão anterior procurava "o ancestral mais externo com 390 de largura", e
+ * isso quebrou no dia em que passaram a existir duas larguras válidas: um
+ * invólucro de 390px em volta de um quadro de desktop de 1280 sequestrava o
+ * resultado, e as 62 ligações de desktop iam todas para o lugar errado. Medida
+ * confunde quando há mais de um tamanho; posição na árvore não.
  */
 function telaDe(no) {
   let atual = no;
-  let melhor = null;
-  while (atual && atual.type !== 'PAGE') {
-    if (Math.round(atual.width) === LARGURA_DA_TELA && atual.height >= ALTURA_MINIMA_DA_TELA) {
-      melhor = atual;
-    }
+  while (atual && atual.parent && atual.parent.type !== 'PAGE' && atual.parent.type !== 'SECTION') {
     atual = atual.parent;
   }
-  return melhor;
+  if (!atual) return null;
+  return LARGURAS.indexOf(Math.round(atual.width)) !== -1 ? atual : null;
 }
 
 const todosOsTextos = figma.currentPage.findAllWithCriteria({ types: ['TEXT'] });
@@ -103,10 +118,24 @@ const TELAS = {};
 const semTela = [];
 for (const chave of Object.keys(MARCA_DA_TELA)) {
   const marca = MARCA_DA_TELA[chave];
-  const texto = todosOsTextos.find((t) => t.characters.trim() === marca);
-  const tela = texto && telaDe(texto);
-  if (tela) TELAS[chave] = tela;
+  // TODAS as ocorrências, não a primeira: cada tela existe duas vezes no arquivo
+  // (celular e desktop) e ligar só uma deixaria metade do protótipo morto.
+  const achadas = [];
+  for (const t of todosOsTextos) {
+    if (t.characters.trim() !== marca) continue;
+    const tela = telaDe(t);
+    if (tela && achadas.indexOf(tela) === -1) achadas.push(tela);
+  }
+  if (achadas.length) TELAS[chave] = achadas;
   else semTela.push(chave + ' (procurei o texto "' + marca + '")');
+}
+
+/** A versão de uma tela com a mesma largura de `referencia`. */
+function mesmoTamanho(lista, referencia) {
+  if (!lista || !referencia) return null;
+  const alvo = Math.round(referencia.width);
+  for (const t of lista) if (Math.round(t.width) === alvo) return t;
+  return null;
 }
 
 /**
@@ -129,63 +158,99 @@ function botao(tela, rotulo) {
   return paiServe ? pai : texto;
 }
 
-const ABAS = [
-  ['Home', 'home'],
-  ['Cal', 'cal'],  // o rótulo desenhado é "Cal", não "Calendário"
-  ['Matérias', 'materias'],
-  ['Quadro', 'quadro'],
-];
+/**
+ * A navegação principal, por largura.
+ *
+ * No celular são as abas de baixo, com "Cal" abreviado porque quatro palavras
+ * não cabem em 390px. No desktop é a barra lateral, e lá cabem por extenso —
+ * abreviar sem precisar é hostil com quem lê. Os rótulos diferem, o destino não.
+ */
+const NAV = {
+  390: [['Home', 'home'], ['Cal', 'cal'], ['Matérias', 'materias'], ['Quadro', 'quadro']],
+  1280: [
+    ['Home', 'home'],
+    ['Calendário', 'cal'],
+    ['Matérias', 'materias'],
+    ['Meu quadro', 'quadro'],
+  ],
+};
 
-const COM_ABAS = [
+const COM_NAV = [
   'home', 'cal', 'materias', 'quadro',
   'nota', 'material', 'novaMateria', 'novoEvento', 'turma',
   'transferir', 'transferirOk',
 ];
 
+/** Ações que existem nos dois tamanhos: [tela de origem, rótulo, tela de destino]. */
+const ACOES = [
+  ['home', 'Cadastrar prova ou entrega', 'novoEvento'],
+  ['materias', 'Nova matéria', 'novaMateria'],
+  ['quadro', 'a turma', 'turma'],
+  ['materias', 'Enviar material', 'material'],
+  // Sem 'calendário -> nova anotação': esse botão é montado por JavaScript
+  // depois de tocar num dia. Ele existe no DOM renderizado, mas depende de um
+  // clique que o import não dá — se aparecer no arquivo, o script o liga.
+  ['cal', 'Anotar neste dia', 'nota'],
+
+  ['novaMateria', '←', 'materias'],
+  ['novoEvento', '←', 'home'],
+  ['turma', '←', 'quadro'],
+
+  ['turma', 'Passar a liderança', 'transferir'],
+  ['transferir', 'Ana Beatriz', 'transferirOk'],
+  ['transferir', '←', 'turma'],
+  ['transferirOk', 'Voltar para a turma', 'turma'],
+  ['transferirOk', '←', 'turma'],
+
+  ['login', 'Criar conta', 'cadastro'],
+  ['login', 'Esqueci', 'recuperar'],
+  ['login', 'Entrar', 'entrarTurma'],
+  ['cadastro', 'Criar conta', 'entrarTurma'],
+  ['entrarTurma', 'Entrar na turma', 'home'],
+];
+
+/** Telas sem seta desenhada: a tela inteira volta ao clique. */
+const VOLTA_INTEIRA = [['nota', 'cal'], ['material', 'materias']];
+
 const ligacoes = [];
 
-// A aba da tela atual aponta para ela mesma de propósito: tocar em "Home"
-// estando na Home não pode levar a lugar nenhum.
-for (const onde of COM_ABAS) {
-  for (const [rotulo, destino] of ABAS) {
-    ligacoes.push([botao(TELAS[onde], rotulo), TELAS[destino], onde + ' · aba ' + rotulo]);
+// Um passe por largura. Uma tela de celular NUNCA aponta para uma de desktop:
+// no modo de apresentação isso trocaria o aparelho no meio do fluxo.
+for (const largura of LARGURAS) {
+  const sufixo = largura === 390 ? ' [celular]' : ' [desktop]';
+  const nav = NAV[largura] || [];
+
+  const daLargura = (chave) => {
+    const lista = TELAS[chave];
+    if (!lista) return null;
+    for (const t of lista) if (Math.round(t.width) === largura) return t;
+    return null;
+  };
+
+  // A seção atual aponta para ela mesma de propósito: tocar em "Home" estando
+  // na Home não pode levar a lugar nenhum.
+  for (const onde of COM_NAV) {
+    for (const [rotulo, destino] of nav) {
+      ligacoes.push([
+        botao(daLargura(onde), rotulo),
+        daLargura(destino),
+        onde + ' · ' + rotulo + sufixo,
+      ]);
+    }
+  }
+
+  for (const [origem, rotulo, destino] of ACOES) {
+    ligacoes.push([
+      botao(daLargura(origem), rotulo),
+      daLargura(destino),
+      origem + ' -> ' + destino + sufixo,
+    ]);
+  }
+
+  for (const [origem, destino] of VOLTA_INTEIRA) {
+    ligacoes.push([daLargura(origem), daLargura(destino), origem + ' -> voltar' + sufixo]);
   }
 }
-
-ligacoes.push(
-  [botao(TELAS.home, 'Cadastrar prova ou entrega'), TELAS.novoEvento, 'home -> novo evento'],
-  [botao(TELAS.materias, 'Nova matéria'), TELAS.novaMateria, 'matérias -> nova matéria'],
-  [botao(TELAS.quadro, 'a turma'), TELAS.turma, 'quadro -> a turma'],
-  // Sem 'calendário -> nova anotação': no mockup esse botão é montado por
-  // JavaScript depois de tocar num dia, então ele não existe no HTML estático e
-  // não chega no import. Para ligá-lo, ele precisa primeiro ser desenhado.
-  [botao(TELAS.materias, 'Enviar material'), TELAS.material, 'matérias -> enviar material'],
-
-  // A seta de voltar das telas novas.
-  [botao(TELAS.novaMateria, '←'), TELAS.materias, 'nova matéria -> voltar'],
-  [botao(TELAS.novoEvento, '←'), TELAS.home, 'novo evento -> voltar'],
-  [botao(TELAS.turma, '←'), TELAS.quadro, 'a turma -> voltar'],
-
-  // Passar a liderança. O botão na tela da turma e o título da tela de destino
-  // têm o mesmo texto; a busca é restrita a cada tela, então não se confundem.
-  [botao(TELAS.turma, 'Passar a liderança'), TELAS.transferir, 'turma -> passar a liderança'],
-  [botao(TELAS.transferir, 'Ana Beatriz'), TELAS.transferirOk, 'escolher quem recebe'],
-  [botao(TELAS.transferir, '←'), TELAS.turma, 'passar a liderança -> voltar'],
-  [botao(TELAS.transferirOk, 'Voltar para a turma'), TELAS.turma, 'pronto -> turma'],
-  [botao(TELAS.transferirOk, '←'), TELAS.turma, 'pronto -> voltar'],
-
-  // Estas duas não têm seta desenhada: a tela inteira volta ao clique. Num
-  // protótipo, alvo largo demais é menos ruim que ficar preso.
-  [TELAS.nota, TELAS.cal, 'nova anotação -> voltar (tela toda)'],
-  [TELAS.material, TELAS.materias, 'enviar material -> voltar (tela toda)'],
-
-  // As telas de entrada, na ordem em que um aluno as vê de verdade.
-  [botao(TELAS.login, 'Criar conta'), TELAS.cadastro, 'login -> cadastro'],
-  [botao(TELAS.login, 'Esqueci'), TELAS.recuperar, 'login -> recuperar senha'],
-  [botao(TELAS.login, 'Entrar'), TELAS.entrarTurma, 'login -> entrar na turma'],
-  [botao(TELAS.cadastro, 'Criar conta'), TELAS.entrarTurma, 'cadastro -> entrar na turma'],
-  [botao(TELAS.entrarTurma, 'Entrar na turma'), TELAS.home, 'entrar na turma -> home'],
-);
 
 const ligados = [];
 const naoLigadas = [];
@@ -201,13 +266,29 @@ for (const [origem, destino, nome] of ligacoes) {
 // Sem ponto de partida a apresentação abre no que estiver selecionado. Dois
 // fluxos: o completo, para mostrar o app como um aluno o encontra, e o das abas,
 // para quem só quer ver a navegação sem passar pelo login toda vez.
-figma.currentPage.flowStartingPoints = [
-  TELAS.login && { nodeId: TELAS.login.id, name: 'projetoFans — fluxo completo' },
-  TELAS.home && { nodeId: TELAS.home.id, name: 'projetoFans — só as abas' },
-].filter(Boolean);
+const inicio = [];
+for (const largura of LARGURAS) {
+  const nome = largura === 390 ? 'celular' : 'desktop';
+  for (const chave of ['login', 'home']) {
+    const lista = TELAS[chave] || [];
+    for (const tela of lista) {
+      if (Math.round(tela.width) !== largura) continue;
+      inicio.push({
+        nodeId: tela.id,
+        name: 'projetoFans · ' + nome + (chave === 'login' ? ' — completo' : ' — só as abas'),
+      });
+    }
+  }
+}
+figma.currentPage.flowStartingPoints = inicio;
+
+let quadros = 0;
+for (const k of Object.keys(TELAS)) quadros += TELAS[k].length;
 
 return {
-  telasEncontradas: Object.keys(TELAS).length + ' de ' + Object.keys(MARCA_DA_TELA).length,
+  telasEncontradas:
+    Object.keys(TELAS).length + ' de ' + Object.keys(MARCA_DA_TELA).length +
+    ' (' + quadros + ' quadros, contando celular e desktop)',
   telasNaoEncontradas: semTela,
   ligacoes: ligados.length,
   naoLigadas: naoLigadas,

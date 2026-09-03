@@ -19,6 +19,10 @@ import re
 
 AQUI = pathlib.Path(__file__).parent
 ORIGEM = AQUI / "telas-v3.html"
+
+# Parte do mockup nasce por JavaScript — a grade do calendário, o painel do dia.
+# Ler o arquivo cru exporta um calendário VAZIO, e vazio em silêncio.
+from render import renderizar
 DESTINO = AQUI / "telas-figma.html"
 
 
@@ -39,7 +43,7 @@ def bloco_balanceado(html: str, inicio: int) -> str:
 
 
 def gerar() -> str:
-    t = ORIGEM.read_text(encoding="utf-8")
+    t = renderizar(ORIGEM)
 
     estilo = re.search(r"<style>.*?</style>", t, re.S)
     if not estilo:
@@ -103,6 +107,17 @@ def gerar() -> str:
   /* A barra de abas flutua sobre o conteudo; com a tela mais alta ela precisa
      ficar no fim do quadro, nao no meio dele. */
   .art .abas {{ position: sticky; bottom: 0; }}
+
+
+  /* A tela entra com uma animação (`opacity: 0` -> 1, `fill-mode: both`). Numa
+     exportação estática ela congela no PRIMEIRO quadro e o conteúdo sai
+     invisível: a moldura do aparelho aparece e não há nada dentro. Foi
+     exatamente o que saiu — 15 páginas de celular em branco, com a sombra do
+     telefone e mais nada. Exportação não tem "entrada". */
+  *, *::before, *::after {{
+    animation: none !important;
+    transition: none !important;
+  }}
 
   .art figcaption {{
     margin-top: 10px; text-align: center;
