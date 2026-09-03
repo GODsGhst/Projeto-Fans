@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular/standalone';
 
@@ -28,7 +34,10 @@ import { mensagemDeErro } from './erro';
       <div class="pf-auth">
         <div class="marca">
           <b>projetoFans</b>
-          <span>O que cai na semana e o que foi dado em cada aula, mantido pela turma.</span>
+          <span
+            >O que cai na semana e o que foi dado em cada aula, mantido pela
+            turma.</span
+          >
         </div>
 
         @if (erro(); as e) {
@@ -43,7 +52,8 @@ import { mensagemDeErro } from './erro';
           inputmode="email"
           autocomplete="email"
           placeholder="voce@exemplo.com"
-          aria-label="E-mail" />
+          aria-label="E-mail"
+        />
 
         <p class="rot-campo">senha</p>
         <input
@@ -53,13 +63,15 @@ import { mensagemDeErro } from './erro';
           autocomplete="current-password"
           placeholder="sua senha"
           aria-label="Senha"
-          (keyup.enter)="entrar(email.value, senha.value)" />
+          (keyup.enter)="entrar(email.value, senha.value)"
+        />
 
         <button
           class="botao"
           type="button"
           [disabled]="enviando()"
-          (click)="entrar(email.value, senha.value)">
+          (click)="entrar(email.value, senha.value)"
+        >
           {{ rotuloDoBotao() }}
         </button>
 
@@ -69,14 +81,20 @@ import { mensagemDeErro } from './erro';
 
         <div class="divisor"><span>ou</span></div>
 
-        <button class="botao botao--fantasma" type="button" (click)="ir('/cadastro')">
+        <button
+          class="botao botao--fantasma"
+          type="button"
+          (click)="ir('/cadastro')"
+        >
           Criar conta
         </button>
 
-        <button class="botao botao--fantasma" type="button" disabled>Entrar com Google</button>
+        <button class="botao botao--fantasma" type="button" disabled>
+          Entrar com Google
+        </button>
         <p class="alerta">
-          O login por Google fica disponível quando o projeto no Google Cloud existir. Enquanto
-          isso, e-mail e senha funcionam normalmente.
+          O login por Google fica disponível quando o projeto no Google Cloud
+          existir. Enquanto isso, e-mail e senha funcionam normalmente.
         </p>
       </div>
     </ion-content>

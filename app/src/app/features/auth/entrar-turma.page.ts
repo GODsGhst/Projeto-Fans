@@ -1,6 +1,16 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService, ROTA_LOGIN } from '../../core/auth.service';
@@ -44,7 +54,9 @@ interface TurmaCriada {
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
-        <ion-title>{{ criada() ? 'Turma criada' : 'Entrar na turma' }}</ion-title>
+        <ion-title>{{
+          criada() ? 'Turma criada' : 'Entrar na turma'
+        }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -61,13 +73,21 @@ interface TurmaCriada {
           </div>
 
           <p class="rot-campo">código da turma</p>
-          <p class="codigo-convite" data-testid="codigo-convite">{{ turma.codigoConvite }}</p>
+          <p class="codigo-convite" data-testid="codigo-convite">
+            {{ turma.codigoConvite }}
+          </p>
 
-          <button class="botao botao--fantasma" type="button" (click)="copiar(turma.codigoConvite)">
+          <button
+            class="botao botao--fantasma"
+            type="button"
+            (click)="copiar(turma.codigoConvite)"
+          >
             {{ copiado() ? 'Copiado ✓' : 'Copiar código' }}
           </button>
 
-          <button class="botao" type="button" (click)="continuar()">Continuar</button>
+          <button class="botao" type="button" (click)="continuar()">
+            Continuar
+          </button>
 
           <p class="alerta">
             Anote em algum lugar. Ele fica no app, mas hoje só aparece aqui.
@@ -75,7 +95,8 @@ interface TurmaCriada {
         } @else {
           <div class="marca">
             <span>
-              Peça o código para alguém que já está na turma. Ele tem até 8 caracteres e não expira.
+              Peça o código para alguém que já está na turma. Ele tem até 8
+              caracteres e não expira.
             </span>
           </div>
 
@@ -91,9 +112,15 @@ interface TurmaCriada {
             maxlength="8"
             autocapitalize="characters"
             placeholder="ABC12345"
-            aria-label="Código da turma" />
+            aria-label="Código da turma"
+          />
 
-          <button class="botao" type="button" [disabled]="enviando()" (click)="entrar(codigo.value)">
+          <button
+            class="botao"
+            type="button"
+            [disabled]="enviando()"
+            (click)="entrar(codigo.value)"
+          >
             {{ enviando() ? 'Entrando…' : 'Entrar na turma' }}
           </button>
 
@@ -107,33 +134,43 @@ interface TurmaCriada {
               type="text"
               name="nome"
               placeholder="como a turma se chama"
-              aria-label="Nome da turma" />
+              aria-label="Nome da turma"
+            />
 
-            <p class="rot-campo">semestre <span class="opcional">— opcional</span></p>
+            <p class="rot-campo">
+              semestre <span class="opcional">— opcional</span>
+            </p>
             <input
               #semestre
               class="campo--linha"
               type="text"
               name="semestre"
               placeholder="2026.2"
-              aria-label="Semestre" />
+              aria-label="Semestre"
+            />
 
             <button
               class="botao"
               type="button"
               [disabled]="enviando()"
-              (click)="criar(nome.value, semestre.value)">
+              (click)="criar(nome.value, semestre.value)"
+            >
               {{ enviando() ? 'Criando…' : 'Criar turma' }}
             </button>
           } @else {
-            <button class="botao botao--fantasma" type="button" (click)="criandoTurma.set(true)">
+            <button
+              class="botao botao--fantasma"
+              type="button"
+              (click)="criandoTurma.set(true)"
+            >
               Criar uma turma nova
             </button>
           }
 
           <p class="alerta">
-            Quem cria a turma vira o líder dela. O líder não edita registro de ninguém — ele só
-            oculta o que não devia estar ali e transfere a liderança.
+            Quem cria a turma vira o líder dela. O líder não edita registro de
+            ninguém — ele só oculta o que não devia estar ali e transfere a
+            liderança.
           </p>
 
           <!-- A saída. Quem chega aqui já tem sessão gravada; sem isto, entrar com

@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -19,13 +22,20 @@ interface SessaoFake {
   turmaId?: string | null;
 }
 
-export class StorageFake implements Pick<StorageService, 'lerSessao' | 'gravarSessao' | 'limparSessao' | 'limpar'> {
+export class StorageFake implements Pick<
+  StorageService,
+  'lerSessao' | 'gravarSessao' | 'limparSessao' | 'limpar'
+> {
   sessao: SessaoFake | null = null;
 
   async lerSessao(): Promise<SessaoFake | null> {
     return this.sessao;
   }
-  async gravarSessao(jwt: string, usuario: Usuario, turmaId?: string | null): Promise<void> {
+  async gravarSessao(
+    jwt: string,
+    usuario: Usuario,
+    turmaId?: string | null,
+  ): Promise<void> {
     this.sessao = { jwt, usuario, turmaId: turmaId ?? null };
   }
   async limparSessao(): Promise<void> {
@@ -36,7 +46,11 @@ export class StorageFake implements Pick<StorageService, 'lerSessao' | 'gravarSe
   }
 }
 
-export const USUARIO: Usuario = { id: 'u1', nome: 'Otavio', email: 'voce@exemplo.com' };
+export const USUARIO: Usuario = {
+  id: 'u1',
+  nome: 'Otavio',
+  email: 'voce@exemplo.com',
+};
 
 /** Providers comuns das telas de entrada: HTTP falso e o interceptor de erro de verdade. */
 export function configurarTeste(storage: StorageFake): HttpTestingController {

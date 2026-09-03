@@ -29,12 +29,18 @@ describe('RecuperarPage', () => {
   afterEach(() => backend.verify());
 
   function enviar() {
-    const campo = fixture.nativeElement.querySelector('input[type="email"]') as HTMLInputElement;
+    const campo = fixture.nativeElement.querySelector(
+      'input[type="email"]',
+    ) as HTMLInputElement;
     campo.value = 'voce@exemplo.com';
     campo.dispatchEvent(new Event('input'));
     (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.trim() === 'Enviar link')!.click();
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.trim() === 'Enviar link')!
+      .click();
     return backend.expectOne(`${environment.apiUrl}/auth/senha/esqueci`);
   }
 
@@ -60,7 +66,9 @@ describe('RecuperarPage', () => {
     req.error(new ProgressEvent('error'));
     await assentar();
 
-    expect(fixture.nativeElement.querySelector('.pf-erro')!.textContent).toContain('Sem conexão');
+    expect(
+      fixture.nativeElement.querySelector('.pf-erro')!.textContent,
+    ).toContain('Sem conexão');
   });
 
   it('sem SMTP a tela nao pede e-mail nenhum — ela explica e manda criar outra conta', async () => {

@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonBackButton,
@@ -26,7 +32,14 @@ import { mensagemDeErro } from './erro';
   selector: 'app-cadastro',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonBackButton,
+    IonContent,
+  ],
   styleUrls: ['./auth.scss'],
   template: `
     <ion-header [translucent]="true">
@@ -51,7 +64,8 @@ import { mensagemDeErro } from './erro';
           type="text"
           autocomplete="name"
           placeholder="como a turma vai te ver"
-          aria-label="Nome" />
+          aria-label="Nome"
+        />
 
         <p class="rot-campo">e-mail</p>
         <input
@@ -61,7 +75,8 @@ import { mensagemDeErro } from './erro';
           inputmode="email"
           autocomplete="email"
           placeholder="voce@exemplo.com"
-          aria-label="E-mail" />
+          aria-label="E-mail"
+        />
 
         <p class="rot-campo">senha</p>
         <input
@@ -70,18 +85,20 @@ import { mensagemDeErro } from './erro';
           type="password"
           autocomplete="new-password"
           placeholder="mínimo 8 caracteres"
-          aria-label="Senha" />
+          aria-label="Senha"
+        />
 
         <p class="alerta">
-          Seu nome aparece em tudo que você postar. É assim que a turma sabe de quem veio a
-          informação — não existe registro anônimo aqui.
+          Seu nome aparece em tudo que você postar. É assim que a turma sabe de
+          quem veio a informação — não existe registro anônimo aqui.
         </p>
 
         <button
           class="botao"
           type="button"
           [disabled]="enviando()"
-          (click)="criar(nome.value, email.value, senha.value)">
+          (click)="criar(nome.value, email.value, senha.value)"
+        >
           {{ rotuloDoBotao() }}
         </button>
       </div>
@@ -107,7 +124,11 @@ export class CadastroPage {
   });
   protected readonly erro = signal<string | null>(null);
 
-  protected async criar(nome: string, email: string, senha: string): Promise<void> {
+  protected async criar(
+    nome: string,
+    email: string,
+    senha: string,
+  ): Promise<void> {
     if (this.enviando()) {
       return;
     }

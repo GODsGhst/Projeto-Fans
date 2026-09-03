@@ -1,5 +1,11 @@
 import { environment } from '../../../environments/environment';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   IonBackButton,
   IonButtons,
@@ -33,7 +39,15 @@ import { mensagemDeErro } from './erro';
   selector: 'app-recuperar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonBackButton,
+    IonContent,
+    RouterLink,
+  ],
   styleUrls: ['./auth.scss'],
   template: `
     <ion-header [translucent]="true">
@@ -51,9 +65,9 @@ import { mensagemDeErro } from './erro';
           <div class="marca">
             <b>Recuperar senha ainda não está no ar.</b>
             <span>
-              Esta versão de teste não envia e-mail. Se você perdeu a senha, crie outra conta com
-              outro e-mail e entre na turma de novo com o mesmo código — nada do que a turma
-              cadastrou se perde.
+              Esta versão de teste não envia e-mail. Se você perdeu a senha,
+              crie outra conta com outro e-mail e entre na turma de novo com o
+              mesmo código — nada do que a turma cadastrou se perde.
             </span>
           </div>
         } @else {
@@ -68,8 +82,12 @@ import { mensagemDeErro } from './erro';
 
         @if (recuperacaoAtiva && enviado()) {
           <p class="alerta" role="status">
-            Se existe conta com esse e-mail, o link de reset já está a caminho dele.
+            Se existe conta com esse e-mail, o link de reset já está a caminho
+            dele.
           </p>
+          <!-- Cliente de e-mail quebra link comprido em duas linhas e o toque
+               abre metade dele. Daqui da para colar o codigo a mao. -->
+          <a class="link-txt" routerLink="/senha/reset">Já tenho o código</a>
         } @else if (recuperacaoAtiva) {
           <p class="rot-campo">e-mail</p>
           <input
@@ -79,16 +97,23 @@ import { mensagemDeErro } from './erro';
             inputmode="email"
             autocomplete="email"
             placeholder="voce@exemplo.com"
-            aria-label="E-mail" />
+            aria-label="E-mail"
+          />
 
-          <button class="botao" type="button" [disabled]="enviando()" (click)="pedir(email.value)">
+          <button
+            class="botao"
+            type="button"
+            [disabled]="enviando()"
+            (click)="pedir(email.value)"
+          >
             {{ enviando() ? 'Enviando…' : 'Enviar link' }}
           </button>
         }
 
         <p class="alerta">
-          A resposta é a mesma exista a conta ou não. Isso é de propósito: resposta diferente
-          transformaria esta tela num jeito de descobrir quem tem conta no app.
+          A resposta é a mesma exista a conta ou não. Isso é de propósito:
+          resposta diferente transformaria esta tela num jeito de descobrir quem
+          tem conta no app.
         </p>
       </div>
     </ion-content>

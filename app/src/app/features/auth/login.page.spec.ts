@@ -26,7 +26,9 @@ describe('LoginPage', () => {
   afterEach(() => backend.verify());
 
   function digitar(seletor: string, valor: string): void {
-    const campo = fixture.nativeElement.querySelector(seletor) as HTMLInputElement;
+    const campo = fixture.nativeElement.querySelector(
+      seletor,
+    ) as HTMLInputElement;
     campo.value = valor;
     campo.dispatchEvent(new Event('input'));
   }
@@ -41,7 +43,9 @@ describe('LoginPage', () => {
   }
 
   function erroNaTela(): string {
-    const p = fixture.nativeElement.querySelector('.pf-erro') as HTMLElement | null;
+    const p = fixture.nativeElement.querySelector(
+      '.pf-erro',
+    ) as HTMLElement | null;
     return p === null ? '' : p.textContent!.trim();
   }
 
@@ -60,13 +64,18 @@ describe('LoginPage', () => {
 
   it('entrar com credencial valida guarda a sessao e vai para as abas', async () => {
     const req = enviar();
-    expect(req.request.body).toEqual({ email: 'voce@exemplo.com', senha: 'senha-certa' });
+    expect(req.request.body).toEqual({
+      email: 'voce@exemplo.com',
+      senha: 'senha-certa',
+    });
 
     req.flush({ jwt: 'jwt-123', usuario: USUARIO });
     await assentar();
 
     expect(auth.autenticado()).withContext('sessao em memoria').toBeTrue();
-    expect(storage.sessao?.jwt).withContext('sessao gravada no aparelho').toBe('jwt-123');
+    expect(storage.sessao?.jwt)
+      .withContext('sessao gravada no aparelho')
+      .toBe('jwt-123');
     expect(irPara).toHaveBeenCalledWith('/tabs/home');
     expect(erroNaTela()).toBe('');
   });
@@ -102,7 +111,11 @@ describe('LoginPage', () => {
       fixture.nativeElement.querySelectorAll('button'),
     ) as HTMLButtonElement[];
     const google = botoes.find((b) => b.textContent!.includes('Google'));
-    expect(google).withContext('o mockup mostra o botao presente').toBeDefined();
-    expect(google!.disabled).withContext('botao presente e vivo mentiria: nao ha Client ID').toBeTrue();
+    expect(google)
+      .withContext('o mockup mostra o botao presente')
+      .toBeDefined();
+    expect(google!.disabled)
+      .withContext('botao presente e vivo mentiria: nao ha Client ID')
+      .toBeTrue();
   });
 });

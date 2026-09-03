@@ -15,21 +15,34 @@ import { guardaSessao } from './core/auth.guard';
 export const routes: Routes = [
   {
     path: 'login',
-    loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
+    loadComponent: () =>
+      import('./features/auth/login.page').then((m) => m.LoginPage),
   },
   {
     path: 'cadastro',
-    loadComponent: () => import('./features/auth/cadastro.page').then((m) => m.CadastroPage),
+    loadComponent: () =>
+      import('./features/auth/cadastro.page').then((m) => m.CadastroPage),
   },
   {
     // Depois do cadastro, e nao as abas: conta nova nao tem turma.
     path: 'entrar-turma',
     loadComponent: () =>
-      import('./features/auth/entrar-turma.page').then((m) => m.EntrarTurmaPage),
+      import('./features/auth/entrar-turma.page').then(
+        (m) => m.EntrarTurmaPage,
+      ),
+  },
+  {
+    // O caminho NAO e escolha livre: e o que o backend manda no e-mail
+    // (`app.reset-senha-url-base`, application.yml). Mudar aqui sem mudar la
+    // deixa todo link ja enviado apontando para lugar nenhum.
+    path: 'senha/reset',
+    loadComponent: () =>
+      import('./features/auth/redefinir.page').then((m) => m.RedefinirPage),
   },
   {
     path: 'recuperar',
-    loadComponent: () => import('./features/auth/recuperar.page').then((m) => m.RecuperarPage),
+    loadComponent: () =>
+      import('./features/auth/recuperar.page').then((m) => m.RecuperarPage),
   },
   {
     path: '',

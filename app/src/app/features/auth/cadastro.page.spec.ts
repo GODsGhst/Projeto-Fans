@@ -46,12 +46,16 @@ describe('CadastroPage', () => {
 
   function botao(): HTMLButtonElement {
     return (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
     ).find((b) => /Criar conta|Criando|Acordando/.test(b.textContent!))!;
   }
 
   function digitar(seletor: string, valor: string): void {
-    const campo = fixture.nativeElement.querySelector(seletor) as HTMLInputElement;
+    const campo = fixture.nativeElement.querySelector(
+      seletor,
+    ) as HTMLInputElement;
     campo.value = valor;
     campo.dispatchEvent(new Event('input'));
   }
@@ -61,8 +65,12 @@ describe('CadastroPage', () => {
     digitar('input[type="email"]', 'voce@exemplo.com');
     digitar('input[type="password"]', 'senha-de-oito');
     (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.trim() === 'Criar conta')!.click();
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.trim() === 'Criar conta')!
+      .click();
     return backend.expectOne(`${environment.apiUrl}/auth/registrar`);
   }
 
@@ -72,7 +80,9 @@ describe('CadastroPage', () => {
   }
 
   function erroNaTela(): string {
-    const p = fixture.nativeElement.querySelector('.pf-erro') as HTMLElement | null;
+    const p = fixture.nativeElement.querySelector(
+      '.pf-erro',
+    ) as HTMLElement | null;
     return p === null ? '' : p.textContent!.trim();
   }
 
@@ -91,14 +101,17 @@ describe('CadastroPage', () => {
 
     expect(irPara).toHaveBeenCalledWith('/entrar-turma');
     expect(irPara).not.toHaveBeenCalledWith('/tabs/home');
-    expect(storage.sessao?.jwt).withContext('a sessao ja vale: /turmas/entrar exige Bearer').toBe(
-      'jwt-123',
-    );
+    expect(storage.sessao?.jwt)
+      .withContext('a sessao ja vale: /turmas/entrar exige Bearer')
+      .toBe('jwt-123');
   });
 
   it('e-mail ja cadastrado mostra a mensagem do servidor e mantem a pessoa na tela', async () => {
     const req = enviar();
-    req.flush({ detail: 'Ja existe conta com este e-mail' }, { status: 409, statusText: 'Conflict' });
+    req.flush(
+      { detail: 'Ja existe conta com este e-mail' },
+      { status: 409, statusText: 'Conflict' },
+    );
     await assentar();
 
     expect(erroNaTela()).toContain('Ja existe conta com este e-mail');

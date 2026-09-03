@@ -22,14 +22,18 @@ describe('EntrarTurmaPage', () => {
 
   function clicar(rotulo: string): void {
     const alvo = (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
     ).find((b) => b.textContent!.trim() === rotulo);
     expect(alvo).withContext(`botao "${rotulo}"`).toBeDefined();
     alvo!.click();
   }
 
   function enviarCodigo(codigo: string) {
-    const campo = fixture.nativeElement.querySelector('.campo--codigo') as HTMLInputElement;
+    const campo = fixture.nativeElement.querySelector(
+      '.campo--codigo',
+    ) as HTMLInputElement;
     campo.value = codigo;
     campo.dispatchEvent(new Event('input'));
     clicar('Entrar na turma');
@@ -42,7 +46,9 @@ describe('EntrarTurmaPage', () => {
   }
 
   function erroNaTela(): string {
-    const p = fixture.nativeElement.querySelector('.pf-erro') as HTMLElement | null;
+    const p = fixture.nativeElement.querySelector(
+      '.pf-erro',
+    ) as HTMLElement | null;
     return p === null ? '' : p.textContent!.trim();
   }
 
@@ -68,7 +74,10 @@ describe('EntrarTurmaPage', () => {
     // O backend responde 404, nunca 403: quem chuta codigo nao pode aprender
     // nada sobre quais existem.
     const req = enviarCodigo('ZZZZZZ');
-    req.flush({ detail: 'Registro nao encontrado' }, { status: 404, statusText: 'Not Found' });
+    req.flush(
+      { detail: 'Registro nao encontrado' },
+      { status: 404, statusText: 'Not Found' },
+    );
     await assentar();
 
     expect(erroNaTela()).toContain('Registro nao encontrado');
@@ -82,7 +91,9 @@ describe('EntrarTurmaPage', () => {
     clicar('Criar uma turma nova');
     fixture.detectChanges();
 
-    const nome = fixture.nativeElement.querySelector('input[name="nome"]') as HTMLInputElement;
+    const nome = fixture.nativeElement.querySelector(
+      'input[name="nome"]',
+    ) as HTMLInputElement;
     const semestre = fixture.nativeElement.querySelector(
       'input[name="semestre"]',
     ) as HTMLInputElement;
@@ -92,13 +103,20 @@ describe('EntrarTurmaPage', () => {
 
     const req = backend.expectOne(`${environment.apiUrl}/turmas`);
     expect(req.request.body).toEqual({ nome: 'Fans 2026', semestre: '2026.2' });
-    req.flush({ id: 't1', nome: 'Fans 2026', semestre: '2026.2', codigoConvite: 'ABC12345' });
+    req.flush({
+      id: 't1',
+      nome: 'Fans 2026',
+      semestre: '2026.2',
+      codigoConvite: 'ABC12345',
+    });
     await assentar();
 
     // O motivo desta tela existir. Sem o codigo na mao, quem cria a turma vira
     // lider de uma turma que nao consegue convidar ninguem: o codigo esta no
     // banco, passou pela mao do app, e a pessoa nunca o ve.
-    const mostrado = fixture.nativeElement.querySelector('[data-testid="codigo-convite"]');
+    const mostrado = fixture.nativeElement.querySelector(
+      '[data-testid="codigo-convite"]',
+    );
     expect(mostrado)
       .withContext('o codigo tem de aparecer na tela, nao so na resposta HTTP')
       .not.toBeNull();
