@@ -15,6 +15,11 @@ import type { AtualizarMaterialRequest, CriarMaterialRequest, Material } from '.
 export class MaterialRepository {
   private readonly api = inject(ApiService);
 
+  /** Um material, para a tela de editar. `GET /materiais/{id}` ja existia sem chamador. */
+  detalhe(materialId: string): Promise<Material> {
+    return this.api.get<Material>(`/materiais/${materialId}`);
+  }
+
   criar(req: CriarMaterialRequest): Promise<Material> {
     return this.api.post<Material>('/materiais', req);
   }

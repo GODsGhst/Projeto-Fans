@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+
+import { AuthService } from '../../core/auth.service';
 import {
   IonBackButton,
   IonButtons,
@@ -82,9 +84,17 @@ import { materialVm } from '../material-vm';
                   [titulo]="m.titulo"
                   [autoria]="m.autoria" />
               </a>
-              @if (m.daAula) {
-                <span class="da-aula">{{ m.daAula }}</span>
-              }
+              <span class="linha-meta">
+                @if (m.daAula) {
+                  <span class="da-aula">{{ m.daAula }}</span>
+                }
+                <!-- So o autor. O toque na linha abre o arquivo, que e a acao
+                     principal; editar precisa de um alvo proprio para nao
+                     disputar com ela. -->
+                @if (m.autorId === meuId()) {
+                  <a class="editar" [routerLink]="['/tabs/materiais', m.id, 'editar']">editar</a>
+                }
+              </span>
             } @else {
               <app-material-linha
                 class="aula"
@@ -106,9 +116,17 @@ import { materialVm } from '../material-vm';
                   [titulo]="m.titulo"
                   [autoria]="m.autoria" />
               </a>
-              @if (m.daAula) {
-                <span class="da-aula">{{ m.daAula }}</span>
-              }
+              <span class="linha-meta">
+                @if (m.daAula) {
+                  <span class="da-aula">{{ m.daAula }}</span>
+                }
+                <!-- So o autor. O toque na linha abre o arquivo, que e a acao
+                     principal; editar precisa de um alvo proprio para nao
+                     disputar com ela. -->
+                @if (m.autorId === meuId()) {
+                  <a class="editar" [routerLink]="['/tabs/materiais', m.id, 'editar']">editar</a>
+                }
+              </span>
             } @else {
               <app-material-linha
                 class="adicional"
@@ -147,6 +165,21 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    .linha-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 0 2px 2px;
+      margin-top: -4px;
+    }
+    .linha-meta .editar {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 2px;
+    }
+
     .onde-e-quem {
       margin: 0;
       font-size: 12.5px;
@@ -176,6 +209,17 @@ import { materialVm } from '../material-vm';
   `,
 })
 export class MateriaPage {
+  private readonly auth = inject(AuthService);
+
+  /**
+   * Quem está olhando. Só o autor vê o link de editar o próprio material.
+   *
+   * `inject` fica no campo, não dentro do `computed`: fora do contexto de
+   * injeção ele estoura em tempo de execução, e o erro só aparece quando a tela
+   * abre — não no build.
+   */
+  protected readonly meuId = computed(() => this.auth.usuario()?.id ?? null);
+
   /**
    * "B-204 · prof. Marcos", ou vazio.
    *

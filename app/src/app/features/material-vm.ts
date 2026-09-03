@@ -11,6 +11,8 @@ export interface MaterialVm {
   readonly url: string | null;
   /** "aula de 2 set", ou vazio quando o material nao e de uma aula. */
   readonly daAula: string;
+  /** Para a tela decidir se oferece editar. So o autor edita. */
+  readonly autorId: string;
   readonly id: string;
   /** "PDF", "JPG", "LINK" — rotulo de formato, nao o `tipo` AULA/ADICIONAL. */
   readonly tipo: string;
@@ -29,6 +31,7 @@ export function materialVm(m: Material, agora: Date): MaterialVm {
     // sempre a url.
     url: m.arquivoRef ?? m.url,
     daAula: rotuloDaAula(m.dataAula),
+    autorId: m.autoria.autorId,
     autoria: assinatura(m.autoria, agora),
   };
 }
