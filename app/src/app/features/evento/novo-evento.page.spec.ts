@@ -1,7 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
@@ -34,6 +34,9 @@ class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 
   }
 }
 
+/** Fica fora do beforeEach para o teste de edição poder mexer antes de criar. */
+const rotaParams = new Map<string, string>();
+
 describe('NovoEventoPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<NovoEventoPage>;
@@ -47,8 +50,12 @@ describe('NovoEventoPage', () => {
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
         { provide: StorageService, useValue: new StorageFake() },
+        // O `id` da rota é o que separa adicionar de editar. `Map` de propósito:
+        // cada teste ajusta o seu, e o padrão (vazio) é o modo de adicionar.
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: rotaParams } } },
       ],
     });
+    rotaParams.clear();
     backend = TestBed.inject(HttpTestingController);
     irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
     fixture = TestBed.createComponent(NovoEventoPage);
@@ -202,5 +209,69 @@ describe('NovoEventoPage', () => {
     await assentar();
 
     expect(irPara).toHaveBeenCalledWith('/tabs/eventos/ev-9');
+  });
+
+  it('em modo de edicao carrega o evento, preenche os campos e manda PATCH com If-Match', async () => {
+    // A mesma página atende adicionar e editar porque é o MESMO formulário: seis
+    // campos, a mesma validação, a mesma lista de matérias. Duas páginas seriam
+    // 150 linhas de quase-cópia, e a cópia divergiria na primeira mudança de
+    // campo — foi assim que a sala quase não entrou na edição.
+    rotaParams.set('id', 'e1');
+
+    const outra = TestBed.createComponent(NovoEventoPage);
+    outra.detectChanges();
+
+    // Duas: o componente do beforeEach já pediu as matérias, e este pede de
+    // novo. Responder as duas é o que mantém o afterEach limpo.
+    for (const r of backend.match(`${environment.apiUrl}/materias`)) r.flush([BD, CALC]);
+    backend.expectOne(`${environment.apiUrl}/eventos/e1`).flush({
+      id: 'e1',
+      tipo: 'ENTREGA',
+      titulo: 'Lista 4',
+      data: '2026-09-12',
+      hora: '19:30',
+      sala: 'A-101',
+      materiaId: CALC.id,
+      materiaSigla: CALC.sigla,
+      materiaCorHex: CALC.corHex,
+      autoria: {
+        autorId: 'u1',
+        autorNome: 'Otavio',
+        criadoEm: '2026-08-30T12:00:00Z',
+        atualizadoEm: '2026-08-30T12:00:00Z',
+      },
+      version: 3,
+      visivelTurma: true,
+      excluidoEm: null,
+      materiais: [],
+    });
+    await outra.whenStable();
+    outra.detectChanges();
+
+    const campo = (sel: string) => outra.nativeElement.querySelector(sel) as HTMLInputElement;
+    expect(campo('input[type="text"]').value)
+      .withContext('editar sem os campos preenchidos obriga a redigitar tudo')
+      .toBe('Lista 4');
+    expect(campo('input[type="date"]').value).toBe('2026-09-12');
+    expect(campo('input[type="time"]').value).toBe('19:30');
+
+    (
+      Array.from(outra.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+    ).find((b) => b.textContent!.includes('Salvar'))!.click();
+
+    const req = backend.expectOne(`${environment.apiUrl}/eventos/e1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.headers.get('If-Match'))
+      .withContext('sem If-Match a edicao passa por cima da de outra pessoa')
+      .toBe('3');
+    expect(req.request.body.titulo).toBe('Lista 4');
+    expect(req.request.body.sala)
+      .withContext('PATCH substitui o objeto inteiro: campo omitido vira null no servidor')
+      .toBe('A-101');
+    req.flush({ id: 'e1' });
+    await outra.whenStable();
+    outra.detectChanges();
+
+    expect(irPara).toHaveBeenCalledWith('/tabs/eventos/e1');
   });
 });

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   IonBackButton,
   IonButtons,
@@ -11,6 +11,8 @@ import {
 
 import { ErroApi } from '../../core/http-error.interceptor';
 import { EventoRepository } from '../../data/evento.repository';
+import { AuthService } from '../../core/auth.service';
+import { mensagemDeErro } from '../auth/erro';
 import type { EventoDetalhe } from '../../data/models';
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import { MaterialLinhaComponent } from '../../shared/material-linha.component';
@@ -88,6 +90,28 @@ import { materialVm } from '../material-vm';
             <p class="sala">nesta vez, na sala <b>{{ e.sala }}</b></p>
           }
 
+          <!-- Só para quem criou. Mostrar o botão a quem vai levar 403 é
+               convidar ao erro e depois culpar a pessoa. -->
+          @if (souAutor()) {
+            <div class="do-autor">
+              @if (confirmando()) {
+                <p class="confirma">Apagar mesmo? Some da lista da turma.</p>
+                <button class="perigo" type="button" [disabled]="apagando()" (click)="apagar()">
+                  {{ apagando() ? 'Apagando…' : 'Sim, apagar' }}
+                </button>
+                <button class="neutro" type="button" (click)="confirmando.set(false)">
+                  Cancelar
+                </button>
+              } @else {
+                <a class="neutro" [routerLink]="['/tabs/eventos', id, 'editar']">Editar</a>
+                <button class="neutro" type="button" (click)="confirmando.set(true)">Apagar</button>
+              }
+            </div>
+            @if (erroDaAcao(); as e2) {
+              <p class="pf-erro" role="alert">{{ e2 }}</p>
+            }
+          }
+
           <!-- FORA do @if de materiais de proposito. Anexar e mais necessario
                quando nao ha nada anexado; escondido ali, o botao so aparecia para
                quem ja tinha resolvido o problema. -->
@@ -122,6 +146,44 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    .do-autor {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .do-autor .neutro,
+    .do-autor .perigo {
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      padding: 9px 14px;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-decoration: none;
+      border: 1px solid var(--rule);
+      background: var(--surface);
+      color: var(--ink);
+    }
+    /* Apagar não é vermelho gritante: o app usa forma, não cor, para peso — e a
+       confirmação já é o freio. Vermelho aqui competiria com o vermelho de erro,
+       que significa outra coisa. */
+    .do-autor .perigo {
+      border-color: var(--m-vermelho, #B91C1C);
+      color: var(--m-vermelho, #B91C1C);
+    }
+    .do-autor .neutro:focus-visible,
+    .do-autor .perigo:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .confirma {
+      margin: 0;
+      flex: 1 0 100%;
+      font-size: 13px;
+      color: var(--ink-2);
+    }
+
     /* So aparece quando ha excecao. A sala de sempre nao entra aqui: repetida em
        toda prova viraria ruido que ninguem le, e ai a excecao passaria batida. */
     .sala {
@@ -200,6 +262,46 @@ export class EventoPage {
    * lia um `id` que nao existia — o link saia como `/tabs/eventos//anexar`.
    */
   protected readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected readonly confirmando = signal(false);
+  protected readonly apagando = signal(false);
+  protected readonly erroDaAcao = signal<string | null>(null);
+
+  /**
+   * Só o autor edita e apaga — é o que a tela de cadastrar promete com estas
+   * palavras, e é o que o servidor aplica. Comparar aqui não é segurança (o 403
+   * é), é honestidade: oferecer um botão que vai falhar ensina a pessoa a
+   * desconfiar da tela.
+   */
+  protected readonly souAutor = computed(() => {
+    const d = this.detalhe();
+    const eu = this.auth.usuario();
+    return d !== null && eu !== null && d.autoria.autorId === eu.id;
+  });
+
+  protected async apagar(): Promise<void> {
+    const d = this.detalhe();
+    if (d === null || this.apagando()) {
+      return;
+    }
+    this.apagando.set(true);
+    this.erroDaAcao.set(null);
+    try {
+      // `version` no If-Match: sem ele, apagar por cima de uma edição que outra
+      // pessoa fez enquanto esta tela estava aberta passaria despercebido.
+      await this.repo.excluir(this.id, d.version);
+    } catch (e) {
+      this.erroDaAcao.set(mensagemDeErro(e));
+      this.confirmando.set(false);
+      return;
+    } finally {
+      this.apagando.set(false);
+    }
+    await this.router.navigateByUrl('/tabs/home');
+  }
 
   constructor() {
     void this.carregar(this.id);

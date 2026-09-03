@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   IonBackButton,
   IonButtons,
@@ -12,7 +12,7 @@ import {
 import { EventoRepository } from '../../data/evento.repository';
 import { HomeRepository } from '../../data/home.repository';
 import { MateriaRepository } from '../../data/materia.repository';
-import type { TipoEvento } from '../../data/models';
+import type { EventoDetalhe, TipoEvento } from '../../data/models';
 import { MateriaChipComponent } from '../../shared/materia-chip.component';
 import { Espera } from '../auth/espera';
 import { mensagemDeErro } from '../auth/erro';
@@ -52,7 +52,7 @@ import { mensagemDeErro } from '../auth/erro';
         <ion-buttons slot="start">
           <ion-back-button defaultHref="/tabs/home" />
         </ion-buttons>
-        <ion-title>O que vai cair</ion-title>
+        <ion-title>{{ editando() ? 'Editar' : 'O que vai cair' }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -120,13 +120,24 @@ import { mensagemDeErro } from '../auth/erro';
             type="text"
             maxlength="120"
             placeholder="Prova 2 — normalização"
+            [value]="valorInicial().titulo"
             aria-label="Título" />
 
           <p class="rot-campo">quando</p>
-          <input #data class="campo--linha" type="date" aria-label="Data" />
+          <input
+            #data
+            class="campo--linha"
+            type="date"
+            [value]="valorInicial().data"
+            aria-label="Data" />
 
           <p class="rot-campo">hora <span class="opcional">— opcional</span></p>
-          <input #hora class="campo--linha" type="time" aria-label="Hora" />
+          <input
+            #hora
+            class="campo--linha"
+            type="time"
+            [value]="valorInicial().hora"
+            aria-label="Hora" />
 
           <p class="rot-campo">sala <span class="opcional">— só se for em outra</span></p>
           <input
@@ -135,6 +146,7 @@ import { mensagemDeErro } from '../auth/erro';
             type="text"
             maxlength="40"
             placeholder="na sala de sempre"
+            [value]="valorInicial().sala"
             aria-label="Sala, se diferente da habitual" />
 
           <p class="alerta">
@@ -269,6 +281,31 @@ export class NovoEventoPage {
 
   private readonly espera = new Espera();
 
+  /**
+   * O `id` na rota é o que separa adicionar de editar.
+   *
+   * A mesma página atende os dois porque é o MESMO formulário: seis campos, a
+   * mesma validação, a mesma lista de matérias. Duas páginas seriam ~150 linhas
+   * de quase-cópia, e quase-cópia diverge — o campo de sala entrou aqui num dia
+   * em que uma segunda página teria ficado para trás sem ninguém notar.
+   */
+  private readonly editandoId = inject(ActivatedRoute).snapshot.paramMap.get('id') || null;
+  protected readonly editando = computed(() => this.original() !== null);
+
+  /** O evento sendo editado; `null` no modo de adicionar. */
+  private readonly original = signal<EventoDetalhe | null>(null);
+
+  /** O que os campos mostram ao abrir. Vazio quando é um evento novo. */
+  protected readonly valorInicial = computed(() => {
+    const o = this.original();
+    return {
+      titulo: o?.titulo ?? '',
+      data: o?.data ?? '',
+      hora: o?.hora ?? '',
+      sala: o?.sala ?? '',
+    };
+  });
+
   /** Sem materia de verdade: carregou, nao falhou, e a turma nao tem nenhuma. */
   protected readonly semMateria = computed(
     () =>
@@ -281,10 +318,14 @@ export class NovoEventoPage {
   );
 
   protected readonly rotuloDoBotao = computed(() => {
+    const editando = this.editando();
     if (!this.enviando()) {
-      return 'Adicionar';
+      return editando ? 'Salvar' : 'Adicionar';
     }
-    return this.espera.demorando() ? 'Acordando o servidor…' : 'Adicionando…';
+    if (this.espera.demorando()) {
+      return 'Acordando o servidor…';
+    }
+    return editando ? 'Salvando…' : 'Adicionando…';
   });
 
   constructor() {
@@ -293,6 +334,26 @@ export class NovoEventoPage {
     this.materiasRepo
       .carregar()
       .catch((e: unknown) => console.error('[novo-evento] falha ao carregar as matérias', e));
+
+    // Falsy, não `!== null`: rota sem o parâmetro devolve `null` no Angular e
+    // `undefined` num Map, e um `GET /eventos/undefined` é o tipo de chamada que
+    // vaza para produção porque no teste "só" polui o console.
+    if (this.editandoId) {
+      void this.carregarOriginal(this.editandoId);
+    }
+  }
+
+  private async carregarOriginal(id: string): Promise<void> {
+    try {
+      const evento = await this.eventos.detalhe(id);
+      this.original.set(evento);
+      this.tipo.set(evento.tipo);
+      this.materiaId.set(evento.materiaId);
+    } catch (e) {
+      // Sem o original não dá para editar: salvar mandaria campos em branco por
+      // cima do que existe, e PATCH aqui SUBSTITUI o objeto inteiro.
+      this.erro.set(mensagemDeErro(e));
+    }
   }
 
   protected async cadastrar(
@@ -313,9 +374,10 @@ export class NovoEventoPage {
     this.enviando.set(true);
     this.erro.set(null);
     this.espera.comecar();
-    let criado;
+    const original = this.original();
+    let alvo = original?.id ?? '';
     try {
-      criado = await this.eventos.criar({
+      const corpo = {
         materiaId,
         tipo: this.tipo(),
         titulo: titulo.trim(),
@@ -326,7 +388,14 @@ export class NovoEventoPage {
         // materia. Copiar a sala da materia para ca faria a disciplina mudar de
         // sala e reescrever onde as provas passadas aconteceram.
         sala: sala.trim() === '' ? null : sala.trim(),
-      });
+      };
+      if (original !== null) {
+        // `version` no If-Match: sem ele, salvar por cima da edição que outra
+        // pessoa fez enquanto esta tela estava aberta passaria despercebido.
+        await this.eventos.atualizar(original.id, original.version, corpo);
+      } else {
+        alvo = (await this.eventos.criar(corpo)).id;
+      }
     } catch (e) {
       this.erro.set(mensagemDeErro(e));
       return;
@@ -344,6 +413,6 @@ export class NovoEventoPage {
     // A Home nao precisa mais ser recarregada aqui: ela recarrega sozinha ao
     // entrar na aba (`ionViewWillEnter`), e uma chamada a menos importa num
     // servidor que dorme.
-    await this.router.navigateByUrl(`/tabs/eventos/${criado.id}`);
+    await this.router.navigateByUrl(`/tabs/eventos/${alvo}`);
   }
 }

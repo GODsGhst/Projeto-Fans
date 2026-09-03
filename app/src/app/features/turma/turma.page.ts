@@ -1,20 +1,22 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Share } from '@capacitor/share';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { mensagemDeErro } from '../auth/erro';
 
-type Papel = 'LIDER' | 'ALUNO' | 'PROFESSOR';
+export type Papel = 'LIDER' | 'ALUNO' | 'PROFESSOR';
 
-interface MembroDaTurma {
+export interface MembroDaTurma {
   usuarioId: string;
   nome: string;
   papel: Papel;
   entrouEm: string;
 }
 
-interface MinhaTurma {
+export interface MinhaTurma {
   id: string;
   nome: string;
   semestre: string;
@@ -43,7 +45,7 @@ interface MinhaTurma {
   selector: 'app-turma',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent],
+  imports: [IonHeader, IonToolbar, IonTitle, IonContent, RouterLink],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -92,6 +94,10 @@ interface MinhaTurma {
             </div>
           }
 
+          @if (souLider()) {
+            <a class="passar" routerLink="/tabs/turma/transferir">Passar a liderança</a>
+          }
+
           <p class="cache-aviso">
             O líder não edita nem apaga registro de ninguém. Ele só oculta o que não devia estar
             ali, e pode transferir a liderança.
@@ -101,6 +107,24 @@ interface MinhaTurma {
     </ion-content>
   `,
   styles: `
+    .passar {
+      display: block;
+      text-align: center;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: var(--r-md);
+      border: 1px solid var(--rule);
+      background: transparent;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .passar:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
     .bloco-codigo {
       display: flex;
       flex-direction: column;
@@ -230,6 +254,18 @@ export class TurmaPage {
   protected readonly carregando = signal(false);
   protected readonly erro = signal<string | null>(null);
   protected readonly copiado = signal(false);
+
+  private readonly auth = inject(AuthService);
+
+  /** Só quem tem o cargo passa o cargo. O servidor recusa o resto; isto evita oferecer. */
+  protected readonly souLider = computed(() => {
+    const meu = this.auth.usuario();
+    const t = this.turma();
+    if (meu === null || t === null) {
+      return false;
+    }
+    return t.membros.some((m) => m.usuarioId === meu.id && m.papel === 'LIDER');
+  });
 
   protected readonly membros = computed(() =>
     (this.turma()?.membros ?? []).map((m) => ({

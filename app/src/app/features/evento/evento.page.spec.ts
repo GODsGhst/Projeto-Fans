@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -7,6 +8,7 @@ import { provideIonicAngular } from '@ionic/angular/standalone';
 import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
 import type { EventoDetalhe, Material } from '../../data/models';
+import { AuthService } from '../../core/auth.service';
 import { EventoPage } from './evento.page';
 
 const AUTORIA = {
@@ -49,6 +51,12 @@ function detalhe(materiais: Material[]): EventoDetalhe {
   };
 }
 
+const usuarioAtual = signal<{ id: string; nome: string; email: string } | null>({
+  id: 'u1',
+  nome: 'Otavio',
+  email: 'voce@exemplo.com',
+});
+
 describe('EventoPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<EventoPage>;
@@ -60,6 +68,10 @@ describe('EventoPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
+        // A tela precisa saber QUEM está olhando para decidir se oferece editar
+        // e apagar. `u1` é o mesmo id de AUTORIA, então por padrão quem abre é o
+        // autor; o teste do não-autor troca isso.
+        { provide: AuthService, useValue: { usuario: usuarioAtual } },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 'e1' }) } },
@@ -70,7 +82,10 @@ describe('EventoPage', () => {
     fixture = TestBed.createComponent(EventoPage);
   });
 
-  afterEach(() => backend.verify());
+  afterEach(() => {
+    backend.verify();
+    usuarioAtual.set({ id: 'u1', nome: 'Otavio', email: 'voce@exemplo.com' });
+  });
 
   async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
     fixture.detectChanges();
@@ -161,5 +176,75 @@ describe('EventoPage', () => {
   it('sem sala propria, nao aparece linha de sala', async () => {
     await abrir((r) => r.flush(detalhe([])));
     expect(fixture.nativeElement.querySelector('.sala')).toBeNull();
+  });
+
+  it('o autor pode editar e apagar o que criou', async () => {
+    // A tela de cadastrar promete, com estas palavras: "Só você pode editar ou
+    // apagar depois". Prometia e não existia — nem editar nem apagar em lugar
+    // nenhum do app. Promessa escrita na tela e sem porta é a pior forma de
+    // mentir, porque quem lê confia.
+    await abrir((r) => r.flush(detalhe([])));
+
+    const acoes = Array.from(
+      fixture.nativeElement.querySelectorAll('.do-autor a, .do-autor button'),
+    ) as HTMLElement[];
+    const textos = acoes.map((a) => a.textContent!.trim());
+
+    expect(textos).toContain('Editar');
+    expect(textos).toContain('Apagar');
+    expect(fixture.nativeElement.querySelector('a[href="/tabs/eventos/e1/editar"]')).not.toBeNull();
+  });
+
+  it('quem NAO e o autor nao ve editar nem apagar', async () => {
+    // "Só você" é a regra, e o servidor a aplica — mas mostrar o botão para quem
+    // vai levar 403 é convidar ao erro e depois culpar a pessoa.
+    usuarioAtual.set({ id: 'outra-pessoa', nome: 'Ana', email: 'ana@exemplo.com' });
+    await abrir((r) => r.flush(detalhe([])));
+
+    expect(fixture.nativeElement.querySelector('.do-autor')).toBeNull();
+  });
+
+  it('apagar pergunta antes, e so entao chama o servidor', async () => {
+    await abrir((r) => r.flush(detalhe([])));
+
+    const apagar = () =>
+      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
+        (b) => b.textContent!.trim() === 'Apagar',
+      )!;
+    apagar().click();
+    fixture.detectChanges();
+
+    // Nada foi para o servidor ainda: o primeiro toque só pergunta.
+    backend.expectNone(`${environment.apiUrl}/eventos/e1`);
+    expect(fixture.nativeElement.textContent as string).toContain('Apagar mesmo');
+
+    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+      .find((b) => b.textContent!.trim() === 'Sim, apagar')!
+      .click();
+
+    const req = backend.expectOne(`${environment.apiUrl}/eventos/e1`);
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.headers.get('If-Match'))
+      .withContext('sem If-Match o servidor apaga por cima de uma edicao de outra pessoa')
+      .toBe('1');
+    req.flush(null);
+    await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  it('desistir de apagar nao manda nada', async () => {
+    await abrir((r) => r.flush(detalhe([])));
+
+    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+      .find((b) => b.textContent!.trim() === 'Apagar')!
+      .click();
+    fixture.detectChanges();
+    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+      .find((b) => b.textContent!.trim() === 'Cancelar')!
+      .click();
+    fixture.detectChanges();
+
+    backend.expectNone(`${environment.apiUrl}/eventos/e1`);
+    expect(fixture.nativeElement.textContent as string).not.toContain('Apagar mesmo');
   });
 });

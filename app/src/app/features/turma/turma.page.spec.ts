@@ -1,11 +1,13 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
+import { AuthService } from '../../core/auth.service';
 import { TurmaPage, convite } from './turma.page';
 
 const TURMA = {
@@ -47,6 +49,12 @@ describe('convite', () => {
   });
 });
 
+const eu = signal<{ id: string; nome: string; email: string } | null>({
+  id: 'u1',
+  nome: 'Otávio',
+  email: 'voce@exemplo.com',
+});
+
 describe('TurmaPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<TurmaPage>;
@@ -58,6 +66,7 @@ describe('TurmaPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
+        { provide: AuthService, useValue: { usuario: eu } },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
@@ -133,5 +142,20 @@ describe('TurmaPage', () => {
       .withContext('falhar o compartilhamento tem de deixar a pessoa com o codigo mesmo assim')
       .toHaveBeenCalledWith('93EB9244');
     expect(fixture.nativeElement.textContent as string).toContain('Copiado');
+  });
+
+  it('so o lider ve a porta para passar a lideranca', async () => {
+    // A própria tela diz que o líder "transfere a liderança". A frase estava lá
+    // e não havia botão nenhum. E para quem não é líder o botão não aparece nem
+    // desabilitado: cinza convida a perguntar "por que não posso?", e a resposta
+    // já está escrita logo abaixo.
+    await abrir((r) => r.flush(TURMA));
+    expect(fixture.nativeElement.querySelector('a[href="/tabs/turma/transferir"]'))
+      .withContext('sou o LIDER da fixture — a porta tem de estar aqui')
+      .not.toBeNull();
+
+    eu.set({ id: 'u2', nome: 'Ana Beatriz', email: 'ana@exemplo.com' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a[href="/tabs/turma/transferir"]')).toBeNull();
   });
 });

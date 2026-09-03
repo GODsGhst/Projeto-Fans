@@ -55,6 +55,12 @@ export const tabsRoutes: Routes = [
         loadComponent: () =>
           import('../features/evento/novo-evento.page').then((m) => m.NovoEventoPage),
       },
+      // Mesma pagina de adicionar: o `id` na rota liga o modo de edicao.
+      {
+        path: 'eventos/:id/editar',
+        loadComponent: () =>
+          import('../features/evento/novo-evento.page').then((m) => m.NovoEventoPage),
+      },
       {
         path: 'eventos/:id/anexar',
         loadComponent: () =>
@@ -68,6 +74,11 @@ export const tabsRoutes: Routes = [
         path: 'quadro',
         loadComponent: () =>
           import('../features/quadro/quadro.page').then((m) => m.QuadroPage),
+      },
+      {
+        path: 'turma/transferir',
+        loadComponent: () =>
+          import('../features/turma/transferir.page').then((m) => m.TransferirPage),
       },
       {
         path: 'turma',
