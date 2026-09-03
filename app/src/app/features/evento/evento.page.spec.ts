@@ -325,4 +325,44 @@ describe('EventoPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
   });
+
+  it('o lider pode PEDIR que o autor apague, e isso nao apaga nada', async () => {
+    // Ocultar tira da lista; pedir e outra coisa — o lider acha que aquilo nao
+    // devia existir, mas quem apaga e sempre quem criou. Sao dois botoes porque
+    // sao duas decisoes diferentes, e juntar as duas num so faria o lider apagar
+    // sem querer o que so queria tirar da vista.
+    liderancaMinha.set(true);
+    usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });
+    await abrir((r) => r.flush(detalhe([])));
+
+    const pedir = () =>
+      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
+        (b) => b.textContent!.includes('Pedir que apague'),
+      );
+    expect(pedir()).toBeDefined();
+
+    pedir()!.click();
+    fixture.detectChanges();
+    backend.expectNone(`${environment.apiUrl}/moderacao/evento/e1/pedir-exclusao`);
+
+    const motivo = fixture.nativeElement.querySelector(
+      'input[name="motivo"]',
+    ) as HTMLInputElement;
+    motivo.value = 'duplicado';
+    motivo.dispatchEvent(new Event('input'));
+    (
+      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+    ).find((b) => b.textContent!.trim() === 'Enviar o pedido')!.click();
+
+    const req = backend.expectOne(`${environment.apiUrl}/moderacao/evento/e1/pedir-exclusao`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ motivo: 'duplicado' });
+    req.flush(null);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent as string)
+      .withContext('o lider precisa saber que pediu, nao que apagou')
+      .toContain('Pedido enviado');
+  });
 });

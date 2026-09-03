@@ -127,6 +127,28 @@ export interface CartaoVm {
           <p class="aviso-nao-listados">Não deu para carregar os não listados.</p>
         }
 
+        <!-- Pedidos do líder para EU apagar algo meu. Some quando não há —
+             quase todo mundo nunca vê esta seção, e uma caixa vazia explicando
+             o que não aconteceu seria ruído permanente. -->
+        @if (pedidos().length) {
+          <section class="pedidos">
+            <p class="pf-rotulo">o líder pediu que você apague</p>
+            @for (p of pedidos(); track p.registroId) {
+              <a class="pedido" [routerLink]="caminhoDo(p)">
+                <span class="titulo">{{ p.titulo }}</span>
+                @if (p.motivo) {
+                  <span class="motivo">{{ p.motivo }}</span>
+                }
+                <span class="quem">{{ p.pedidoPor }} pediu · você decide</span>
+              </a>
+            }
+            <p class="cache-aviso">
+              O líder não apaga registro de ninguém — ele pede. Quem apaga é sempre quem criou,
+              e ignorar o pedido é uma resposta válida.
+            </p>
+          </section>
+        }
+
         @if (temNaoListados()) {
           <section class="nao-listados">
             <p class="pf-rotulo">não listados · {{ totalNaoListados() }}</p>
@@ -155,6 +177,39 @@ export interface CartaoVm {
     </ion-content>
   `,
   styles: `
+    .pedidos {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 10px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--rule);
+    }
+    .pedido {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 11px 13px;
+      border-radius: var(--r-md);
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      text-decoration: none;
+      color: inherit;
+    }
+    .pedido .titulo {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .pedido .motivo {
+      font-size: 12.5px;
+      color: var(--ink-2);
+    }
+    .pedido .quem {
+      font-size: 11px;
+      color: var(--ink-3);
+    }
+
     .link-turma {
       align-self: flex-end;
       font-size: 13px;
@@ -314,6 +369,7 @@ export class QuadroPage {
   ionViewWillEnter(): void {
     void this.repo.carregar();
     void this.repo.carregarNaoListados();
+    void this.repo.carregarPedidos();
   }
 
   /**
@@ -330,6 +386,15 @@ export class QuadroPage {
   /** O desfazer nomeia o estado atual, nao a operacao: some a duvida do que ele desfaz. */
   protected desfazer(tipo: TipoEvento): string {
     return tipo === 'PROVA' ? 'feita' : 'entregue';
+  }
+
+  protected readonly pedidos = this.repo.pedidos;
+
+  /** Onde fica o registro do pedido. Material vive dentro da matéria dele. */
+  protected caminhoDo(p: { registroTipo: string; registroId: string }): string {
+    return p.registroTipo === 'EVENTO'
+      ? `/tabs/eventos/${p.registroId}`
+      : `/tabs/materiais/${p.registroId}/editar`;
   }
 
   protected marcar(eventoId: string, feito: boolean): void {

@@ -13,12 +13,19 @@ import com.projetofans.repo.AcaoModeracaoRepository;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.repo.MaterialRepository;
 import com.projetofans.repo.MembroRepository;
+import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
+import com.projetofans.web.dto.PedidoDeExclusaoResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Moderacao do lider: ocultar, reexibir, pedir exclusao e transferir lideranca.
@@ -48,15 +55,18 @@ public class ModeracaoService {
     private final MaterialRepository materiais;
     private final MembroRepository membros;
     private final AcaoModeracaoRepository acoes;
+    private final UsuarioRepository usuarios;
     private final TurmaScopeResolver escopo;
 
     public ModeracaoService(EventoRepository eventos, MaterialRepository materiais,
                             MembroRepository membros, AcaoModeracaoRepository acoes,
+                            UsuarioRepository usuarios,
                             TurmaScopeResolver escopo) {
         this.eventos = eventos;
         this.materiais = materiais;
         this.membros = membros;
         this.acoes = acoes;
+        this.usuarios = usuarios;
         this.escopo = escopo;
     }
 
@@ -93,6 +103,53 @@ public class ModeracaoService {
      * membro_um_lider_por_turma e verificado a cada statement, entao promover antes
      * de rebaixar estoura com dois LIDER na mesma turma no meio da transacao.
      */
+    /**
+     * Os pedidos de exclusao abertos sobre os MEUS registros.
+     *
+     * "Abertos" e por construcao: a consulta so olha registro que ainda existe,
+     * entao apagar o registro faz o pedido sumir junto — nao ha estado de
+     * "resolvido" para manter em dia, e um estado a menos e um estado que nao
+     * pode ficar errado.
+     */
+    @Transactional(readOnly = true)
+    public List<PedidoDeExclusaoResponse> meusPedidosDeExclusao(UsuarioAtual eu) {
+        List<PedidoDeExclusaoResponse> pedidos = new ArrayList<>();
+
+        Map<UUID, String> meusEventos = eventos.vivosDoAutor(eu.usuarioId()).stream()
+                .collect(Collectors.toMap(Evento::getId, Evento::getTitulo));
+        Map<UUID, String> meusMateriais = materiais.vivosDoAutor(eu.usuarioId()).stream()
+                .collect(Collectors.toMap(Material::getId, Material::getTitulo));
+
+        juntar(pedidos, RegistroTipo.EVENTO, meusEventos);
+        juntar(pedidos, RegistroTipo.MATERIAL, meusMateriais);
+        pedidos.sort(Comparator.comparing(PedidoDeExclusaoResponse::em).reversed());
+        return pedidos;
+    }
+
+    private void juntar(List<PedidoDeExclusaoResponse> destino, RegistroTipo tipo,
+                        Map<UUID, String> titulosPorId) {
+        if (titulosPorId.isEmpty()) {
+            // `IN ()` com lista vazia e erro de sintaxe em Postgres, e o caso e
+            // comum: quem ainda nao cadastrou nada cai aqui em toda abertura.
+            return;
+        }
+        for (AcaoModeracao a : acoes.doTipoSobre(
+                AcaoModeracaoTipo.PEDIR_EXCLUSAO, tipo, titulosPorId.keySet())) {
+            destino.add(new PedidoDeExclusaoResponse(
+                    tipo,
+                    a.getRegistroId(),
+                    titulosPorId.get(a.getRegistroId()),
+                    a.getMotivo(),
+                    nomeDeQuemPediu(a.getLiderId()),
+                    a.getEm()));
+        }
+    }
+
+    /** O nome de quem pediu. Ausente vira texto neutro: pedido sem dono ainda e um pedido. */
+    private String nomeDeQuemPediu(UUID liderId) {
+        return usuarios.findById(liderId).map(u -> u.getNome()).orElse("o líder");
+    }
+
     @Transactional
     public void transferirLideranca(UsuarioAtual lider, UUID novoLiderUsuarioId) {
         UUID turmaId = escopo.turmaDoUsuario(lider.usuarioId());

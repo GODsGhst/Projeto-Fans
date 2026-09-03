@@ -94,12 +94,17 @@ describe('QuadroPage', () => {
   async function abrir(
     quadro: (r: ReturnType<HttpTestingController['expectOne']>) => void,
     naoListados: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+    // Pedido de exclusao e raro: quase todo mundo nunca tem nenhum, entao o
+    // padrao e lista vazia e so o teste que fala deles responde outra coisa.
+    // Sem isto o `verify()` acusa a chamada pendente em TODO teste da tela.
+    pedidos: (r: ReturnType<HttpTestingController['expectOne']>) => void = (r) => r.flush([]),
   ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
     quadro(backend.expectOne(`${environment.apiUrl}/meu-quadro`));
     naoListados(backend.expectOne(`${environment.apiUrl}/nao-listados`));
+    pedidos(backend.expectOne(`${environment.apiUrl}/moderacao/pedidos`));
     await fixture.whenStable();
     fixture.detectChanges();
   }
@@ -257,6 +262,8 @@ describe('QuadroPage', () => {
       .expectOne(`${environment.apiUrl}/meu-quadro`)
       .flush({ aFazer: [item('e-1', 'Lista 4')], feito: [] });
     backend.expectOne(`${environment.apiUrl}/nao-listados`).flush({ eventos: [], materiais: [] });
+    // Reentrar na aba recarrega TUDO, pedidos inclusive.
+    backend.expectOne(`${environment.apiUrl}/moderacao/pedidos`).flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
   });
@@ -298,5 +305,48 @@ describe('QuadroPage', () => {
     expect(fixture.nativeElement.querySelector('.marcar svg'))
       .withContext('sem o vetor a acao e so uma linha de texto')
       .not.toBeNull();
+  });
+
+  it('o pedido do lider para eu apagar algo meu aparece aqui', async () => {
+    // O outro lado de "pedir exclusao". Antes, o pedido ficava so no diario de
+    // moderacao do servidor: o lider achava que tinha pedido e o autor nunca
+    // ficava sabendo. Meu quadro e o lugar certo porque e a unica tela do app
+    // que fala de mim, e nao da turma.
+    await abrir(
+      (r) => r.flush({ aFazer: [], feito: [] }),
+      (r) => r.flush({ eventos: [], materiais: [] }),
+      (r) =>
+        r.flush([
+          {
+            registroTipo: 'EVENTO',
+            registroId: 'e1',
+            titulo: 'Prova duplicada',
+            motivo: 'ja existe outra igual',
+            pedidoPor: 'Lia',
+            em: '2026-09-02T18:00:00Z',
+          },
+        ]),
+    );
+
+    const texto = fixture.nativeElement.querySelector('.pedidos')!.textContent as string;
+    expect(texto).toContain('Prova duplicada');
+    expect(texto).withContext('sem o motivo o pedido vira uma ordem sem explicacao')
+      .toContain('ja existe outra igual');
+    expect(texto).withContext('quem pediu importa: da para conversar com a pessoa')
+      .toContain('Lia');
+    expect(fixture.nativeElement.querySelector('.pedidos a[href="/tabs/eventos/e1"]'))
+      .withContext('tem de levar ao registro — pedido sem caminho obriga a procurar')
+      .not.toBeNull();
+  });
+
+  it('sem pedido nenhum, a secao nao existe', async () => {
+    // Quase todo mundo nunca vera esta secao. Uma caixa vazia dizendo "nenhum
+    // pedido" seria ruido permanente para explicar uma coisa que nao aconteceu.
+    await abrir(
+      (r) => r.flush({ aFazer: [], feito: [] }),
+      (r) => r.flush({ eventos: [], materiais: [] }),
+    );
+
+    expect(fixture.nativeElement.querySelector('.pedidos')).toBeNull();
   });
 });

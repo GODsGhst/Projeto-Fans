@@ -31,6 +31,13 @@ public interface MaterialRepository extends JpaRepository<Material, UUID> {
         """)
     List<Material> naoListadosDoAutor(@Param("autorId") UUID autorId);
 
+    /** Meus materiais que ainda existem. */
+    @Query("""
+            SELECT m FROM Material m
+            WHERE m.autorId = :autorId AND m.excluidoEm IS NULL
+            """)
+    List<Material> vivosDoAutor(@Param("autorId") UUID autorId);
+
     /**
      * SOMENTE os materiais vinculados ao evento. A tela de prova nunca despeja a
      * materia inteira — e desta consulta que sai "o que estudar pra essa prova".

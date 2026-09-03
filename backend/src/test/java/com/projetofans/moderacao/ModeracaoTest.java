@@ -1,5 +1,6 @@
 package com.projetofans.moderacao;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.projetofans.domain.AcaoModeracao;
 import com.projetofans.domain.AcaoModeracaoTipo;
 import com.projetofans.domain.Evento;
@@ -29,6 +30,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -291,5 +293,77 @@ class ModeracaoTest extends TesteDeApi {
                 .filteredOn(m -> m.getPapel() == PapelMembro.LIDER)
                 .singleElement()
                 .satisfies(m -> assertThat(m.getUsuarioId()).isEqualTo(lider.getId()));
+    }
+
+    private JsonNode pedidos(Usuario quem) throws Exception {
+        return json.readTree(http.perform(get("/api/v1/moderacao/pedidos")
+                        .header("Authorization", bearer(quem)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+    }
+
+    private void pedirExclusao(Usuario quem, String tipo, UUID id, String motivo) throws Exception {
+        http.perform(post("/api/v1/moderacao/" + tipo + "/" + id + "/pedir-exclusao")
+                        .header("Authorization", bearer(quem))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"" + motivo + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("o pedido de exclusao CHEGA ao autor, com titulo e motivo")
+    void pedidoDeExclusaoChegaAoAutor() throws Exception {
+        // Antes disto, `pedir-exclusao` so escrevia no diario de moderacao e o
+        // autor nao tinha por onde saber. O lider achava que tinha pedido, e
+        // ninguem tinha sido avisado — botao que mente para os dois lados.
+        Evento prova = evento(autor, "Prova duplicada", 4);
+        pedirExclusao(lider, "evento", prova.getId(), "ja existe outra igual");
+
+        JsonNode meus = pedidos(autor);
+
+        assertThat(meus).hasSize(1);
+        assertThat(meus.get(0).get("registroId").asText()).isEqualTo(prova.getId().toString());
+        assertThat(meus.get(0).get("titulo").asText())
+                .as("pedido que diz so o id obriga a pessoa a procurar o que ela mesma escreveu")
+                .isEqualTo("Prova duplicada");
+        assertThat(meus.get(0).get("motivo").asText()).isEqualTo("ja existe outra igual");
+        assertThat(meus.get(0).get("pedidoPor").asText()).isEqualTo("Lia");
+    }
+
+    @Test
+    @DisplayName("o pedido e SO do autor: outra pessoa nao ve pedido sobre registro alheio")
+    void pedidoNaoVazaParaOutraPessoa() throws Exception {
+        Evento prova = evento(autor, "P1", 3);
+        pedirExclusao(lider, "evento", prova.getId(), "motivo");
+
+        assertThat(pedidos(outro)).as("o pedido e uma conversa entre lider e autor").isEmpty();
+        assertThat(pedidos(lider)).as("nem o proprio lider ve, porque o registro nao e dele")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("apagar o registro faz o pedido sumir junto")
+    void apagarORegistroResolveOPedido() throws Exception {
+        // Nao ha estado de "resolvido" para manter em dia: a consulta so olha
+        // registro que ainda existe. Um estado a menos e um estado que nao pode
+        // ficar errado.
+        Evento prova = evento(autor, "P1", 3);
+        pedirExclusao(lider, "evento", prova.getId(), "motivo");
+        assertThat(pedidos(autor)).hasSize(1);
+
+        http.perform(delete("/api/v1/eventos/" + prova.getId())
+                        .header("Authorization", bearer(autor))
+                        .header("If-Match", "0"))
+                .andExpect(status().isNoContent());
+
+        assertThat(pedidos(autor)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("quem nao cadastrou nada recebe lista vazia, nao erro")
+    void semRegistrosNaoQuebra() throws Exception {
+        // `IN ()` com lista vazia e erro de sintaxe em Postgres, e este e o caso
+        // mais comum de todos: toda pessoa que acaba de entrar na turma.
+        assertThat(pedidos(outro)).isEmpty();
     }
 }

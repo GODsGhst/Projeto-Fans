@@ -1,6 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 
 import { ApiService } from '../core/api.service';
+import { ModeracaoRepository } from './moderacao.repository';
+import type { PedidoDeExclusao } from './moderacao.repository';
 import type { ItemHome, MeuQuadro, NaoListados } from './models';
 
 /**
@@ -18,6 +20,7 @@ import type { ItemHome, MeuQuadro, NaoListados } from './models';
 @Injectable({ providedIn: 'root' })
 export class QuadroRepository {
   private readonly api = inject(ApiService);
+  private readonly moderacao = inject(ModeracaoRepository);
 
   readonly aFazer = signal<ItemHome[]>([]);
   readonly feito = signal<ItemHome[]>([]);
@@ -42,6 +45,19 @@ export class QuadroRepository {
       this.erro.set(mensagem(e, 'Não deu para carregar o quadro.'));
     } finally {
       this.carregando.set(false);
+    }
+  }
+
+  /** Pedidos do líder para eu apagar algo meu. Vazio para quase todo mundo. */
+  readonly pedidos = signal<PedidoDeExclusao[]>([]);
+
+  async carregarPedidos(): Promise<void> {
+    try {
+      this.pedidos.set(await this.moderacao.meusPedidos());
+    } catch {
+      // Falhar aqui não vira aviso na tela: pedido é raro, e um erro sobre algo
+      // que quase nunca existe assustaria mais do que informa. A seção
+      // simplesmente não aparece, como quando não há pedido nenhum.
     }
   }
 

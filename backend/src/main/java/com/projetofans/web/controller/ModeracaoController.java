@@ -5,17 +5,20 @@ import com.projetofans.erro.ErroDeNegocio;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.service.ModeracaoService;
 import com.projetofans.web.dto.MotivoRequest;
+import com.projetofans.web.dto.PedidoDeExclusaoResponse;
 import com.projetofans.web.dto.TransferirLiderancaRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Locale;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -61,6 +64,18 @@ public class ModeracaoController {
                               @PathVariable UUID id,
                               @RequestBody(required = false) MotivoRequest pedido) {
         moderacao.pedirExclusao(eu, registroTipo(tipo), id, motivo(pedido));
+    }
+
+    /**
+     * Os pedidos de exclusao sobre o que EU criei.
+     *
+     * Fica sob /moderacao mas nao e acao de lider: e o outro lado dela. Sem esta
+     * rota, `pedir-exclusao` escrevia no diario e o autor nunca ficava sabendo —
+     * o lider achava que tinha pedido, e ninguem tinha sido avisado.
+     */
+    @GetMapping("/moderacao/pedidos")
+    public List<PedidoDeExclusaoResponse> meusPedidos(@AuthenticationPrincipal UsuarioAtual eu) {
+        return moderacao.meusPedidosDeExclusao(eu);
     }
 
     @PostMapping("/turmas/lideranca/transferir")

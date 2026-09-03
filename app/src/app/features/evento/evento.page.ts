@@ -118,9 +118,41 @@ import { materialVm } from '../material-vm';
                 <button class="botao botao--fantasma" type="button" (click)="ocultando.set(false)">
                   Cancelar
                 </button>
+              } @else if (pedindo()) {
+                <p class="rot-campo">por quê <span class="opcional">— opcional</span></p>
+                <input
+                  #motivoPedido
+                  class="campo--linha"
+                  type="text"
+                  name="motivo"
+                  maxlength="140"
+                  placeholder="duplicado, informação errada…"
+                  aria-label="Motivo" />
+                <p class="cache-aviso">
+                  O pedido aparece no Meu quadro de quem criou, com o seu nome e este motivo.
+                  Quem apaga é sempre a pessoa que criou — você está pedindo, não apagando.
+                </p>
+                <button class="botao" type="button" [disabled]="enviandoModeracao()"
+                        (click)="pedirExclusao(motivoPedido.value)">
+                  {{ enviandoModeracao() ? 'Enviando…' : 'Enviar o pedido' }}
+                </button>
+                <button class="botao botao--fantasma" type="button" (click)="pedindo.set(false)">
+                  Cancelar
+                </button>
+              } @else if (pedidoEnviado()) {
+                <p class="alerta" role="status">
+                  <b>Pedido enviado.</b>
+                  <span>Ele aparece no Meu quadro de quem criou. A decisão de apagar é dela.</span>
+                </p>
               } @else {
                 <button class="botao botao--fantasma" type="button" (click)="ocultando.set(true)">
                   Ocultar da turma
+                </button>
+                <!-- Dois botoes porque sao duas decisoes. Ocultar tira da vista
+                     agora; pedir e conversa com quem criou. Juntar as duas faria
+                     o lider apagar sem querer o que so queria tirar da lista. -->
+                <button class="botao botao--fantasma" type="button" (click)="pedindo.set(true)">
+                  Pedir que apague
                 </button>
               }
             </div>
@@ -298,6 +330,8 @@ export class EventoPage {
   /** O papel é lido da turma, nunca da sessão: a liderança se transfere. */
   protected readonly souLider = this.turmas.souLider;
   protected readonly ocultando = signal(false);
+  protected readonly pedindo = signal(false);
+  protected readonly pedidoEnviado = signal(false);
   protected readonly enviandoModeracao = signal(false);
 
   protected readonly confirmando = signal(false);
@@ -339,6 +373,35 @@ export class EventoPage {
       this.ocultando.set(false);
     }
     await this.router.navigateByUrl('/tabs/home');
+  }
+
+  /**
+   * Pede que o autor apague. NÃO apaga.
+   *
+   * O pedido vira uma linha em "Meu quadro" de quem criou, com o nome de quem
+   * pediu e o motivo. Ignorar é uma resposta válida — se fosse para o líder
+   * decidir, ele apagaria, e apagar registro alheio é justamente o que o papel
+   * não faz.
+   */
+  protected async pedirExclusao(motivo: string): Promise<void> {
+    if (this.enviandoModeracao()) {
+      return;
+    }
+    this.enviandoModeracao.set(true);
+    this.erroDaAcao.set(null);
+    try {
+      await this.moderacao.pedirExclusao(
+        'evento',
+        this.id,
+        motivo.trim() === '' ? null : motivo.trim(),
+      );
+      this.pedidoEnviado.set(true);
+    } catch (e) {
+      this.erroDaAcao.set(mensagemDeErro(e));
+    } finally {
+      this.enviandoModeracao.set(false);
+      this.pedindo.set(false);
+    }
   }
 
   protected async apagar(): Promise<void> {

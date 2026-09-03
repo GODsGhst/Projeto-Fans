@@ -48,6 +48,13 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
         """)
     List<Evento> naoListadosDoAutor(@Param("autorId") UUID autorId);
 
+    /** Meus eventos que ainda existem — a base para saber sobre quais ha pedido. */
+    @Query("""
+            SELECT e FROM Evento e
+            WHERE e.autorId = :autorId AND e.excluidoEm IS NULL
+            """)
+    List<Evento> vivosDoAutor(@Param("autorId") UUID autorId);
+
     @Query("""
         select e from Evento e
         where e.materiaId = :materiaId

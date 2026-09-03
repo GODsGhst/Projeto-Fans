@@ -5,6 +5,16 @@ import { ApiService } from '../core/api.service';
 /** Os dois tipos que o líder pode moderar. A rota do spec é em minúsculas. */
 export type TipoModeravel = 'evento' | 'material';
 
+/** Um pedido do líder para que você apague algo seu. */
+export interface PedidoDeExclusao {
+  registroTipo: 'EVENTO' | 'MATERIAL';
+  registroId: string;
+  titulo: string;
+  motivo: string | null;
+  pedidoPor: string;
+  em: string;
+}
+
 /**
  * Os poderes do líder, e a transferência do cargo.
  *
@@ -23,6 +33,16 @@ export type TipoModeravel = 'evento' | 'material';
 @Injectable({ providedIn: 'root' })
 export class ModeracaoRepository {
   private readonly api = inject(ApiService);
+
+  /**
+   * Os pedidos de exclusão sobre o que EU criei.
+   *
+   * O outro lado de `pedirExclusao`. Sem isto o pedido ficava só no diário de
+   * moderação: o líder achava que tinha pedido e o autor nunca ficava sabendo.
+   */
+  meusPedidos(): Promise<PedidoDeExclusao[]> {
+    return this.api.get<PedidoDeExclusao[]>('/moderacao/pedidos');
+  }
 
   /** Tira da lista da turma. O autor continua vendo em "não listados". */
   ocultar(tipo: TipoModeravel, id: string, motivo: string | null): Promise<void> {
