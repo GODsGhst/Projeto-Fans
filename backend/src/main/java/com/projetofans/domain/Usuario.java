@@ -40,6 +40,18 @@ public class Usuario {
     @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
     private Instant criadoEm;
 
+    /**
+     * Admin de plataforma. Concedido SOMENTE por SQL.
+     *
+     * Nao ha setter, e a ausencia e a decisao: sem caminho no codigo, nao ha
+     * rota que possa ser enganada para promover alguem. Virar admin exige
+     * acesso ao banco, que e outra credencial, guardada em outro lugar.
+     *
+     * `updatable = false` para que nem um `save()` distraido consiga mexer.
+     */
+    @Column(name = "admin_plataforma", nullable = false, insertable = false, updatable = false)
+    private boolean adminPlataforma;
+
     protected Usuario() {
     }
 
@@ -77,6 +89,10 @@ public class Usuario {
 
     public String getGoogleSub() {
         return googleSub;
+    }
+
+    public boolean isAdminPlataforma() {
+        return adminPlataforma;
     }
 
     public Instant getCriadoEm() {

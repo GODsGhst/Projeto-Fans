@@ -145,8 +145,49 @@ Consciente, e cada um por um motivo:
 - **E-mail de "esqueci a senha".** Cai no log do Render em vez de chegar na caixa de entrada. Para
   recuperar uma senha no teste, você lê o link no painel do Render. Ligar SMTP de verdade é uma
   variável de ambiente e uma conta na Brevo (300/dia grátis).
-- **Notificação push.** É a Task 8, ainda não implementada.
+- **Notificação push.** Não existe, e não é falta: o aviso da véspera é **local**, agendado no
+  próprio aparelho (decisão 2.3 do spec). Host gratuito hiberna, e um job das 19h não roda num
+  servidor dormindo.
 - **Envio de arquivo.** É a Task 15. Material entra por link.
+
+---
+
+## Destravar uma turma sem líder
+
+A liderança só se transfere pelas mãos do líder. Quando o líder some — troca de faculdade,
+formatura, desiste do app — a turma fica sem ninguém que possa ocultar conteúdo impróprio ou
+passar o cargo adiante. Não há caminho de volta dentro do produto. Este é o alçapão.
+
+**Virar admin é só por SQL, e isso é a decisão, não uma limitação.** Nenhuma rota da API escreve
+na coluna `admin_plataforma`. Se existisse `POST /admin/promover`, ela seria o alvo mais valioso
+da API: uma falha de autorização ali entregaria todas as turmas de uma vez. Sem rota, virar admin
+exige acesso ao banco — outra credencial, guardada em outro lugar, com rastro fora da aplicação.
+
+No console SQL do Neon:
+
+```sql
+-- 1. conceder (uma vez, para você)
+UPDATE usuario SET admin_plataforma = true WHERE email = 'voce@exemplo.com';
+
+-- 2. achar os ids da turma travada e de quem vai assumir
+SELECT t.id AS turma_id, t.nome, u.id AS usuario_id, u.nome, m.papel
+FROM turma t JOIN membro m ON m.turma_id = t.id JOIN usuario u ON u.id = m.usuario_id
+WHERE t.nome ILIKE '%parte do nome%';
+```
+
+Depois, autenticado como o admin (o mesmo login do app):
+
+```bash
+curl -X POST "$API/api/v1/admin/turmas/$TURMA_ID/lider" -H "Authorization: Bearer $JWT" -H 'Content-Type: application/json' -d "{\"novoLiderUsuarioId\":\"$USUARIO_ID\"}"
+```
+
+**O que o admin pode e o que ele não pode.** Pode definir quem é líder de uma turma. Só isso. Não
+lê, não cria, não edita e não apaga conteúdo de turma nenhuma — o poder é de destravar, não de
+vigiar. E o novo líder precisa **já ser membro**: para entrar continua sendo preciso o código de
+convite, que é de quem está lá dentro.
+
+Não há tela para isso no app, de propósito: um painel de admin dentro do APK que todo aluno tem
+instalado é superfície que não precisa existir. Toda ação daqui fica no diário de moderação.
 
 ---
 
