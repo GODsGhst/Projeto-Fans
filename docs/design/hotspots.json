@@ -1,0 +1,1080 @@
+{
+  "quadro": {
+    "w": 390,
+    "h": 844
+  },
+  "telas": [
+    {
+      "nome": "nova-materia",
+      "alturaConteudo": 844,
+      "aba": "materias",
+      "semAbas": false,
+      "titulo": "Nova matéria",
+      "alvos": [
+        {
+          "para": "materias",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "materias",
+          "rotulo": "Criar matéria",
+          "voltar": false,
+          "x": 16,
+          "y": 541,
+          "w": 358,
+          "h": 51
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "novo-evento",
+      "alturaConteudo": 844,
+      "aba": "home",
+      "semAbas": false,
+      "titulo": "O que vai cair",
+      "alvos": [
+        {
+          "para": "home",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "home",
+          "rotulo": "Adicionar",
+          "voltar": false,
+          "x": 16,
+          "y": 636,
+          "w": 358,
+          "h": 51
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "turma",
+      "alturaConteudo": 867,
+      "aba": "quadro",
+      "semAbas": false,
+      "titulo": "Fans 2026.2",
+      "alvos": [
+        {
+          "para": "quadro",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "transferir",
+          "rotulo": "Passar a liderança",
+          "voltar": false,
+          "x": 16,
+          "y": 641,
+          "w": 348,
+          "h": 53
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "transferir",
+      "alturaConteudo": 844,
+      "aba": "quadro",
+      "semAbas": false,
+      "titulo": "Passar a liderança",
+      "alvos": [
+        {
+          "para": "turma",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "transferir-ok",
+          "rotulo": "A\n            \n              Ana Beatriz",
+          "voltar": false,
+          "x": 16,
+          "y": 222,
+          "w": 358,
+          "h": 59
+        },
+        {
+          "para": "transferir-ok",
+          "rotulo": "B\n            \n              Bruno\n     ",
+          "voltar": false,
+          "x": 16,
+          "y": 291,
+          "w": 358,
+          "h": 59
+        },
+        {
+          "para": "transferir-ok",
+          "rotulo": "M\n            \n              prof. Marco",
+          "voltar": false,
+          "x": 16,
+          "y": 360,
+          "w": 358,
+          "h": 59
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "transferir-ok",
+      "alturaConteudo": 844,
+      "aba": "quadro",
+      "semAbas": false,
+      "titulo": "Pronto",
+      "alvos": [
+        {
+          "para": "turma",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "turma",
+          "rotulo": "Voltar para a turma",
+          "voltar": false,
+          "x": 16,
+          "y": 288,
+          "w": 358,
+          "h": 51
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "login",
+      "alturaConteudo": 844,
+      "aba": "login",
+      "semAbas": true,
+      "titulo": "",
+      "alvos": [
+        {
+          "para": "home",
+          "rotulo": "Entrar",
+          "voltar": false,
+          "x": 16,
+          "y": 313,
+          "w": 358,
+          "h": 51
+        },
+        {
+          "para": "recuperar",
+          "rotulo": "Esqueci a senha",
+          "voltar": false,
+          "x": 143,
+          "y": 374,
+          "w": 104,
+          "h": 37
+        },
+        {
+          "para": "cadastro",
+          "rotulo": "Criar conta",
+          "voltar": false,
+          "x": 16,
+          "y": 462,
+          "w": 358,
+          "h": 53
+        }
+      ],
+      "abas": []
+    },
+    {
+      "nome": "cadastro",
+      "alturaConteudo": 845,
+      "aba": "cadastro",
+      "semAbas": true,
+      "titulo": "Criar conta",
+      "alvos": [
+        {
+          "para": "login",
+          "rotulo": "Voltar para o login",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "entrar-turma",
+          "rotulo": "Criar conta",
+          "voltar": false,
+          "x": 16,
+          "y": 432,
+          "w": 358,
+          "h": 51
+        }
+      ],
+      "abas": []
+    },
+    {
+      "nome": "entrar-turma",
+      "alturaConteudo": 845,
+      "aba": "entrar-turma",
+      "semAbas": true,
+      "titulo": "Entrar na turma",
+      "alvos": [
+        {
+          "para": "cadastro",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "home",
+          "rotulo": "Entrar na turma",
+          "voltar": false,
+          "x": 16,
+          "y": 247,
+          "w": 358,
+          "h": 51
+        },
+        {
+          "para": "home",
+          "rotulo": "Criar uma turma nova",
+          "voltar": false,
+          "x": 16,
+          "y": 350,
+          "w": 358,
+          "h": 53
+        }
+      ],
+      "abas": []
+    },
+    {
+      "nome": "recuperar",
+      "alturaConteudo": 845,
+      "aba": "recuperar",
+      "semAbas": true,
+      "titulo": "Esqueci a senha",
+      "alvos": [
+        {
+          "para": "login",
+          "rotulo": "Voltar para o login",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        }
+      ],
+      "abas": []
+    },
+    {
+      "nome": "home",
+      "alturaConteudo": 1309,
+      "aba": "home",
+      "semAbas": false,
+      "titulo": "Sexta, 21 ago",
+      "alvos": [
+        {
+          "para": "editar-evento",
+          "rotulo": "29ago\n            \n              \n      ",
+          "voltar": false,
+          "x": 16,
+          "y": 724,
+          "w": 348,
+          "h": 102
+        },
+        {
+          "para": "ver-evento",
+          "rotulo": "27ago\n            \n              \n      ",
+          "voltar": false,
+          "x": 16,
+          "y": 836,
+          "w": 348,
+          "h": 102
+        },
+        {
+          "para": "confirmar-exclusao",
+          "rotulo": "30ago\n            \n              \n      ",
+          "voltar": false,
+          "x": 16,
+          "y": 949,
+          "w": 348,
+          "h": 102
+        },
+        {
+          "para": "confirmar-exclusao",
+          "rotulo": "30ago\n            \n              \n      ",
+          "voltar": false,
+          "x": 16,
+          "y": 1061,
+          "w": 348,
+          "h": 102
+        },
+        {
+          "para": "novo-evento",
+          "rotulo": "+&nbsp;&nbsp;Adicionar prova ou entrega",
+          "voltar": false,
+          "x": 16,
+          "y": 1173,
+          "w": 348,
+          "h": 48
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "editar-evento",
+      "alturaConteudo": 844,
+      "aba": "home",
+      "semAbas": false,
+      "titulo": "Editar",
+      "alvos": [
+        {
+          "para": "home",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "home",
+          "rotulo": "Salvar",
+          "voltar": false,
+          "x": 16,
+          "y": 586,
+          "w": 358,
+          "h": 51
+        },
+        {
+          "para": "confirmar-exclusao",
+          "rotulo": "Apagar",
+          "voltar": false,
+          "x": 16,
+          "y": 647,
+          "w": 358,
+          "h": 53
+        },
+        {
+          "para": "erro",
+          "rotulo": "demo: salvar sem conexão",
+          "voltar": false,
+          "x": 111,
+          "y": 710,
+          "w": 169,
+          "h": 37
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "ver-evento",
+      "alturaConteudo": 844,
+      "aba": "home",
+      "semAbas": false,
+      "titulo": "Entrega",
+      "alvos": [
+        {
+          "para": "home",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Avisar no quadro",
+          "voltar": false,
+          "x": 16,
+          "y": 316,
+          "w": 358,
+          "h": 53
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "confirmar-exclusao",
+      "alturaConteudo": 844,
+      "aba": "home",
+      "semAbas": false,
+      "titulo": "Apagar?",
+      "alvos": [
+        {
+          "para": "home",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "home",
+          "rotulo": "Sim, apagar",
+          "voltar": false,
+          "x": 16,
+          "y": 345,
+          "w": 358,
+          "h": 53
+        },
+        {
+          "para": "home",
+          "rotulo": "Cancelar",
+          "voltar": false,
+          "x": 16,
+          "y": 408,
+          "w": 358,
+          "h": 51
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "erro",
+      "alturaConteudo": 844,
+      "aba": "home",
+      "semAbas": false,
+      "titulo": "Não salvou",
+      "alvos": [
+        {
+          "para": "editar-evento",
+          "rotulo": "Voltar",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        },
+        {
+          "para": "home",
+          "rotulo": "Tentar de novo",
+          "voltar": false,
+          "x": 16,
+          "y": 345,
+          "w": 358,
+          "h": 51
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "cal",
+      "alturaConteudo": 1091,
+      "aba": "cal",
+      "semAbas": false,
+      "titulo": "Agosto",
+      "alvos": [
+        {
+          "para": "nota",
+          "rotulo": "+ &nbsp;Anotar neste dia",
+          "voltar": false,
+          "x": 31,
+          "y": 942,
+          "w": 318,
+          "h": 48
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "nota",
+      "alturaConteudo": 844,
+      "aba": "cal",
+      "semAbas": false,
+      "titulo": "Nova anotação",
+      "alvos": [
+        {
+          "para": "cal",
+          "rotulo": "Voltar para o calendário",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "materias",
+      "alturaConteudo": 979,
+      "aba": "materias",
+      "semAbas": false,
+      "titulo": "Banco de Dados",
+      "alvos": [
+        {
+          "para": "nova-materia",
+          "rotulo": "+&nbsp;&nbsp;Nova matéria",
+          "voltar": false,
+          "x": 16,
+          "y": 83,
+          "w": 348,
+          "h": 48
+        },
+        {
+          "para": "material",
+          "rotulo": "+ &nbsp;Enviar material",
+          "voltar": false,
+          "x": 16,
+          "y": 725,
+          "w": 348,
+          "h": 48
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "quadro",
+      "alturaConteudo": 844,
+      "aba": "quadro",
+      "semAbas": false,
+      "titulo": "Meu quadro",
+      "alvos": [
+        {
+          "para": "turma",
+          "rotulo": "a turma →",
+          "voltar": false,
+          "x": 309,
+          "y": 23,
+          "w": 63,
+          "h": 29
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    },
+    {
+      "nome": "material",
+      "alturaConteudo": 888,
+      "aba": "materias",
+      "semAbas": false,
+      "titulo": "Enviar material",
+      "alvos": [
+        {
+          "para": "materias",
+          "rotulo": "Voltar para Matérias",
+          "voltar": true,
+          "x": 18,
+          "y": 22,
+          "w": 32,
+          "h": 32
+        }
+      ],
+      "abas": [
+        {
+          "para": "home",
+          "rotulo": "Home",
+          "x": 8,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "cal",
+          "rotulo": "Cal",
+          "x": 102,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "materias",
+          "rotulo": "Matérias",
+          "x": 195,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        },
+        {
+          "para": "quadro",
+          "rotulo": "Quadro",
+          "x": 289,
+          "y": 783,
+          "w": 94,
+          "h": 49
+        }
+      ]
+    }
+  ]
+}

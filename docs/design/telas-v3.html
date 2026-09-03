@@ -206,6 +206,13 @@
     position: relative; z-index: 1;
   }
 
+  /* Filho de flex ENCOLHE por padrao. Com `.t-corpo` sendo um flex column de
+     altura definida (overflow-y: auto), uma lista mais longa que a tela
+     espremia o primeiro cartao em vez de rolar — o cartao da aula de agora
+     virava uma tira de 40px com o texto vazando. So apareceu quando a home
+     ganhou os cartoes que o teste de usabilidade precisa. */
+  .t-corpo > * { flex-shrink: 0; }
+
   /* ---------- barra de abas: pilula ativa, icone de verdade ---------- */
   .abas {
     display: grid; grid-template-columns: repeat(4, 1fr);
@@ -817,7 +824,7 @@
                  aria-label="Título" value="Prova 2 — normalização">
 
           <p class="rot-campo">quando</p>
-          <input class="campo--linha" type="date" aria-label="Data" value="2026-09-10">
+          <input class="campo--linha" type="date" aria-label="Data" value="2026-08-29">
 
           <p class="rot-campo">hora <span style="font-weight:400">— opcional</span></p>
           <input class="campo--linha" type="time" aria-label="Hora">
@@ -833,7 +840,7 @@
               depois.</span>
           </div>
 
-          <button class="botao" type="button" data-ir="home">Cadastrar</button>
+          <button class="botao" type="button" data-ir="home">Adicionar</button>
         </div>
       </div>
 
@@ -1207,10 +1214,217 @@
             </div>
           </div>
 
+
+          <!-- Meu registro: o unico que abre a edicao (Testes 03 e 05). -->
+          <div class="ev ev--prova" data-ir="editar-evento" role="button" tabindex="0">
+            <div class="ev-data"><span class="ev-dia">29</span><span class="ev-mes">ago</span></div>
+            <div class="ev-corpo">
+              <div class="ev-topo">
+                <span class="chip" style="--c: var(--m-bd)">BD</span>
+                <span class="ev-tipo"><span class="glyph glyph--prova"></span>19:00</span>
+              </div>
+              <p class="ev-titulo">Prova 2 — normalização e SQL</p>
+              <p class="ev-rodape">Otávio · agora</p>
+            </div>
+          </div>
+
+          <!-- Registro da Marina: abre em LEITURA, nao em edicao (Testes 04 e 05). -->
+          <div class="ev ev--entrega" data-ir="ver-evento" role="button" tabindex="0">
+            <div class="ev-data"><span class="ev-dia">27</span><span class="ev-mes">ago</span></div>
+            <div class="ev-corpo">
+              <div class="ev-topo">
+                <span class="chip" style="--c: var(--m-esoft)">ESOFT</span>
+                <span class="ev-tipo"><span class="glyph glyph--entrega"></span>entrega</span>
+              </div>
+              <p class="ev-titulo">Diagrama de casos de uso</p>
+              <p class="ev-rodape">Marina · há 3 dias</p>
+            </div>
+          </div>
+
+          <!-- Duplicata proposital: e o objeto do Teste 06. Sao dois cartoes
+               identicos, e achar qual apagar faz parte da tarefa. -->
+          <div class="ev ev--entrega" data-ir="confirmar-exclusao" role="button" tabindex="0">
+            <div class="ev-data"><span class="ev-dia">30</span><span class="ev-mes">ago</span></div>
+            <div class="ev-corpo">
+              <div class="ev-topo">
+                <span class="chip" style="--c: var(--m-redes)">REDES</span>
+                <span class="ev-tipo"><span class="glyph glyph--entrega"></span>23:59</span>
+              </div>
+              <p class="ev-titulo">Seminário de Redes</p>
+              <p class="ev-rodape">Otávio · há 2 dias</p>
+            </div>
+          </div>
+
+          <div class="ev ev--entrega" data-ir="confirmar-exclusao" role="button" tabindex="0">
+            <div class="ev-data"><span class="ev-dia">30</span><span class="ev-mes">ago</span></div>
+            <div class="ev-corpo">
+              <div class="ev-topo">
+                <span class="chip" style="--c: var(--m-redes)">REDES</span>
+                <span class="ev-tipo"><span class="glyph glyph--entrega"></span>23:59</span>
+              </div>
+              <p class="ev-titulo">Seminário de Redes</p>
+              <p class="ev-rodape">Otávio · há 2 dias</p>
+            </div>
+          </div>
+
           <button class="add-linha" type="button" data-ir="novo-evento">
-            +&nbsp;&nbsp;Cadastrar prova ou entrega
+            +&nbsp;&nbsp;Adicionar prova ou entrega
           </button>
 
+        </div>
+      </div>
+
+
+      <!-- ==================== EDITAR PROVA OU ENTREGA ==================== -->
+      <div class="tela" data-tela="editar-evento" data-aba="home">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="home" aria-label="Voltar">&larr;</button>
+            <h3>Editar</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <p class="rot-campo">tipo</p>
+          <div class="seg" id="seg-tipo-editar">
+            <button type="button" data-tipo="prova" aria-pressed="true">Prova</button>
+            <button type="button" data-tipo="entrega" aria-pressed="false">Entrega</button>
+          </div>
+
+          <p class="rot-campo">matéria</p>
+          <div class="chips-pick" role="group" aria-label="Matéria" id="pick-materia-editar">
+            <button type="button" aria-pressed="true"><span class="chip" style="--c: var(--m-bd)">BD</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-calc)">CALC2</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-esoft)">ESOFT</span></button>
+            <button type="button" aria-pressed="false"><span class="chip" style="--c: var(--m-redes)">REDES</span></button>
+          </div>
+
+          <p class="rot-campo">o que é</p>
+          <input class="campo--linha" type="text" placeholder="Prova 2 — normalização"
+                 aria-label="Título" value="Prova 2 — normalização e SQL">
+
+          <p class="rot-campo">quando</p>
+          <input class="campo--linha" type="date" aria-label="Data" value="2026-08-29">
+
+          <p class="rot-campo">hora <span style="font-weight:400">— opcional</span></p>
+          <input class="campo--linha" type="time" aria-label="Hora" value="19:00">
+
+          <p class="cache-aviso">
+            Este registro é seu: você cadastrou hoje. Só quem criou pode editar ou apagar. O líder
+            não mexe no registro de ninguém — ele só oculta da lista da turma.
+          </p>
+
+          <button class="botao" type="button" data-ir="home">Salvar</button>
+          <button class="botao botao--fantasma" type="button" data-ir="confirmar-exclusao">Apagar</button>
+
+          <!-- Atalho só do protótipo, para o avaliador alcançar o estado de falha.
+               No app de verdade essa tela aparece sozinha quando o envio falha. -->
+          <button class="link-txt" type="button" data-ir="erro">demo: salvar sem conexão</button>
+        </div>
+      </div>
+
+      <!-- ==================== VER REGISTRO DE OUTRA PESSOA ==================== -->
+      <div class="tela" data-tela="ver-evento" data-aba="home">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="home" aria-label="Voltar">&larr;</button>
+            <h3>Entrega</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <div class="linha-campo">
+            <b><span class="glyph glyph--entrega"></span>&nbsp; Diagrama de casos de uso</b>
+            <span>ESOFT · 27 ago · entrega</span>
+          </div>
+
+          <p class="rotulo">quem cadastrou</p>
+          <div class="linha-campo">
+            <b>Marina</b>
+            <span>há 3 dias</span>
+          </div>
+
+          <!-- A restricao e dita ANTES de tentar, e nao depois de um toque negado:
+               descobrir que nao pode editar depois de digitar e o pior momento. -->
+          <div class="alerta" data-tom="turma">
+            <span class="glyph glyph--entrega" style="margin-top:3px"></span>
+            <span>Só a <b>Marina</b> edita ou apaga este registro, porque foi ela que cadastrou.
+              Se a informação mudou, avise no quadro — ela corrige.</span>
+          </div>
+
+          <button class="botao botao--fantasma" type="button" data-ir="quadro">Avisar no quadro</button>
+        </div>
+      </div>
+
+      <!-- ==================== APAGAR? (CONFIRMACAO) ==================== -->
+      <div class="tela" data-tela="confirmar-exclusao" data-aba="home">
+        <div class="t-barra">
+          <span class="esq">
+            <!-- A seta volta para a home: sair daqui NUNCA apaga nada. -->
+            <button class="voltar" type="button" data-ir="home" aria-label="Voltar">&larr;</button>
+            <h3>Apagar?</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <p class="rotulo">o que vai sumir</p>
+
+          <div class="linha-campo">
+            <b><span class="glyph glyph--entrega"></span>&nbsp; Seminário de Redes</b>
+            <span>REDES · 30 ago · 23:59</span>
+          </div>
+
+          <div class="alerta" data-tom="turma">
+            <span class="glyph glyph--entrega" style="margin-top:3px"></span>
+            <span>
+              Some da lista da turma e do calendário das <b>4 pessoas</b> que já viram este
+              registro. <b>Não dá para desfazer.</b>
+            </span>
+          </div>
+
+          <p class="cache-aviso">
+            Apagar é diferente de ocultar. Ocultar tira da lista e volta atrás; apagar destrói o
+            registro para todo mundo — e só você, que criou, pode fazer isso.
+          </p>
+
+          <!-- O destrutivo e o botao LEVE. O de maior peso visual e o caminho seguro,
+               e fica por ultimo, onde o polegar cai sozinho. -->
+          <button class="botao botao--fantasma" type="button" data-ir="home">Sim, apagar</button>
+          <button class="botao" type="button" data-ir="home">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- ==================== FALHA AO SALVAR ==================== -->
+      <div class="tela" data-tela="erro" data-aba="home">
+        <div class="t-barra">
+          <span class="esq">
+            <button class="voltar" type="button" data-ir="editar-evento" aria-label="Voltar">&larr;</button>
+            <h3>Não salvou</h3>
+          </span>
+        </div>
+        <div class="t-corpo">
+          <!-- Sem glifo aqui de proposito: o circulo e o quadrado ja significam
+               "entrega" e "prova" em todo o resto do sistema, e reusa-los para
+               marcar falha faria o participante ler erro como tipo de evento.
+               A borda do .alerta mais a palavra "Falhou" bastam, e sobrevivem a
+               escala de cinza. -->
+          <div class="alerta" data-tom="turma">
+            <span>
+              <b>Falhou ao enviar.</b> O aparelho está sem conexão. A alteração não chegou ao
+              servidor, então a turma ainda vê a versão antiga.
+            </span>
+          </div>
+
+          <p class="rotulo">o que você escreveu</p>
+
+          <div class="linha-campo">
+            <b>Prova 2 — normalização e SQL</b>
+            <span>BD · 29 ago · 19:00</span>
+          </div>
+
+          <p class="cache-aviso">
+            Nada foi perdido: a edição está guardada no aparelho e sobe sozinha quando a conexão
+            voltar. Você não precisa digitar de novo.
+          </p>
+
+          <button class="botao" type="button" data-ir="home">Tentar de novo</button>
         </div>
       </div>
 
@@ -1726,7 +1940,9 @@
   const EVENTOS = {
     21: { tipo: 'entrega', cor: 'm-bd', sigla: 'BD', titulo: 'Lista 4 — normalização', hora: '23:59' },
     25: { tipo: 'prova', cor: 'm-calc', sigla: 'CALC2', titulo: 'Prova 2 — integrais', hora: '19:00' },
-    27: { tipo: 'entrega', cor: 'm-esoft', sigla: 'ESOFT', titulo: 'Diagrama de casos de uso', hora: 'entrega' }
+    27: { tipo: 'entrega', cor: 'm-esoft', sigla: 'ESOFT', titulo: 'Diagrama de casos de uso', hora: 'entrega' },
+    29: { tipo: 'prova', cor: 'm-bd', sigla: 'BD', titulo: 'Prova 2 — normalização e SQL', hora: '19:00' },
+    30: { tipo: 'entrega', cor: 'm-redes', sigla: 'REDES', titulo: 'Seminário de Redes', hora: '23:59' }
   };
 
   const NOTAS = {

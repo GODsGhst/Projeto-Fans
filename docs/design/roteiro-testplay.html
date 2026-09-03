@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Roteiro de TestPlay — projetoFans</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  :root {
+    --ink: #14181A; --ink-2: #464E50; --ink-3: #6B7375;
+    --rule: #D6DAD8; --soft: #F2F4F1; --accent: #0F766E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 0 24px;
+    font: 10.5pt/1.45 "Roboto", -apple-system, "Segoe UI", system-ui, sans-serif;
+    color: var(--ink); background: #fff;
+  }
+  header.capa { border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 14px; }
+  h1 { font-size: 17pt; margin: 0 0 2px; letter-spacing: -.02em; }
+  .sub { color: var(--ink-2); font-size: 10pt; margin: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; }
+  th, td { border: 1px solid var(--rule); padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 9pt; font-weight: 600; }
+  td.preencher { height: 30px; }
+
+  h2 {
+    font-size: 12pt; margin: 18px 0 6px; padding: 5px 8px;
+    background: var(--ink); color: #fff; border-radius: 3px; letter-spacing: -.01em;
+  }
+  h3 { font-size: 10.5pt; margin: 12px 0 4px; color: var(--accent); }
+
+  .campo { margin: 0 0 7px; }
+  .campo b { display: inline-block; min-width: 128px; color: var(--ink-2); font-size: 9.5pt; }
+  .linha { border-bottom: 1px dotted var(--ink-3); display: block; height: 17px; margin-top: 3px; }
+  .linha + .linha { margin-top: 6px; }
+
+  ul { margin: 4px 0 0 17px; padding: 0; }
+  li { margin: 1px 0; font-size: 9.5pt; color: var(--ink-2); }
+
+  .aviso {
+    border-left: 3px solid var(--accent); background: var(--soft);
+    padding: 7px 10px; margin: 8px 0; font-size: 9.5pt;
+  }
+  .naodiga { border-left-color: #B91C1C; }
+  .teste { page-break-inside: avoid; break-inside: avoid; }
+  .quebra { page-break-before: always; break-before: page; }
+  code { font-family: "Roboto Mono", ui-monospace, Consolas, monospace; font-size: 9.5pt;
+         background: var(--soft); padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header class="capa">
+  <h1>Roteiro de Teste de Usabilidade — TestPlay</h1>
+  <p class="sub"><b>projetoFans</b> — o app onde a turma registra junto as provas, as entregas e os materiais.<br>
+  Funcionalidade principal avaliada: <b>cadastrar uma prova ou entrega</b>.</p>
+</header>
+
+<table>
+  <tr><th style="width:26%">Participante (código)</th><td class="preencher"></td>
+      <th style="width:16%">Data / hora</th><td class="preencher"></td></tr>
+  <tr><th>Aplicador</th><td class="preencher"></td>
+      <th>Onde rodou</th><td class="preencher"></td></tr>
+</table>
+
+<h2>Instruções ao aplicador</h2>
+
+<div class="aviso">
+  <b>Diga antes de começar:</b>
+  <ul>
+    <li>“Quem está sendo testado é o aplicativo, não você. Se algo der errado, o erro é nosso.”</li>
+    <li>“Fale em voz alta o que você está pensando: o que procura, o que espera, o que confunde.”</li>
+    <li>“Não existe resposta certa. Se travar, tudo bem — é isso que precisamos descobrir.”</li>
+    <li>“Pode desistir de uma tarefa quando quiser. É só avisar.”</li>
+  </ul>
+</div>
+
+<div class="aviso naodiga">
+  <b>NÃO diga durante o teste:</b>
+  <ul>
+    <li>Nunca aponte o caminho: nada de “toque ali”, “usa o botão de baixo”, “tenta naquela aba”.</li>
+    <li>Não dê nome de botão, de tela ou de menu.</li>
+    <li>Não corrija nem confirme (“isso!”, “não é aí”).</li>
+    <li>Não explique nenhuma regra do app antes da tarefa. Se a pessoa descobrir sozinha, isso é o dado.</li>
+    <li>Se perguntarem “é aqui?”, devolva: “O que você acha que acontece se tentar?”</li>
+  </ul>
+</div>
+
+<p style="font-size:9.5pt"><b>Só intervenha</b> se a pessoa ficar parada mais de 60 s sem nenhuma
+hipótese, ou pedir ajuda explicitamente duas vezes. Nesse caso registre
+<b>Concluído com auxílio</b>. Cronometre cada tarefa e anote as falas literais.</p>
+
+<h3>Como classificar cada tarefa</h3>
+<table>
+  <tr><th style="width:30%">Classificação</th><th>Critério</th></tr>
+  <tr><td><b>Concluído</b></td><td>Chegou ao resultado sozinho, sem hesitação relevante e sem caminho errado.</td></tr>
+  <tr><td><b>Concluído com dificuldade</b></td><td>Chegou sozinho, mas tentou caminhos errados, voltou atrás ou demorou bem acima do esperado.</td></tr>
+  <tr><td><b>Concluído com auxílio</b></td><td>Só chegou depois de dica ou pergunta orientadora do aplicador.</td></tr>
+  <tr><td><b>Não concluído</b></td><td>Desistiu, chegou a um resultado errado sem perceber, ou o tempo acabou.</td></tr>
+</table>
+
+<h3>O que já está no protótipo antes de começar</h3>
+<p style="font-size:9.5pt">O participante encontra a turma com estes registros. Não conte isso a ele.</p>
+<table>
+  <tr><th>Registro</th><th>Quando</th><th>De quem</th><th>Serve ao teste</th></tr>
+  <tr><td>Lista 4 — normalização (BD)</td><td>21 ago</td><td>Otávio (a conta em uso)</td><td>contexto</td></tr>
+  <tr><td>Prova 2 — integrais (CALC2)</td><td>25 ago</td><td>Ana Beatriz</td><td>contexto</td></tr>
+  <tr><td>Diagrama de casos de uso (ESOFT)</td><td>27 ago</td><td><b>Marina</b></td><td>Testes 04 e 05</td></tr>
+  <tr><td>Prova 2 — normalização e SQL (BD)</td><td>29 ago</td><td>Otávio (a conta em uso)</td><td>Teste 05</td></tr>
+  <tr><td>Seminário de Redes — <b>duplicado</b></td><td>30 ago</td><td>Otávio (a conta em uso)</td><td>Teste 06</td></tr>
+</table>
+<p style="font-size:9.5pt">Credenciais impressas para entregar no Teste 02:
+<code>aluno.teste@turma.com</code> / <code>turma2026</code></p>
+
+<div class="quebra"></div>
+
+<h2>Teste 01 — Acesso inicial</h2>
+<div class="teste">
+  <p class="campo"><b>Tarefa:</b> Você acabou de instalar no celular o aplicativo que a sua turma
+  usa para se organizar. Abra e me diga o que você acha que dá para fazer aqui.</p>
+  <p class="campo"><b>Objetivo:</b> Verificar se a abertura acontece sem instrução e se a primeira
+  tela comunica sozinha para que o app serve.</p>
+  <p class="campo"><b>Resultado esperado:</b> A pessoa abre o app, chega à primeira tela e diz com
+  as próprias palavras que serve para a turma se organizar. Reconhece que precisa se identificar
+  antes de ver a turma — ler a lista é o Teste 02.</p>
+  <p class="campo"><b>Resultado obtido:</b><span class="linha"></span><span class="linha"></span></p>
+  <p class="campo"><b>Observações:</b><span class="linha"></span><span class="linha"></span></p>
+  <b style="font-size:9.5pt">Verificar</b>
+  <ul>
+    <li>Identifica sozinho onde começar?</li>
+    <li>Fica claro que o app é da turma, e não pessoal?</li>
+    <li>Hesita sobre “e agora, o que eu faço aqui?”</li>
+    <li>Alguma tela de abertura atrapalha o primeiro contato?</li>
+  </ul>
+</div>
+
+<h2>Teste 02 — Cadastro ou Login</h2>
+<div class="teste">
+  <p class="campo"><b>Tarefa:</b> Este app é da sua turma, e só quem é da turma enxerga o que tem
+  lá dentro. Faça o que for preciso para o app te reconhecer. Neste papel está o que você recebeu
+  quando entrou na turma.</p>
+  <p class="campo"><b>Objetivo:</b> Avaliar o fluxo de autenticação e se a pessoa distingue
+  sozinha entrar de criar conta.</p>
+  <p class="campo"><b>Resultado esperado:</b> Conclui a operação e chega à área principal da turma.</p>
+  <p class="campo"><b>Resultado obtido:</b><span class="linha"></span><span class="linha"></span></p>
+  <p class="campo"><b>Observações:</b><span class="linha"></span><span class="linha"></span></p>
+  <b style="font-size:9.5pt">Verificar</b>
+  <ul>
+    <li>Distingue “entrar” de “criar conta” sem ajuda?</li>
+    <li>Os campos são claros? Digita algo no campo errado?</li>
+    <li>Identifica como confirmar a operação?</li>
+    <li>Percebe que entrou? Fica claro em qual turma está?</li>
+  </ul>
+</div>
+
+<h2>Teste 03 — Executar a funcionalidade principal</h2>
+<div class="teste">
+  <p class="campo"><b>Tarefa:</b> O professor de Banco de Dados avisou no fim da aula: prova no
+  dia 29, cai SQL e modelagem. Faça a turma inteira ficar sabendo disso pelo app.</p>
+  <p class="campo"><b>Objetivo:</b> Avaliar o fluxo completo de cadastro — achar o ponto de
+  entrada, preencher e confirmar — e se o registro aparece para a turma.</p>
+  <p class="campo"><b>Resultado esperado:</b> Cria o registro da prova, salva, e vê o registro na
+  lista da turma identificado como <b>prova</b>.</p>
+  <p class="campo"><b>Resultado obtido:</b><span class="linha"></span><span class="linha"></span></p>
+  <p class="campo"><b>Observações:</b><span class="linha"></span><span class="linha"></span></p>
+  <b style="font-size:9.5pt">Verificar</b>
+  <ul>
+    <li>Acha sozinho por onde se cadastra algo novo? Em quanto tempo?</li>
+    <li>Entende que precisa escolher entre prova e entrega? Escolhe certo?</li>
+    <li>Ao final pergunte: “como você sabe que aquilo é uma prova?” — a resposta não pode depender de cor.</li>
+    <li>Tem certeza de que salvou? Existe confirmação visível?</li>
+    <li>Espera que alguém precise aprovar o registro? <i>(a regra é que não precisa)</i></li>
+  </ul>
+</div>
+
+<div class="quebra"></div>
+
+<h2>Teste 04 — Consultar informações</h2>
+<div class="teste">
+  <p class="campo"><b>Tarefa:</b> Uma colega faltou hoje e mandou mensagem perguntando o que a
+  turma tem de Engenharia de Software. Responda para ela o que está marcado e para quando.</p>
+  <p class="campo"><b>Objetivo:</b> Verificar se a pessoa localiza um registro criado por outra
+  pessoa e consegue ler dele a informação de que precisa.</p>
+  <p class="campo"><b>Resultado esperado:</b> Encontra o registro de ESOFT (27 ago, da Marina), diz
+  em voz alta a data e do que se trata, e nomeia por conta própria que é uma entrega — se não
+  nomear, isso é dado de teste.</p>
+  <p class="campo"><b>Resultado obtido:</b><span class="linha"></span><span class="linha"></span></p>
+  <p class="campo"><b>Observações:</b><span class="linha"></span><span class="linha"></span></p>
+  <b style="font-size:9.5pt">Verificar</b>
+  <ul>
+    <li>Procura por rolagem, por aba, pelo calendário? Qual é o reflexo?</li>
+    <li>A lista deixa claro o que vem primeiro?</li>
+    <li>Identifica quem cadastrou aquele registro?</li>
+    <li>Abre o registro sem medo de alterar alguma coisa?</li>
+  </ul>
+</div>
+
+<h2>Teste 05 — Editar informações</h2>
+<div class="teste">
+  <p class="campo"><b>Tarefa:</b> O professor de Banco de Dados voltou atrás: a prova saiu do dia
+  29 e passou para o dia 30. Deixe o app com a informação certa. Depois disso: a entrega de
+  Engenharia de Software também mudou de data. Deixe o app certo nesse caso também.</p>
+  <p class="campo"><b>Objetivo:</b> Avaliar a edição do próprio registro e se a pessoa descobre
+  sozinha a regra de que só quem criou pode editar.</p>
+  <p class="campo"><b>Resultado esperado:</b> Altera a prova que ela mesma criou e vê a mudança;
+  ao tentar a de Engenharia de Software, percebe que não pode e entende o motivo sem explicação.</p>
+  <p class="campo"><b>Resultado obtido:</b><span class="linha"></span><span class="linha"></span></p>
+  <p class="campo"><b>Observações:</b><span class="linha"></span><span class="linha"></span></p>
+  <b style="font-size:9.5pt">Verificar</b>
+  <ul>
+    <li>Onde procura a edição primeiro?</li>
+    <li>Consegue mudar só a data, sem refazer o registro inteiro?</li>
+    <li>No registro da Marina: a impossibilidade fica visível <b>antes</b> de tentar, ou só depois?</li>
+    <li>Entende o porquê da restrição, ou acha que é defeito do app? Anote a fala.</li>
+    <li>Procura alguma forma de avisar a Marina que a informação está errada?</li>
+  </ul>
+</div>
+
+<div class="quebra"></div>
+
+<h2>Teste 06 — Excluir ou cancelar</h2>
+<div class="teste">
+  <p class="campo"><b>Tarefa:</b> Você percebeu que o seminário de Redes ficou cadastrado duas
+  vezes na lista da turma. Resolva isso.</p>
+  <p class="campo"><b>Objetivo:</b> Avaliar a exclusão do próprio registro, a etapa de
+  confirmação e a segurança percebida.</p>
+  <p class="campo"><b>Resultado esperado:</b> Localiza a duplicata, remove o registro, passa por
+  uma confirmação explícita e vê a lista com apenas um seminário.</p>
+  <p class="campo"><b>Resultado obtido:</b><span class="linha"></span><span class="linha"></span></p>
+  <p class="campo"><b>Observações:</b><span class="linha"></span><span class="linha"></span></p>
+  <b style="font-size:9.5pt">Verificar</b>
+  <ul>
+    <li>Acha a opção de excluir? Está escondida demais ou exposta demais?</li>
+    <li>A confirmação aparece antes de apagar? O texto diz claramente o que será apagado?</li>
+    <li><b>Existe diferença clara entre confirmar e cancelar?</b> Qual dos dois parece o caminho “normal”?</li>
+    <li>Consegue desistir na tela de confirmação?</li>
+    <li>Demonstra medo de apagar algo da turma inteira?</li>
+  </ul>
+</div>
+
+<h2>Teste 07 — Navegação</h2>
+<div class="teste">
+  <p class="campo"><b>Tarefa:</b> Você começou a registrar um trabalho de Cálculo, mas percebeu no
+  meio que não lembra a data que o professor falou. Saia disso sem registrar nada e volte para a
+  tela onde você vê tudo o que a turma tem.</p>
+  <p class="campo"><b>Objetivo:</b> Avaliar o abandono de uma operação em andamento e o retorno à
+  tela principal usando a navegação disponível.</p>
+  <p class="campo"><b>Resultado esperado:</b> Abandona sem salvar, nada é publicado, e retorna à
+  tela principal com a lista intacta.</p>
+  <p class="campo"><b>Resultado obtido:</b><span class="linha"></span><span class="linha"></span></p>
+  <p class="campo"><b>Observações:</b><span class="linha"></span><span class="linha"></span></p>
+  <b style="font-size:9.5pt">Verificar</b>
+  <ul>
+    <li>Os botões de navegação são identificáveis?</li>
+    <li>O comportamento de voltar é o esperado?</li>
+    <li>Tem certeza de que não publicou nada pela metade?</li>
+    <li>Consegue voltar à tela principal de qualquer ponto?</li>
+  </ul>
+</div>
+
+<div class="quebra"></div>
+
+<h2>Fechamento — perguntas depois das 7 tarefas</h2>
+<ol style="font-size:10pt">
+  <li>Qual parte foi mais confusa? Por quê?<span class="linha"></span></li>
+  <li>Você usaria isso com a sua turma de verdade? O que faltou?<span class="linha"></span></li>
+  <li>Sem olhar: como você diferencia uma prova de uma entrega aqui dentro?<span class="linha"></span></li>
+  <li>Você confiaria que o que está na lista está certo e atualizado?<span class="linha"></span></li>
+  <li>Se pudesse mudar uma única coisa, qual seria?<span class="linha"></span></li>
+</ol>
+
+<h2>Resumo do participante</h2>
+<table>
+  <tr><th style="width:34%">Teste</th><th style="width:30%">Classificação</th>
+      <th style="width:14%">Tempo</th><th>Caminhos errados</th></tr>
+  <tr><td>01 Acesso inicial</td><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td>02 Cadastro ou Login</td><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td>03 Cadastrar prova/entrega</td><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td>04 Consultar</td><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td>05 Editar</td><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td>06 Excluir ou cancelar</td><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td>07 Navegação</td><td class="preencher"></td><td></td><td></td></tr>
+</table>
+
+<h3>Problemas identificados e o que fazer sobre eles</h3>
+<p style="font-size:9.5pt">Esta parte é o que a atividade avalia como “identificação de problemas
+e análise dos resultados”. Uma linha por problema observado.</p>
+<table>
+  <tr><th style="width:8%">Teste</th><th style="width:42%">O que aconteceu</th>
+      <th>Mudança proposta na interface</th></tr>
+  <tr><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td class="preencher"></td><td></td><td></td></tr>
+  <tr><td class="preencher"></td><td></td><td></td></tr>
+</table>
+
+</body>
+</html>
