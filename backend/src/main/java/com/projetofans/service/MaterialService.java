@@ -78,7 +78,8 @@ public class MaterialService {
         revisoes.registrar(RegistroTipo.MATERIAL, material.getId(), usuario.usuarioId(),
                 AcaoRevisao.EDITAR, material);
 
-        material.editar(materia.getId(), req.tipo(), req.titulo(), req.url(), Instant.now());
+        material.editar(materia.getId(), req.tipo(), req.titulo(), req.url(), req.dataAula(),
+                Instant.now());
         Material salvo = materiais.saveAndFlush(material);
         return MaterialResponse.de(salvo, nomeDoAutor(salvo.getAutorId()));
     }

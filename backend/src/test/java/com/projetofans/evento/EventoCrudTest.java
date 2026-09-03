@@ -287,4 +287,63 @@ class EventoCrudTest extends TesteDeApi {
         assertThat(eventos.findById(UUID.fromString(criado.get("id").asText())).orElseThrow()
                 .getHoraEvento()).isNull();
     }
+
+    @Test
+    @DisplayName("editar grava a sala — PATCH nao pode ignorar campo em silencio")
+    void editarPreservaASala() throws Exception {
+        // Perda silenciosa de dado, encontrada rodando contra o servidor de
+        // verdade: `Evento.editar` foi escrito antes de a coluna `sala` existir,
+        // e quando ela chegou so o caminho de CRIAR foi ligado. Editar o titulo
+        // de uma prova apagava a sala dela, sem erro nenhum — o pior tipo de
+        // defeito, porque a resposta e 200 e quem editou nao tem como saber.
+        // Criar SEM sala e editar COM ela: este e o caminho que expoe o defeito.
+        // Criar com A-101 e editar mantendo A-101 passaria por acidente, porque
+        // `editar` simplesmente nao toca no campo — o valor antigo sobrevive e o
+        // teste aplaude o bug.
+        JsonNode criado = criar(bearerAutor, pedidoDeEvento());
+
+        Map<String, Object> edicao = pedidoDeEvento();
+        edicao.put("titulo", "Prova 1 — corrigida");
+        edicao.put("sala", "A-101");
+
+        MvcResult r = http.perform(patch("/api/v1/eventos/" + criado.get("id").asText())
+                        .header("Authorization", bearerAutor)
+                        .header("If-Match", criado.get("version").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(corpo(edicao)))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode depois = json.readTree(r.getResponse().getContentAsString());
+
+        assertThat(depois.get("titulo").asText()).isEqualTo("Prova 1 — corrigida");
+        assertThat(depois.get("sala"))
+                .as("a sala foi enviada na edicao e o servidor a ignorou")
+                .isNotNull();
+        assertThat(depois.get("sala").asText()).isEqualTo("A-101");
+    }
+
+    @Test
+    @DisplayName("editar sem sala LIMPA a sala — PATCH substitui, nao mescla")
+    void editarSemSalaLimpaASala() throws Exception {
+        // O outro lado da mesma regra, e ele tambem precisa de teste: PATCH aqui
+        // SUBSTITUI o objeto inteiro (A13). Campo ausente vira nulo de proposito
+        // — e assim que se tira a sala de excecao de uma prova que mudou de volta
+        // para a sala de sempre.
+        Map<String, Object> pedido = pedidoDeEvento();
+        pedido.put("sala", "A-101");
+        JsonNode criado = criar(bearerAutor, pedido);
+
+        MvcResult r = http.perform(patch("/api/v1/eventos/" + criado.get("id").asText())
+                        .header("Authorization", bearerAutor)
+                        .header("If-Match", criado.get("version").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(corpo(pedidoDeEvento())))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode depois = json.readTree(r.getResponse().getContentAsString());
+
+        assertThat(depois.get("sala") == null || depois.get("sala").isNull())
+                .as("sem sala no corpo, a prova volta para a sala da materia")
+                .isTrue();
+    }
 }

@@ -154,11 +154,14 @@ public class Material {
         return excluidoEm != null;
     }
 
-    public void editar(UUID materiaId, TipoMaterial tipo, String titulo, String url, Instant agora) {
+    /** Mesmo cuidado do Evento: PATCH substitui, entao `dataAula` entra aqui. */
+    public void editar(UUID materiaId, TipoMaterial tipo, String titulo, String url,
+                       LocalDate dataAula, Instant agora) {
         this.materiaId = materiaId;
         this.tipo = tipo;
         this.titulo = titulo;
         this.url = url;
+        this.dataAula = dataAula;
         this.atualizadoEm = agora;
     }
 

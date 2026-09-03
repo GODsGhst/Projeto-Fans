@@ -106,7 +106,8 @@ public class EventoService {
                 AcaoRevisao.EDITAR, evento);
 
         Instant agora = Instant.now();
-        evento.editar(materia.getId(), req.tipo(), req.titulo(), req.data(), req.hora(), agora);
+        evento.editar(materia.getId(), req.tipo(), req.titulo(), req.data(), req.hora(),
+                req.sala(), agora);
         Evento salvo = eventos.saveAndFlush(evento);
         avisar(salvo.getTurmaId(), usuario, agora);
         return EventoResponse.de(salvo, materia, nomeDoAutor(salvo.getAutorId()));

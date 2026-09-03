@@ -173,13 +173,23 @@ public class Evento {
     }
 
     /** So o autor chega aqui — a checagem de autoria e do service, e tem teste proprio. */
+    /**
+     * PATCH SUBSTITUI o objeto inteiro (A13), entao todo campo editavel entra
+     * aqui — inclusive os que sao nulos na maioria das vezes.
+     *
+     * `sala` ficou de fora quando a coluna foi criada: so o caminho de CRIAR foi
+     * ligado, e editar o titulo de uma prova ignorava a sala enviada, com
+     * resposta 200. Perda silenciosa e o pior defeito possivel aqui, porque quem
+     * editou nao tem como perceber.
+     */
     public void editar(UUID materiaId, TipoEvento tipo, String titulo,
-                       LocalDate dataEvento, LocalTime horaEvento, Instant agora) {
+                       LocalDate dataEvento, LocalTime horaEvento, String sala, Instant agora) {
         this.materiaId = materiaId;
         this.tipo = tipo;
         this.titulo = titulo;
         this.dataEvento = dataEvento;
         this.horaEvento = horaEvento;
+        this.sala = emBrancoViraNulo(sala);
         this.atualizadoEm = agora;
     }
 

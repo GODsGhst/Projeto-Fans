@@ -3,6 +3,7 @@ package com.projetofans.web.dto;
 import com.projetofans.domain.TipoEvento;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -21,5 +22,11 @@ public record AtualizarEventoRequest(
         @NotNull TipoEvento tipo,
         @NotBlank String titulo,
         @NotNull LocalDate data,
-        LocalTime hora) {
+        LocalTime hora,
+        // Entrou tarde e por isso vale o aviso: TODO campo editavel precisa
+        // existir aqui tambem, nao so no request de criar. `sala` ficou de fora
+        // quando a coluna nasceu, e o efeito foi mudo — o PATCH trazia a sala, o
+        // Jackson a descartava por nao existir no record, e o servidor
+        // respondia 200 como se tivesse gravado.
+        @Size(max = 40) String sala) {
 }
