@@ -18,6 +18,11 @@ export interface MaterialVm {
   readonly tipo: string;
   readonly titulo: string;
   readonly autoria: string;
+  /**
+   * Se ja existe resumo por IA. So o booleano: o texto inteiro numa lista de
+   * vinte materiais seria carregado para nao ser lido.
+   */
+  readonly temResumo: boolean;
 }
 
 export function materialVm(m: Material, agora: Date): MaterialVm {
@@ -33,6 +38,7 @@ export function materialVm(m: Material, agora: Date): MaterialVm {
     daAula: rotuloDaAula(m.dataAula),
     autorId: m.autoria.autorId,
     autoria: assinatura(m.autoria, agora),
+    temResumo: (m.resumo ?? null) !== null,
   };
 }
 
@@ -47,8 +53,18 @@ function formato(ref: string | null): string {
 }
 
 const MESES_CURTOS = [
-  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-  'jul', 'ago', 'set', 'out', 'nov', 'dez',
+  'jan',
+  'fev',
+  'mar',
+  'abr',
+  'mai',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'out',
+  'nov',
+  'dez',
 ];
 
 /**

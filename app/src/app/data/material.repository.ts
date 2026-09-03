@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 
 import { ApiService } from '../core/api.service';
-import type { AtualizarMaterialRequest, CriarMaterialRequest, Material } from './models';
+import type {
+  AtualizarMaterialRequest,
+  CriarMaterialRequest,
+  Material,
+} from './models';
 
 /**
  * Materiais.
@@ -25,8 +29,34 @@ export class MaterialRepository {
   }
 
   /** So o autor. `version` no `If-Match`. */
-  atualizar(materialId: string, version: number, req: AtualizarMaterialRequest): Promise<Material> {
+  atualizar(
+    materialId: string,
+    version: number,
+    req: AtualizarMaterialRequest,
+  ): Promise<Material> {
     return this.api.patch<Material>(`/materiais/${materialId}`, req, version);
+  }
+
+  /**
+   * Pede o resumo por IA, com a chave DESTE aparelho no header.
+   *
+   * A chave viaja em header e nunca em corpo: corpo de requisicao acaba em log
+   * de acesso e em relatorio de erro com muito mais facilidade, e ela e a unica
+   * coisa que trafega aqui que nao pertence ao projeto.
+   *
+   * `refazer` existe porque a chamada custa dinheiro: sem ele, abrir a tela de
+   * novo cobraria de novo. Com resumo ja gerado o servidor devolve o que tem.
+   */
+  resumir(
+    materialId: string,
+    chave: string,
+    refazer = false,
+  ): Promise<Material> {
+    return this.api.post<Material>(
+      `/materiais/${materialId}/resumo${refazer ? '?refazer=true' : ''}`,
+      {},
+      { 'X-IA-Key': chave },
+    );
   }
 
   excluir(materialId: string, version: number): Promise<void> {

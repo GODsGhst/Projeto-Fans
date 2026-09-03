@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
@@ -69,7 +75,10 @@ import { materialVm } from '../material-vm';
         <!-- Fora dos @if de proposito: existe com a materia cheia e vazia. O
              estado vazio dizia "assim que alguem da turma adicionar" e nao
              oferecia como — convite sem porta. -->
-        <a class="botao" [routerLink]="['/tabs/materias', id, 'material', 'novo']">
+        <a
+          class="botao"
+          [routerLink]="['/tabs/materias', id, 'material', 'novo']"
+        >
           Adicionar material
         </a>
 
@@ -77,12 +86,18 @@ import { materialVm } from '../material-vm';
           <p class="pf-rotulo">material de aula</p>
           @for (m of aula(); track m.id) {
             @if (m.url; as endereco) {
-              <a class="abrir" [href]="endereco" target="_blank" rel="noopener noreferrer">
+              <a
+                class="abrir"
+                [href]="endereco"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <app-material-linha
                   class="aula"
                   [tipo]="m.tipo"
                   [titulo]="m.titulo"
-                  [autoria]="m.autoria" />
+                  [autoria]="m.autoria"
+                />
               </a>
               <span class="linha-meta">
                 @if (m.daAula) {
@@ -92,15 +107,27 @@ import { materialVm } from '../material-vm';
                      principal; editar precisa de um alvo proprio para nao
                      disputar com ela. -->
                 @if (m.autorId === meuId()) {
-                  <a class="editar" [routerLink]="['/tabs/materiais', m.id, 'editar']">editar</a>
+                  <a
+                    class="editar"
+                    [routerLink]="['/tabs/materiais', m.id, 'editar']"
+                    >editar</a
+                  >
                 }
+                <!-- De todo mundo, nao so do autor: o resumo e da turma. Quem
+                     tem chave gera uma vez e os trinta leem. -->
+                <a
+                  class="editar"
+                  [routerLink]="['/tabs/materiais', m.id, 'resumo']"
+                  >{{ m.temResumo ? 'resumo ✓' : 'resumo' }}</a
+                >
               </span>
             } @else {
               <app-material-linha
                 class="aula"
                 [tipo]="m.tipo"
                 [titulo]="m.titulo"
-                [autoria]="m.autoria" />
+                [autoria]="m.autoria"
+              />
             }
           }
         }
@@ -109,12 +136,18 @@ import { materialVm } from '../material-vm';
           <p class="pf-rotulo">material adicional</p>
           @for (m of adicionais(); track m.id) {
             @if (m.url; as endereco) {
-              <a class="abrir" [href]="endereco" target="_blank" rel="noopener noreferrer">
+              <a
+                class="abrir"
+                [href]="endereco"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <app-material-linha
                   class="adicional"
                   [tipo]="m.tipo"
                   [titulo]="m.titulo"
-                  [autoria]="m.autoria" />
+                  [autoria]="m.autoria"
+                />
               </a>
               <span class="linha-meta">
                 @if (m.daAula) {
@@ -124,15 +157,27 @@ import { materialVm } from '../material-vm';
                      principal; editar precisa de um alvo proprio para nao
                      disputar com ela. -->
                 @if (m.autorId === meuId()) {
-                  <a class="editar" [routerLink]="['/tabs/materiais', m.id, 'editar']">editar</a>
+                  <a
+                    class="editar"
+                    [routerLink]="['/tabs/materiais', m.id, 'editar']"
+                    >editar</a
+                  >
                 }
+                <!-- De todo mundo, nao so do autor: o resumo e da turma. Quem
+                     tem chave gera uma vez e os trinta leem. -->
+                <a
+                  class="editar"
+                  [routerLink]="['/tabs/materiais', m.id, 'resumo']"
+                  >{{ m.temResumo ? 'resumo ✓' : 'resumo' }}</a
+                >
               </span>
             } @else {
               <app-material-linha
                 class="adicional"
                 [tipo]="m.tipo"
                 [titulo]="m.titulo"
-                [autoria]="m.autoria" />
+                [autoria]="m.autoria"
+              />
             }
           }
         }
@@ -148,7 +193,8 @@ import { materialVm } from '../material-vm';
                 [quando]="e.quando"
                 [titulo]="e.titulo"
                 [materia]="e.materia"
-                [autoria]="e.autoria" />
+                [autoria]="e.autoria"
+              />
             </a>
           }
         }
@@ -157,7 +203,8 @@ import { materialVm } from '../material-vm';
           <div class="pf-vazio">
             <b>Nada nesta matéria ainda.</b>
             <span>
-              Material e prova aparecem aqui assim que alguém da turma adicionar.
+              Material e prova aparecem aqui assim que alguém da turma
+              adicionar.
             </span>
           </div>
         }
@@ -204,8 +251,6 @@ import { materialVm } from '../material-vm';
       text-decoration: none;
       color: inherit;
     }
-
-
   `,
 })
 export class MateriaPage {
@@ -241,7 +286,9 @@ export class MateriaPage {
   protected readonly carregando = signal(true);
   protected readonly erro = signal<string | null>(null);
 
-  protected readonly nome = computed(() => this.detalhe()?.materia.nome ?? 'Matéria');
+  protected readonly nome = computed(
+    () => this.detalhe()?.materia.nome ?? 'Matéria',
+  );
 
   private readonly agora = new Date();
 
@@ -250,11 +297,16 @@ export class MateriaPage {
   );
 
   protected readonly adicionais = computed(() =>
-    (this.detalhe()?.materiaisAdicionais ?? []).map((m) => materialVm(m, this.agora)),
+    (this.detalhe()?.materiaisAdicionais ?? []).map((m) =>
+      materialVm(m, this.agora),
+    ),
   );
 
   protected readonly eventos = computed(() =>
-    (this.detalhe()?.eventos ?? []).map((e) => ({ id: e.id, ...eventoVm(e, this.agora) })),
+    (this.detalhe()?.eventos ?? []).map((e) => ({
+      id: e.id,
+      ...eventoVm(e, this.agora),
+    })),
   );
 
   /** Vazio de verdade: carregou, nao falhou, e a materia nao tem nada. */
@@ -278,7 +330,9 @@ export class MateriaPage {
       this.detalhe.set(await this.repo.detalhe(id));
     } catch (e) {
       // Nunca virar "esta materia nao tem nada": falhar ao buscar e outra tela.
-      this.erro.set(e instanceof Error ? e.message : 'Não deu para carregar a matéria.');
+      this.erro.set(
+        e instanceof Error ? e.message : 'Não deu para carregar a matéria.',
+      );
     } finally {
       this.carregando.set(false);
     }

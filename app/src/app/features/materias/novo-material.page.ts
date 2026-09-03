@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonBackButton,
@@ -35,7 +40,14 @@ import { mensagemDeErro } from '../auth/erro';
   selector: 'app-novo-material',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonBackButton,
+    IonContent,
+  ],
   styleUrls: ['../auth/auth.scss'],
   template: `
     <ion-header [translucent]="true">
@@ -59,14 +71,16 @@ import { mensagemDeErro } from '../auth/erro';
             type="button"
             data-tipo="AULA"
             [attr.aria-pressed]="tipo() === 'AULA'"
-            (click)="tipo.set('AULA')">
+            (click)="tipo.set('AULA')"
+          >
             De aula
           </button>
           <button
             type="button"
             data-tipo="ADICIONAL"
             [attr.aria-pressed]="tipo() === 'ADICIONAL'"
-            (click)="tipo.set('ADICIONAL')">
+            (click)="tipo.set('ADICIONAL')"
+          >
             Adicional
           </button>
         </div>
@@ -79,7 +93,8 @@ import { mensagemDeErro } from '../auth/erro';
           name="titulo"
           maxlength="120"
           placeholder="Slides da aula 3"
-          aria-label="Título do material" />
+          aria-label="Título do material"
+        />
 
         <p class="rot-campo">link</p>
         <input
@@ -90,26 +105,32 @@ import { mensagemDeErro } from '../auth/erro';
           inputmode="url"
           autocapitalize="off"
           placeholder="https://…"
-          aria-label="Link do material" />
+          aria-label="Link do material"
+        />
 
-        <p class="rot-campo">de que aula <span class="opcional">— opcional</span></p>
+        <p class="rot-campo">
+          de que aula <span class="opcional">— opcional</span>
+        </p>
         <input
           #dataAula
           class="campo--linha"
           type="date"
           name="dataAula"
-          aria-label="Data da aula" />
+          aria-label="Data da aula"
+        />
 
         <p class="alerta">
-          Cole o endereço de onde o material está — Drive, Classroom, site da matéria. Enviar o
-          arquivo direto do celular ainda não dá; por enquanto é o link.
+          Cole o endereço de onde o material está — Drive, Classroom, site da
+          matéria. Enviar o arquivo direto do celular ainda não dá; por enquanto
+          é o link.
         </p>
 
         <button
           class="botao"
           type="button"
           [disabled]="enviando()"
-          (click)="adicionar(titulo.value, url.value, dataAula.value)">
+          (click)="adicionar(titulo.value, url.value, dataAula.value)"
+        >
           {{ rotulo() }}
         </button>
       </div>
@@ -120,7 +141,8 @@ export class NovoMaterialPage {
   private readonly materiais = inject(MaterialRepository);
   private readonly router = inject(Router);
 
-  private readonly materiaId = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+  private readonly materiaId =
+    inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
   protected readonly voltarPara = `/tabs/materias/${this.materiaId}`;
   protected readonly tipo = signal<TipoMaterial>('AULA');
@@ -136,7 +158,11 @@ export class NovoMaterialPage {
     return this.espera.demorando() ? 'Acordando o servidor…' : 'Adicionando…';
   }
 
-  protected async adicionar(titulo: string, url: string, dataAula: string): Promise<void> {
+  protected async adicionar(
+    titulo: string,
+    url: string,
+    dataAula: string,
+  ): Promise<void> {
     if (this.enviando()) {
       return;
     }

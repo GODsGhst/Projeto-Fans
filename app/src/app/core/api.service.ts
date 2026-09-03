@@ -19,11 +19,19 @@ export class ApiService {
   private readonly base = environment.apiUrl;
 
   get<T>(rota: string, params?: ParamsApi): Promise<T> {
-    return firstValueFrom(this.http.get<T>(this.base + rota, { params: montar(params) }));
+    return firstValueFrom(
+      this.http.get<T>(this.base + rota, { params: montar(params) }),
+    );
   }
 
-  post<T>(rota: string, corpo?: unknown): Promise<T> {
-    return firstValueFrom(this.http.post<T>(this.base + rota, corpo ?? {}));
+  post<T>(
+    rota: string,
+    corpo?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<T> {
+    return firstValueFrom(
+      this.http.post<T>(this.base + rota, corpo ?? {}, { headers }),
+    );
   }
 
   put<T>(rota: string, corpo?: unknown): Promise<T> {

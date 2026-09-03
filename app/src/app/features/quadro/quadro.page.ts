@@ -1,6 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 
 import { MaterialLinhaComponent } from '../../shared/material-linha.component';
 import { MiniCardComponent } from '../../shared/mini-card.component';
@@ -51,7 +61,8 @@ export interface CartaoVm {
     IonContent,
     MiniCardComponent,
     MaterialLinhaComponent,
-    RouterLink,],
+    RouterLink,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -84,8 +95,16 @@ export interface CartaoVm {
             <div class="coluna">
               <p class="pf-rotulo">a fazer</p>
               @for (c of aFazer(); track c.id) {
-                <app-mini-card [materia]="c.materia" [titulo]="c.titulo" [tipo]="c.tipo" />
-                <button class="marcar" type="button" (click)="marcar(c.id, true)">
+                <app-mini-card
+                  [materia]="c.materia"
+                  [titulo]="c.titulo"
+                  [tipo]="c.tipo"
+                />
+                <button
+                  class="marcar"
+                  type="button"
+                  (click)="marcar(c.id, true)"
+                >
                   <svg viewBox="0 0 20 20" aria-hidden="true">
                     <rect x="2.5" y="2.5" width="15" height="15" rx="4.5" />
                     <path d="M6.4 10.3l2.5 2.5 4.7-5.1" />
@@ -104,8 +123,13 @@ export interface CartaoVm {
                   [materia]="c.materia"
                   [titulo]="c.titulo"
                   [tipo]="c.tipo"
-                  [feito]="true" />
-                <button class="marcar marcar--feito" type="button" (click)="marcar(c.id, false)">
+                  [feito]="true"
+                />
+                <button
+                  class="marcar marcar--feito"
+                  type="button"
+                  (click)="marcar(c.id, false)"
+                >
                   <svg viewBox="0 0 20 20" aria-hidden="true">
                     <rect x="2.5" y="2.5" width="15" height="15" rx="4.5" />
                     <path d="M6.4 10.3l2.5 2.5 4.7-5.1" />
@@ -124,7 +148,9 @@ export interface CartaoVm {
           proprio, e a secao NAO renderiza — senao a ausencia dela mentiria.
         -->
         @if (!erro() && erroNaoListados()) {
-          <p class="aviso-nao-listados">Não deu para carregar os não listados.</p>
+          <p class="aviso-nao-listados">
+            Não deu para carregar os não listados.
+          </p>
         }
 
         <!-- Pedidos do líder para EU apagar algo meu. Some quando não há —
@@ -143,8 +169,8 @@ export interface CartaoVm {
               </a>
             }
             <p class="cache-aviso">
-              O líder não apaga registro de ninguém — ele pede. Quem apaga é sempre quem criou,
-              e ignorar o pedido é uma resposta válida.
+              O líder não apaga registro de ninguém — ele pede. Quem apaga é
+              sempre quem criou, e ignorar o pedido é uma resposta válida.
             </p>
           </section>
         }
@@ -159,7 +185,8 @@ export interface CartaoVm {
                 [materia]="c.materia"
                 [titulo]="c.titulo"
                 [tipo]="c.tipo"
-                [aviso]="c.aviso ?? null" />
+                [aviso]="c.aviso ?? null"
+              />
             }
 
             @for (m of materiaisOcultos(); track m.vm.id) {
@@ -167,7 +194,8 @@ export interface CartaoVm {
                 <app-material-linha
                   [tipo]="m.vm.tipo"
                   [titulo]="m.vm.titulo"
-                  [autoria]="m.vm.autoria" />
+                  [autoria]="m.vm.autoria"
+                />
                 <span class="aviso">{{ m.aviso }}</span>
               </div>
             }
@@ -331,8 +359,12 @@ export class QuadroPage {
     () => this.repo.aFazer().length > 0 || this.repo.feito().length > 0,
   );
 
-  protected readonly aFazer = computed(() => this.repo.aFazer().map(cartaoDeItem));
-  protected readonly feitos = computed(() => this.repo.feito().map(cartaoDeItem));
+  protected readonly aFazer = computed(() =>
+    this.repo.aFazer().map(cartaoDeItem),
+  );
+  protected readonly feitos = computed(() =>
+    this.repo.feito().map(cartaoDeItem),
+  );
 
   protected readonly eventosOcultos = computed(
     () => this.repo.naoListados()?.eventos.map(cartaoDeEvento) ?? [],
@@ -351,7 +383,9 @@ export class QuadroPage {
   );
 
   /** So aparece quando ha algo. Secao vazia seria ruido para quase todo mundo. */
-  protected readonly temNaoListados = computed(() => this.totalNaoListados() > 0);
+  protected readonly temNaoListados = computed(
+    () => this.totalNaoListados() > 0,
+  );
 
   /**
    * Recarrega toda vez que a aba aparece — não só quando o componente nasce.

@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
@@ -34,7 +37,10 @@ function item(id: string, data: string, tipo: 'PROVA' | 'ENTREGA'): ItemHome {
   };
 }
 
-class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 'mesclar'> {
+class StorageFake implements Pick<
+  StorageService,
+  'ler' | 'gravar' | 'limpar' | 'mesclar'
+> {
   snapshot: SnapshotLocal | null = null;
   async ler(): Promise<SnapshotLocal | null> {
     return this.snapshot;
@@ -45,7 +51,9 @@ class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 
   async limpar(): Promise<void> {
     this.snapshot = null;
   }
-  async mesclar(parcial: { eventos?: SnapshotLocal['eventos'] }): Promise<void> {
+  async mesclar(parcial: {
+    eventos?: SnapshotLocal['eventos'];
+  }): Promise<void> {
     this.snapshot = {
       eventos: parcial.eventos ?? this.snapshot?.eventos ?? [],
       materias: this.snapshot?.materias ?? [],
@@ -114,19 +122,33 @@ describe('HomeRepository', () => {
     await pronto;
 
     expect(repo.itens().length).withContext('nao corta no teto de 6').toBe(7);
-    expect(repo.itens().map((i) => i.eventoId)).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g']);
+    expect(repo.itens().map((i) => i.eventoId)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+      'f',
+      'g',
+    ]);
   });
 
   it('erro de rede NAO devolve lista vazia como sucesso', async () => {
     storage.snapshot = null;
 
     const pronto = repo.carregar();
-    backend.expectOne(`${environment.apiUrl}/home`).error(new ProgressEvent('error'));
+    backend
+      .expectOne(`${environment.apiUrl}/home`)
+      .error(new ProgressEvent('error'));
     await pronto;
 
-    expect(repo.itens()).withContext('sem snapshot, nao ha o que mostrar').toEqual([]);
+    expect(repo.itens())
+      .withContext('sem snapshot, nao ha o que mostrar')
+      .toEqual([]);
     expect(repo.erro())
-      .withContext('lista vazia sem erro seria "nao ha provas" mentindo sobre "falhei ao buscar"')
+      .withContext(
+        'lista vazia sem erro seria "nao ha provas" mentindo sobre "falhei ao buscar"',
+      )
       .not.toBeNull();
     expect(repo.offline()).toBeTrue();
   });
@@ -139,7 +161,9 @@ describe('HomeRepository', () => {
     };
 
     const pronto = repo.carregar();
-    backend.expectOne(`${environment.apiUrl}/home`).error(new ProgressEvent('error'));
+    backend
+      .expectOne(`${environment.apiUrl}/home`)
+      .error(new ProgressEvent('error'));
     await pronto;
 
     expect(repo.itens().map((i) => i.eventoId)).toEqual(['do-cache']);

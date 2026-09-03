@@ -23,7 +23,9 @@ export const ROTA_ENTRAR_TURMA = '/entrar-turma';
  * `restaurar()` e idempotente, entao chamar de novo custa uma leitura e fecha a
  * corrida.
  */
-export const guardaSessao: CanActivateFn = async (): Promise<boolean | UrlTree> => {
+export const guardaSessao: CanActivateFn = async (): Promise<
+  boolean | UrlTree
+> => {
   const auth = inject(AuthService);
   const router = inject(Router);
 

@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+} from '@angular/core';
 import type { AlcanceNota } from './tipos';
 
 /**
@@ -23,7 +28,9 @@ import type { AlcanceNota } from './tipos';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article class="nota" [class.nota--turma]="ehTurma()">
-      <span class="cabeca">{{ ehTurma() ? 'da turma · todos veem' : 'pessoal · só você' }}</span>
+      <span class="cabeca">{{
+        ehTurma() ? 'da turma · todos veem' : 'pessoal · só você'
+      }}</span>
       <p class="texto">{{ texto() }}</p>
       @if (autoria(); as a) {
         <span class="autoria">{{ a }}</span>

@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+} from '@angular/core';
 import { MateriaChipComponent } from './materia-chip.component';
 import type { Materia, TipoEvento } from './tipos';
 
@@ -38,7 +43,9 @@ import type { Materia, TipoEvento } from './tipos';
           }
           <span class="tipo">
             <span class="glifo" aria-hidden="true"></span>
-            <span class="apenas-leitor">{{ ehProva() ? 'Prova' : 'Entrega' }} —</span>
+            <span class="apenas-leitor"
+              >{{ ehProva() ? 'Prova' : 'Entrega' }} —</span
+            >
             {{ quando() }}
           </span>
         </div>

@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -38,7 +41,9 @@ describe('NovoMaterialPage', () => {
 
   function preencher(titulo: string, url: string): void {
     const campo = (nome: string) =>
-      fixture.nativeElement.querySelector(`input[name="${nome}"]`) as HTMLInputElement;
+      fixture.nativeElement.querySelector(
+        `input[name="${nome}"]`,
+      ) as HTMLInputElement;
     campo('titulo').value = titulo;
     campo('titulo').dispatchEvent(new Event('input'));
     campo('url').value = url;
@@ -47,8 +52,12 @@ describe('NovoMaterialPage', () => {
 
   function enviar(): void {
     (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.includes('Adicionar'))!.click();
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.includes('Adicionar'))!
+      .click();
   }
 
   async function assentar(): Promise<void> {
@@ -81,7 +90,9 @@ describe('NovoMaterialPage', () => {
     await assentar();
 
     backend.expectNone(`${environment.apiUrl}/materiais`);
-    expect(fixture.nativeElement.querySelector('.pf-erro')!.textContent).toContain('link');
+    expect(
+      fixture.nativeElement.querySelector('.pf-erro')!.textContent,
+    ).toContain('link');
   });
 
   it('link que nao e endereco nao vai para o servidor', async () => {
@@ -90,7 +101,9 @@ describe('NovoMaterialPage', () => {
     await assentar();
 
     backend.expectNone(`${environment.apiUrl}/materiais`);
-    expect(fixture.nativeElement.querySelector('.pf-erro')!.textContent).toContain('http');
+    expect(
+      fixture.nativeElement.querySelector('.pf-erro')!.textContent,
+    ).toContain('http');
   });
 
   it('depois de adicionar, volta para a materia', async () => {
@@ -107,7 +120,10 @@ describe('NovoMaterialPage', () => {
     enviar();
     backend
       .expectOne(`${environment.apiUrl}/materiais`)
-      .flush({ detail: 'Servidor fora do ar.' }, { status: 500, statusText: 'Server Error' });
+      .flush(
+        { detail: 'Servidor fora do ar.' },
+        { status: 500, statusText: 'Server Error' },
+      );
     await assentar();
 
     expect(fixture.nativeElement.querySelector('.pf-erro')).not.toBeNull();

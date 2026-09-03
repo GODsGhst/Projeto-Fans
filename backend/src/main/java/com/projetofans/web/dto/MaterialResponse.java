@@ -18,7 +18,9 @@ public record MaterialResponse(
         AutoriaResponse autoria,
         int version,
         boolean visivelTurma,
-        Instant excluidoEm) {
+        Instant excluidoEm,
+        String resumo,
+        Instant resumoEm) {
 
     public static MaterialResponse de(Material material, String autorNome) {
         return new MaterialResponse(
@@ -33,6 +35,8 @@ public record MaterialResponse(
                         material.getCriadoEm(), material.getAtualizadoEm()),
                 material.getVersion(),
                 material.isVisivelTurma(),
-                material.getExcluidoEm());
+                material.getExcluidoEm(),
+                material.getResumo(),
+                material.getResumoEm());
     }
 }

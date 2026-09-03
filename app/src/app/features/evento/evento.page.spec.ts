@@ -1,8 +1,15 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  convertToParamMap,
+  provideRouter,
+} from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
@@ -55,11 +62,13 @@ function detalhe(materiais: Material[]): EventoDetalhe {
 /** Se quem está olhando é o líder da turma. Muda por teste. */
 const liderancaMinha = signal(false);
 
-const usuarioAtual = signal<{ id: string; nome: string; email: string } | null>({
-  id: 'u1',
-  nome: 'Otavio',
-  email: 'voce@exemplo.com',
-});
+const usuarioAtual = signal<{ id: string; nome: string; email: string } | null>(
+  {
+    id: 'u1',
+    nome: 'Otavio',
+    email: 'voce@exemplo.com',
+  },
+);
 
 describe('EventoPage', () => {
   let backend: HttpTestingController;
@@ -78,7 +87,10 @@ describe('EventoPage', () => {
         { provide: AuthService, useValue: { usuario: usuarioAtual } },
         {
           provide: TurmaRepository,
-          useValue: { souLider: liderancaMinha, garantirCarregada: () => Promise.resolve() },
+          useValue: {
+            souLider: liderancaMinha,
+            garantirCarregada: () => Promise.resolve(),
+          },
         },
         {
           provide: ActivatedRoute,
@@ -96,7 +108,9 @@ describe('EventoPage', () => {
     liderancaMinha.set(false);
   });
 
-  async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
+  async function abrir(
+    responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+  ) {
     fixture.detectChanges();
     responder(backend.expectOne(`${environment.apiUrl}/eventos/e1`));
     await fixture.whenStable();
@@ -104,8 +118,8 @@ describe('EventoPage', () => {
   }
 
   function textos(seletor: string): string[] {
-    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map((e) =>
-      (e as HTMLElement).textContent!.trim(),
+    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map(
+      (e) => (e as HTMLElement).textContent!.trim(),
     );
   }
 
@@ -114,7 +128,11 @@ describe('EventoPage', () => {
     // pode buscar material por materia para "completar" a lista: despejar a
     // materia inteira na tela de uma prova e exatamente o que o nao-negociavel
     // 11 proibe.
-    await abrir((r) => r.flush(detalhe([material('mat-vinculado', 'Formas normais', 'x/fn.pdf')])));
+    await abrir((r) =>
+      r.flush(
+        detalhe([material('mat-vinculado', 'Formas normais', 'x/fn.pdf')]),
+      ),
+    );
 
     expect(textos('app-material-linha .titulo')).toEqual(['Formas normais']);
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
@@ -126,7 +144,9 @@ describe('EventoPage', () => {
   it('evento sem material vinculado diz isso, e nao some com a lista', async () => {
     await abrir((r) => r.flush(detalhe([])));
 
-    expect(fixture.nativeElement.querySelectorAll('app-material-linha').length).toBe(0);
+    expect(
+      fixture.nativeElement.querySelectorAll('app-material-linha').length,
+    ).toBe(0);
     expect(fixture.nativeElement.querySelector('.pf-vazio')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.pf-aviso'))
       .withContext('evento sem material nao mostra aviso de falha')
@@ -137,9 +157,16 @@ describe('EventoPage', () => {
     // Mudanca do backend de 2026-08-31: registro oculto ou logicamente
     // excluido responde 404 para quem nao e o autor. Isso nao e "deu erro" —
     // e "isso nao existe mais".
-    await abrir((r) => r.flush({ detail: 'Isso não existe mais.' }, { status: 404, statusText: 'Not Found' }));
+    await abrir((r) =>
+      r.flush(
+        { detail: 'Isso não existe mais.' },
+        { status: 404, statusText: 'Not Found' },
+      ),
+    );
 
-    const sumiu = fixture.nativeElement.querySelector('.pf-sumiu') as HTMLElement | null;
+    const sumiu = fixture.nativeElement.querySelector(
+      '.pf-sumiu',
+    ) as HTMLElement | null;
     expect(sumiu).not.toBeNull();
     expect(sumiu!.textContent).toContain('Isso não existe mais.');
     expect(fixture.nativeElement.querySelector('.pf-aviso'))
@@ -151,9 +178,9 @@ describe('EventoPage', () => {
   it('falha de rede nao vira evento sem material', async () => {
     await abrir((r) => r.error(new ProgressEvent('error')));
 
-    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain(
-      'Sem conexão',
-    );
+    expect(
+      fixture.nativeElement.querySelector('.pf-aviso')!.textContent,
+    ).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
       .withContext('falhar ao buscar NAO e "nao ha material vinculado"')
       .toBeNull();
@@ -168,8 +195,12 @@ describe('EventoPage', () => {
     // "/tabs/eventos//anexar" e nao levava a lugar nenhum.
     await abrir((r) => r.flush(detalhe([])));
 
-    const link = fixture.nativeElement.querySelector('a.anexar') as HTMLAnchorElement | null;
-    expect(link).withContext('sem material e justamente quando anexar importa').not.toBeNull();
+    const link = fixture.nativeElement.querySelector(
+      'a.anexar',
+    ) as HTMLAnchorElement | null;
+    expect(link)
+      .withContext('sem material e justamente quando anexar importa')
+      .not.toBeNull();
     expect(link!.getAttribute('href')).toBe('/tabs/eventos/e1/anexar');
   });
 
@@ -179,7 +210,9 @@ describe('EventoPage', () => {
     // das provas e na sala de sempre, e repetir isso em todas viraria ruido que
     // ninguem le — entao a linha so aparece quando ha excecao.
     await abrir((r) => r.flush({ ...detalhe([]), sala: 'A-101' }));
-    expect(fixture.nativeElement.querySelector('.sala')!.textContent).toContain('A-101');
+    expect(fixture.nativeElement.querySelector('.sala')!.textContent).toContain(
+      'A-101',
+    );
   });
 
   it('sem sala propria, nao aparece linha de sala', async () => {
@@ -201,13 +234,19 @@ describe('EventoPage', () => {
 
     expect(textos).toContain('Editar');
     expect(textos).toContain('Apagar');
-    expect(fixture.nativeElement.querySelector('a[href="/tabs/eventos/e1/editar"]')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/tabs/eventos/e1/editar"]'),
+    ).not.toBeNull();
   });
 
   it('quem NAO e o autor nao ve editar nem apagar', async () => {
     // "Só você" é a regra, e o servidor a aplica — mas mostrar o botão para quem
     // vai levar 403 é convidar ao erro e depois culpar a pessoa.
-    usuarioAtual.set({ id: 'outra-pessoa', nome: 'Ana', email: 'ana@exemplo.com' });
+    usuarioAtual.set({
+      id: 'outra-pessoa',
+      nome: 'Ana',
+      email: 'ana@exemplo.com',
+    });
     await abrir((r) => r.flush(detalhe([])));
 
     expect(fixture.nativeElement.querySelector('.do-autor')).toBeNull();
@@ -217,24 +256,34 @@ describe('EventoPage', () => {
     await abrir((r) => r.flush(detalhe([])));
 
     const apagar = () =>
-      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-        (b) => b.textContent!.trim() === 'Apagar',
-      )!;
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.trim() === 'Apagar')!;
     apagar().click();
     fixture.detectChanges();
 
     // Nada foi para o servidor ainda: o primeiro toque só pergunta.
     backend.expectNone(`${environment.apiUrl}/eventos/e1`);
-    expect(fixture.nativeElement.textContent as string).toContain('Apagar mesmo');
+    expect(fixture.nativeElement.textContent as string).toContain(
+      'Apagar mesmo',
+    );
 
-    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
       .find((b) => b.textContent!.trim() === 'Sim, apagar')!
       .click();
 
     const req = backend.expectOne(`${environment.apiUrl}/eventos/e1`);
     expect(req.request.method).toBe('DELETE');
     expect(req.request.headers.get('If-Match'))
-      .withContext('sem If-Match o servidor apaga por cima de uma edicao de outra pessoa')
+      .withContext(
+        'sem If-Match o servidor apaga por cima de uma edicao de outra pessoa',
+      )
       .toBe('1');
     req.flush(null);
     await fixture.whenStable();
@@ -244,17 +293,27 @@ describe('EventoPage', () => {
   it('desistir de apagar nao manda nada', async () => {
     await abrir((r) => r.flush(detalhe([])));
 
-    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
       .find((b) => b.textContent!.trim() === 'Apagar')!
       .click();
     fixture.detectChanges();
-    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
       .find((b) => b.textContent!.trim() === 'Cancelar')!
       .click();
     fixture.detectChanges();
 
     backend.expectNone(`${environment.apiUrl}/eventos/e1`);
-    expect(fixture.nativeElement.textContent as string).not.toContain('Apagar mesmo');
+    expect(fixture.nativeElement.textContent as string).not.toContain(
+      'Apagar mesmo',
+    );
   });
 
   it('o lider pode ocultar da turma, com motivo', async () => {
@@ -266,10 +325,14 @@ describe('EventoPage', () => {
     await abrir((r) => r.flush(detalhe([])));
 
     const ocultar = () =>
-      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-        (b) => b.textContent!.includes('Ocultar'),
-      );
-    expect(ocultar()).withContext('o lider precisa de um jeito de tirar da lista').toBeDefined();
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.includes('Ocultar'));
+    expect(ocultar())
+      .withContext('o lider precisa de um jeito de tirar da lista')
+      .toBeDefined();
 
     ocultar()!.click();
     fixture.detectChanges();
@@ -282,10 +345,16 @@ describe('EventoPage', () => {
     motivo.value = 'foto indevida';
     motivo.dispatchEvent(new Event('input'));
     (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.trim() === 'Ocultar da turma')!.click();
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
+      .click();
 
-    const req = backend.expectOne(`${environment.apiUrl}/moderacao/evento/e1/ocultar`);
+    const req = backend.expectOne(
+      `${environment.apiUrl}/moderacao/evento/e1/ocultar`,
+    );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ motivo: 'foto indevida' });
     req.flush(null);
@@ -311,15 +380,25 @@ describe('EventoPage', () => {
     liderancaMinha.set(true);
     await abrir((r) => r.flush(detalhe([])));
 
-    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
       .find((b) => b.textContent!.includes('Ocultar'))!
       .click();
     fixture.detectChanges();
-    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
       .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
       .click();
 
-    const req = backend.expectOne(`${environment.apiUrl}/moderacao/evento/e1/ocultar`);
+    const req = backend.expectOne(
+      `${environment.apiUrl}/moderacao/evento/e1/ocultar`,
+    );
     expect(req.request.body).toEqual({ motivo: null });
     req.flush(null);
     await fixture.whenStable();
@@ -336,14 +415,18 @@ describe('EventoPage', () => {
     await abrir((r) => r.flush(detalhe([])));
 
     const pedir = () =>
-      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-        (b) => b.textContent!.includes('Pedir que apague'),
-      );
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.includes('Pedir que apague'));
     expect(pedir()).toBeDefined();
 
     pedir()!.click();
     fixture.detectChanges();
-    backend.expectNone(`${environment.apiUrl}/moderacao/evento/e1/pedir-exclusao`);
+    backend.expectNone(
+      `${environment.apiUrl}/moderacao/evento/e1/pedir-exclusao`,
+    );
 
     const motivo = fixture.nativeElement.querySelector(
       'input[name="motivo"]',
@@ -351,10 +434,16 @@ describe('EventoPage', () => {
     motivo.value = 'duplicado';
     motivo.dispatchEvent(new Event('input'));
     (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.trim() === 'Enviar o pedido')!.click();
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.trim() === 'Enviar o pedido')!
+      .click();
 
-    const req = backend.expectOne(`${environment.apiUrl}/moderacao/evento/e1/pedir-exclusao`);
+    const req = backend.expectOne(
+      `${environment.apiUrl}/moderacao/evento/e1/pedir-exclusao`,
+    );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ motivo: 'duplicado' });
     req.flush(null);

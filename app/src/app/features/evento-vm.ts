@@ -27,7 +27,13 @@ export interface EventoVm {
  */
 export type FonteEvento = Pick<
   ItemHome,
-  'tipo' | 'titulo' | 'data' | 'hora' | 'materiaSigla' | 'materiaCorHex' | 'autoria'
+  | 'tipo'
+  | 'titulo'
+  | 'data'
+  | 'hora'
+  | 'materiaSigla'
+  | 'materiaCorHex'
+  | 'autoria'
 > & {
   /**
    * Opcional porque so o Evento a tem — `ItemHome` (a Home) nao traz sala. O
@@ -95,7 +101,10 @@ export function mesPorExtenso(agora: Date): string {
 export function limitesDoMes(agora: Date): { de: string; ate: string } {
   const ano = agora.getFullYear();
   const mes = agora.getMonth();
-  return { de: iso(new Date(ano, mes, 1)), ate: iso(new Date(ano, mes + 1, 0)) };
+  return {
+    de: iso(new Date(ano, mes, 1)),
+    ate: iso(new Date(ano, mes + 1, 0)),
+  };
 }
 
 function iso(d: Date): string {

@@ -17,7 +17,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   selector: 'app-materia-chip',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span class="chip" [style.background]="cor()">{{ sigla() }}</span>`,
+  template: `<span class="chip" [style.background]="cor()">{{
+    sigla()
+  }}</span>`,
   styles: `
     :host {
       display: inline-flex;

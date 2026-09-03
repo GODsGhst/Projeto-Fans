@@ -22,7 +22,9 @@ describe('design system — nao-negociaveis visuais', () => {
       f.detectChanges();
 
       const chip: HTMLElement = f.nativeElement.querySelector('.chip');
-      expect(chip.textContent!.trim()).withContext('a sigla precisa aparecer').toBe('BD');
+      expect(chip.textContent!.trim())
+        .withContext('a sigla precisa aparecer')
+        .toBe('BD');
       expect(getComputedStyle(chip).backgroundColor)
         .withContext('o preenchimento precisa ser a hue da materia')
         .toBe('rgb(3, 105, 161)');
@@ -60,7 +62,8 @@ describe('design system — nao-negociaveis visuais', () => {
     });
 
     it('prova e bloco preenchido; entrega e contorno sem preenchimento', () => {
-      const fundo = (el: HTMLElement) => getComputedStyle(el.querySelector('.ev')!).backgroundColor;
+      const fundo = (el: HTMLElement) =>
+        getComputedStyle(el.querySelector('.ev')!).backgroundColor;
 
       // entrega nao pinta fundo: transparente resolve para alpha 0
       expect(fundo(montar('ENTREGA'))).toBe('rgba(0, 0, 0, 0)');
@@ -68,7 +71,8 @@ describe('design system — nao-negociaveis visuais', () => {
     });
 
     it('o glifo tem forma diferente: cheio e quadrado na prova, vazado e redondo na entrega', () => {
-      const glifo = (el: HTMLElement) => getComputedStyle(el.querySelector('.glifo')!);
+      const glifo = (el: HTMLElement) =>
+        getComputedStyle(el.querySelector('.glifo')!);
 
       const prova = glifo(montar('PROVA'));
       const entrega = glifo(montar('ENTREGA'));
@@ -114,7 +118,8 @@ describe('design system — nao-negociaveis visuais', () => {
     });
 
     it('a regua tem estilo diferente — a distincao sobrevive a escala de cinza', () => {
-      const estilo = (el: HTMLElement) => getComputedStyle(el.querySelector('.nota')!);
+      const estilo = (el: HTMLElement) =>
+        getComputedStyle(el.querySelector('.nota')!);
 
       expect(estilo(montar('TURMA')).borderLeftStyle).toBe('solid');
       expect(estilo(montar('PESSOAL')).borderLeftStyle).toBe('dashed');
@@ -132,7 +137,9 @@ describe('design system — nao-negociaveis visuais', () => {
 
       const el = f.nativeElement as HTMLElement;
       expect(el.querySelector('.sala')!.textContent!.trim()).toBe('B-204');
-      expect(el.querySelector('.sala svg')).withContext('o vetor de sala de aula').not.toBeNull();
+      expect(el.querySelector('.sala svg'))
+        .withContext('o vetor de sala de aula')
+        .not.toBeNull();
     });
 
     it('so a aula em andamento recebe o trilho de accent', () => {

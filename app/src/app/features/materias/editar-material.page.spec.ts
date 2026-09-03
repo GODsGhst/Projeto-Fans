@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
@@ -70,7 +73,9 @@ describe('EditarMaterialPage', () => {
 
   function botao(texto: string): HTMLButtonElement | undefined {
     return (
-      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
     ).find((b) => b.textContent!.includes(texto));
   }
 
@@ -80,13 +85,25 @@ describe('EditarMaterialPage', () => {
     await abrir();
 
     expect(
-      (fixture.nativeElement.querySelector('input[name="titulo"]') as HTMLInputElement).value,
+      (
+        fixture.nativeElement.querySelector(
+          'input[name="titulo"]',
+        ) as HTMLInputElement
+      ).value,
     ).toBe('Slides da aula 3');
     expect(
-      (fixture.nativeElement.querySelector('input[name="url"]') as HTMLInputElement).value,
+      (
+        fixture.nativeElement.querySelector(
+          'input[name="url"]',
+        ) as HTMLInputElement
+      ).value,
     ).toBe('https://drive.google.com/a.pdf');
     expect(
-      (fixture.nativeElement.querySelector('input[name="dataAula"]') as HTMLInputElement).value,
+      (
+        fixture.nativeElement.querySelector(
+          'input[name="dataAula"]',
+        ) as HTMLInputElement
+      ).value,
     ).toBe('2026-09-02');
   });
 
@@ -137,7 +154,9 @@ describe('EditarMaterialPage', () => {
 
   it('link invalido nao vai para o servidor', async () => {
     await abrir();
-    const url = fixture.nativeElement.querySelector('input[name="url"]') as HTMLInputElement;
+    const url = fixture.nativeElement.querySelector(
+      'input[name="url"]',
+    ) as HTMLInputElement;
     url.value = 'drive.google.com/sem-esquema';
     url.dispatchEvent(new Event('input'));
     botao('Salvar')!.click();
@@ -145,6 +164,8 @@ describe('EditarMaterialPage', () => {
     fixture.detectChanges();
 
     backend.expectNone(`${environment.apiUrl}/materiais/mat-1`);
-    expect(fixture.nativeElement.querySelector('.pf-erro')!.textContent).toContain('http');
+    expect(
+      fixture.nativeElement.querySelector('.pf-erro')!.textContent,
+    ).toContain('http');
   });
 });

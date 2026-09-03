@@ -29,7 +29,9 @@ export class MateriaRepository {
       this.materias.set(doServidor);
       await this.storage.mesclar({ materias: doServidor });
     } catch (e) {
-      this.erro.set(e instanceof Error ? e.message : 'Não deu para carregar as matérias.');
+      this.erro.set(
+        e instanceof Error ? e.message : 'Não deu para carregar as matérias.',
+      );
       throw e;
     } finally {
       this.carregando.set(false);
@@ -54,7 +56,11 @@ export class MateriaRepository {
     const snapshot = await this.storage.ler();
     // `servidorRespondeu` cobre a corrida: turma que apagou todas as materias
     // recebe lista vazia do servidor, e sem esta guarda o disco a repintaria.
-    if (!this.servidorRespondeu && snapshot !== null && snapshot.materias.length > 0) {
+    if (
+      !this.servidorRespondeu &&
+      snapshot !== null &&
+      snapshot.materias.length > 0
+    ) {
       this.materias.set(snapshot.materias);
     }
   }

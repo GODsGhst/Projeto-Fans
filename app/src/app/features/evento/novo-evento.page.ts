@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   IonBackButton,
@@ -67,15 +73,17 @@ import { mensagemDeErro } from '../auth/erro';
           <div class="pf-vazio">
             <b>Nenhuma matéria cadastrada ainda.</b>
             <span>
-              Prova e entrega pertencem a uma matéria — sem matéria não dá para adicionar. Crie a
-              primeira e volte aqui.
+              Prova e entrega pertencem a uma matéria — sem matéria não dá para
+              adicionar. Crie a primeira e volte aqui.
             </span>
           </div>
           <!-- Elemento a, nao button: o teste exige que nao exista BOTAO de cadastrar
                quando nao ha materia, e ele tem razao — nao ha o que cadastrar.
                Este elemento leva embora da tela; nao envia nada dela. Aparencia
                igual, papel oposto, e a tag e o que carrega essa diferenca. -->
-          <a class="botao" routerLink="/tabs/materias/nova">Adicionar matéria</a>
+          <a class="botao" routerLink="/tabs/materias/nova"
+            >Adicionar matéria</a
+          >
         } @else {
           @if (erro(); as e) {
             <p class="pf-erro" role="alert">{{ e }}</p>
@@ -87,14 +95,16 @@ import { mensagemDeErro } from '../auth/erro';
               type="button"
               data-tipo="PROVA"
               [attr.aria-pressed]="tipo() === 'PROVA'"
-              (click)="tipo.set('PROVA')">
+              (click)="tipo.set('PROVA')"
+            >
               Prova
             </button>
             <button
               type="button"
               data-tipo="ENTREGA"
               [attr.aria-pressed]="tipo() === 'ENTREGA'"
-              (click)="tipo.set('ENTREGA')">
+              (click)="tipo.set('ENTREGA')"
+            >
               Entrega
             </button>
           </div>
@@ -107,7 +117,8 @@ import { mensagemDeErro } from '../auth/erro';
                 [attr.data-materia]="m.id"
                 [attr.aria-pressed]="materiaEscolhida() === m.id"
                 [attr.aria-label]="m.nome"
-                (click)="materiaId.set(m.id)">
+                (click)="materiaId.set(m.id)"
+              >
                 <app-materia-chip [cor]="m.corHex" [sigla]="m.sigla" />
               </button>
             }
@@ -121,7 +132,8 @@ import { mensagemDeErro } from '../auth/erro';
             maxlength="120"
             placeholder="Prova 2 — normalização"
             [value]="valorInicial().titulo"
-            aria-label="Título" />
+            aria-label="Título"
+          />
 
           <p class="rot-campo">quando</p>
           <input
@@ -129,7 +141,8 @@ import { mensagemDeErro } from '../auth/erro';
             class="campo--linha"
             type="date"
             [value]="valorInicial().data"
-            aria-label="Data" />
+            aria-label="Data"
+          />
 
           <p class="rot-campo">hora <span class="opcional">— opcional</span></p>
           <input
@@ -137,9 +150,12 @@ import { mensagemDeErro } from '../auth/erro';
             class="campo--linha"
             type="time"
             [value]="valorInicial().hora"
-            aria-label="Hora" />
+            aria-label="Hora"
+          />
 
-          <p class="rot-campo">sala <span class="opcional">— só se for em outra</span></p>
+          <p class="rot-campo">
+            sala <span class="opcional">— só se for em outra</span>
+          </p>
           <input
             #sala
             class="campo--linha"
@@ -147,7 +163,8 @@ import { mensagemDeErro } from '../auth/erro';
             maxlength="40"
             placeholder="na sala de sempre"
             [value]="valorInicial().sala"
-            aria-label="Sala, se diferente da habitual" />
+            aria-label="Sala, se diferente da habitual"
+          />
 
           <p class="alerta">
             <!-- Nao prometa o aviso da vespera aqui. O modulo reagendador.ts
@@ -156,19 +173,23 @@ import { mensagemDeErro } from '../auth/erro';
                  frase antiga dizia que o aviso da vespera saia as 19h — quem
                  lesse confiaria e perderia a prova. Ela volta quando o
                  agendamento existir de verdade, nao antes. -->
-            A hora só entra se a turma precisar saber dela. Sem ela, a prova continua aparecendo
-            no dia certo.
+            A hora só entra se a turma precisar saber dela. Sem ela, a prova
+            continua aparecendo no dia certo.
           </p>
 
           <p class="alerta alerta--turma">
-            Vai aparecer para a turma toda com o seu nome. Só você pode editar ou apagar depois.
+            Vai aparecer para a turma toda com o seu nome. Só você pode editar
+            ou apagar depois.
           </p>
 
           <button
             class="botao"
             type="button"
             [disabled]="enviando()"
-            (click)="cadastrar(titulo.value, data.value, hora.value, sala.value)">
+            (click)="
+              cadastrar(titulo.value, data.value, hora.value, sala.value)
+            "
+          >
             {{ rotuloDoBotao() }}
           </button>
         }
@@ -176,7 +197,6 @@ import { mensagemDeErro } from '../auth/erro';
     </ion-content>
   `,
   styles: `
-
     .opcional {
       font-weight: 400;
     }
@@ -277,7 +297,8 @@ export class NovoEventoPage {
    * de quase-cópia, e quase-cópia diverge — o campo de sala entrou aqui num dia
    * em que uma segunda página teria ficado para trás sem ninguém notar.
    */
-  private readonly editandoId = inject(ActivatedRoute).snapshot.paramMap.get('id') || null;
+  private readonly editandoId =
+    inject(ActivatedRoute).snapshot.paramMap.get('id') || null;
   protected readonly editando = computed(() => this.original() !== null);
 
   /** O evento sendo editado; `null` no modo de adicionar. */
@@ -297,7 +318,9 @@ export class NovoEventoPage {
   /** Sem materia de verdade: carregou, nao falhou, e a turma nao tem nenhuma. */
   protected readonly semMateria = computed(
     () =>
-      !this.carregando() && this.erroDasMaterias() === null && this.materias().length === 0,
+      !this.carregando() &&
+      this.erroDasMaterias() === null &&
+      this.materias().length === 0,
   );
 
   /** A primeira ja vem marcada: um seletor sem escolha feita nao ajuda ninguem. */
@@ -321,7 +344,9 @@ export class NovoEventoPage {
     // Este catch registra e evita rejeicao solta — nunca vira "sem materia".
     this.materiasRepo
       .carregar()
-      .catch((e: unknown) => console.error('[novo-evento] falha ao carregar as matérias', e));
+      .catch((e: unknown) =>
+        console.error('[novo-evento] falha ao carregar as matérias', e),
+      );
 
     // Falsy, não `!== null`: rota sem o parâmetro devolve `null` no Angular e
     // `undefined` num Map, e um `GET /eventos/undefined` é o tipo de chamada que

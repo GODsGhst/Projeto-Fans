@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonBackButton,
@@ -35,7 +41,14 @@ import { mensagemDeErro } from '../auth/erro';
   selector: 'app-editar-material',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonBackButton,
+    IonContent,
+  ],
   styleUrls: ['../auth/auth.scss'],
   template: `
     <ion-header [translucent]="true">
@@ -61,8 +74,9 @@ import { mensagemDeErro } from '../auth/erro';
             <div class="pf-vazio">
               <b>Este material não é seu.</b>
               <span>
-                Editar e apagar é de quem criou — aqui, {{ m.autoria.autorNome }}. Se estiver
-                errado, fale com quem cadastrou; se for impróprio, o líder pode ocultar.
+                Editar e apagar é de quem criou — aqui,
+                {{ m.autoria.autorNome }}. Se estiver errado, fale com quem
+                cadastrou; se for impróprio, o líder pode ocultar.
               </span>
             </div>
           } @else {
@@ -71,13 +85,15 @@ import { mensagemDeErro } from '../auth/erro';
               <button
                 type="button"
                 [attr.aria-pressed]="tipo() === 'AULA'"
-                (click)="tipo.set('AULA')">
+                (click)="tipo.set('AULA')"
+              >
                 De aula
               </button>
               <button
                 type="button"
                 [attr.aria-pressed]="tipo() === 'ADICIONAL'"
-                (click)="tipo.set('ADICIONAL')">
+                (click)="tipo.set('ADICIONAL')"
+              >
                 Adicional
               </button>
             </div>
@@ -90,7 +106,8 @@ import { mensagemDeErro } from '../auth/erro';
               name="titulo"
               maxlength="120"
               [value]="m.titulo"
-              aria-label="Título do material" />
+              aria-label="Título do material"
+            />
 
             <p class="rot-campo">link</p>
             <input
@@ -101,45 +118,55 @@ import { mensagemDeErro } from '../auth/erro';
               inputmode="url"
               autocapitalize="off"
               [value]="m.url ?? ''"
-              aria-label="Link do material" />
+              aria-label="Link do material"
+            />
 
-            <p class="rot-campo">de que aula <span class="opcional">— opcional</span></p>
+            <p class="rot-campo">
+              de que aula <span class="opcional">— opcional</span>
+            </p>
             <input
               #dataAula
               class="campo--linha"
               type="date"
               name="dataAula"
               [value]="m.dataAula ?? ''"
-              aria-label="Data da aula" />
+              aria-label="Data da aula"
+            />
 
             <button
               class="botao"
               type="button"
               [disabled]="enviando()"
-              (click)="salvar(titulo.value, url.value, dataAula.value)">
+              (click)="salvar(titulo.value, url.value, dataAula.value)"
+            >
               {{ rotulo() }}
             </button>
 
             @if (confirmando()) {
-              <p class="alerta">Apagar mesmo? Some da matéria e das provas em que está anexado.</p>
+              <p class="alerta">
+                Apagar mesmo? Some da matéria e das provas em que está anexado.
+              </p>
               <button
                 class="botao botao--fantasma"
                 type="button"
                 [disabled]="enviando()"
-                (click)="apagar()">
+                (click)="apagar()"
+              >
                 Sim, apagar
               </button>
               <button
                 class="botao botao--fantasma"
                 type="button"
-                (click)="confirmando.set(false)">
+                (click)="confirmando.set(false)"
+              >
                 Cancelar
               </button>
             } @else {
               <button
                 class="botao botao--fantasma"
                 type="button"
-                (click)="confirmando.set(true)">
+                (click)="confirmando.set(true)"
+              >
                 Apagar
               </button>
             }
@@ -154,7 +181,8 @@ export class EditarMaterialPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+  private readonly id =
+    inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
   protected readonly material = signal<Material | null>(null);
   protected readonly carregando = signal(true);
@@ -199,7 +227,11 @@ export class EditarMaterialPage {
     }
   }
 
-  protected async salvar(titulo: string, url: string, dataAula: string): Promise<void> {
+  protected async salvar(
+    titulo: string,
+    url: string,
+    dataAula: string,
+  ): Promise<void> {
     const m = this.material();
     if (m === null || this.enviando()) {
       return;

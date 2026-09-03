@@ -115,6 +115,14 @@ export interface Material {
   excluidoEm: string | null;
   /** De que aula este material e, em `AAAA-MM-DD`. Ausente = nao se aplica. */
   dataAula?: string | null;
+  /**
+   * Resumo por IA, gerado por alguem da turma e visivel para todos.
+   *
+   * Compartilhado de proposito: gerar custa dinheiro da chave de quem pediu, e
+   * um resumo por pessoa faria os trinta pagarem pelo mesmo PDF.
+   */
+  resumo?: string | null;
+  resumoEm?: string | null;
 }
 
 /** `GET /eventos/{id}` — traz SOMENTE os materiais vinculados a este evento. */

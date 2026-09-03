@@ -28,6 +28,12 @@ app:
   reset-senha-url-base: http://localhost:8100/senha/reset
   # Lida pelo reagendador de notificacao (Task 8).
   notificacao-hora-vespera: "19:00"
+  ia:
+    # Modelo do resumo de material. A CHAVE nao esta aqui e nao vai estar: ela
+    # chega no header da requisicao, e usada e descartada. So o modelo e
+    # decisao do servidor — e ele muda de nome mais rapido do que se atualiza
+    # um app publicado, entao vive em config e nao em constante.
+    modelo: ${IA_MODELO:claude-sonnet-5}
   # A janela de 14 dias e o teto de 6 itens da Home NAO estao aqui, de proposito.
   # Eles vivem literais no SQL de EventoRepository.home, que e o unico lugar onde
   # as tres regras da Home moram juntas. Estiveram declarados neste bloco ate

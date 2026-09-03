@@ -48,7 +48,9 @@ export class StorageService {
    * Home e Materias gravam partes distintas do mesmo snapshot. Sem a mescla, a
    * ultima a gravar apagaria o pedaco da outra.
    */
-  async mesclar(parcial: Partial<Omit<SnapshotLocal, 'ultimoSync'>>): Promise<void> {
+  async mesclar(
+    parcial: Partial<Omit<SnapshotLocal, 'ultimoSync'>>,
+  ): Promise<void> {
     const atual = await this.ler();
     await this.gravar({
       eventos: parcial.eventos ?? atual?.eventos ?? [],
@@ -61,7 +63,11 @@ export class StorageService {
     return this.lerJson<SessaoLocal>(CHAVE_SESSAO);
   }
 
-  async gravarSessao(jwt: string, usuario: Usuario, turmaId?: string | null): Promise<void> {
+  async gravarSessao(
+    jwt: string,
+    usuario: Usuario,
+    turmaId?: string | null,
+  ): Promise<void> {
     await Preferences.set({
       key: CHAVE_SESSAO,
       value: JSON.stringify({ jwt, usuario, turmaId: turmaId ?? null }),

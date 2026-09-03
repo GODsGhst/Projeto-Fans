@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -30,7 +33,10 @@ function item(id: string, tipo: 'PROVA' | 'ENTREGA', data: string): ItemHome {
   };
 }
 
-class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 'mesclar'> {
+class StorageFake implements Pick<
+  StorageService,
+  'ler' | 'gravar' | 'limpar' | 'mesclar'
+> {
   snapshot: SnapshotLocal | null = null;
   async ler(): Promise<SnapshotLocal | null> {
     return this.snapshot;
@@ -41,7 +47,9 @@ class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 
   async limpar(): Promise<void> {
     this.snapshot = null;
   }
-  async mesclar(parcial: { eventos?: SnapshotLocal['eventos'] }): Promise<void> {
+  async mesclar(parcial: {
+    eventos?: SnapshotLocal['eventos'];
+  }): Promise<void> {
     this.snapshot = {
       eventos: parcial.eventos ?? this.snapshot?.eventos ?? [],
       materias: this.snapshot?.materias ?? [],
@@ -73,7 +81,9 @@ describe('HomePage', () => {
   afterEach(() => backend.verify());
 
   /** Cria a tela, responde o `GET /home` e espera o carregamento terminar. */
-  async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
+  async function abrir(
+    responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+  ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
@@ -83,8 +93,8 @@ describe('HomePage', () => {
   }
 
   function textos(seletor: string): string[] {
-    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map((e) =>
-      (e as HTMLElement).textContent!.trim(),
+    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map(
+      (e) => (e as HTMLElement).textContent!.trim(),
     );
   }
 
@@ -110,10 +120,14 @@ describe('HomePage', () => {
   it('estado vazio aparece com lista vazia', async () => {
     await abrir((r) => r.flush([]));
 
-    const vazio = fixture.nativeElement.querySelector('.pf-vazio') as HTMLElement | null;
+    const vazio = fixture.nativeElement.querySelector(
+      '.pf-vazio',
+    ) as HTMLElement | null;
     expect(vazio).not.toBeNull();
     expect(vazio!.textContent).toContain('Nada nos próximos 14 dias.');
-    expect(fixture.nativeElement.querySelectorAll('app-evento-card').length).toBe(0);
+    expect(
+      fixture.nativeElement.querySelectorAll('app-evento-card').length,
+    ).toBe(0);
     expect(fixture.nativeElement.querySelector('.pf-aviso'))
       .withContext('lista vazia de verdade nao mostra aviso de falha')
       .toBeNull();
@@ -129,7 +143,9 @@ describe('HomePage', () => {
 
     await abrir((r) => r.error(new ProgressEvent('error')));
 
-    const aviso = fixture.nativeElement.querySelector('.pf-aviso') as HTMLElement | null;
+    const aviso = fixture.nativeElement.querySelector(
+      '.pf-aviso',
+    ) as HTMLElement | null;
     expect(aviso).not.toBeNull();
     expect(aviso!.textContent).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
@@ -145,13 +161,17 @@ describe('HomePage', () => {
 
     await abrir((r) => r.error(new ProgressEvent('error')));
 
-    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain(
-      'Sem conexão',
-    );
+    expect(
+      fixture.nativeElement.querySelector('.pf-aviso')!.textContent,
+    ).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
-      .withContext('sem cache e sem rede, a tela admite a falha em vez de dizer que nao ha nada')
+      .withContext(
+        'sem cache e sem rede, a tela admite a falha em vez de dizer que nao ha nada',
+      )
       .toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('app-evento-card').length).toBe(0);
+    expect(
+      fixture.nativeElement.querySelectorAll('app-evento-card').length,
+    ).toBe(0);
   });
 
   it('a Home oferece cadastrar prova ou entrega, mesmo vazia', async () => {
@@ -159,7 +179,9 @@ describe('HomePage', () => {
     // app so lia. Esta e a porta que faltava.
     await abrir((r) => r.flush([]));
 
-    expect(fixture.nativeElement.querySelector('a[href="/tabs/eventos/novo"]')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/tabs/eventos/novo"]'),
+    ).not.toBeNull();
   });
 
   it('tocar num evento abre a tela dele', async () => {
@@ -168,16 +190,23 @@ describe('HomePage', () => {
     // primeiro, tocar no card nao fazia nada. O primeiro gesto de quem abre o
     // app e tocar no que esta na frente; nao responder a ele parece app quebrado.
     await abrir((r) =>
-      r.flush([item('e-1', 'PROVA', '2026-09-01'), item('e-2', 'ENTREGA', '2026-09-02')]),
+      r.flush([
+        item('e-1', 'PROVA', '2026-09-01'),
+        item('e-2', 'ENTREGA', '2026-09-02'),
+      ]),
     );
 
     const destinos = Array.from(
-      fixture.nativeElement.querySelectorAll('a.ir') as NodeListOf<HTMLAnchorElement>,
+      fixture.nativeElement.querySelectorAll(
+        'a.ir',
+      ) as NodeListOf<HTMLAnchorElement>,
     ).map((a) => a.getAttribute('href'));
 
     expect(destinos).toEqual(['/tabs/eventos/e-1', '/tabs/eventos/e-2']);
     expect(fixture.nativeElement.querySelector('a.ir app-evento-card'))
-      .withContext('o card inteiro e o alvo do toque, nao um "ver mais" ao lado')
+      .withContext(
+        'o card inteiro e o alvo do toque, nao um "ver mais" ao lado',
+      )
       .not.toBeNull();
   });
 
@@ -198,9 +227,13 @@ describe('HomePage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(textos('app-evento-card .titulo')).toEqual(['evento cadastrada-pelo-colega']);
+    expect(textos('app-evento-card .titulo')).toEqual([
+      'evento cadastrada-pelo-colega',
+    ]);
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
-      .withContext('"nada nos proximos 14 dias" nao pode sobreviver a uma recarga que trouxe prova')
+      .withContext(
+        '"nada nos proximos 14 dias" nao pode sobreviver a uma recarga que trouxe prova',
+      )
       .toBeNull();
   });
 
@@ -223,10 +256,14 @@ describe('HomePage', () => {
     // a requisicao esta EM VOO — nada foi respondido ainda
     const req = backend.expectOne(`${environment.apiUrl}/home`);
     expect(textos('app-evento-card .titulo'))
-      .withContext('o snapshot tem de estar na tela antes de o servidor responder')
+      .withContext(
+        'o snapshot tem de estar na tela antes de o servidor responder',
+      )
       .toEqual(['evento do-disco']);
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
-      .withContext('com dado em tela, "nada nos proximos 14 dias" seria mentira')
+      .withContext(
+        'com dado em tela, "nada nos proximos 14 dias" seria mentira',
+      )
       .toBeNull();
 
     // quando o servidor responde, ele manda
@@ -248,14 +285,18 @@ describe('HomePage', () => {
 
     const req = backend.expectOne(`${environment.apiUrl}/home`);
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
-      .withContext('sem snapshot e sem resposta, "nada nos proximos 14 dias" nao pode aparecer')
+      .withContext(
+        'sem snapshot e sem resposta, "nada nos proximos 14 dias" nao pode aparecer',
+      )
       .toBeNull();
 
     req.flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
-      .withContext('agora sim: o servidor respondeu e a semana esta mesmo vazia')
+      .withContext(
+        'agora sim: o servidor respondeu e a semana esta mesmo vazia',
+      )
       .not.toBeNull();
   });
 });

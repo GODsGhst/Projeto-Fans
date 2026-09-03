@@ -7,7 +7,12 @@ import {
   IonTabs,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { calendarOutline, checkboxOutline, libraryOutline, listOutline } from 'ionicons/icons';
+import {
+  calendarOutline,
+  checkboxOutline,
+  libraryOutline,
+  listOutline,
+} from 'ionicons/icons';
 
 @Component({
   selector: 'app-tabs',

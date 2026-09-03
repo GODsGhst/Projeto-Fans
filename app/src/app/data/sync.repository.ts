@@ -20,7 +20,10 @@ export class SyncRepository {
   }
 
   /** `POST /devices` no login, `DELETE /devices/{token}` no logout. */
-  registrarDevice(fcmToken: string, plataforma: 'android' | 'ios' | 'web'): Promise<void> {
+  registrarDevice(
+    fcmToken: string,
+    plataforma: 'android' | 'ios' | 'web',
+  ): Promise<void> {
     return this.api.post<void>('/devices', { fcmToken, plataforma });
   }
 

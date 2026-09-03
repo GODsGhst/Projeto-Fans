@@ -1,6 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { AulaCardComponent } from '../../shared/aula-card.component';
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import type { Materia } from '../../shared/tipos';
@@ -37,7 +48,15 @@ export interface AulaVm {
   selector: 'app-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, AulaCardComponent, EventoCardComponent, RouterLink],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    AulaCardComponent,
+    EventoCardComponent,
+    RouterLink,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -63,7 +82,8 @@ export interface AulaVm {
               [sala]="a.sala"
               [detalhe]="a.detalhe ?? null"
               [atividade]="a.atividade ?? null"
-              [agora]="a.agora ?? false" />
+              [agora]="a.agora ?? false"
+            />
           }
         }
 
@@ -81,7 +101,8 @@ export interface AulaVm {
                 [quando]="e.quando"
                 [titulo]="e.titulo"
                 [materia]="e.materia"
-                [autoria]="e.autoria" />
+                [autoria]="e.autoria"
+              />
             </a>
           }
         }
@@ -98,8 +119,8 @@ export interface AulaVm {
           <div class="pf-vazio">
             <b>Nada nos próximos 14 dias.</b>
             <span>
-              Se você sabe de alguma prova ou entrega que não está aqui, adicione — qualquer
-              pessoa da turma pode.
+              Se você sabe de alguma prova ou entrega que não está aqui,
+              adicione — qualquer pessoa da turma pode.
             </span>
           </div>
         }
@@ -116,8 +137,7 @@ export interface AulaVm {
       </div>
     </ion-content>
   `,
-  styles: `
-  `,
+  styles: ``,
 })
 export class HomePage {
   private readonly repo = inject(HomeRepository);
@@ -140,7 +160,9 @@ export class HomePage {
     const agora = new Date();
     // O id nao entra no EventoVm: a Home o chama de `eventoId` e o Calendario de
     // `id`, e o vm serve aos dois. Mesmo formato usado em materia.page.ts.
-    return this.repo.itens().map((i) => ({ id: i.eventoId, ...eventoVm(i, agora) }));
+    return this.repo
+      .itens()
+      .map((i) => ({ id: i.eventoId, ...eventoVm(i, agora) }));
   });
 
   /**

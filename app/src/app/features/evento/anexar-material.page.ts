@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   IonBackButton,
@@ -36,7 +42,15 @@ import { mensagemDeErro } from '../auth/erro';
   selector: 'app-anexar-material',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent, RouterLink],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonBackButton,
+    IonContent,
+    RouterLink,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -62,7 +76,8 @@ import { mensagemDeErro } from '../auth/erro';
               class="anexavel"
               type="button"
               [attr.aria-pressed]="m.anexado"
-              (click)="alternar(m.id, m.anexado)">
+              (click)="alternar(m.id, m.anexado)"
+            >
               <span class="marca" aria-hidden="true">
                 <svg viewBox="0 0 20 20">
                   <rect x="2.5" y="2.5" width="15" height="15" rx="4.5" />
@@ -79,15 +94,21 @@ import { mensagemDeErro } from '../auth/erro';
           }
 
           <p class="cache-aviso">
-            Anexar não move o material: ele continua na matéria e pode ser anexado a outra prova.
-            Desanexar tira só o vínculo.
+            Anexar não move o material: ele continua na matéria e pode ser
+            anexado a outra prova. Desanexar tira só o vínculo.
           </p>
         } @else if (!carregando() && semMaterial()) {
           <div class="pf-vazio">
             <b>Esta matéria ainda não tem material.</b>
-            <span>Adicione o material na matéria e volte aqui para anexá-lo a esta prova.</span>
+            <span
+              >Adicione o material na matéria e volte aqui para anexá-lo a esta
+              prova.</span
+            >
           </div>
-          <a class="botao" [routerLink]="['/tabs/materias', materiaId(), 'material', 'novo']">
+          <a
+            class="botao"
+            [routerLink]="['/tabs/materias', materiaId(), 'material', 'novo']"
+          >
             Adicionar material
           </a>
         }
@@ -155,14 +176,14 @@ import { mensagemDeErro } from '../auth/erro';
       font-size: 11.5px;
       color: var(--ink-3);
     }
-
   `,
 })
 export class AnexarMaterialPage {
   private readonly eventos = inject(EventoRepository);
   private readonly materias = inject(MateriaRepository);
 
-  private readonly eventoId = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+  private readonly eventoId =
+    inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
   protected readonly voltarPara = `/tabs/eventos/${this.eventoId}`;
   protected readonly carregando = signal(true);
@@ -182,7 +203,8 @@ export class AnexarMaterialPage {
       id: m.id,
       titulo: m.titulo,
       anexado: this.anexados().has(m.id),
-      rotuloDoTipo: m.tipo === 'AULA' ? 'material de aula' : 'material adicional',
+      rotuloDoTipo:
+        m.tipo === 'AULA' ? 'material de aula' : 'material adicional',
     })),
   );
 
@@ -197,7 +219,10 @@ export class AnexarMaterialPage {
       this.anexados.set(new Set(evento.materiais.map((m) => m.id)));
 
       const detalhe = await this.materias.detalhe(evento.materiaId);
-      this.daMateria.set([...detalhe.materiaisAula, ...detalhe.materiaisAdicionais]);
+      this.daMateria.set([
+        ...detalhe.materiaisAula,
+        ...detalhe.materiaisAdicionais,
+      ]);
     } catch (e) {
       // Nao limpa a lista: falhar ao buscar nao pode virar "esta materia nao tem
       // material", que e a frase oposta e manda a pessoa cadastrar de novo.
@@ -214,7 +239,10 @@ export class AnexarMaterialPage {
    * confiar: material que pisca "anexado" e volta atras ensina a pessoa a nao
    * acreditar na tela — e ela vai para a prova achando que anexou.
    */
-  protected async alternar(materialId: string, anexado: boolean): Promise<void> {
+  protected async alternar(
+    materialId: string,
+    anexado: boolean,
+  ): Promise<void> {
     this.erro.set(null);
     try {
       if (anexado) {

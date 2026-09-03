@@ -72,6 +72,20 @@ public class Material {
     @Column(name = "excluido_em")
     private Instant excluidoEm;
 
+    /**
+     * Resumo por IA do arquivo em `url`. Da turma, nao de quem pediu: gerar
+     * custa dinheiro da chave de quem pediu, e um resumo por pessoa faria os
+     * trinta pagarem pelo mesmo PDF.
+     */
+    @Column(name = "resumo")
+    private String resumo;
+
+    @Column(name = "resumo_em")
+    private Instant resumoEm;
+
+    @Column(name = "resumo_por")
+    private UUID resumoPor;
+
     protected Material() {
     }
 
@@ -163,6 +177,32 @@ public class Material {
         this.url = url;
         this.dataAula = dataAula;
         this.atualizadoEm = agora;
+    }
+
+    public String getResumo() {
+        return resumo;
+    }
+
+    public Instant getResumoEm() {
+        return resumoEm;
+    }
+
+    public UUID getResumoPor() {
+        return resumoPor;
+    }
+
+    /**
+     * NAO mexe em `atualizadoEm` nem na `version`.
+     *
+     * Gerar resumo nao e editar o material: se contasse como edicao, quem
+     * estivesse com a tela de editar aberta levaria um 409 por causa de um
+     * resumo que outra pessoa pediu, e o `/sync` acordaria os celulares da
+     * turma inteira para um campo que nao muda nada do que foi combinado.
+     */
+    public void guardarResumo(String resumo, UUID porQuem, Instant agora) {
+        this.resumo = resumo;
+        this.resumoPor = porQuem;
+        this.resumoEm = agora;
     }
 
     public void excluirLogicamente(Instant agora) {

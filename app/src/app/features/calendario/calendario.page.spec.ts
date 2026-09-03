@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -49,7 +52,9 @@ describe('CalendarioPage', () => {
 
   afterEach(() => backend.verify());
 
-  async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
+  async function abrir(
+    responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+  ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
@@ -60,7 +65,9 @@ describe('CalendarioPage', () => {
 
   function titulos(): string[] {
     return Array.from(
-      fixture.nativeElement.querySelectorAll('app-evento-card .titulo') as NodeListOf<HTMLElement>,
+      fixture.nativeElement.querySelectorAll(
+        'app-evento-card .titulo',
+      ) as NodeListOf<HTMLElement>,
     ).map((e) => e.textContent!.trim());
   }
 
@@ -78,7 +85,9 @@ describe('CalendarioPage', () => {
   it('falha ao carregar o calendario nao vira mes vazio', async () => {
     await abrir((r) => r.error(new ProgressEvent('error')));
 
-    const aviso = fixture.nativeElement.querySelector('.pf-aviso') as HTMLElement | null;
+    const aviso = fixture.nativeElement.querySelector(
+      '.pf-aviso',
+    ) as HTMLElement | null;
     expect(aviso).not.toBeNull();
     expect(aviso!.textContent).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
@@ -90,11 +99,16 @@ describe('CalendarioPage', () => {
     // Mesma porta que faltava na Home (A17). O calendario mostra o evento no
     // dia; tocar nele tem de levar ao evento.
     await abrir((r) =>
-      r.flush([evento('c-1', 'PROVA', '2026-08-12'), evento('c-2', 'ENTREGA', '2026-08-19')]),
+      r.flush([
+        evento('c-1', 'PROVA', '2026-08-12'),
+        evento('c-2', 'ENTREGA', '2026-08-19'),
+      ]),
     );
 
     const destinos = Array.from(
-      fixture.nativeElement.querySelectorAll('a.ir') as NodeListOf<HTMLAnchorElement>,
+      fixture.nativeElement.querySelectorAll(
+        'a.ir',
+      ) as NodeListOf<HTMLAnchorElement>,
     ).map((a) => a.getAttribute('href'));
 
     expect(destinos).toEqual(['/tabs/eventos/c-1', '/tabs/eventos/c-2']);

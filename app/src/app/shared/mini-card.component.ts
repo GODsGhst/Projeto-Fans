@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+} from '@angular/core';
 import { MateriaChipComponent } from './materia-chip.component';
 import type { Materia, TipoEvento } from './tipos';
 
@@ -19,7 +24,11 @@ import type { Materia, TipoEvento } from './tipos';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MateriaChipComponent],
   template: `
-    <article class="mini" [class.mini--solida]="ehProva()" [class.mini--feita]="feito()">
+    <article
+      class="mini"
+      [class.mini--solida]="ehProva()"
+      [class.mini--feita]="feito()"
+    >
       <app-materia-chip [cor]="materia().cor" [sigla]="materia().sigla" />
       <span class="titulo">{{ titulo() }}</span>
       @if (aviso(); as a) {

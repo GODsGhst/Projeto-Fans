@@ -103,7 +103,12 @@ public class MaterialService {
         return MaterialResponse.de(material, nomeDoAutor(material.getAutorId()));
     }
 
-    private Material daTurmaDoUsuario(UsuarioAtual usuario, UUID materialId) {
+    /**
+     * Visivel no pacote para o ResumoService: o escopo de turma do material e a
+     * mesma regra, e duplicar a checagem la e como uma regra de acesso deixa de
+     * valer em um dos dois lugares sem ninguem notar.
+     */
+    Material daTurmaDoUsuario(UsuarioAtual usuario, UUID materialId) {
         Material material = materiais.findById(materialId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), material.getTurmaId());
         return material;
@@ -127,7 +132,7 @@ public class MaterialService {
         }
     }
 
-    private String nomeDoAutor(UUID autorId) {
+    String nomeDoAutor(UUID autorId) {
         return usuarios.findById(autorId).orElseThrow(AcessoNegadoException::new).getNome();
     }
 }

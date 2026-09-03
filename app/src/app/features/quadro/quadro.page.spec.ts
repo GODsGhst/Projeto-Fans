@@ -1,12 +1,21 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
-import type { Evento, ItemHome, Material, MeuQuadro, NaoListados } from '../../data/models';
+import type {
+  Evento,
+  ItemHome,
+  Material,
+  MeuQuadro,
+  NaoListados,
+} from '../../data/models';
 import { QuadroPage } from './quadro.page';
 
 const AUTORIA = {
@@ -97,7 +106,9 @@ describe('QuadroPage', () => {
     // Pedido de exclusao e raro: quase todo mundo nunca tem nenhum, entao o
     // padrao e lista vazia e so o teste que fala deles responde outra coisa.
     // Sem isto o `verify()` acusa a chamada pendente em TODO teste da tela.
-    pedidos: (r: ReturnType<HttpTestingController['expectOne']>) => void = (r) => r.flush([]),
+    pedidos: (r: ReturnType<HttpTestingController['expectOne']>) => void = (
+      r,
+    ) => r.flush([]),
   ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
@@ -112,7 +123,9 @@ describe('QuadroPage', () => {
   function coluna(indice: number): string[] {
     const colunas = fixture.nativeElement.querySelectorAll('.coluna');
     return Array.from(
-      (colunas[indice] as HTMLElement).querySelectorAll('app-mini-card .titulo'),
+      (colunas[indice] as HTMLElement).querySelectorAll(
+        'app-mini-card .titulo',
+      ),
     ).map((e) => (e as HTMLElement).textContent!.trim());
   }
 
@@ -163,7 +176,9 @@ describe('QuadroPage', () => {
       (r) => r.flush(ocultos),
     );
 
-    const secao = fixture.nativeElement.querySelector('.nao-listados') as HTMLElement | null;
+    const secao = fixture.nativeElement.querySelector(
+      '.nao-listados',
+    ) as HTMLElement | null;
     expect(secao).not.toBeNull();
     expect(secao!.textContent).toContain('oculto pelo líder');
     expect(secao!.textContent).toContain('excluído');
@@ -179,9 +194,9 @@ describe('QuadroPage', () => {
       (r) => r.error(new ProgressEvent('error')),
     );
 
-    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain(
-      'Sem conexão',
-    );
+    expect(
+      fixture.nativeElement.querySelector('.pf-aviso')!.textContent,
+    ).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('.kanban'))
       .withContext('sem dado nao ha kanban: coluna vazia aqui seria mentira')
       .toBeNull();
@@ -194,11 +209,13 @@ describe('QuadroPage', () => {
     );
 
     expect(coluna(0)).toEqual(['Lista 4']);
-    expect(fixture.nativeElement.querySelector('.aviso-nao-listados')!.textContent).toContain(
-      'não listados',
-    );
+    expect(
+      fixture.nativeElement.querySelector('.aviso-nao-listados')!.textContent,
+    ).toContain('não listados');
     expect(fixture.nativeElement.querySelector('.nao-listados'))
-      .withContext('falhar ao buscar os ocultos nao e "voce nao tem nenhum oculto"')
+      .withContext(
+        'falhar ao buscar os ocultos nao e "voce nao tem nenhum oculto"',
+      )
       .toBeNull();
   });
 
@@ -208,12 +225,18 @@ describe('QuadroPage', () => {
       (r) => r.flush(VAZIO),
     );
 
-    (fixture.nativeElement.querySelector('.coluna .marcar') as HTMLButtonElement).click();
+    (
+      fixture.nativeElement.querySelector(
+        '.coluna .marcar',
+      ) as HTMLButtonElement
+    ).click();
     await fixture.whenStable();
 
     // PUT em /eventos/{id}/estado-pessoal, nunca PATCH no evento: feito e
     // estado pessoal e nao toca no fato compartilhado.
-    const put = backend.expectOne(`${environment.apiUrl}/eventos/e1/estado-pessoal`);
+    const put = backend.expectOne(
+      `${environment.apiUrl}/eventos/e1/estado-pessoal`,
+    );
     expect(put.request.method).toBe('PUT');
     expect(put.request.body).toEqual({ feito: true });
     put.flush(null);
@@ -236,7 +259,9 @@ describe('QuadroPage', () => {
       (r) => r.flush(VAZIO),
     );
 
-    expect(fixture.nativeElement.querySelector('a[href="/tabs/turma"]')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/tabs/turma"]'),
+    ).not.toBeNull();
   });
 
   it('recarregar nao apaga o quadro que ja esta na tela', async () => {
@@ -261,7 +286,9 @@ describe('QuadroPage', () => {
     backend
       .expectOne(`${environment.apiUrl}/meu-quadro`)
       .flush({ aFazer: [item('e-1', 'Lista 4')], feito: [] });
-    backend.expectOne(`${environment.apiUrl}/nao-listados`).flush({ eventos: [], materiais: [] });
+    backend
+      .expectOne(`${environment.apiUrl}/nao-listados`)
+      .flush({ eventos: [], materiais: [] });
     // Reentrar na aba recarrega TUDO, pedidos inclusive.
     backend.expectOne(`${environment.apiUrl}/moderacao/pedidos`).flush([]);
     await fixture.whenStable();
@@ -286,7 +313,9 @@ describe('QuadroPage', () => {
     );
 
     const rotulos = (
-      Array.from(fixture.nativeElement.querySelectorAll('.marcar')) as HTMLElement[]
+      Array.from(
+        fixture.nativeElement.querySelectorAll('.marcar'),
+      ) as HTMLElement[]
     ).map((b) => b.textContent!.trim());
 
     expect(rotulos[0]).withContext('prova se faz').toContain('feita');
@@ -298,7 +327,8 @@ describe('QuadroPage', () => {
     // Alvo de toque de 11px de texto puro nao parece tocavel, e num quadro cheio
     // some entre os cartoes. O simbolo torna a acao visivel antes de ser lida.
     await abrir(
-      (r) => r.flush({ aFazer: [item('p1', 'Prova 2', false, 'PROVA')], feito: [] }),
+      (r) =>
+        r.flush({ aFazer: [item('p1', 'Prova 2', false, 'PROVA')], feito: [] }),
       (r) => r.flush({ eventos: [], materiais: [] }),
     );
 
@@ -328,14 +358,23 @@ describe('QuadroPage', () => {
         ]),
     );
 
-    const texto = fixture.nativeElement.querySelector('.pedidos')!.textContent as string;
+    const texto = fixture.nativeElement.querySelector('.pedidos')!
+      .textContent as string;
     expect(texto).toContain('Prova duplicada');
-    expect(texto).withContext('sem o motivo o pedido vira uma ordem sem explicacao')
+    expect(texto)
+      .withContext('sem o motivo o pedido vira uma ordem sem explicacao')
       .toContain('ja existe outra igual');
-    expect(texto).withContext('quem pediu importa: da para conversar com a pessoa')
+    expect(texto)
+      .withContext('quem pediu importa: da para conversar com a pessoa')
       .toContain('Lia');
-    expect(fixture.nativeElement.querySelector('.pedidos a[href="/tabs/eventos/e1"]'))
-      .withContext('tem de levar ao registro — pedido sem caminho obriga a procurar')
+    expect(
+      fixture.nativeElement.querySelector(
+        '.pedidos a[href="/tabs/eventos/e1"]',
+      ),
+    )
+      .withContext(
+        'tem de levar ao registro — pedido sem caminho obriga a procurar',
+      )
       .not.toBeNull();
   });
 

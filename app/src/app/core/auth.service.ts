@@ -40,15 +40,25 @@ export class AuthService {
   }
 
   async registrar(nome: string, email: string, senha: string): Promise<void> {
-    await this.aplicar(await this.api.post<SessaoResponse>('/auth/registrar', { nome, email, senha }));
+    await this.aplicar(
+      await this.api.post<SessaoResponse>('/auth/registrar', {
+        nome,
+        email,
+        senha,
+      }),
+    );
   }
 
   async entrar(email: string, senha: string): Promise<void> {
-    await this.aplicar(await this.api.post<SessaoResponse>('/auth/login', { email, senha }));
+    await this.aplicar(
+      await this.api.post<SessaoResponse>('/auth/login', { email, senha }),
+    );
   }
 
   async entrarComGoogle(idToken: string): Promise<void> {
-    await this.aplicar(await this.api.post<SessaoResponse>('/auth/google', { idToken }));
+    await this.aplicar(
+      await this.api.post<SessaoResponse>('/auth/google', { idToken }),
+    );
   }
 
   /** 204 sempre, mesmo para e-mail inexistente: a lista de contas nao e enumeravel. */
@@ -61,7 +71,9 @@ export class AuthService {
   }
 
   async entrarNaTurma(codigoConvite: string): Promise<Membro> {
-    const membro = await this.api.post<Membro>('/turmas/entrar', { codigoConvite });
+    const membro = await this.api.post<Membro>('/turmas/entrar', {
+      codigoConvite,
+    });
     await this.registrarTurma(membro.turmaId);
     return membro;
   }
@@ -104,7 +116,9 @@ export class AuthService {
     this._turmaId.set(null);
     this.storage
       .limparSessao()
-      .catch((e: unknown) => console.error('[auth] falha ao apagar a sessao local', e));
+      .catch((e: unknown) =>
+        console.error('[auth] falha ao apagar a sessao local', e),
+      );
   }
 
   private async aplicar(sessao: SessaoResponse): Promise<void> {

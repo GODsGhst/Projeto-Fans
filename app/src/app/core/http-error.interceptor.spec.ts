@@ -1,5 +1,12 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpClient,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
@@ -40,13 +47,20 @@ describe('erroHttpInterceptor', () => {
   }
 
   it('interceptor de erro mapeia 401 para logout', () => {
-    auth.definirSessao('jwt-de-teste', { id: 'u1', nome: 'Otavio', email: 'o@x.com' });
+    auth.definirSessao('jwt-de-teste', {
+      id: 'u1',
+      nome: 'Otavio',
+      email: 'o@x.com',
+    });
     expect(auth.token()).toBe('jwt-de-teste');
 
     const capturado = capturar('/protegido');
     backend
       .expectOne('/protegido')
-      .flush({ detail: 'expirado' }, { status: 401, statusText: 'Unauthorized' });
+      .flush(
+        { detail: 'expirado' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
 
     expect(capturado.erro instanceof ErroApi).toBeTrue();
     expect(capturado.erro!.classe).toBe('AUTH');

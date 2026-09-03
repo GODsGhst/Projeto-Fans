@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -10,7 +13,10 @@ import { StorageService } from '../../core/storage.service';
 import type { SnapshotLocal } from '../../core/storage.service';
 import { NovaMateriaPage, PALETA } from './nova-materia.page';
 
-class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 'mesclar'> {
+class StorageFake implements Pick<
+  StorageService,
+  'ler' | 'gravar' | 'limpar' | 'mesclar'
+> {
   snapshot: SnapshotLocal | null = null;
   async ler(): Promise<SnapshotLocal | null> {
     return this.snapshot;
@@ -21,7 +27,9 @@ class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 
   async limpar(): Promise<void> {
     this.snapshot = null;
   }
-  async mesclar(parcial: { materias?: SnapshotLocal['materias'] }): Promise<void> {
+  async mesclar(parcial: {
+    materias?: SnapshotLocal['materias'];
+  }): Promise<void> {
     this.snapshot = {
       eventos: this.snapshot?.eventos ?? [],
       materias: parcial.materias ?? this.snapshot?.materias ?? [],
@@ -54,7 +62,9 @@ describe('NovaMateriaPage', () => {
   afterEach(() => backend.verify());
 
   function cores(): HTMLButtonElement[] {
-    return Array.from(fixture.nativeElement.querySelectorAll('.cores-pick button'));
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('.cores-pick button'),
+    );
   }
 
   function preencher(nome: string, sigla: string): void {
@@ -69,7 +79,9 @@ describe('NovaMateriaPage', () => {
   }
 
   function criar(): void {
-    (fixture.nativeElement.querySelector('.botao') as HTMLButtonElement).click();
+    (
+      fixture.nativeElement.querySelector('.botao') as HTMLButtonElement
+    ).click();
   }
 
   async function assentar(): Promise<void> {
@@ -78,7 +90,9 @@ describe('NovaMateriaPage', () => {
   }
 
   function erroNaTela(): string {
-    const p = fixture.nativeElement.querySelector('.pf-erro') as HTMLElement | null;
+    const p = fixture.nativeElement.querySelector(
+      '.pf-erro',
+    ) as HTMLElement | null;
     return p === null ? '' : p.textContent!.trim();
   }
 
@@ -97,7 +111,9 @@ describe('NovaMateriaPage', () => {
     cores()[4].click();
     fixture.detectChanges();
 
-    const marcadas = cores().filter((b) => b.getAttribute('aria-pressed') === 'true');
+    const marcadas = cores().filter(
+      (b) => b.getAttribute('aria-pressed') === 'true',
+    );
     expect(marcadas.length).toBe(1);
     expect(marcadas[0].getAttribute('data-cor')).toBe(PALETA[4].hex);
   });
@@ -117,11 +133,18 @@ describe('NovaMateriaPage', () => {
       professor: null,
     });
 
-    req.flush({ id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: PALETA[1].hex });
+    req.flush({
+      id: 'm1',
+      nome: 'Banco de Dados',
+      sigla: 'BD',
+      corHex: PALETA[1].hex,
+    });
     await assentar();
 
     backend
-      .expectOne((r) => r.method === 'GET' && r.url === `${environment.apiUrl}/materias`)
+      .expectOne(
+        (r) => r.method === 'GET' && r.url === `${environment.apiUrl}/materias`,
+      )
       .flush([]);
     await assentar();
   });
@@ -163,12 +186,21 @@ describe('NovaMateriaPage', () => {
 
     backend
       .expectOne(`${environment.apiUrl}/materias`)
-      .flush({ id: 'm9', nome: 'Redes', sigla: 'REDES', corHex: PALETA[0].hex });
+      .flush({
+        id: 'm9',
+        nome: 'Redes',
+        sigla: 'REDES',
+        corHex: PALETA[0].hex,
+      });
     await assentar();
 
     backend
-      .expectOne((r) => r.method === 'GET' && r.url === `${environment.apiUrl}/materias`)
-      .flush([{ id: 'm9', nome: 'Redes', sigla: 'REDES', corHex: PALETA[0].hex }]);
+      .expectOne(
+        (r) => r.method === 'GET' && r.url === `${environment.apiUrl}/materias`,
+      )
+      .flush([
+        { id: 'm9', nome: 'Redes', sigla: 'REDES', corHex: PALETA[0].hex },
+      ]);
     await assentar();
     // Mais um: depois do GET o repositorio ainda grava o snapshot,
     // e essa promessa nao e rastreada pelo whenStable.

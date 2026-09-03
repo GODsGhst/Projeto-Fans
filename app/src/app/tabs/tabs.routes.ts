@@ -43,6 +43,16 @@ export const tabsRoutes: Routes = [
       // primeira que serve, e um caminho de 3 segmentos nao colide com um de 2 —
       // mas manter a regra visivel evita alguem reordenar sem perceber.
       {
+        path: 'materiais/:id/resumo',
+        loadComponent: () =>
+          import('../features/materias/resumo.page').then((m) => m.ResumoPage),
+      },
+      {
+        path: 'ajustes',
+        loadComponent: () =>
+          import('../features/ajustes/ajustes.page').then((m) => m.AjustesPage),
+      },
+      {
         path: 'materiais/:id/editar',
         loadComponent: () =>
           import('../features/materias/editar-material.page').then(

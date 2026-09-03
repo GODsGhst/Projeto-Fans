@@ -100,6 +100,10 @@ import { mensagemDeErro } from '../auth/erro';
             </div>
           }
 
+          <a class="botao botao--fantasma" routerLink="/tabs/ajustes"
+            >Ajustes</a
+          >
+
           @if (souLider()) {
             <a class="botao botao--fantasma" routerLink="/tabs/turma/editar"
               >Editar turma</a

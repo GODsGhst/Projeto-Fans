@@ -69,7 +69,9 @@ export const erroHttpInterceptor: HttpInterceptorFn = (req, next) => {
         auth.encerrarSessao();
         router
           .navigateByUrl(ROTA_LOGIN)
-          .catch((e: unknown) => console.error('[http] falha ao voltar para o login', e));
+          .catch((e: unknown) =>
+            console.error('[http] falha ao voltar para o login', e),
+          );
       }
       return throwError(() => traduzir(resposta));
     }),
@@ -84,13 +86,25 @@ function traduzir(r: HttpErrorResponse): ErroApi {
     return new ErroApi('OFFLINE', 0, 'Sem conexão.', true);
   }
   if (r.status === 401) {
-    return new ErroApi('AUTH', 401, doServidor ?? 'Sua sessão expirou. Entre de novo.');
+    return new ErroApi(
+      'AUTH',
+      401,
+      doServidor ?? 'Sua sessão expirou. Entre de novo.',
+    );
   }
   if (r.status === 403) {
-    return new ErroApi('PROIBIDO', 403, doServidor ?? 'Só quem criou pode editar.');
+    return new ErroApi(
+      'PROIBIDO',
+      403,
+      doServidor ?? 'Só quem criou pode editar.',
+    );
   }
   if (r.status === 404) {
-    return new ErroApi('NAO_ENCONTRADO', 404, doServidor ?? 'Isso não existe mais.');
+    return new ErroApi(
+      'NAO_ENCONTRADO',
+      404,
+      doServidor ?? 'Isso não existe mais.',
+    );
   }
   if (r.status === 409) {
     return new ErroApi(
@@ -102,12 +116,25 @@ function traduzir(r: HttpErrorResponse): ErroApi {
     );
   }
   if (r.status === 428) {
-    return new ErroApi('PRECONDICAO', 428, doServidor ?? 'Recarregue o registro e tente de novo.');
+    return new ErroApi(
+      'PRECONDICAO',
+      428,
+      doServidor ?? 'Recarregue o registro e tente de novo.',
+    );
   }
   if (r.status >= 500) {
-    return new ErroApi('SERVIDOR', r.status, 'Deu problema no servidor. Tente de novo.', true);
+    return new ErroApi(
+      'SERVIDOR',
+      r.status,
+      'Deu problema no servidor. Tente de novo.',
+      true,
+    );
   }
-  return new ErroApi('DESCONHECIDO', r.status, doServidor ?? 'Não deu para completar a ação.');
+  return new ErroApi(
+    'DESCONHECIDO',
+    r.status,
+    doServidor ?? 'Não deu para completar a ação.',
+  );
 }
 
 /** O backend responde `ProblemDetail` (RFC 7807): `detail` primeiro, `title` depois. */

@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -11,10 +14,23 @@ import type { SnapshotLocal } from '../../core/storage.service';
 import type { Materia } from '../../data/models';
 import { NovoEventoPage } from './novo-evento.page';
 
-const BD: Materia = { id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' };
-const CALC: Materia = { id: 'm2', nome: 'Cálculo 2', sigla: 'CALC2', corHex: '#1D4ED8' };
+const BD: Materia = {
+  id: 'm1',
+  nome: 'Banco de Dados',
+  sigla: 'BD',
+  corHex: '#0369A1',
+};
+const CALC: Materia = {
+  id: 'm2',
+  nome: 'Cálculo 2',
+  sigla: 'CALC2',
+  corHex: '#1D4ED8',
+};
 
-class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 'mesclar'> {
+class StorageFake implements Pick<
+  StorageService,
+  'ler' | 'gravar' | 'limpar' | 'mesclar'
+> {
   snapshot: SnapshotLocal | null = null;
   async ler(): Promise<SnapshotLocal | null> {
     return this.snapshot;
@@ -25,7 +41,9 @@ class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 
   async limpar(): Promise<void> {
     this.snapshot = null;
   }
-  async mesclar(parcial: Partial<Omit<SnapshotLocal, 'ultimoSync'>>): Promise<void> {
+  async mesclar(
+    parcial: Partial<Omit<SnapshotLocal, 'ultimoSync'>>,
+  ): Promise<void> {
     this.snapshot = {
       eventos: parcial.eventos ?? this.snapshot?.eventos ?? [],
       materias: parcial.materias ?? this.snapshot?.materias ?? [],
@@ -52,7 +70,10 @@ describe('NovoEventoPage', () => {
         { provide: StorageService, useValue: new StorageFake() },
         // O `id` da rota é o que separa adicionar de editar. `Map` de propósito:
         // cada teste ajusta o seu, e o padrão (vazio) é o modo de adicionar.
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: rotaParams } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: rotaParams } },
+        },
       ],
     });
     rotaParams.clear();
@@ -88,11 +109,15 @@ describe('NovoEventoPage', () => {
   }
 
   function cadastrar(): void {
-    (fixture.nativeElement.querySelector('.botao') as HTMLButtonElement).click();
+    (
+      fixture.nativeElement.querySelector('.botao') as HTMLButtonElement
+    ).click();
   }
 
   function erroNaTela(): string {
-    const p = fixture.nativeElement.querySelector('.pf-erro') as HTMLElement | null;
+    const p = fixture.nativeElement.querySelector(
+      '.pf-erro',
+    ) as HTMLElement | null;
     return p === null ? '' : p.textContent!.trim();
   }
 
@@ -105,15 +130,21 @@ describe('NovoEventoPage', () => {
       .withContext('seletor vazio nao pode aparecer')
       .toBeNull();
     expect(fixture.nativeElement.querySelector('button.botao'))
-      .withContext('nao ha o que cadastrar sem materia — e `button` porque a distincao real e essa')
+      .withContext(
+        'nao ha o que cadastrar sem materia — e `button` porque a distincao real e essa',
+      )
       .toBeNull();
-    expect(fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]'),
+    ).not.toBeNull();
   });
 
   it('falha ao buscar as materias NAO vira "nenhuma materia cadastrada"', async () => {
     await abrir((r) => r.error(new ProgressEvent('error')));
 
-    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain('Sem conexão');
+    expect(
+      fixture.nativeElement.querySelector('.pf-aviso')!.textContent,
+    ).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]'))
       .withContext('falhar ao perguntar nao e "a turma nao tem materia"')
       .toBeNull();
@@ -144,7 +175,9 @@ describe('NovoEventoPage', () => {
     await abrir((r) => r.flush([BD, CALC]));
 
     (
-      fixture.nativeElement.querySelector('.seg button[data-tipo="ENTREGA"]') as HTMLButtonElement
+      fixture.nativeElement.querySelector(
+        '.seg button[data-tipo="ENTREGA"]',
+      ) as HTMLButtonElement
     ).click();
     (
       fixture.nativeElement.querySelector(
@@ -190,7 +223,10 @@ describe('NovoEventoPage', () => {
     cadastrar();
     backend
       .expectOne(`${environment.apiUrl}/eventos`)
-      .flush({ detail: 'Deu ruim' }, { status: 500, statusText: 'Server Error' });
+      .flush(
+        { detail: 'Deu ruim' },
+        { status: 500, statusText: 'Server Error' },
+      );
     await assentar();
 
     expect(erroNaTela()).not.toBe('');
@@ -223,7 +259,8 @@ describe('NovoEventoPage', () => {
 
     // Duas: o componente do beforeEach já pediu as matérias, e este pede de
     // novo. Responder as duas é o que mantém o afterEach limpo.
-    for (const r of backend.match(`${environment.apiUrl}/materias`)) r.flush([BD, CALC]);
+    for (const r of backend.match(`${environment.apiUrl}/materias`))
+      r.flush([BD, CALC]);
     backend.expectOne(`${environment.apiUrl}/eventos/e1`).flush({
       id: 'e1',
       tipo: 'ENTREGA',
@@ -248,7 +285,8 @@ describe('NovoEventoPage', () => {
     await outra.whenStable();
     outra.detectChanges();
 
-    const campo = (sel: string) => outra.nativeElement.querySelector(sel) as HTMLInputElement;
+    const campo = (sel: string) =>
+      outra.nativeElement.querySelector(sel) as HTMLInputElement;
     expect(campo('input[type="text"]').value)
       .withContext('editar sem os campos preenchidos obriga a redigitar tudo')
       .toBe('Lista 4');
@@ -256,8 +294,12 @@ describe('NovoEventoPage', () => {
     expect(campo('input[type="time"]').value).toBe('19:30');
 
     (
-      Array.from(outra.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
-    ).find((b) => b.textContent!.includes('Salvar'))!.click();
+      Array.from(
+        outra.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.includes('Salvar'))!
+      .click();
 
     const req = backend.expectOne(`${environment.apiUrl}/eventos/e1`);
     expect(req.request.method).toBe('PATCH');
@@ -266,7 +308,9 @@ describe('NovoEventoPage', () => {
       .toBe('3');
     expect(req.request.body.titulo).toBe('Lista 4');
     expect(req.request.body.sala)
-      .withContext('PATCH substitui o objeto inteiro: campo omitido vira null no servidor')
+      .withContext(
+        'PATCH substitui o objeto inteiro: campo omitido vira null no servidor',
+      )
       .toBe('A-101');
     req.flush({ id: 'e1' });
     await outra.whenStable();

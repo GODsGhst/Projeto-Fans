@@ -49,7 +49,11 @@ export class EventoRepository {
   }
 
   /** So o autor. `version` vai no `If-Match`: divergiu, 409. */
-  atualizar(eventoId: string, version: number, req: AtualizarEventoRequest): Promise<Evento> {
+  atualizar(
+    eventoId: string,
+    version: number,
+    req: AtualizarEventoRequest,
+  ): Promise<Evento> {
     return this.api.patch<Evento>(`/eventos/${eventoId}`, req, version);
   }
 
@@ -63,7 +67,9 @@ export class EventoRepository {
   }
 
   desvincularMaterial(eventoId: string, materialId: string): Promise<void> {
-    return this.api.delete<void>(`/eventos/${eventoId}/materiais/${materialId}`);
+    return this.api.delete<void>(
+      `/eventos/${eventoId}/materiais/${materialId}`,
+    );
   }
 }
 

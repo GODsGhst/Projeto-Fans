@@ -3,6 +3,7 @@ package com.projetofans.web.controller;
 import com.projetofans.erro.IfMatchAusenteException;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.service.MaterialService;
+import com.projetofans.service.ResumoService;
 import com.projetofans.web.dto.AtualizarMaterialRequest;
 import com.projetofans.web.dto.CriarMaterialRequest;
 import com.projetofans.web.dto.MaterialResponse;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,9 +33,11 @@ import java.util.UUID;
 public class MaterialController {
 
     private final MaterialService materiais;
+    private final ResumoService resumos;
 
-    public MaterialController(MaterialService materiais) {
+    public MaterialController(MaterialService materiais, ResumoService resumos) {
         this.materiais = materiais;
+        this.resumos = resumos;
     }
 
     @PostMapping
@@ -55,6 +59,25 @@ public class MaterialController {
                                       @RequestHeader(value = "If-Match", required = false) Integer ifMatch,
                                       @Valid @RequestBody AtualizarMaterialRequest pedido) {
         return materiais.atualizar(eu, id, IfMatchAusenteException.exigir(ifMatch), pedido);
+    }
+
+    /**
+     * Resumo por IA, com a chave de QUEM PEDIU, no header.
+     *
+     * A chave vem em header e nao no corpo porque corpo de requisicao vai parar
+     * em log de acesso e em relatorio de erro com muito mais facilidade — e esta
+     * e a unica coisa que trafega aqui que nao pertence ao projeto.
+     *
+     * Nao ha If-Match: gerar resumo nao e editar o material. Exigir versao aqui
+     * faria a geracao falhar com 409 sempre que alguem tivesse editado o titulo
+     * enquanto o PDF era lido.
+     */
+    @PostMapping("/{id}/resumo")
+    public MaterialResponse resumir(@AuthenticationPrincipal UsuarioAtual eu,
+                                    @PathVariable UUID id,
+                                    @RequestHeader(value = "X-IA-Key", required = false) String chave,
+                                    @RequestParam(defaultValue = "false") boolean refazer) {
+        return resumos.resumir(eu, id, chave, refazer);
     }
 
     @DeleteMapping("/{id}")

@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -15,7 +18,11 @@ const AUTORIA = {
   atualizadoEm: '2026-08-30T12:00:00Z',
 };
 
-function material(id: string, titulo: string, tipo: 'AULA' | 'ADICIONAL' = 'AULA') {
+function material(
+  id: string,
+  titulo: string,
+  tipo: 'AULA' | 'ADICIONAL' = 'AULA',
+) {
   return {
     id,
     materiaId: 'm1',
@@ -41,7 +48,10 @@ describe('AnexarMaterialPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', 'e1']]) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: new Map([['id', 'e1']]) } },
+        },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
@@ -72,7 +82,12 @@ describe('AnexarMaterialPage', () => {
     fixture.detectChanges();
 
     backend.expectOne(`${environment.apiUrl}/materias/m1`).flush({
-      materia: { id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' },
+      materia: {
+        id: 'm1',
+        nome: 'Banco de Dados',
+        sigla: 'BD',
+        corHex: '#0369A1',
+      },
       materiaisAula: [material('mat-1', 'Slides da aula 3')],
       materiaisAdicionais: [material('mat-2', 'Lista extra', 'ADICIONAL')],
       eventos: [],
@@ -95,7 +110,9 @@ describe('AnexarMaterialPage', () => {
     await abrir();
     linhas()[0].click();
 
-    const req = backend.expectOne(`${environment.apiUrl}/eventos/e1/materiais/mat-1`);
+    const req = backend.expectOne(
+      `${environment.apiUrl}/eventos/e1/materiais/mat-1`,
+    );
     expect(req.request.method).toBe('POST');
     req.flush(null);
     await fixture.whenStable();
@@ -111,7 +128,9 @@ describe('AnexarMaterialPage', () => {
     expect(linhas()[0].getAttribute('aria-pressed')).toBe('true');
 
     linhas()[0].click();
-    const req = backend.expectOne(`${environment.apiUrl}/eventos/e1/materiais/mat-1`);
+    const req = backend.expectOne(
+      `${environment.apiUrl}/eventos/e1/materiais/mat-1`,
+    );
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
     await fixture.whenStable();
@@ -123,22 +142,43 @@ describe('AnexarMaterialPage', () => {
   it('materia sem material explica e leva para adicionar', async () => {
     fixture.detectChanges();
     backend.expectOne(`${environment.apiUrl}/eventos/e1`).flush({
-      id: 'e1', materiaId: 'm1', tipo: 'PROVA', titulo: 'Prova 2', data: '2026-09-10',
-      hora: null, materiaSigla: 'BD', materiaCorHex: '#0369A1', autoria: AUTORIA,
-      version: 1, visivelTurma: true, excluidoEm: null, materiais: [],
+      id: 'e1',
+      materiaId: 'm1',
+      tipo: 'PROVA',
+      titulo: 'Prova 2',
+      data: '2026-09-10',
+      hora: null,
+      materiaSigla: 'BD',
+      materiaCorHex: '#0369A1',
+      autoria: AUTORIA,
+      version: 1,
+      visivelTurma: true,
+      excluidoEm: null,
+      materiais: [],
     });
     await fixture.whenStable();
     fixture.detectChanges();
     backend.expectOne(`${environment.apiUrl}/materias/m1`).flush({
-      materia: { id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' },
-      materiaisAula: [], materiaisAdicionais: [], eventos: [],
+      materia: {
+        id: 'm1',
+        nome: 'Banco de Dados',
+        sigla: 'BD',
+        corHex: '#0369A1',
+      },
+      materiaisAula: [],
+      materiaisAdicionais: [],
+      eventos: [],
     });
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(linhas().length).toBe(0);
-    const link = fixture.nativeElement.querySelector('a[href="/tabs/materias/m1/material/novo"]');
-    expect(link).withContext('nao ha o que anexar — tem de oferecer criar').not.toBeNull();
+    const link = fixture.nativeElement.querySelector(
+      'a[href="/tabs/materias/m1/material/novo"]',
+    );
+    expect(link)
+      .withContext('nao ha o que anexar — tem de oferecer criar')
+      .not.toBeNull();
   });
 
   it('falha ao anexar aparece na tela e o estado nao muda', async () => {
@@ -146,7 +186,10 @@ describe('AnexarMaterialPage', () => {
     linhas()[0].click();
     backend
       .expectOne(`${environment.apiUrl}/eventos/e1/materiais/mat-1`)
-      .flush({ detail: 'Servidor fora do ar.' }, { status: 500, statusText: 'Server Error' });
+      .flush(
+        { detail: 'Servidor fora do ar.' },
+        { status: 500, statusText: 'Server Error' },
+      );
     await fixture.whenStable();
     fixture.detectChanges();
 

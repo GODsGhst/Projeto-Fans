@@ -61,7 +61,9 @@ export class TurmaRepository {
    * inteira do próprio grupo.
    */
   async renomear(nome: string, semestre: string | null): Promise<void> {
-    this.turma.set(await this.api.patch<MinhaTurma>('/turmas/minha', { nome, semestre }));
+    this.turma.set(
+      await this.api.patch<MinhaTurma>('/turmas/minha', { nome, semestre }),
+    );
   }
 
   async carregar(): Promise<void> {
@@ -73,7 +75,9 @@ export class TurmaRepository {
       // A turma NÃO é limpa: se já havia dado, ele continua valendo enquanto o
       // aviso explica que a atualização falhou. Zerar transformaria "não
       // consegui atualizar" em "a turma sumiu".
-      this.erro.set(e instanceof Error ? e.message : 'Não deu para carregar a turma.');
+      this.erro.set(
+        e instanceof Error ? e.message : 'Não deu para carregar a turma.',
+      );
     } finally {
       this.carregando.set(false);
     }

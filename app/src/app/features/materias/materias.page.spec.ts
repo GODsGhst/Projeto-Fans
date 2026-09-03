@@ -1,5 +1,8 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
@@ -15,7 +18,10 @@ function materia(id: string, sigla: string, nome: string): Materia {
   return { id, nome, sigla, corHex: '#0369A1' };
 }
 
-class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 'mesclar'> {
+class StorageFake implements Pick<
+  StorageService,
+  'ler' | 'gravar' | 'limpar' | 'mesclar'
+> {
   snapshot: SnapshotLocal | null = null;
   async ler(): Promise<SnapshotLocal | null> {
     return this.snapshot;
@@ -26,7 +32,9 @@ class StorageFake implements Pick<StorageService, 'ler' | 'gravar' | 'limpar' | 
   async limpar(): Promise<void> {
     this.snapshot = null;
   }
-  async mesclar(parcial: { materias?: SnapshotLocal['materias'] }): Promise<void> {
+  async mesclar(parcial: {
+    materias?: SnapshotLocal['materias'];
+  }): Promise<void> {
     this.snapshot = {
       eventos: this.snapshot?.eventos ?? [],
       materias: parcial.materias ?? this.snapshot?.materias ?? [],
@@ -55,7 +63,9 @@ describe('MateriasPage', () => {
 
   afterEach(() => backend.verify());
 
-  async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
+  async function abrir(
+    responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+  ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
@@ -65,8 +75,8 @@ describe('MateriasPage', () => {
   }
 
   function textos(seletor: string): string[] {
-    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map((e) =>
-      (e as HTMLElement).textContent!.trim(),
+    return Array.from(fixture.nativeElement.querySelectorAll(seletor)).map(
+      (e) => (e as HTMLElement).textContent!.trim(),
     );
   }
 
@@ -97,9 +107,9 @@ describe('MateriasPage', () => {
   it('falha ao buscar as materias nao vira "nao ha materias"', async () => {
     await abrir((r) => r.error(new ProgressEvent('error')));
 
-    expect(fixture.nativeElement.querySelector('.pf-aviso')!.textContent).toContain(
-      'Sem conexão',
-    );
+    expect(
+      fixture.nativeElement.querySelector('.pf-aviso')!.textContent,
+    ).toContain('Sem conexão');
     expect(fixture.nativeElement.querySelector('.pf-vazio'))
       .withContext('falhar ao buscar NAO e "nao ha materias"')
       .toBeNull();
@@ -118,6 +128,8 @@ describe('MateriasPage', () => {
   it('a entrada continua ali com a lista cheia', async () => {
     await abrir((r) => r.flush([materia('m1', 'BD', 'Banco de Dados')]));
 
-    expect(fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/tabs/materias/nova"]'),
+    ).not.toBeNull();
   });
 });

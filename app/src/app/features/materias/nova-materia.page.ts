@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonBackButton,
@@ -25,7 +31,10 @@ import { mensagemDeErro } from '../auth/erro';
  *
  * Por isso a tela oferece escolha entre 12, e nao um campo de cor livre.
  */
-export const PALETA: readonly { readonly hex: string; readonly nome: string }[] = [
+export const PALETA: readonly {
+  readonly hex: string;
+  readonly nome: string;
+}[] = [
   { hex: '#1D4ED8', nome: 'azul' },
   { hex: '#0369A1', nome: 'azul-petróleo' },
   { hex: '#0F766E', nome: 'verde-azulado' },
@@ -91,7 +100,8 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
           type="text"
           maxlength="80"
           placeholder="Banco de Dados"
-          aria-label="Nome da matéria" />
+          aria-label="Nome da matéria"
+        />
 
         <p class="rot-campo">sigla</p>
         <input
@@ -102,7 +112,8 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
           autocapitalize="characters"
           placeholder="BD"
           aria-label="Sigla"
-          (input)="previa.set(sigla.value.trim().toUpperCase() || 'SIGLA')" />
+          (input)="previa.set(sigla.value.trim().toUpperCase() || 'SIGLA')"
+        />
 
         <p class="rot-campo">sala <span class="opcional">— opcional</span></p>
         <input
@@ -112,9 +123,12 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
           name="sala"
           maxlength="40"
           placeholder="B-204"
-          aria-label="Sala habitual" />
+          aria-label="Sala habitual"
+        />
 
-        <p class="rot-campo">professor <span class="opcional">— opcional</span></p>
+        <p class="rot-campo">
+          professor <span class="opcional">— opcional</span>
+        </p>
         <input
           #professor
           class="campo--linha"
@@ -122,11 +136,12 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
           name="professor"
           maxlength="80"
           placeholder="prof. Marcos"
-          aria-label="Professor" />
+          aria-label="Professor"
+        />
 
         <p class="cache-aviso">
-          A sala aqui é a de sempre. Quando uma prova cair em outra sala, dá para dizer isso na
-          própria prova — sem mexer na matéria.
+          A sala aqui é a de sempre. Quando uma prova cair em outra sala, dá
+          para dizer isso na própria prova — sem mexer na matéria.
         </p>
 
         <p class="rot-campo">cor</p>
@@ -138,7 +153,8 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
               [attr.data-cor]="c.hex"
               [attr.aria-pressed]="cor() === c.hex"
               [attr.aria-label]="c.nome"
-              (click)="cor.set(c.hex)"></button>
+              (click)="cor.set(c.hex)"
+            ></button>
           }
         </div>
 
@@ -148,15 +164,16 @@ export const PALETA: readonly { readonly hex: string; readonly nome: string }[] 
         </div>
 
         <p class="alerta">
-          As 12 cores foram medidas para dar contraste suficiente com o texto branco do chip. Por
-          isso a escolha é entre elas, e não livre.
+          As 12 cores foram medidas para dar contraste suficiente com o texto
+          branco do chip. Por isso a escolha é entre elas, e não livre.
         </p>
 
         <button
           class="botao"
           type="button"
           [disabled]="enviando()"
-          (click)="criar(nome.value, sigla.value, sala.value, professor.value)">
+          (click)="criar(nome.value, sigla.value, sala.value, professor.value)"
+        >
           {{ rotuloDoBotao() }}
         </button>
       </div>
@@ -280,7 +297,9 @@ export class NovaMateriaPage {
     // guarda no proprio signal e a aba Materias o mostra.
     await this.repo
       .carregar()
-      .catch((e: unknown) => console.error('[nova-materia] falha ao recarregar as materias', e));
+      .catch((e: unknown) =>
+        console.error('[nova-materia] falha ao recarregar as materias', e),
+      );
     await this.router.navigateByUrl('/tabs/materias');
   }
 }

@@ -34,11 +34,15 @@ describe('StorageService', () => {
           feitoPeloUsuario: false,
         },
       ],
-      materias: [{ id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' }],
+      materias: [
+        { id: 'm1', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' },
+      ],
       ultimoSync: '2026-08-30T12:05:00Z',
     };
 
-    expect(await storage.ler()).withContext('comeca vazio').toBeNull();
+    expect(await storage.ler())
+      .withContext('comeca vazio')
+      .toBeNull();
 
     await storage.gravar(snapshot);
     expect(await storage.ler()).toEqual(snapshot);

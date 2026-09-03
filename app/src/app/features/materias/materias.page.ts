@@ -1,6 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 
 import { MateriaRepository } from '../../data/materia.repository';
 import { MateriaChipComponent } from '../../shared/materia-chip.component';
@@ -20,7 +30,14 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
   selector: 'app-materias',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, MateriaChipComponent, RouterLink],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    MateriaChipComponent,
+    RouterLink,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -54,7 +71,8 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
           <div class="pf-vazio">
             <b>Nenhuma matéria cadastrada.</b>
             <span>
-              Matéria é o que organiza material e prova. Qualquer pessoa da turma pode adicionar.
+              Matéria é o que organiza material e prova. Qualquer pessoa da
+              turma pode adicionar.
             </span>
           </div>
         }
@@ -62,7 +80,6 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
     </ion-content>
   `,
   styles: `
-
     .linha {
       display: flex;
       align-items: center;
@@ -90,7 +107,10 @@ export class MateriasPage {
 
   /** Vazio de verdade: carregou, nao falhou, e a turma nao tem materia. */
   protected readonly vazia = computed(
-    () => !this.carregando() && this.erro() === null && this.materias().length === 0,
+    () =>
+      !this.carregando() &&
+      this.erro() === null &&
+      this.materias().length === 0,
   );
 
   /**
@@ -112,6 +132,8 @@ export class MateriasPage {
     // "nao ha materias".
     this.repo
       .carregar()
-      .catch((e: unknown) => console.error('[materias] falha ao carregar as matérias', e));
+      .catch((e: unknown) =>
+        console.error('[materias] falha ao carregar as matérias', e),
+      );
   }
 }

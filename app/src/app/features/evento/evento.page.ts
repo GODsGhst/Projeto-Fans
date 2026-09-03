@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   IonBackButton,
@@ -44,7 +50,9 @@ import { materialVm } from '../material-vm';
     IonBackButton,
     IonContent,
     EventoCardComponent,
-    MaterialLinhaComponent, RouterLink],
+    MaterialLinhaComponent,
+    RouterLink,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -73,7 +81,8 @@ import { materialVm } from '../material-vm';
           <div class="pf-vazio pf-sumiu">
             <b>Isso não existe mais.</b>
             <span>
-              O registro foi excluído por quem criou, ou o líder tirou da lista da turma.
+              O registro foi excluído por quem criou, ou o líder tirou da lista
+              da turma.
             </span>
           </div>
         }
@@ -86,10 +95,13 @@ import { materialVm } from '../material-vm';
             [quando]="e.quando"
             [titulo]="e.titulo"
             [materia]="e.materia"
-            [autoria]="e.autoria" />
+            [autoria]="e.autoria"
+          />
 
           @if (e.sala) {
-            <p class="sala">nesta vez, na sala <b>{{ e.sala }}</b></p>
+            <p class="sala">
+              nesta vez, na sala <b>{{ e.sala }}</b>
+            </p>
           }
 
           <!-- O líder tira da lista da turma. Não apaga: o registro continua
@@ -98,7 +110,9 @@ import { materialVm } from '../material-vm';
           @if (souLider()) {
             <div class="do-lider">
               @if (ocultando()) {
-                <p class="rot-campo">por quê <span class="opcional">— opcional</span></p>
+                <p class="rot-campo">
+                  por quê <span class="opcional">— opcional</span>
+                </p>
                 <input
                   #motivo
                   class="campo--linha"
@@ -106,20 +120,31 @@ import { materialVm } from '../material-vm';
                   name="motivo"
                   maxlength="140"
                   placeholder="foto indevida, duplicado…"
-                  aria-label="Motivo" />
+                  aria-label="Motivo"
+                />
                 <p class="cache-aviso">
-                  Fica registrado com o seu nome. Quem criou continua vendo o registro em "não
-                  listados", e você pode reexibir.
+                  Fica registrado com o seu nome. Quem criou continua vendo o
+                  registro em "não listados", e você pode reexibir.
                 </p>
-                <button class="botao" type="button" [disabled]="enviandoModeracao()"
-                        (click)="ocultar(motivo.value)">
+                <button
+                  class="botao"
+                  type="button"
+                  [disabled]="enviandoModeracao()"
+                  (click)="ocultar(motivo.value)"
+                >
                   {{ enviandoModeracao() ? 'Ocultando…' : 'Ocultar da turma' }}
                 </button>
-                <button class="botao botao--fantasma" type="button" (click)="ocultando.set(false)">
+                <button
+                  class="botao botao--fantasma"
+                  type="button"
+                  (click)="ocultando.set(false)"
+                >
                   Cancelar
                 </button>
               } @else if (pedindo()) {
-                <p class="rot-campo">por quê <span class="opcional">— opcional</span></p>
+                <p class="rot-campo">
+                  por quê <span class="opcional">— opcional</span>
+                </p>
                 <input
                   #motivoPedido
                   class="campo--linha"
@@ -127,31 +152,52 @@ import { materialVm } from '../material-vm';
                   name="motivo"
                   maxlength="140"
                   placeholder="duplicado, informação errada…"
-                  aria-label="Motivo" />
+                  aria-label="Motivo"
+                />
                 <p class="cache-aviso">
-                  O pedido aparece no Meu quadro de quem criou, com o seu nome e este motivo.
-                  Quem apaga é sempre a pessoa que criou — você está pedindo, não apagando.
+                  O pedido aparece no Meu quadro de quem criou, com o seu nome e
+                  este motivo. Quem apaga é sempre a pessoa que criou — você
+                  está pedindo, não apagando.
                 </p>
-                <button class="botao" type="button" [disabled]="enviandoModeracao()"
-                        (click)="pedirExclusao(motivoPedido.value)">
+                <button
+                  class="botao"
+                  type="button"
+                  [disabled]="enviandoModeracao()"
+                  (click)="pedirExclusao(motivoPedido.value)"
+                >
                   {{ enviandoModeracao() ? 'Enviando…' : 'Enviar o pedido' }}
                 </button>
-                <button class="botao botao--fantasma" type="button" (click)="pedindo.set(false)">
+                <button
+                  class="botao botao--fantasma"
+                  type="button"
+                  (click)="pedindo.set(false)"
+                >
                   Cancelar
                 </button>
               } @else if (pedidoEnviado()) {
                 <p class="alerta" role="status">
                   <b>Pedido enviado.</b>
-                  <span>Ele aparece no Meu quadro de quem criou. A decisão de apagar é dela.</span>
+                  <span
+                    >Ele aparece no Meu quadro de quem criou. A decisão de
+                    apagar é dela.</span
+                  >
                 </p>
               } @else {
-                <button class="botao botao--fantasma" type="button" (click)="ocultando.set(true)">
+                <button
+                  class="botao botao--fantasma"
+                  type="button"
+                  (click)="ocultando.set(true)"
+                >
                   Ocultar da turma
                 </button>
                 <!-- Dois botoes porque sao duas decisoes. Ocultar tira da vista
                      agora; pedir e conversa com quem criou. Juntar as duas faria
                      o lider apagar sem querer o que so queria tirar da lista. -->
-                <button class="botao botao--fantasma" type="button" (click)="pedindo.set(true)">
+                <button
+                  class="botao botao--fantasma"
+                  type="button"
+                  (click)="pedindo.set(true)"
+                >
                   Pedir que apague
                 </button>
               }
@@ -164,15 +210,32 @@ import { materialVm } from '../material-vm';
             <div class="do-autor">
               @if (confirmando()) {
                 <p class="confirma">Apagar mesmo? Some da lista da turma.</p>
-                <button class="perigo" type="button" [disabled]="apagando()" (click)="apagar()">
+                <button
+                  class="perigo"
+                  type="button"
+                  [disabled]="apagando()"
+                  (click)="apagar()"
+                >
                   {{ apagando() ? 'Apagando…' : 'Sim, apagar' }}
                 </button>
-                <button class="neutro" type="button" (click)="confirmando.set(false)">
+                <button
+                  class="neutro"
+                  type="button"
+                  (click)="confirmando.set(false)"
+                >
                   Cancelar
                 </button>
               } @else {
-                <a class="neutro" [routerLink]="['/tabs/eventos', id, 'editar']">Editar</a>
-                <button class="neutro" type="button" (click)="confirmando.set(true)">Apagar</button>
+                <a class="neutro" [routerLink]="['/tabs/eventos', id, 'editar']"
+                  >Editar</a
+                >
+                <button
+                  class="neutro"
+                  type="button"
+                  (click)="confirmando.set(true)"
+                >
+                  Apagar
+                </button>
               }
             </div>
             @if (erroDaAcao(); as e2) {
@@ -183,7 +246,10 @@ import { materialVm } from '../material-vm';
           <!-- FORA do @if de materiais de proposito. Anexar e mais necessario
                quando nao ha nada anexado; escondido ali, o botao so aparecia para
                quem ja tinha resolvido o problema. -->
-          <a class="botao botao--fantasma anexar" [routerLink]="['/tabs/eventos', id, 'anexar']">
+          <a
+            class="botao botao--fantasma anexar"
+            [routerLink]="['/tabs/eventos', id, 'anexar']"
+          >
             Anexar material
           </a>
 
@@ -191,11 +257,24 @@ import { materialVm } from '../material-vm';
             <p class="pf-rotulo">materiais</p>
             @for (m of materiais(); track m.id) {
               @if (m.url; as endereco) {
-                <a class="abrir" [href]="endereco" target="_blank" rel="noopener noreferrer">
-                  <app-material-linha [tipo]="m.tipo" [titulo]="m.titulo" [autoria]="m.autoria" />
+                <a
+                  class="abrir"
+                  [href]="endereco"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <app-material-linha
+                    [tipo]="m.tipo"
+                    [titulo]="m.titulo"
+                    [autoria]="m.autoria"
+                  />
                 </a>
               } @else {
-                <app-material-linha [tipo]="m.tipo" [titulo]="m.titulo" [autoria]="m.autoria" />
+                <app-material-linha
+                  [tipo]="m.tipo"
+                  [titulo]="m.titulo"
+                  [autoria]="m.autoria"
+                />
               }
             }
           }
@@ -205,8 +284,8 @@ import { materialVm } from '../material-vm';
           <div class="pf-vazio">
             <b>Nenhum material vinculado.</b>
             <span>
-              Só aparece aqui o que alguém vinculou a esta prova ou entrega — a matéria inteira
-              fica na tela da matéria.
+              Só aparece aqui o que alguém vinculou a esta prova ou entrega — a
+              matéria inteira fica na tela da matéria.
             </span>
           </div>
         }
@@ -243,8 +322,8 @@ import { materialVm } from '../material-vm';
        confirmação já é o freio. Vermelho aqui competiria com o vermelho de erro,
        que significa outra coisa. */
     .do-autor .perigo {
-      border-color: var(--m-vermelho, #B91C1C);
-      color: var(--m-vermelho, #B91C1C);
+      border-color: var(--m-vermelho, #b91c1c);
+      color: var(--m-vermelho, #b91c1c);
     }
     .do-autor .neutro:focus-visible,
     .do-autor .perigo:focus-visible {
@@ -276,7 +355,6 @@ import { materialVm } from '../material-vm';
       text-decoration: none;
       color: inherit;
     }
-
   `,
 })
 export class EventoPage {
@@ -319,7 +397,8 @@ export class EventoPage {
    * link de anexar. Antes era so uma variavel local do construtor, e o template
    * lia um `id` que nao existia — o link saia como `/tabs/eventos//anexar`.
    */
-  protected readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
+  protected readonly id =
+    inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -364,7 +443,11 @@ export class EventoPage {
     this.enviandoModeracao.set(true);
     this.erroDaAcao.set(null);
     try {
-      await this.moderacao.ocultar('evento', this.id, motivo.trim() === '' ? null : motivo.trim());
+      await this.moderacao.ocultar(
+        'evento',
+        this.id,
+        motivo.trim() === '' ? null : motivo.trim(),
+      );
     } catch (e) {
       this.erroDaAcao.set(mensagemDeErro(e));
       return;
@@ -440,7 +523,9 @@ export class EventoPage {
         this.sumiu.set(true);
       } else {
         // Nunca virar "nao ha material vinculado": falhar ao buscar e outra tela.
-        this.erro.set(e instanceof Error ? e.message : 'Não deu para carregar o evento.');
+        this.erro.set(
+          e instanceof Error ? e.message : 'Não deu para carregar o evento.',
+        );
       }
     } finally {
       this.carregando.set(false);

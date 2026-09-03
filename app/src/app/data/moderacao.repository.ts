@@ -45,7 +45,11 @@ export class ModeracaoRepository {
   }
 
   /** Tira da lista da turma. O autor continua vendo em "não listados". */
-  ocultar(tipo: TipoModeravel, id: string, motivo: string | null): Promise<void> {
+  ocultar(
+    tipo: TipoModeravel,
+    id: string,
+    motivo: string | null,
+  ): Promise<void> {
     return this.api.post<void>(`/moderacao/${tipo}/${id}/ocultar`, { motivo });
   }
 
@@ -54,8 +58,14 @@ export class ModeracaoRepository {
   }
 
   /** Avisa o autor. Não apaga: apagar é só de quem criou. */
-  pedirExclusao(tipo: TipoModeravel, id: string, motivo: string | null): Promise<void> {
-    return this.api.post<void>(`/moderacao/${tipo}/${id}/pedir-exclusao`, { motivo });
+  pedirExclusao(
+    tipo: TipoModeravel,
+    id: string,
+    motivo: string | null,
+  ): Promise<void> {
+    return this.api.post<void>(`/moderacao/${tipo}/${id}/pedir-exclusao`, {
+      motivo,
+    });
   }
 
   /**
@@ -63,6 +73,8 @@ export class ModeracaoRepository {
    * nunca fica sem líder nem com dois.
    */
   transferirLideranca(novoLiderUsuarioId: string): Promise<void> {
-    return this.api.post<void>('/turmas/lideranca/transferir', { novoLiderUsuarioId });
+    return this.api.post<void>('/turmas/lideranca/transferir', {
+      novoLiderUsuarioId,
+    });
   }
 }

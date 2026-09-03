@@ -1,6 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/angular/standalone';
 
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import { EventoRepository } from '../../data/evento.repository';
@@ -22,7 +33,14 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
   selector: 'app-calendario',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, EventoCardComponent, RouterLink],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    EventoCardComponent,
+    RouterLink,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
@@ -49,7 +67,8 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
                 [quando]="e.quando"
                 [titulo]="e.titulo"
                 [materia]="e.materia"
-                [autoria]="e.autoria" />
+                [autoria]="e.autoria"
+              />
             </a>
           }
         }
@@ -75,12 +94,15 @@ export class CalendarioPage {
 
   protected readonly eventos = computed(() => {
     const agora = new Date();
-    return this.repo.eventos().map((e) => ({ id: e.id, ...eventoVm(e, agora) }));
+    return this.repo
+      .eventos()
+      .map((e) => ({ id: e.id, ...eventoVm(e, agora) }));
   });
 
   /** Vazio de verdade: carregou, nao falhou, e o mes nao tem nada. */
   protected readonly vazio = computed(
-    () => !this.carregando() && this.erro() === null && this.eventos().length === 0,
+    () =>
+      !this.carregando() && this.erro() === null && this.eventos().length === 0,
   );
 
   /**
@@ -103,6 +125,8 @@ export class CalendarioPage {
     // rejeicao solta — nunca para transformar falha em "mes vazio".
     this.repo
       .carregarPeriodo(de, ate)
-      .catch((e: unknown) => console.error('[calendario] falha ao carregar o mês', e));
+      .catch((e: unknown) =>
+        console.error('[calendario] falha ao carregar o mês', e),
+      );
   }
 }

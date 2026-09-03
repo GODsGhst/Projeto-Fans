@@ -66,7 +66,9 @@ export class QuadroRepository {
     try {
       this.naoListados.set(await this.api.get<NaoListados>('/nao-listados'));
     } catch (e) {
-      this.erroNaoListados.set(mensagem(e, 'Não deu para carregar os não listados.'));
+      this.erroNaoListados.set(
+        mensagem(e, 'Não deu para carregar os não listados.'),
+      );
     }
   }
 
