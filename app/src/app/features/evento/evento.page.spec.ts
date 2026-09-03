@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
 import type { EventoDetalhe, Material } from '../../data/models';
 import { AuthService } from '../../core/auth.service';
+import { TurmaRepository } from '../../data/turma.repository';
 import { EventoPage } from './evento.page';
 
 const AUTORIA = {
@@ -51,6 +52,9 @@ function detalhe(materiais: Material[]): EventoDetalhe {
   };
 }
 
+/** Se quem está olhando é o líder da turma. Muda por teste. */
+const liderancaMinha = signal(false);
+
 const usuarioAtual = signal<{ id: string; nome: string; email: string } | null>({
   id: 'u1',
   nome: 'Otavio',
@@ -73,6 +77,10 @@ describe('EventoPage', () => {
         // autor; o teste do não-autor troca isso.
         { provide: AuthService, useValue: { usuario: usuarioAtual } },
         {
+          provide: TurmaRepository,
+          useValue: { souLider: liderancaMinha, garantirCarregada: () => Promise.resolve() },
+        },
+        {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 'e1' }) } },
         },
@@ -85,6 +93,7 @@ describe('EventoPage', () => {
   afterEach(() => {
     backend.verify();
     usuarioAtual.set({ id: 'u1', nome: 'Otavio', email: 'voce@exemplo.com' });
+    liderancaMinha.set(false);
   });
 
   async function abrir(responder: (r: ReturnType<HttpTestingController['expectOne']>) => void) {
@@ -246,5 +255,74 @@ describe('EventoPage', () => {
 
     backend.expectNone(`${environment.apiUrl}/eventos/e1`);
     expect(fixture.nativeElement.textContent as string).not.toContain('Apagar mesmo');
+  });
+
+  it('o lider pode ocultar da turma, com motivo', async () => {
+    // As telas dizem que "o líder só oculta o que não devia estar ali". A API de
+    // moderação inteira existia no servidor e o app nunca chamou nenhuma rota
+    // dela — o papel existia nos dados e não tinha um único botão.
+    liderancaMinha.set(true);
+    usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });
+    await abrir((r) => r.flush(detalhe([])));
+
+    const ocultar = () =>
+      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
+        (b) => b.textContent!.includes('Ocultar'),
+      );
+    expect(ocultar()).withContext('o lider precisa de um jeito de tirar da lista').toBeDefined();
+
+    ocultar()!.click();
+    fixture.detectChanges();
+    // Pergunta primeiro: ocultar mexe no que a turma inteira vê.
+    backend.expectNone(`${environment.apiUrl}/moderacao/evento/e1/ocultar`);
+
+    const motivo = fixture.nativeElement.querySelector(
+      'input[name="motivo"]',
+    ) as HTMLInputElement;
+    motivo.value = 'foto indevida';
+    motivo.dispatchEvent(new Event('input'));
+    (
+      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+    ).find((b) => b.textContent!.trim() === 'Ocultar da turma')!.click();
+
+    const req = backend.expectOne(`${environment.apiUrl}/moderacao/evento/e1/ocultar`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ motivo: 'foto indevida' });
+    req.flush(null);
+    await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  it('quem nao e lider nao ve ocultar', async () => {
+    liderancaMinha.set(false);
+    usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });
+    await abrir((r) => r.flush(detalhe([])));
+
+    const textos = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ).map((b) => (b as HTMLButtonElement).textContent!);
+    expect(textos.join(' ')).not.toContain('Ocultar');
+  });
+
+  it('motivo em branco ainda oculta — explicar e util, nao obrigatorio', async () => {
+    // O servidor aceita motivo nulo. Exigir texto faria o líder inventar um para
+    // conseguir agir, e motivo inventado é pior que motivo ausente: ele fica no
+    // registro de moderação como se fosse verdade.
+    liderancaMinha.set(true);
+    await abrir((r) => r.flush(detalhe([])));
+
+    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+      .find((b) => b.textContent!.includes('Ocultar'))!
+      .click();
+    fixture.detectChanges();
+    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+      .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
+      .click();
+
+    const req = backend.expectOne(`${environment.apiUrl}/moderacao/evento/e1/ocultar`);
+    expect(req.request.body).toEqual({ motivo: null });
+    req.flush(null);
+    await fixture.whenStable();
+    fixture.detectChanges();
   });
 });

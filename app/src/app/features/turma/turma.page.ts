@@ -3,26 +3,9 @@ import { RouterLink } from '@angular/router';
 import { Share } from '@capacitor/share';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 
-import { ApiService } from '../../core/api.service';
-import { AuthService } from '../../core/auth.service';
+import { TurmaRepository } from '../../data/turma.repository';
+import type { MinhaTurma } from '../../data/turma.repository';
 import { mensagemDeErro } from '../auth/erro';
-
-export type Papel = 'LIDER' | 'ALUNO' | 'PROFESSOR';
-
-export interface MembroDaTurma {
-  usuarioId: string;
-  nome: string;
-  papel: Papel;
-  entrouEm: string;
-}
-
-export interface MinhaTurma {
-  id: string;
-  nome: string;
-  semestre: string;
-  codigoConvite: string;
-  membros: MembroDaTurma[];
-}
 
 /**
  * A turma: quem está nela e o código para entrar.
@@ -210,24 +193,12 @@ export interface MinhaTurma {
   `,
 })
 export class TurmaPage {
-  private readonly api = inject(ApiService);
+  private readonly repo = inject(TurmaRepository);
 
-  protected readonly turma = signal<MinhaTurma | null>(null);
-  protected readonly carregando = signal(false);
-  protected readonly erro = signal<string | null>(null);
+  protected readonly turma = this.repo.turma;
+  protected readonly carregando = this.repo.carregando;
+  protected readonly erro = this.repo.erro;
   protected readonly copiado = signal(false);
-
-  private readonly auth = inject(AuthService);
-
-  /** Só quem tem o cargo passa o cargo. O servidor recusa o resto; isto evita oferecer. */
-  protected readonly souLider = computed(() => {
-    const meu = this.auth.usuario();
-    const t = this.turma();
-    if (meu === null || t === null) {
-      return false;
-    }
-    return t.membros.some((m) => m.usuarioId === meu.id && m.papel === 'LIDER');
-  });
 
   protected readonly membros = computed(() =>
     (this.turma()?.membros ?? []).map((m) => ({
@@ -239,23 +210,10 @@ export class TurmaPage {
     })),
   );
 
-  constructor() {
-    void this.carregar();
-  }
+  protected readonly souLider = this.repo.souLider;
 
-  private async carregar(): Promise<void> {
-    this.carregando.set(true);
-    this.erro.set(null);
-    try {
-      this.turma.set(await this.api.get<MinhaTurma>('/turmas/minha'));
-    } catch (e) {
-      // A turma NÃO é limpa aqui de propósito: se já havia dado na tela, ele
-      // continua valendo enquanto o aviso explica que a atualização falhou.
-      // Zerar transformaria "não consegui atualizar" em "a turma sumiu".
-      this.erro.set(mensagemDeErro(e));
-    } finally {
-      this.carregando.set(false);
-    }
+  constructor() {
+    void this.repo.carregar();
   }
 
   /**

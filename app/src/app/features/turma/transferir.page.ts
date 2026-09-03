@@ -9,11 +9,10 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
-import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { ModeracaoRepository } from '../../data/moderacao.repository';
+import { TurmaRepository } from '../../data/turma.repository';
 import { mensagemDeErro } from '../auth/erro';
-import type { MinhaTurma } from './turma.page';
 
 /**
  * Passar a liderança para outra pessoa da turma.
@@ -179,25 +178,18 @@ import type { MinhaTurma } from './turma.page';
   `,
 })
 export class TransferirPage {
-  private readonly api = inject(ApiService);
+  private readonly repo = inject(TurmaRepository);
   private readonly auth = inject(AuthService);
   private readonly moderacao = inject(ModeracaoRepository);
   private readonly router = inject(Router);
 
-  protected readonly turma = signal<MinhaTurma | null>(null);
-  protected readonly carregando = signal(true);
+  protected readonly turma = this.repo.turma;
+  protected readonly carregando = this.repo.carregando;
   protected readonly erro = signal<string | null>(null);
   protected readonly enviando = signal(false);
   protected readonly escolhidoId = signal<string | null>(null);
 
-  protected readonly souLider = computed(() => {
-    const eu = this.auth.usuario();
-    const t = this.turma();
-    if (eu === null || t === null) {
-      return false;
-    }
-    return t.membros.some((m) => m.usuarioId === eu.id && m.papel === 'LIDER');
-  });
+  protected readonly souLider = this.repo.souLider;
 
   /** Todo mundo menos eu: passar a liderança para si mesmo não é uma operação. */
   protected readonly candidatos = computed(() => {
@@ -218,17 +210,7 @@ export class TransferirPage {
   });
 
   constructor() {
-    void this.carregar();
-  }
-
-  private async carregar(): Promise<void> {
-    try {
-      this.turma.set(await this.api.get<MinhaTurma>('/turmas/minha'));
-    } catch (e) {
-      this.erro.set(mensagemDeErro(e));
-    } finally {
-      this.carregando.set(false);
-    }
+    void this.repo.carregar();
   }
 
   protected async confirmar(): Promise<void> {

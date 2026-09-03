@@ -12,6 +12,8 @@ import {
 import { ErroApi } from '../../core/http-error.interceptor';
 import { EventoRepository } from '../../data/evento.repository';
 import { AuthService } from '../../core/auth.service';
+import { ModeracaoRepository } from '../../data/moderacao.repository';
+import { TurmaRepository } from '../../data/turma.repository';
 import { mensagemDeErro } from '../auth/erro';
 import type { EventoDetalhe } from '../../data/models';
 import { EventoCardComponent } from '../../shared/evento-card.component';
@@ -90,6 +92,40 @@ import { materialVm } from '../material-vm';
             <p class="sala">nesta vez, na sala <b>{{ e.sala }}</b></p>
           }
 
+          <!-- O líder tira da lista da turma. Não apaga: o registro continua
+               existindo, com autoria, e volta em "não listados" para quem o
+               criou. É o contrapeso do papel. -->
+          @if (souLider()) {
+            <div class="do-lider">
+              @if (ocultando()) {
+                <p class="rot-campo">por quê <span class="opcional">— opcional</span></p>
+                <input
+                  #motivo
+                  class="campo--linha"
+                  type="text"
+                  name="motivo"
+                  maxlength="140"
+                  placeholder="foto indevida, duplicado…"
+                  aria-label="Motivo" />
+                <p class="cache-aviso">
+                  Fica registrado com o seu nome. Quem criou continua vendo o registro em "não
+                  listados", e você pode reexibir.
+                </p>
+                <button class="botao" type="button" [disabled]="enviandoModeracao()"
+                        (click)="ocultar(motivo.value)">
+                  {{ enviandoModeracao() ? 'Ocultando…' : 'Ocultar da turma' }}
+                </button>
+                <button class="botao botao--fantasma" type="button" (click)="ocultando.set(false)">
+                  Cancelar
+                </button>
+              } @else {
+                <button class="botao botao--fantasma" type="button" (click)="ocultando.set(true)">
+                  Ocultar da turma
+                </button>
+              }
+            </div>
+          }
+
           <!-- Só para quem criou. Mostrar o botão a quem vai levar 403 é
                convidar ao erro e depois culpar a pessoa. -->
           @if (souAutor()) {
@@ -146,6 +182,12 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    .do-lider {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
     .do-autor {
       display: flex;
       flex-wrap: wrap;
@@ -250,6 +292,14 @@ export class EventoPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
+  private readonly turmas = inject(TurmaRepository);
+  private readonly moderacao = inject(ModeracaoRepository);
+
+  /** O papel é lido da turma, nunca da sessão: a liderança se transfere. */
+  protected readonly souLider = this.turmas.souLider;
+  protected readonly ocultando = signal(false);
+  protected readonly enviandoModeracao = signal(false);
+
   protected readonly confirmando = signal(false);
   protected readonly apagando = signal(false);
   protected readonly erroDaAcao = signal<string | null>(null);
@@ -265,6 +315,31 @@ export class EventoPage {
     const eu = this.auth.usuario();
     return d !== null && eu !== null && d.autoria.autorId === eu.id;
   });
+
+  /**
+   * Tira da lista da turma. Não apaga.
+   *
+   * O motivo é opcional porque o servidor o aceita nulo. Exigir texto faria o
+   * líder inventar um para conseguir agir, e motivo inventado é pior que motivo
+   * ausente: ele fica no registro de moderação com cara de verdade.
+   */
+  protected async ocultar(motivo: string): Promise<void> {
+    if (this.enviandoModeracao()) {
+      return;
+    }
+    this.enviandoModeracao.set(true);
+    this.erroDaAcao.set(null);
+    try {
+      await this.moderacao.ocultar('evento', this.id, motivo.trim() === '' ? null : motivo.trim());
+    } catch (e) {
+      this.erroDaAcao.set(mensagemDeErro(e));
+      return;
+    } finally {
+      this.enviandoModeracao.set(false);
+      this.ocultando.set(false);
+    }
+    await this.router.navigateByUrl('/tabs/home');
+  }
 
   protected async apagar(): Promise<void> {
     const d = this.detalhe();
@@ -288,6 +363,9 @@ export class EventoPage {
   }
 
   constructor() {
+    // O papel do usuário na turma não vem na sessão; esta tela precisa dele para
+    // decidir se oferece moderar. `garantir` não refaz a chamada se já houver.
+    void this.turmas.garantirCarregada();
     void this.carregar(this.id);
   }
 
