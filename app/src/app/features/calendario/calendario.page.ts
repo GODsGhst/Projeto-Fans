@@ -14,7 +14,10 @@ import {
 } from '@ionic/angular/standalone';
 
 import { EventoCardComponent } from '../../shared/evento-card.component';
+import { NotaComponent } from '../../shared/nota.component';
 import { EventoRepository } from '../../data/evento.repository';
+import { NotaRepository } from '../../data/nota.repository';
+import { assinatura } from '../evento-vm';
 import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
 
 /**
@@ -39,6 +42,7 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
     IonTitle,
     IonContent,
     EventoCardComponent,
+    NotaComponent,
     RouterLink,
   ],
   template: `
@@ -73,6 +77,33 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
           }
         }
 
+        <p class="pf-rotulo">anotações</p>
+        <a class="botao botao--fantasma" routerLink="/tabs/notas/nova"
+          >Anotar alguma coisa</a
+        >
+
+        @for (n of notas(); track n.id) {
+          <!-- So a minha e tocavel para editar. A anotacao da turma e de quem
+               escreveu — o mesmo autor-only do resto do app. -->
+          @if (n.minha) {
+            <a class="ir" [routerLink]="['/tabs/notas', n.id, 'editar']">
+              <span class="dia-nota">{{ n.dia }}</span>
+              <app-nota
+                [alcance]="n.alcance"
+                [texto]="n.texto"
+                [autoria]="n.autoria"
+              />
+            </a>
+          } @else {
+            <span class="dia-nota">{{ n.dia }}</span>
+            <app-nota
+              [alcance]="n.alcance"
+              [texto]="n.texto"
+              [autoria]="n.autoria"
+            />
+          }
+        }
+
         @if (vazio()) {
           <div class="pf-vazio">
             <b>Nada marcado em {{ mes() }}.</b>
@@ -84,9 +115,21 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
       </div>
     </ion-content>
   `,
+  styles: `
+    .dia-nota {
+      display: block;
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--ink-3);
+      margin-bottom: 2px;
+    }
+  `,
 })
 export class CalendarioPage {
   private readonly repo = inject(EventoRepository);
+  private readonly notasRepo = inject(NotaRepository);
 
   protected readonly mes = signal(mesPorExtenso(new Date()));
   protected readonly carregando = this.repo.carregando;
@@ -97,6 +140,36 @@ export class CalendarioPage {
     return this.repo
       .eventos()
       .map((e) => ({ id: e.id, ...eventoVm(e, agora) }));
+  });
+
+  /**
+   * As anotacoes do mes, ja com o dia e a assinatura prontos.
+   *
+   * `minha` sai do `autorNome`, e nao de comparar ids: o servidor so assina a
+   * nota da TURMA, e a pessoal que ele devolve e sempre a de quem perguntou —
+   * ele nunca manda a de outra pessoa. Entao "veio sem assinatura" ja significa
+   * "e minha", sem a tela precisar saber quem ela e.
+   */
+  protected readonly notas = computed(() => {
+    const agora = new Date();
+    return this.notasRepo.notas().map((n) => ({
+      id: n.id,
+      alcance: n.alcance,
+      texto: n.texto,
+      dia: diaCurto(n.data),
+      minha: !n.autorNome,
+      autoria: n.autorNome
+        ? assinatura(
+            {
+              autorId: n.autorId,
+              autorNome: n.autorNome,
+              criadoEm: n.criadoEm,
+              atualizadoEm: n.atualizadoEm,
+            },
+            agora,
+          )
+        : null,
+    }));
   });
 
   /** Vazio de verdade: carregou, nao falhou, e o mes nao tem nada. */
@@ -128,5 +201,29 @@ export class CalendarioPage {
       .catch((e: unknown) =>
         console.error('[calendario] falha ao carregar o mês', e),
       );
+    // O repositorio de nota nao relanca: ele guarda o erro no proprio signal e
+    // mantem o que ja estava em tela. Uma falha aqui nao pode apagar os eventos.
+    void this.notasRepo.carregar(de, ate);
   }
+}
+
+/** "12 set". Partida como string: `new Date` leria UTC e voltaria um dia. */
+function diaCurto(data: string): string {
+  const meses = [
+    'jan',
+    'fev',
+    'mar',
+    'abr',
+    'mai',
+    'jun',
+    'jul',
+    'ago',
+    'set',
+    'out',
+    'nov',
+    'dez',
+  ];
+  const [, mes, dia] = data.split('-');
+  const nome = meses[Number(mes) - 1];
+  return nome === undefined ? data : `${Number(dia)} ${nome}`;
 }

@@ -54,11 +54,15 @@ describe('CalendarioPage', () => {
 
   async function abrir(
     responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+    // As anotacoes saem na mesma entrada da aba. O padrao e lista vazia: quem
+    // testa evento nao devia ter de saber que a tela tambem carrega nota.
+    notas: unknown[] = [],
   ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
     responder(backend.expectOne((r) => r.url.endsWith('/eventos')));
+    backend.expectOne((r) => r.url.endsWith('/notas')).flush(notas);
     await fixture.whenStable();
     fixture.detectChanges();
   }
@@ -112,5 +116,66 @@ describe('CalendarioPage', () => {
     ).map((a) => a.getAttribute('href'));
 
     expect(destinos).toEqual(['/tabs/eventos/c-1', '/tabs/eventos/c-2']);
+  });
+  it('a anotacao da turma aparece assinada; a minha, tocavel para editar', async () => {
+    // O servidor so assina a nota da TURMA, e a pessoal que ele devolve e
+    // sempre a de quem perguntou. Entao "veio sem assinatura" ja significa
+    // "e minha" — a tela nao precisa saber quem ela e.
+    await abrir(
+      (r) => r.flush([]),
+      [
+        {
+          id: 'n-turma',
+          alcance: 'TURMA',
+          data: '2026-08-12',
+          texto: 'aula cancelada quinta',
+          autorId: 'u2',
+          autorNome: 'Ana',
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+        },
+        {
+          id: 'n-minha',
+          alcance: 'PESSOAL',
+          data: '2026-08-13',
+          texto: 'estudar cap 4',
+          autorId: 'u1',
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+        },
+      ],
+    );
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('aula cancelada quinta');
+    expect(texto).toContain('estudar cap 4');
+    expect(texto).toContain('Ana');
+
+    // So a minha leva para a tela de editar. A da turma e de quem escreveu.
+    const paraEditar = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        'a.ir',
+      ) as NodeListOf<HTMLAnchorElement>,
+    )
+      .map((a) => a.getAttribute('href'))
+      .filter((h) => h!.includes('/notas/'));
+    expect(paraEditar).toEqual(['/tabs/notas/n-minha/editar']);
+  });
+
+  it('falha ao carregar anotacao nao apaga os eventos do mes', async () => {
+    fixture.componentInstance.ionViewWillEnter();
+    fixture.detectChanges();
+    backend
+      .expectOne((r) => r.url.endsWith('/eventos'))
+      .flush([evento('c-1', 'PROVA', '2026-08-12')]);
+    backend
+      .expectOne((r) => r.url.endsWith('/notas'))
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(titulos().length).toBe(1);
   });
 });

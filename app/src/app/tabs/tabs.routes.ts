@@ -104,6 +104,22 @@ export const tabsRoutes: Routes = [
         loadComponent: () =>
           import('../features/evento/evento.page').then((m) => m.EventoPage),
       },
+      // 'nova' antes de ':id/editar' pelo mesmo motivo das outras rotas: o
+      // Angular casa na primeira que serve.
+      {
+        path: 'notas/nova',
+        loadComponent: () =>
+          import('../features/notas/nova-nota.page').then(
+            (m) => m.NovaNotaPage,
+          ),
+      },
+      {
+        path: 'notas/:id/editar',
+        loadComponent: () =>
+          import('../features/notas/nova-nota.page').then(
+            (m) => m.NovaNotaPage,
+          ),
+      },
       {
         path: 'quadro',
         loadComponent: () =>

@@ -184,14 +184,12 @@ describe('NovaMateriaPage', () => {
     preencher('Redes', 'REDES');
     criar();
 
-    backend
-      .expectOne(`${environment.apiUrl}/materias`)
-      .flush({
-        id: 'm9',
-        nome: 'Redes',
-        sigla: 'REDES',
-        corHex: PALETA[0].hex,
-      });
+    backend.expectOne(`${environment.apiUrl}/materias`).flush({
+      id: 'm9',
+      nome: 'Redes',
+      sigla: 'REDES',
+      corHex: PALETA[0].hex,
+    });
     await assentar();
 
     backend
