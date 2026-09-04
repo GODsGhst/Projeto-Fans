@@ -86,6 +86,20 @@ const TELAS = {json.dumps(compacto, ensure_ascii=False, indent=1)};
 // ------------------------------------------------------------
 // 1. Acha as imagens importadas, pelo nome do arquivo.
 // ------------------------------------------------------------
+// Rodou duas vezes? Na segunda, os filhos da pagina ja sao os FRAMES criados
+// aqui (com a imagem dentro, chamada "tela"). Embrulhar de novo faria bagunça.
+const jaMontado = figma.currentPage.children.filter(
+  n => n.type === "FRAME" && n.findChild && n.findChild(c => c.name === "tela")
+);
+if (jaMontado.length) {{
+  figma.notify(
+    "Esta página já tem " + jaMontado.length + " telas montadas. Apague os frames " +
+    "(ou use uma página nova) antes de rodar de novo.",
+    {{ error: true, timeout: 9000 }}
+  );
+  throw new Error("Já montado — nada foi alterado.");
+}}
+
 const porNome = new Map();
 for (const no of figma.currentPage.children) {{
   // O Figma pode acrescentar sufixo (" 1", "@2x"); normaliza.
