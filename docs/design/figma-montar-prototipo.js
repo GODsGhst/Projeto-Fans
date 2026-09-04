@@ -30,7 +30,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "materias",
@@ -38,7 +39,8 @@ const TELAS = [
     "y": 541,
     "w": 358,
     "h": 51,
-    "r": "Criar matéria"
+    "r": "Criar matéria",
+    "back": false
    },
    {
     "p": "home",
@@ -46,7 +48,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -54,7 +57,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -62,7 +66,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -70,7 +75,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -86,7 +92,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "home",
@@ -94,7 +101,8 @@ const TELAS = [
     "y": 636,
     "w": 358,
     "h": 51,
-    "r": "Adicionar"
+    "r": "Adicionar",
+    "back": false
    },
    {
     "p": "home",
@@ -102,7 +110,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -110,7 +119,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -118,7 +128,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -126,7 +137,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -142,7 +154,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "transferir",
@@ -150,7 +163,8 @@ const TELAS = [
     "y": 641,
     "w": 348,
     "h": 53,
-    "r": "Passar a liderança"
+    "r": "Passar a liderança",
+    "back": false
    },
    {
     "p": "home",
@@ -158,7 +172,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -166,7 +181,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -174,7 +190,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -182,7 +199,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -198,7 +216,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "transferir-ok",
@@ -206,7 +225,8 @@ const TELAS = [
     "y": 222,
     "w": 358,
     "h": 59,
-    "r": "A\n            \n             "
+    "r": "A\n            \n             ",
+    "back": false
    },
    {
     "p": "transferir-ok",
@@ -214,7 +234,8 @@ const TELAS = [
     "y": 291,
     "w": 358,
     "h": 59,
-    "r": "B\n            \n             "
+    "r": "B\n            \n             ",
+    "back": false
    },
    {
     "p": "transferir-ok",
@@ -222,7 +243,8 @@ const TELAS = [
     "y": 360,
     "w": 358,
     "h": 59,
-    "r": "M\n            \n             "
+    "r": "M\n            \n             ",
+    "back": false
    },
    {
     "p": "home",
@@ -230,7 +252,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -238,7 +261,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -246,7 +270,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -254,7 +279,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -270,7 +296,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "turma",
@@ -278,7 +305,8 @@ const TELAS = [
     "y": 288,
     "w": 358,
     "h": 51,
-    "r": "Voltar para a turma"
+    "r": "Voltar para a turma",
+    "back": false
    },
    {
     "p": "home",
@@ -286,7 +314,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -294,7 +323,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -302,7 +332,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -310,7 +341,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -326,7 +358,8 @@ const TELAS = [
     "y": 313,
     "w": 358,
     "h": 51,
-    "r": "Entrar"
+    "r": "Entrar",
+    "back": false
    },
    {
     "p": "recuperar",
@@ -334,7 +367,8 @@ const TELAS = [
     "y": 374,
     "w": 104,
     "h": 37,
-    "r": "Esqueci a senha"
+    "r": "Esqueci a senha",
+    "back": false
    },
    {
     "p": "cadastro",
@@ -342,7 +376,8 @@ const TELAS = [
     "y": 462,
     "w": 358,
     "h": 53,
-    "r": "Criar conta"
+    "r": "Criar conta",
+    "back": false
    }
   ]
  },
@@ -358,7 +393,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar para o login"
+    "r": "Voltar para o login",
+    "back": true
    },
    {
     "p": "entrar-turma",
@@ -366,7 +402,8 @@ const TELAS = [
     "y": 432,
     "w": 358,
     "h": 51,
-    "r": "Criar conta"
+    "r": "Criar conta",
+    "back": false
    }
   ]
  },
@@ -382,7 +419,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "home",
@@ -390,7 +428,8 @@ const TELAS = [
     "y": 247,
     "w": 358,
     "h": 51,
-    "r": "Entrar na turma"
+    "r": "Entrar na turma",
+    "back": false
    },
    {
     "p": "home",
@@ -398,7 +437,8 @@ const TELAS = [
     "y": 350,
     "w": 358,
     "h": 53,
-    "r": "Criar uma turma nova"
+    "r": "Criar uma turma nova",
+    "back": false
    }
   ]
  },
@@ -414,7 +454,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar para o login"
+    "r": "Voltar para o login",
+    "back": true
    }
   ]
  },
@@ -430,7 +471,8 @@ const TELAS = [
     "y": 724,
     "w": 348,
     "h": 102,
-    "r": "29ago\n            \n         "
+    "r": "29ago\n            \n         ",
+    "back": false
    },
    {
     "p": "ver-evento",
@@ -438,7 +480,8 @@ const TELAS = [
     "y": 836,
     "w": 348,
     "h": 102,
-    "r": "27ago\n            \n         "
+    "r": "27ago\n            \n         ",
+    "back": false
    },
    {
     "p": "confirmar-exclusao",
@@ -446,7 +489,8 @@ const TELAS = [
     "y": 949,
     "w": 348,
     "h": 102,
-    "r": "30ago\n            \n         "
+    "r": "30ago\n            \n         ",
+    "back": false
    },
    {
     "p": "confirmar-exclusao",
@@ -454,7 +498,8 @@ const TELAS = [
     "y": 1061,
     "w": 348,
     "h": 102,
-    "r": "30ago\n            \n         "
+    "r": "30ago\n            \n         ",
+    "back": false
    },
    {
     "p": "novo-evento",
@@ -462,7 +507,8 @@ const TELAS = [
     "y": 1173,
     "w": 348,
     "h": 48,
-    "r": "+&nbsp;&nbsp;Adicionar prova"
+    "r": "+&nbsp;&nbsp;Adicionar prova",
+    "back": false
    },
    {
     "p": "home",
@@ -470,7 +516,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -478,7 +525,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -486,7 +534,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -494,7 +543,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -510,7 +560,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "home",
@@ -518,7 +569,8 @@ const TELAS = [
     "y": 586,
     "w": 358,
     "h": 51,
-    "r": "Salvar"
+    "r": "Salvar",
+    "back": false
    },
    {
     "p": "confirmar-exclusao",
@@ -526,7 +578,8 @@ const TELAS = [
     "y": 647,
     "w": 358,
     "h": 53,
-    "r": "Apagar"
+    "r": "Apagar",
+    "back": false
    },
    {
     "p": "erro",
@@ -534,7 +587,8 @@ const TELAS = [
     "y": 710,
     "w": 169,
     "h": 37,
-    "r": "demo: salvar sem conexão"
+    "r": "demo: salvar sem conexão",
+    "back": false
    },
    {
     "p": "home",
@@ -542,7 +596,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -550,7 +605,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -558,7 +614,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -566,7 +623,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -582,7 +640,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "quadro",
@@ -590,7 +649,8 @@ const TELAS = [
     "y": 316,
     "w": 358,
     "h": 53,
-    "r": "Avisar no quadro"
+    "r": "Avisar no quadro",
+    "back": false
    },
    {
     "p": "home",
@@ -598,7 +658,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -606,7 +667,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -614,7 +676,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -622,7 +685,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -638,7 +702,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "home",
@@ -646,7 +711,8 @@ const TELAS = [
     "y": 345,
     "w": 358,
     "h": 53,
-    "r": "Sim, apagar"
+    "r": "Sim, apagar",
+    "back": false
    },
    {
     "p": "home",
@@ -654,7 +720,8 @@ const TELAS = [
     "y": 408,
     "w": 358,
     "h": 51,
-    "r": "Cancelar"
+    "r": "Cancelar",
+    "back": true
    },
    {
     "p": "home",
@@ -662,7 +729,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -670,7 +738,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -678,7 +747,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -686,7 +756,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -702,7 +773,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar"
+    "r": "Voltar",
+    "back": true
    },
    {
     "p": "home",
@@ -710,7 +782,8 @@ const TELAS = [
     "y": 345,
     "w": 358,
     "h": 51,
-    "r": "Tentar de novo"
+    "r": "Tentar de novo",
+    "back": false
    },
    {
     "p": "home",
@@ -718,7 +791,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -726,7 +800,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -734,7 +809,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -742,7 +818,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -758,7 +835,8 @@ const TELAS = [
     "y": 942,
     "w": 318,
     "h": 48,
-    "r": "+ &nbsp;Anotar neste dia"
+    "r": "+ &nbsp;Anotar neste dia",
+    "back": false
    },
    {
     "p": "home",
@@ -766,7 +844,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -774,7 +853,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -782,7 +862,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -790,7 +871,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -806,7 +888,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar para o calendário"
+    "r": "Voltar para o calendário",
+    "back": true
    },
    {
     "p": "home",
@@ -814,7 +897,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -822,7 +906,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -830,7 +915,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -838,7 +924,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -854,7 +941,8 @@ const TELAS = [
     "y": 83,
     "w": 348,
     "h": 48,
-    "r": "+&nbsp;&nbsp;Nova matéria"
+    "r": "+&nbsp;&nbsp;Nova matéria",
+    "back": false
    },
    {
     "p": "material",
@@ -862,7 +950,8 @@ const TELAS = [
     "y": 725,
     "w": 348,
     "h": 48,
-    "r": "+ &nbsp;Enviar material"
+    "r": "+ &nbsp;Enviar material",
+    "back": false
    },
    {
     "p": "home",
@@ -870,7 +959,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -878,7 +968,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -886,7 +977,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -894,7 +986,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -910,7 +1003,8 @@ const TELAS = [
     "y": 23,
     "w": 63,
     "h": 29,
-    "r": "a turma →"
+    "r": "a turma →",
+    "back": false
    },
    {
     "p": "home",
@@ -918,7 +1012,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -926,7 +1021,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -934,7 +1030,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -942,7 +1039,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  },
@@ -958,7 +1056,8 @@ const TELAS = [
     "y": 22,
     "w": 32,
     "h": 32,
-    "r": "Voltar para Matérias"
+    "r": "Voltar para Matérias",
+    "back": true
    },
    {
     "p": "home",
@@ -966,7 +1065,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Home"
+    "r": "Home",
+    "back": false
    },
    {
     "p": "cal",
@@ -974,7 +1074,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Cal"
+    "r": "Cal",
+    "back": false
    },
    {
     "p": "materias",
@@ -982,7 +1083,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Matérias"
+    "r": "Matérias",
+    "back": false
    },
    {
     "p": "quadro",
@@ -990,7 +1092,8 @@ const TELAS = [
     "y": 783,
     "w": 94,
     "h": 49,
-    "r": "Quadro"
+    "r": "Quadro",
+    "back": false
    }
   ]
  }
@@ -1060,7 +1163,7 @@ for (const t of TELAS) {
     if (!destino) { semDestino.push(t.nome + " -> " + a.p); continue; }
 
     const hot = figma.createRectangle();
-    hot.name = "→ " + a.p + (a.r ? "  (" + a.r + ")" : "");
+    hot.name = (a.back ? "↩ voltar" : "→ " + a.p) + (a.r ? "  (" + a.r + ")" : "");
     hot.resize(Math.max(a.w, 1), Math.max(a.h, 1));
     hot.x = a.x;
     hot.y = a.y;
@@ -1075,7 +1178,7 @@ for (const t of TELAS) {
       actions: [{
         type: "NODE",
         destinationId: destino.id,
-        navigation: "NAVIGATE",
+        navigation: a.back ? "BACK" : "NAVIGATE",
         transition: {
           type: "SMART_ANIMATE",
           easing: { type: "EASE_OUT" },

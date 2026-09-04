@@ -50,7 +50,14 @@ def main() -> None:
             "lin": i // COLUNAS,
             "alvos": [
                 {"p": a["para"], "x": a["x"], "y": a["y"], "w": a["w"], "h": a["h"],
-                 "r": (a["rotulo"] or "")[:28]}
+                 "r": (a["rotulo"] or "")[:28],
+                 # Seta de voltar e botao de cancelar viram navegacao BACK: eles
+                 # devem devolver a pessoa de ONDE ELA VEIO, e nao a um destino
+                 # fixo. `confirmar-exclusao` tem duas entradas (o cartao da home
+                 # e o botao Apagar da edicao) — com destino fixo, cancelar
+                 # levaria ao lugar errado em uma das duas. E o Teste 07 pergunta
+                 # exatamente se "o comportamento de voltar e o esperado".
+                 "back": bool(a.get("voltar")) or (a["rotulo"] or "").strip() == "Cancelar"}
                 for a in t["alvos"] + t["abas"]
             ],
         })
@@ -140,7 +147,7 @@ for (const t of TELAS) {{
     if (!destino) {{ semDestino.push(t.nome + " -> " + a.p); continue; }}
 
     const hot = figma.createRectangle();
-    hot.name = "→ " + a.p + (a.r ? "  (" + a.r + ")" : "");
+    hot.name = (a.back ? "↩ voltar" : "→ " + a.p) + (a.r ? "  (" + a.r + ")" : "");
     hot.resize(Math.max(a.w, 1), Math.max(a.h, 1));
     hot.x = a.x;
     hot.y = a.y;
@@ -155,7 +162,7 @@ for (const t of TELAS) {{
       actions: [{{
         type: "NODE",
         destinationId: destino.id,
-        navigation: "NAVIGATE",
+        navigation: a.back ? "BACK" : "NAVIGATE",
         transition: {{
           type: "SMART_ANIMATE",
           easing: {{ type: "EASE_OUT" }},
@@ -194,6 +201,8 @@ figma.notify(recado, {{ timeout: 6000 }});
     print(f"  {len(compacto)} telas, {alvos} hotspots")
     print(f"  rolagem vertical em: {', '.join(rolam)}")
     print(f"  ponto de partida: {INICIAL}")
+    voltas = sum(1 for t in compacto for a in t["alvos"] if a["back"])
+    print(f"  {voltas} hotspots usam navegação BACK (setas e Cancelar)")
 
 
 if __name__ == "__main__":
