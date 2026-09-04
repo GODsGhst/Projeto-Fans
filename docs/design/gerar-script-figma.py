@@ -48,6 +48,10 @@ def main() -> None:
             "alt": t.get("alturaConteudo", altura),
             "col": i % COLUNAS,
             "lin": i // COLUNAS,
+            # Auto-referencia fora: o botao "Home" da barra estando NA Home
+            # aponta para o proprio frame, e o Figma recusa a reacao. Ficavam
+            # 4 retangulos inertes no arquivo — e tocar "Home" na Home nao deve
+            # mesmo fazer nada.
             "alvos": [
                 {"p": a["para"], "x": a["x"], "y": a["y"], "w": a["w"], "h": a["h"],
                  "r": (a["rotulo"] or "")[:28],
@@ -59,6 +63,7 @@ def main() -> None:
                  # exatamente se "o comportamento de voltar e o esperado".
                  "back": bool(a.get("voltar")) or (a["rotulo"] or "").strip() == "Cancelar"}
                 for a in t["alvos"] + t["abas"]
+                if a["para"] != t["nome"]
             ],
         })
 
@@ -88,16 +93,19 @@ const TELAS = {json.dumps(compacto, ensure_ascii=False, indent=1)};
 // ------------------------------------------------------------
 // Rodou duas vezes? Na segunda, os filhos da pagina ja sao os FRAMES criados
 // aqui (com a imagem dentro, chamada "tela"). Embrulhar de novo faria bagunça.
-const jaMontado = figma.currentPage.children.filter(
-  n => n.type === "FRAME" && n.findChild && n.findChild(c => c.name === "tela")
-);
-if (jaMontado.length) {{
-  figma.notify(
-    "Esta página já tem " + jaMontado.length + " telas montadas. Apague os frames " +
-    "(ou use uma página nova) antes de rodar de novo.",
-    {{ error: true, timeout: 9000 }}
-  );
-  throw new Error("Já montado — nada foi alterado.");
+// Rodou de novo? Desmonta: devolve a imagem para a pagina e apaga o frame.
+// Barrar era pior — se a primeira passada falhar no meio, a pagina fica presa
+// num estado que so da para consertar a mao.
+let desmontados = 0;
+for (const n of [...figma.currentPage.children]) {{
+  if (n.type !== "FRAME" || !n.findChild) continue;
+  const tela = n.findChild(c => c.name === "tela");
+  if (!tela) continue;
+  tela.name = n.name;
+  tela.locked = false;
+  figma.currentPage.appendChild(tela);
+  n.remove();
+  desmontados++;
 }}
 
 const porNome = new Map();
@@ -152,6 +160,7 @@ for (const t of TELAS) {{
 // ------------------------------------------------------------
 let ligacoes = 0;
 let semDestino = [];
+const pendentes = [];
 
 for (const t of TELAS) {{
   const frame = frames.get(t.nome);
@@ -171,12 +180,18 @@ for (const t of TELAS) {{
     hot.cornerRadius = 8;
     frame.appendChild(hot);
 
-    await hot.setReactionsAsync([{{
+    // Promessas COLETADAS, nao aguardadas uma a uma. 103 `await` em sequencia
+    // demoram o bastante para o Scripter cortar a execucao no meio — o sintoma
+    // foi 47 hotspots de 103, sem erro nenhum aparecendo.
+    pendentes.push(hot.setReactionsAsync([{{
       trigger: {{ type: "ON_CLICK" }},
-      actions: [{{
+      // BACK e um TIPO de acao proprio e NAO aceita destino. Mandar
+      // `navigation:"BACK"` junto de `destinationId` reprova na validacao:
+      // "Expected [0].actions[0] to be one of the following, but none matched".
+      actions: [a.back ? {{ type: "BACK" }} : {{
         type: "NODE",
         destinationId: destino.id,
-        navigation: a.back ? "BACK" : "NAVIGATE",
+        navigation: "NAVIGATE",
         transition: {{
           type: "SMART_ANIMATE",
           easing: {{ type: "EASE_OUT" }},
@@ -184,10 +199,12 @@ for (const t of TELAS) {{
         }},
         preserveScrollPosition: false
       }}]
-    }}]);
+    }}]));
     ligacoes++;
   }}
 }}
+
+await Promise.all(pendentes);
 
 // ------------------------------------------------------------
 // 4. Ponto de partida do fluxo.
@@ -202,7 +219,8 @@ if (partida) {{
 figma.currentPage.selection = [...frames.values()];
 figma.viewport.scrollAndZoomIntoView([...frames.values()]);
 
-const recado = frames.size + " telas, " + ligacoes + " ligações";
+const recado = frames.size + " telas, " + ligacoes + " ligações"
+  + (desmontados ? "  (remontou " + desmontados + ")" : "");
 console.log(recado);
 if (semDestino.length) console.log("SEM DESTINO:", semDestino.join(", "));
 figma.notify(recado, {{ timeout: 6000 }});
