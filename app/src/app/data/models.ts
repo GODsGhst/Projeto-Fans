@@ -149,13 +149,6 @@ export interface NaoListados {
   materiais: Material[];
 }
 
-/** Delta de `GET /sync?desde=`. Inclui os ocultos para o app poder remove-los. */
-export interface SyncResponse {
-  eventosAlterados: Evento[];
-  materias: Materia[];
-  servidorEm: string;
-}
-
 export interface CriarEventoRequest {
   materiaId: string;
   tipo: TipoEvento;

@@ -418,6 +418,24 @@ describe('EventoPage', () => {
     ).toBeDefined();
   });
 
+  it('quem nao criou descobre a regra ANTES de procurar o botao', async () => {
+    // Esconder os botoes ja evitava o 403. Mas ausencia de botao e silencio: a
+    // pessoa nao aprende a regra e fica procurando a opcao que nao existe.
+    liderancaMinha.set(false);
+    usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });
+    await abrir((r) => r.flush(detalhe([])));
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('só essa pessoa');
+    expect(
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button, a'),
+        ) as HTMLElement[]
+      ).find((b) => b.textContent!.trim() === 'Editar'),
+    ).toBeUndefined();
+  });
+
   it('quem nao e lider nao ve ocultar', async () => {
     liderancaMinha.set(false);
     usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });

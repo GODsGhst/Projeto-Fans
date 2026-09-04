@@ -258,6 +258,15 @@ import { materialVm } from '../material-vm';
             @if (erroDaAcao(); as e2) {
               <p class="pf-erro" role="alert">{{ e2 }}</p>
             }
+          } @else {
+            <!-- A regra dita ANTES de tentar, e nao depois de um toque negado.
+                 Esconder os botoes ja evitava o 403, mas ausencia de botao e
+                 silencio: quem le nao aprende a regra e acha que o app quebrou,
+                 ou fica procurando a opcao que nao existe. -->
+            <p class="de-outra-pessoa">
+              Quem cadastrou foi <b>{{ autorDoRegistro() }}</b> — só essa pessoa
+              edita ou apaga. Se a informação mudou, avise no quadro.
+            </p>
           }
 
           <!-- FORA do @if de materiais de proposito. Anexar e mais necessario
@@ -310,6 +319,17 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    .de-outra-pessoa {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--ink-2);
+      background: var(--rule-soft);
+      border-left: 3px solid var(--rule);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      margin: 0;
+    }
+
     .do-lider {
       display: flex;
       flex-direction: column;
@@ -442,6 +462,11 @@ export class EventoPage {
    * é), é honestidade: oferecer um botão que vai falhar ensina a pessoa a
    * desconfiar da tela.
    */
+  /** Nome de quem criou. "alguém" e melhor que vazio: a frase precisa fechar. */
+  protected readonly autorDoRegistro = computed(
+    () => this.detalhe()?.autoria.autorNome ?? 'alguém da turma',
+  );
+
   protected readonly souAutor = computed(() => {
     const d = this.detalhe();
     const eu = this.auth.usuario();
