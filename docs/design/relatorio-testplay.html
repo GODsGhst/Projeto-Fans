@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ata de TestPlay e Relatório de Avaliação — projetoFans</title>
+<style>
+  @page { size: A4; margin: 3cm 2cm 2cm 3cm; }
+  :root { --ink:#111; --ink-2:#3a3a3a; --rule:#999; --soft:#F0F0F0; --marca:#0F766E; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; color:var(--ink); background:#fff;
+    font:12pt/1.5 "Times New Roman", Georgia, serif;
+    text-align: justify;
+  }
+
+  /* ---------- capa ---------- */
+  .capa { height: 24.7cm; display:flex; flex-direction:column; align-items:center;
+          text-align:center; page-break-after:always; }
+  .capa .inst { text-transform:uppercase; font-size:12pt; line-height:1.6; }
+  .capa .autores { margin-top:5cm; font-size:12pt; line-height:1.8; }
+  .capa .titulo { margin-top:5cm; text-transform:uppercase; font-weight:bold;
+                  font-size:14pt; line-height:1.6; }
+  .capa .sub { font-size:12pt; margin-top:.4cm; }
+  .capa .orient { margin-top:auto; font-size:11pt; }
+  .capa .local { margin-top:1.2cm; text-transform:uppercase; font-size:12pt; }
+
+  h1 { font-size:12pt; text-transform:uppercase; font-weight:bold;
+       margin:0 0 .6cm; page-break-after:avoid; }
+  h2 { font-size:12pt; font-weight:bold; margin:.8cm 0 .3cm; page-break-after:avoid; }
+  p { margin:0 0 .35cm; text-indent:1.25cm; }
+  p.semrecuo { text-indent:0; }
+  section { page-break-inside:auto; }
+
+  .quadro-tit { text-indent:0; margin:.7cm 0 .15cm; font-size:11pt; }
+  table { width:100%; border-collapse:collapse; font-size:11pt; page-break-inside:avoid; }
+  th, td { border:1px solid var(--ink); padding:.18cm .25cm; text-align:left;
+           vertical-align:top; line-height:1.35; }
+  th { background:var(--soft); width:4.6cm; font-weight:bold; }
+  td.vazio { min-height:1.4cm; }
+  .fonte { text-indent:0; font-size:10pt; margin:.15cm 0 .5cm; }
+
+  .linha { display:block; border-bottom:1px solid #bbb; height:.62cm; }
+  .linha + .linha { margin-top:.1cm; }
+
+  .nota-preencher {
+    text-indent:0; font-size:10pt; font-family:Arial, sans-serif;
+    border-left:3px solid var(--marca); background:var(--soft);
+    padding:.25cm .35cm; margin:.3cm 0 .6cm; text-align:left;
+  }
+  ul, ol { margin:.1cm 0 .35cm 1.25cm; padding:0; }
+  li { margin:.08cm 0; }
+  .quebra { page-break-before:always; }
+</style>
+</head>
+<body>
+
+<!-- ======================= CAPA ======================= -->
+<div class="capa">
+  <div class="inst">
+    Faculdade de Nova Serrana — FANS<br>
+    Curso de Engenharia de Software
+  </div>
+
+  <div class="autores">
+    Otávio<br>
+    <span style="color:#777">[demais integrantes do grupo]</span>
+  </div>
+
+  <div class="titulo">
+    Ata de TestPlay e Relatório de Avaliação
+  </div>
+  <div class="sub">Sistema projetoFans — o app da turma</div>
+
+  <div class="orient">
+    Orientador / Cliente: <span style="color:#777">[nome do professor]</span>
+  </div>
+  <div class="local">
+    Nova Serrana — MG<br>2026
+  </div>
+</div>
+
+<!-- ======================= 1 ======================= -->
+<section>
+<h1>1 Introdução</h1>
+
+<p>O presente documento constitui a ata de testplay e o relatório de avaliação de
+usabilidade do sistema <b>projetoFans</b>, aplicativo em que uma turma de faculdade
+registra em conjunto as provas, as entregas e os materiais de estudo de cada matéria.</p>
+
+<p>O testplay foi realizado em <span style="color:#777">[data]</span>, com
+<span style="color:#777">[nome do participante]</span>, que não participou do
+desenvolvimento do sistema. O objetivo foi validar a jornada completa do usuário no
+protótipo navegável, desde a entrada no aplicativo até a exclusão de um registro,
+contemplando os sete fluxos definidos na atividade avaliativa.</p>
+
+<p>A funcionalidade central avaliada é o <b>cadastro de uma prova ou entrega</b>, que é a
+razão de existir do sistema: qualquer membro da turma registra o que foi passado, e o
+registro passa a valer para todos, sem depender da aprovação de ninguém.</p>
+
+<p>Este relatório está organizado em sete seções: o roteiro de testplay executado, os
+pontos positivos destacados pelo participante, os problemas identificados e sua
+respectiva análise, as melhorias implementadas no protótipo em resposta ao retorno
+recebido, as evidências coletadas ao longo do processo e, por fim, a conclusão geral
+sobre os resultados obtidos.</p>
+
+<h2>1.1 Ambiente e método</h2>
+
+<p class="semrecuo">O teste foi conduzido sobre o protótipo navegável construído no
+Figma, composto por <b>19 telas</b> ligadas por <b>103 áreas de toque</b>, com ponto de
+partida na tela de entrada do aplicativo. Os fluxos foram previamente verificados de
+forma automatizada, percorrendo-se os vinte passos que cobrem as sete tarefas, para
+garantir que nenhuma tarefa fosse impedida por defeito do próprio material de teste.</p>
+
+<p class="semrecuo">Ao participante foram entregues apenas os enunciados das tarefas,
+descritos como situações reais, sem qualquer indicação do caminho a percorrer na
+interface. O aplicador registrou o resultado, o tempo e as falas ao longo da execução,
+intervindo somente após sessenta segundos de inatividade ou mediante pedido explícito de
+ajuda, situação em que a tarefa foi classificada como concluída com auxílio.</p>
+
+<div class="nota-preencher">
+  <b>Classificação adotada.</b> Concluído (sem auxílio e sem hesitação relevante);
+  Concluído com dificuldade (chegou sozinho, mas com caminhos errados ou demora);
+  Concluído com auxílio (precisou de orientação); Não concluído (desistiu, errou sem
+  perceber ou o tempo acabou).
+</div>
+</section>
+
+<!-- ======================= 2 ======================= -->
+<section class="quebra">
+<h1>2 Roteiro de TestPlay</h1>
+
+<p>Foram definidas sete tarefas para testar os fluxos mais críticos do sistema, cobrindo
+a jornada completa desde o acesso inicial até a exclusão de um registro, passando pela
+consulta e pela edição de conteúdo criado por outra pessoa. Os quadros a seguir
+apresentam, para cada tarefa, o objetivo do teste, o resultado esperado, o resultado
+efetivamente obtido e as observações registradas durante a execução.</p>
+
+<p class="quadro-tit">Quadro 1 — Acesso inicial</p>
+<table>
+  <tr><th>Tarefa apresentada</th><td>Você acabou de instalar no celular o aplicativo que
+    a sua turma usa para se organizar. Abra e me diga o que você acha que dá para fazer
+    aqui.</td></tr>
+  <tr><th>Objetivo do teste</th><td>Verificar se a abertura do aplicativo acontece sem
+    instrução e se a primeira tela comunica sozinha a que o sistema se destina.</td></tr>
+  <tr><th>Resultado esperado</th><td>O participante abre o aplicativo, alcança a primeira
+    tela e descreve com as próprias palavras que o sistema serve para a turma se
+    organizar, reconhecendo que precisa se identificar antes de ver o conteúdo.</td></tr>
+  <tr><th>Resultado obtido</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Observações</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 2 — Cadastro ou login</p>
+<table>
+  <tr><th>Tarefa apresentada</th><td>Este aplicativo é da sua turma, e só quem é da turma
+    enxerga o que tem lá dentro. Faça o que for preciso para o aplicativo te reconhecer.
+    Neste papel está o que você recebeu quando entrou na turma.</td></tr>
+  <tr><th>Objetivo do teste</th><td>Avaliar o fluxo de autenticação e verificar se o
+    participante distingue sozinho a entrada com conta existente da criação de conta
+    nova.</td></tr>
+  <tr><th>Resultado esperado</th><td>O participante conclui a operação e chega à área
+    principal da turma, identificado como membro.</td></tr>
+  <tr><th>Resultado obtido</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Observações</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 3 — Cadastro de prova ou entrega (funcionalidade principal)</p>
+<table>
+  <tr><th>Tarefa apresentada</th><td>O professor de Banco de Dados avisou no fim da aula:
+    prova no dia 29, cai SQL e modelagem. Faça a turma inteira ficar sabendo disso pelo
+    aplicativo.</td></tr>
+  <tr><th>Objetivo do teste</th><td>Avaliar o fluxo completo da funcionalidade central —
+    descoberta do ponto de entrada, preenchimento e confirmação — e verificar se o
+    registro passa a valer para a turma.</td></tr>
+  <tr><th>Resultado esperado</th><td>O participante cria o registro da prova, salva e
+    visualiza o item publicado na lista da turma, identificado como prova e distinguível
+    de uma entrega sem depender da cor.</td></tr>
+  <tr><th>Resultado obtido</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Observações</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 4 — Consulta de informação</p>
+<table>
+  <tr><th>Tarefa apresentada</th><td>Uma colega faltou hoje e mandou mensagem perguntando
+    o que a turma tem de Engenharia de Software. Responda para ela o que está marcado e
+    para quando.</td></tr>
+  <tr><th>Objetivo do teste</th><td>Verificar se o participante localiza um registro
+    criado por outra pessoa e consegue extrair dele a informação de que precisa.</td></tr>
+  <tr><th>Resultado esperado</th><td>O participante encontra o registro da matéria
+    solicitada, informa em voz alta a data e o conteúdo, e nomeia por conta própria que se
+    trata de uma entrega.</td></tr>
+  <tr><th>Resultado obtido</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Observações</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 5 — Edição de informação e regra de autoria</p>
+<table>
+  <tr><th>Tarefa apresentada</th><td>O professor de Banco de Dados voltou atrás: a prova
+    saiu do dia 29 e passou para o dia 30. Deixe o aplicativo com a informação certa.
+    Depois disso: a entrega de Engenharia de Software também mudou de data. Deixe o
+    aplicativo certo nesse caso também.</td></tr>
+  <tr><th>Objetivo do teste</th><td>Avaliar a edição do registro próprio e verificar se o
+    participante descobre sozinho a regra de que somente quem criou um registro pode
+    alterá-lo.</td></tr>
+  <tr><th>Resultado esperado</th><td>O participante altera o registro que ele mesmo criou
+    e vê a mudança refletida; ao tentar alterar o registro de outra pessoa, percebe a
+    restrição e compreende o motivo sem necessidade de explicação.</td></tr>
+  <tr><th>Resultado obtido</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Observações</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 6 — Exclusão com confirmação</p>
+<table>
+  <tr><th>Tarefa apresentada</th><td>Você percebeu que o seminário de Redes ficou
+    cadastrado duas vezes na lista da turma. Resolva isso.</td></tr>
+  <tr><th>Objetivo do teste</th><td>Avaliar o fluxo de exclusão do registro próprio,
+    incluindo a etapa de confirmação e a distinção entre confirmar e cancelar.</td></tr>
+  <tr><th>Resultado esperado</th><td>O participante localiza a duplicata, aciona a
+    exclusão, passa por uma confirmação explícita que informa o que será perdido e conclui
+    a operação, restando apenas um registro na lista.</td></tr>
+  <tr><th>Resultado obtido</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Observações</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 7 — Navegação e retorno</p>
+<table>
+  <tr><th>Tarefa apresentada</th><td>Você começou a registrar um trabalho de Cálculo, mas
+    percebeu no meio que não lembra a data que o professor falou. Saia disso sem registrar
+    nada e volte para a tela onde você vê tudo o que a turma tem.</td></tr>
+  <tr><th>Objetivo do teste</th><td>Avaliar o abandono de uma operação em andamento e o
+    retorno à tela principal por meio da navegação disponível.</td></tr>
+  <tr><th>Resultado esperado</th><td>O participante abandona a operação sem salvar, nada é
+    publicado pela metade, e ele retorna à tela principal com a lista intacta.</td></tr>
+  <tr><th>Resultado obtido</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Observações</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 8 — Síntese da execução</p>
+<table>
+  <tr><th style="width:5.5cm">Tarefa</th><th style="width:4.5cm">Classificação</th>
+      <th style="width:2.2cm">Tempo</th><th style="width:auto">Caminhos errados</th></tr>
+  <tr><td>1 Acesso inicial</td><td class="vazio"></td><td></td><td></td></tr>
+  <tr><td>2 Cadastro ou login</td><td class="vazio"></td><td></td><td></td></tr>
+  <tr><td>3 Cadastro de prova ou entrega</td><td class="vazio"></td><td></td><td></td></tr>
+  <tr><td>4 Consulta de informação</td><td class="vazio"></td><td></td><td></td></tr>
+  <tr><td>5 Edição e regra de autoria</td><td class="vazio"></td><td></td><td></td></tr>
+  <tr><td>6 Exclusão com confirmação</td><td class="vazio"></td><td></td><td></td></tr>
+  <tr><td>7 Navegação e retorno</td><td class="vazio"></td><td></td><td></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+</section>
+
+<!-- ======================= 3 ======================= -->
+<section class="quebra">
+<h1>3 Pontos positivos destacados pelo participante</h1>
+
+<p>Durante a execução dos testes, o participante manifestou verbalmente os aspectos do
+sistema que considerou bem resolvidos. O Quadro 9 sintetiza esses apontamentos.</p>
+
+<p class="quadro-tit">Quadro 9 — Pontos positivos destacados</p>
+<table>
+  <tr><th>Aspecto</th><th style="width:auto">Comentário do participante</th></tr>
+  <tr><td class="vazio"><span class="linha"></span></td><td class="vazio"><span class="linha"></span></td></tr>
+  <tr><td class="vazio"><span class="linha"></span></td><td class="vazio"><span class="linha"></span></td></tr>
+  <tr><td class="vazio"><span class="linha"></span></td><td class="vazio"><span class="linha"></span></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<div class="nota-preencher">
+  Registre aqui a fala literal sempre que possível. Um comentário transcrito vale mais que
+  um resumo: “achei que ia apagar da turma toda” diz mais sobre a interface do que
+  “demonstrou insegurança”.
+</div>
+</section>
+
+<!-- ======================= 4 ======================= -->
+<section>
+<h1>4 Problemas identificados e análise dos resultados</h1>
+
+<p>Com base no comportamento observado e no retorno do participante durante a execução
+das tarefas, foram identificados os problemas descritos a seguir. Cada problema recebeu um
+identificador, a descrição do que foi observado e a análise do impacto sobre a experiência
+do usuário.</p>
+
+<p class="quadro-tit">Quadro 10 — Problema P01</p>
+<table>
+  <tr><th>Tarefa em que ocorreu</th><td class="vazio"><span class="linha"></span></td></tr>
+  <tr><th>Descrição</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Impacto na experiência</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Gravidade</th><td>( ) baixa &nbsp;&nbsp; ( ) média &nbsp;&nbsp; ( ) alta</td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 11 — Problema P02</p>
+<table>
+  <tr><th>Tarefa em que ocorreu</th><td class="vazio"><span class="linha"></span></td></tr>
+  <tr><th>Descrição</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Impacto na experiência</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Gravidade</th><td>( ) baixa &nbsp;&nbsp; ( ) média &nbsp;&nbsp; ( ) alta</td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<p class="quadro-tit">Quadro 12 — Problema P03</p>
+<table>
+  <tr><th>Tarefa em que ocorreu</th><td class="vazio"><span class="linha"></span></td></tr>
+  <tr><th>Descrição</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Impacto na experiência</th><td class="vazio"><span class="linha"></span><span class="linha"></span></td></tr>
+  <tr><th>Gravidade</th><td>( ) baixa &nbsp;&nbsp; ( ) média &nbsp;&nbsp; ( ) alta</td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<div class="nota-preencher">
+  <b>O que conta como problema.</b> Hesitação longa, caminho errado, pergunta feita ao
+  aplicador, e principalmente qualquer momento em que o participante achou que tinha feito
+  algo que não fez — ou o contrário. Acerto com dificuldade também é problema.
+</div>
+</section>
+
+<!-- ======================= 5 ======================= -->
+<section class="quebra">
+<h1>5 Melhorias implementadas após o teste</h1>
+
+<p>Com base no relatório de avaliação, a equipe executou as alterações descritas no
+Quadro 13, ligando cada mudança ao problema que a motivou.</p>
+
+<p class="quadro-tit">Quadro 13 — Melhorias implementadas</p>
+<table>
+  <tr><th style="width:2.4cm">Problema</th><th style="width:auto">Alteração realizada</th>
+      <th style="width:4cm">Onde</th></tr>
+  <tr><td class="vazio"></td><td class="vazio"><span class="linha"></span></td><td></td></tr>
+  <tr><td class="vazio"></td><td class="vazio"><span class="linha"></span></td><td></td></tr>
+  <tr><td class="vazio"></td><td class="vazio"><span class="linha"></span></td><td></td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<h2>5.1 Melhorias anteriores ao teste, decorrentes da preparação</h2>
+
+<p class="semrecuo">A montagem do protótipo e a verificação automatizada dos fluxos, feitas
+antes da sessão com o participante, já revelaram falhas que foram corrigidas previamente e
+são registradas aqui por integrarem o processo de avaliação:</p>
+
+<ul>
+  <li>Ausência das telas de <b>edição</b> e de <b>confirmação de exclusão</b>, sem as
+      quais duas das sete tarefas não teriam onde ocorrer;</li>
+  <li>Ausência de uma tela de <b>visualização de registro de outra pessoa</b>, necessária
+      para que a regra de autoria pudesse ser descoberta pelo usuário em vez de
+      explicada;</li>
+  <li>Telas novas inalcançáveis: nenhum elemento da tela principal levava até elas, de
+      modo que os fluxos existiam no arquivo mas não na mão de quem testa;</li>
+  <li>Divergência de vocabulário entre o protótipo e o aplicativo — o mesmo botão dizia
+      “Cadastrar” em um e “Adicionar” no outro —, que produziria um falso problema de
+      usabilidade, atribuível ao material e não ao produto;</li>
+  <li>Defeito de layout na lista principal, em que o primeiro cartão era comprimido
+      quando a lista crescia.</li>
+</ul>
+</section>
+
+<!-- ======================= 6 ======================= -->
+<section>
+<h1>6 Evidências da execução dos testes</h1>
+
+<p>O teste foi conduzido <span style="color:#777">[presencialmente / remotamente]</span>
+com <span style="color:#777">[nome do participante]</span>, que navegou pelo protótipo no
+<span style="color:#777">[dispositivo utilizado]</span>. Durante a sessão, o participante
+forneceu retornos verbais que foram registrados neste relatório.</p>
+
+<p>As evidências coletadas encontram-se listadas no Quadro 14 e reproduzidas nas figuras
+subsequentes.</p>
+
+<p class="quadro-tit">Quadro 14 — Evidências coletadas</p>
+<table>
+  <tr><th style="width:3cm">Tipo</th><th style="width:auto">Descrição</th>
+      <th style="width:3.4cm">Referência</th></tr>
+  <tr><td>Captura de tela</td><td class="vazio"><span class="linha"></span></td><td>Figura 1</td></tr>
+  <tr><td>Fotografia</td><td class="vazio"><span class="linha"></span></td><td>Figura 2</td></tr>
+  <tr><td>Vídeo da execução</td><td class="vazio"><span class="linha"></span></td><td>Apêndice A</td></tr>
+  <tr><td>Roteiro preenchido</td><td>Formulário de aplicação com as sete tarefas,
+      preenchido à mão durante a sessão</td><td>Apêndice B</td></tr>
+</table>
+<p class="fonte">Fonte: Elaborado pelos autores (2026).</p>
+
+<div class="nota-preencher">
+  <b>Onde encaixar as imagens.</b> Insira cada figura logo abaixo do quadro, com legenda
+  “Figura N — descrição” acima e “Fonte: Elaborado pelos autores (2026).” abaixo. Uma
+  captura por tarefa em que houve problema já sustenta a seção 4.
+</div>
+</section>
+
+<!-- ======================= 7 ======================= -->
+<section class="quebra">
+<h1>7 Conclusão</h1>
+
+<p class="semrecuo"><span style="color:#777">[Preencher após a execução. Os parágrafos
+abaixo indicam o que a conclusão precisa responder.]</span></p>
+
+<p>Quais fluxos foram concluídos sem auxílio e o que isso indica sobre a clareza da
+interface.</p>
+
+<p>Quais pontos críticos a execução revelou, agrupados por natureza — retorno visual,
+prevenção de erro, clareza de vocabulário, descoberta de funcionalidade —, e por que cada
+um importa para uma turma que depende do aplicativo para não perder uma prova.</p>
+
+<p>Quais solicitações foram atendidas no protótipo e quais ficaram registradas para uma
+próxima iteração, com a justificativa da escolha.</p>
+
+<p>Por fim, a avaliação da equipe sobre o próprio processo: o que o testplay ensinou que a
+construção sozinha não teria ensinado.</p>
+
+<h2>Apêndices</h2>
+<p class="semrecuo"><b>Apêndice A</b> — Vídeo da execução do testplay.</p>
+<p class="semrecuo"><b>Apêndice B</b> — Roteiro de aplicação preenchido durante a sessão.</p>
+<p class="semrecuo"><b>Apêndice C</b> — Link do protótipo navegável no Figma.</p>
+</section>
+
+</body>
+</html>
