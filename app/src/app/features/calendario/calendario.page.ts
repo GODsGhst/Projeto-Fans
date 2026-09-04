@@ -78,6 +78,12 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
         }
 
         <p class="pf-rotulo">anotações</p>
+        <!-- Aviso PROPRIO das anotacoes. O erro() acima e o dos eventos; sem
+             esta linha, falhar ao buscar anotacao virava "nao tem anotacao" —
+             que e exatamente o que este app nao pode fazer. -->
+        @if (erroDasNotas(); as e) {
+          <p class="pf-aviso" role="alert">{{ e }}</p>
+        }
         <a class="botao botao--fantasma" routerLink="/tabs/notas/nova"
           >Anotar alguma coisa</a
         >
@@ -150,6 +156,8 @@ export class CalendarioPage {
    * ele nunca manda a de outra pessoa. Entao "veio sem assinatura" ja significa
    * "e minha", sem a tela precisar saber quem ela e.
    */
+  protected readonly erroDasNotas = this.notasRepo.erro;
+
   protected readonly notas = computed(() => {
     const agora = new Date();
     return this.notasRepo.notas().map((n) => ({

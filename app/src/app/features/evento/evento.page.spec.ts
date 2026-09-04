@@ -360,6 +360,62 @@ describe('EventoPage', () => {
     req.flush(null);
     await fixture.whenStable();
     fixture.detectChanges();
+
+    // NAO navega para fora: ocultar tira o evento da vista do proprio lider, e
+    // ao sair desta tela ele leva 404. Este instante e a unica janela de desfazer.
+    // Se tivesse navegado para fora, este aviso nao estaria em tela.
+    expect(fixture.nativeElement.textContent as string).toContain('desfazer');
+  });
+
+  it('desfazer devolve o evento a turma — a unica janela em que isso e possivel', async () => {
+    liderancaMinha.set(true);
+    usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });
+    await abrir((r) => r.flush(detalhe([])));
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.includes('Ocultar'))!
+      .click();
+    fixture.detectChanges();
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
+      .click();
+    backend
+      .expectOne(`${environment.apiUrl}/moderacao/evento/e1/ocultar`)
+      .flush(null);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    )
+      .find((b) => b.textContent!.trim() === 'Desfazer')!
+      .click();
+
+    const volta = backend.expectOne(
+      `${environment.apiUrl}/moderacao/evento/e1/reexibir`,
+    );
+    expect(volta.request.method).toBe('POST');
+    volta.flush(null);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Voltou ao estado normal: o botao de ocultar esta de volta.
+    expect(
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.includes('Ocultar')),
+    ).toBeDefined();
   });
 
   it('quem nao e lider nao ve ocultar', async () => {

@@ -109,7 +109,23 @@ import { materialVm } from '../material-vm';
                criou. É o contrapeso do papel. -->
           @if (souLider()) {
             <div class="do-lider">
-              @if (ocultando()) {
+              @if (ocultado()) {
+                <!-- A janela do desfazer. Ao sair desta tela o lider leva 404
+                     neste evento e nao ha mais caminho de volta — por isso o
+                     aviso diz "agora", e nao "depois". -->
+                <p class="alerta" role="status">
+                  Ocultado da turma. Dá para desfazer <b>agora</b>: ao sair
+                  desta tela, o registro some também para você.
+                </p>
+                <button
+                  class="botao"
+                  type="button"
+                  [disabled]="enviandoModeracao()"
+                  (click)="reexibir()"
+                >
+                  {{ enviandoModeracao() ? 'Desfazendo…' : 'Desfazer' }}
+                </button>
+              } @else if (ocultando()) {
                 <p class="rot-campo">
                   por quê <span class="opcional">— opcional</span>
                 </p>
@@ -124,7 +140,8 @@ import { materialVm } from '../material-vm';
                 />
                 <p class="cache-aviso">
                   Fica registrado com o seu nome. Quem criou continua vendo o
-                  registro em "não listados", e você pode reexibir.
+                  registro em "não listados". Você poderá desfazer aqui mesmo,
+                  logo depois — mas só até sair desta tela.
                 </p>
                 <button
                   class="botao"
@@ -409,6 +426,8 @@ export class EventoPage {
   /** O papel é lido da turma, nunca da sessão: a liderança se transfere. */
   protected readonly souLider = this.turmas.souLider;
   protected readonly ocultando = signal(false);
+  /** Ficou oculto NESTA sessao de tela — a unica janela em que desfazer existe. */
+  protected readonly ocultado = signal(false);
   protected readonly pedindo = signal(false);
   protected readonly pedidoEnviado = signal(false);
   protected readonly enviandoModeracao = signal(false);
@@ -455,7 +474,27 @@ export class EventoPage {
       this.enviandoModeracao.set(false);
       this.ocultando.set(false);
     }
-    await this.router.navigateByUrl('/tabs/home');
+    // NAO navega. Ocultar tira o evento da vista do proprio lider: ao sair
+    // desta tela ele leva 404 e nao ha caminho de volta. Este instante e a
+    // unica janela em que desfazer e possivel, entao ela fica aberta.
+    this.ocultado.set(true);
+  }
+
+  /** Desfaz o ocultar. So funciona enquanto esta tela nao for fechada. */
+  protected async reexibir(): Promise<void> {
+    if (this.enviandoModeracao()) {
+      return;
+    }
+    this.enviandoModeracao.set(true);
+    this.erroDaAcao.set(null);
+    try {
+      await this.moderacao.reexibir('evento', this.id);
+      this.ocultado.set(false);
+    } catch (e) {
+      this.erroDaAcao.set(mensagemDeErro(e));
+    } finally {
+      this.enviandoModeracao.set(false);
+    }
   }
 
   /**
