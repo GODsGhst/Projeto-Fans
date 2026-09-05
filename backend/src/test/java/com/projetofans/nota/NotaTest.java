@@ -193,6 +193,71 @@ class NotaTest extends TesteDeApi {
     }
 
     @Test
+    @DisplayName("o lider oculta a nota da turma: some para os outros, fica para o autor")
+    void liderOculta() throws Exception {
+        String id = criar(colega, "TURMA", "2026-09-22", "recado improprio");
+
+        http.perform(post("/api/v1/moderacao/nota/" + id + "/ocultar")
+                        .header("Authorization", bearer(eu))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("motivo", "fora de contexto"))))
+                .andExpect(status().isOk());
+
+        // Sumiu da lista de quem nao escreveu — inclusive do proprio lider.
+        assertThat(listar(eu)).isEmpty();
+        // E continua com quem escreveu: ocultar tira da vista da turma, nunca
+        // da existencia.
+        JsonNode doAutor = listar(colega);
+        assertThat(doAutor).hasSize(1);
+        assertThat(doAutor.get(0).get("visivelTurma").asBoolean()).isFalse();
+    }
+
+    @Test
+    @DisplayName("reexibir devolve a nota para a turma")
+    void liderReexibe() throws Exception {
+        String id = criar(colega, "TURMA", "2026-09-23", "recado");
+        http.perform(post("/api/v1/moderacao/nota/" + id + "/ocultar")
+                        .header("Authorization", bearer(eu))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
+
+        http.perform(post("/api/v1/moderacao/nota/" + id + "/reexibir")
+                        .header("Authorization", bearer(eu)))
+                .andExpect(status().isOk());
+
+        assertThat(listar(eu)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("o lider NAO oculta rascunho pessoal — seria poder sobre o invisivel")
+    void liderNaoOcultaPessoal() throws Exception {
+        // Ele nunca conseguiu ler a nota PESSOAL de ninguem. Poder oculta-la
+        // seria, alem de poder sobre o invisivel, um jeito de descobrir que ela
+        // existe: 204 confirmaria o id, 404 negaria.
+        String id = criar(colega, "PESSOAL", "2026-09-24", "senha do wifi");
+
+        http.perform(post("/api/v1/moderacao/nota/" + id + "/ocultar")
+                        .header("Authorization", bearer(eu))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+
+        assertThat(listar(colega)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("aluno comum nao oculta nada")
+    void alunoNaoOculta() throws Exception {
+        String id = criar(eu, "TURMA", "2026-09-25", "recado do lider");
+
+        http.perform(post("/api/v1/moderacao/nota/" + id + "/ocultar")
+                        .header("Authorization", bearer(colega))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+
+        assertThat(listar(colega)).hasSize(1);
+    }
+
+    @Test
     @DisplayName("fora da janela nao vem")
     void janela() throws Exception {
         criar(eu, "TURMA", "2026-10-05", "mes que vem");

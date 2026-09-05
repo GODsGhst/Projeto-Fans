@@ -16,9 +16,12 @@ import {
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import { NotaComponent } from '../../shared/nota.component';
 import { EventoRepository } from '../../data/evento.repository';
+import { ModeracaoRepository } from '../../data/moderacao.repository';
 import { NotaRepository } from '../../data/nota.repository';
+import { TurmaRepository } from '../../data/turma.repository';
 import { assinatura } from '../evento-vm';
 import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
+import { mensagemDeErro } from '../auth/erro';
 
 /**
  * Consulta, nao entrada. Quem so quer saber "o que tem essa semana" resolve na Home.
@@ -88,6 +91,10 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
           >Anotar alguma coisa</a
         >
 
+        @if (erroDaModeracao(); as e) {
+          <p class="pf-erro" role="alert">{{ e }}</p>
+        }
+
         @for (n of notas(); track n.id) {
           <!-- So a minha e tocavel para editar. A anotacao da turma e de quem
                escreveu — o mesmo autor-only do resto do app. -->
@@ -100,6 +107,14 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
                 [autoria]="n.autoria"
               />
             </a>
+            @if (!n.visivelTurma) {
+              <!-- O autor precisa saber POR QUE ninguem comentou o recado dele.
+                   Sem esta linha ele ve a anotacao normal e conclui que a turma
+                   ignorou — quando na verdade a turma nunca viu. -->
+              <p class="nota-oculta">
+                O líder tirou esta anotação da lista da turma. Só você ainda vê.
+              </p>
+            }
           } @else {
             <span class="dia-nota">{{ n.dia }}</span>
             <app-nota
@@ -107,6 +122,18 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
               [texto]="n.texto"
               [autoria]="n.autoria"
             />
+            @if (souLider() && n.alcance === 'TURMA') {
+              <!-- O lider so oculta o que ele consegue LER. Rascunho pessoal de
+                   outra pessoa nunca chega aqui, entao nao ha botao para ele. -->
+              <button
+                class="ocultar-nota"
+                type="button"
+                [disabled]="moderando()"
+                (click)="ocultarNota(n.id)"
+              >
+                Ocultar da turma
+              </button>
+            }
           }
         }
 
@@ -122,6 +149,27 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
     </ion-content>
   `,
   styles: `
+    .ocultar-nota {
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      align-self: flex-start;
+      padding: 5px 10px;
+      margin-bottom: 4px;
+      border-radius: var(--r-pill);
+      border: 1px solid var(--rule);
+      background: transparent;
+      color: var(--ink-2);
+    }
+    .nota-oculta {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--ink-2);
+      background: var(--rule-soft);
+      border-left: 3px solid var(--rule);
+      padding: 7px 10px;
+      margin: 0 0 4px;
+    }
     .dia-nota {
       display: block;
       font-family: var(--mono);
@@ -136,6 +184,8 @@ import { eventoVm, limitesDoMes, mesPorExtenso } from '../evento-vm';
 export class CalendarioPage {
   private readonly repo = inject(EventoRepository);
   private readonly notasRepo = inject(NotaRepository);
+  private readonly moderacao = inject(ModeracaoRepository);
+  private readonly turmaRepo = inject(TurmaRepository);
 
   protected readonly mes = signal(mesPorExtenso(new Date()));
   protected readonly carregando = this.repo.carregando;
@@ -157,6 +207,9 @@ export class CalendarioPage {
    * "e minha", sem a tela precisar saber quem ela e.
    */
   protected readonly erroDasNotas = this.notasRepo.erro;
+  protected readonly souLider = this.turmaRepo.souLider;
+  protected readonly moderando = signal(false);
+  protected readonly erroDaModeracao = signal<string | null>(null);
 
   protected readonly notas = computed(() => {
     const agora = new Date();
@@ -212,6 +265,27 @@ export class CalendarioPage {
     // O repositorio de nota nao relanca: ele guarda o erro no proprio signal e
     // mantem o que ja estava em tela. Uma falha aqui nao pode apagar os eventos.
     void this.notasRepo.carregar(de, ate);
+    // O papel e LIDO, nunca guardado na sessao: a lideranca se transfere, e uma
+    // sessao antiga ofereceria "Ocultar" a quem ja nao e lider.
+    void this.turmaRepo.garantirCarregada();
+  }
+
+  /** Tira a anotação da lista da turma. Não apaga: o autor continua vendo. */
+  protected async ocultarNota(id: string): Promise<void> {
+    if (this.moderando()) {
+      return;
+    }
+    this.moderando.set(true);
+    this.erroDaModeracao.set(null);
+    try {
+      await this.moderacao.ocultar('nota', id, null);
+      const { de, ate } = limitesDoMes(new Date());
+      await this.notasRepo.carregar(de, ate);
+    } catch (e) {
+      this.erroDaModeracao.set(mensagemDeErro(e));
+    } finally {
+      this.moderando.set(false);
+    }
   }
 }
 

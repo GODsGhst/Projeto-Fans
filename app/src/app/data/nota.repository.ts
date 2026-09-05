@@ -15,6 +15,8 @@ export interface Nota {
   criadoEm: string;
   atualizadoEm: string;
   version: number;
+  /** `false` = o líder tirou da lista da turma. Só o autor continua vendo. */
+  visivelTurma: boolean;
 }
 
 export interface SalvarNota {

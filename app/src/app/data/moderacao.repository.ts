@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../core/api.service';
 
 /** Os dois tipos que o líder pode moderar. A rota do spec é em minúsculas. */
-export type TipoModeravel = 'evento' | 'material';
+export type TipoModeravel = 'evento' | 'material' | 'nota';
 
 /** Um pedido do líder para que você apague algo seu. */
 export interface PedidoDeExclusao {

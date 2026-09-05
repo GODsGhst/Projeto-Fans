@@ -18,6 +18,8 @@
 -- evento e material, e nota da turma ainda não passa por ele. Está escrito aqui
 -- porque é uma lacuna conhecida, não um esquecimento — e o dia em que entrar,
 -- entra como as outras, com a coluna e o RegistroTipo.
+--
+-- ATUALIZAÇÃO: entrou na V7, exatamente assim.
 
 CREATE TABLE nota (
   id             UUID        PRIMARY KEY,

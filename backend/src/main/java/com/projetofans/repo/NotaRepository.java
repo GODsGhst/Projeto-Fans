@@ -19,13 +19,21 @@ public interface NotaRepository extends JpaRepository<Nota, UUID> {
      * ela devolveria o rascunho de todo mundo para todo mundo. A regra mora na
      * consulta, e nao numa filtragem depois, porque dado que nao sai do banco
      * nao vaza por um caminho que alguem esqueceu de filtrar.
+     *
+     * A nota da TURMA que o lider ocultou sai da lista de todo mundo MENOS de
+     * quem escreveu — mesma regra de evento e material: ocultar tira da vista da
+     * turma, nunca da existencia, e o autor continua vendo o que e dele.
      */
     @Query("""
         select n from Nota n
         where n.turmaId = :turmaId
           and n.excluidoEm is null
           and n.data between :de and :ate
-          and (n.alcance = com.projetofans.domain.AlcanceNota.TURMA or n.autorId = :euId)
+          and (
+                (n.alcance = com.projetofans.domain.AlcanceNota.TURMA
+                   and (n.visivelTurma = true or n.autorId = :euId))
+             or n.autorId = :euId
+              )
         order by n.data asc, n.criadoEm asc
         """)
     List<Nota> queEuLeioNoPeriodo(@Param("turmaId") UUID turmaId,

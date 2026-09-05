@@ -6,6 +6,9 @@ import {
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
+import { signal } from '@angular/core';
+
+import { AuthService } from '../../core/auth.service';
 
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
 import type { Evento } from '../../data/models';
@@ -44,6 +47,14 @@ describe('CalendarioPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
+        // `souLider` compara quem eu sou com os membros da turma. Sem isto o
+        // AuthService real le do disco, devolve null, e o papel nunca resolve.
+        {
+          provide: AuthService,
+          useValue: {
+            usuario: signal({ id: 'u1', nome: 'Eu', email: 'eu@exemplo.com' }),
+          },
+        },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
@@ -57,12 +68,32 @@ describe('CalendarioPage', () => {
     // As anotacoes saem na mesma entrada da aba. O padrao e lista vazia: quem
     // testa evento nao devia ter de saber que a tela tambem carrega nota.
     notas: unknown[] = [],
+    papel: 'LIDER' | 'ALUNO' = 'ALUNO',
   ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
     fixture.detectChanges();
     responder(backend.expectOne((r) => r.url.endsWith('/eventos')));
     backend.expectOne((r) => r.url.endsWith('/notas')).flush(notas);
+    // A tela tambem pergunta o papel: so o lider ve "Ocultar da turma". O papel
+    // e lido a cada entrada, nunca guardado — a lideranca se transfere.
+    const turma = backend.match((r) => r.url.endsWith('/turmas/minha'));
+    for (const req of turma) {
+      req.flush({
+        id: 't1',
+        nome: 'Fans',
+        semestre: null,
+        codigoConvite: 'X',
+        membros: [
+          {
+            usuarioId: 'u1',
+            nome: 'Eu',
+            papel: papel,
+            entrouEm: '2026-08-01T12:00:00Z',
+          },
+        ],
+      });
+    }
     await fixture.whenStable();
     fixture.detectChanges();
   }
@@ -134,6 +165,7 @@ describe('CalendarioPage', () => {
           criadoEm: '2026-08-01T12:00:00Z',
           atualizadoEm: '2026-08-01T12:00:00Z',
           version: 0,
+          visivelTurma: true,
         },
         {
           id: 'n-minha',
@@ -144,6 +176,7 @@ describe('CalendarioPage', () => {
           criadoEm: '2026-08-01T12:00:00Z',
           atualizadoEm: '2026-08-01T12:00:00Z',
           version: 0,
+          visivelTurma: true,
         },
       ],
     );
@@ -173,9 +206,96 @@ describe('CalendarioPage', () => {
     backend
       .expectOne((r) => r.url.endsWith('/notas'))
       .flush(null, { status: 500, statusText: 'Server Error' });
+    for (const req of backend.match((r) => r.url.endsWith('/turmas/minha'))) {
+      req.flush(null, { status: 500, statusText: 'Server Error' });
+    }
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(titulos().length).toBe(1);
+  });
+  it('so o lider ve "Ocultar da turma" numa anotacao da turma', async () => {
+    // O papel e lido a cada entrada, nunca guardado na sessao: a lideranca se
+    // transfere, e uma sessao antiga ofereceria o botao a quem ja nao e lider.
+    await abrir(
+      (r) => r.flush([]),
+      [
+        {
+          id: 'n-turma',
+          alcance: 'TURMA',
+          data: '2026-08-12',
+          texto: 'aula cancelada quinta',
+          autorId: 'u2',
+          autorNome: 'Ana',
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: true,
+        },
+      ],
+      'LIDER',
+    );
+
+    expect(
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.includes('Ocultar da turma')),
+    ).toBeDefined();
+  });
+
+  it('aluno comum nao ve o botao de ocultar', async () => {
+    await abrir(
+      (r) => r.flush([]),
+      [
+        {
+          id: 'n-turma',
+          alcance: 'TURMA',
+          data: '2026-08-12',
+          texto: 'aula cancelada quinta',
+          autorId: 'u2',
+          autorNome: 'Ana',
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: true,
+        },
+      ],
+      'ALUNO',
+    );
+
+    expect(
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.includes('Ocultar da turma')),
+    ).toBeUndefined();
+  });
+
+  it('a minha anotacao oculta diz por que ninguem viu', async () => {
+    // Sem este aviso o autor ve a anotacao normal e conclui que a turma
+    // ignorou o recado — quando a turma nunca chegou a ver.
+    await abrir(
+      (r) => r.flush([]),
+      [
+        {
+          id: 'n-minha',
+          alcance: 'TURMA',
+          data: '2026-08-13',
+          texto: 'meu recado',
+          autorId: 'u1',
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: false,
+        },
+      ],
+    );
+
+    expect(fixture.nativeElement.textContent as string).toContain(
+      'tirou esta anotação da lista',
+    );
   });
 });

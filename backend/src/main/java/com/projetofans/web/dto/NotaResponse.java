@@ -23,7 +23,8 @@ public record NotaResponse(
         String autorNome,
         Instant criadoEm,
         Instant atualizadoEm,
-        int version) {
+        int version,
+        boolean visivelTurma) {
 
     public static NotaResponse de(Nota nota, String autorNome) {
         return new NotaResponse(
@@ -35,6 +36,7 @@ public record NotaResponse(
                 nota.getAlcance() == AlcanceNota.TURMA ? autorNome : null,
                 nota.getCriadoEm(),
                 nota.getAtualizadoEm(),
-                nota.getVersion());
+                nota.getVersion(),
+                nota.isVisivelTurma());
     }
 }

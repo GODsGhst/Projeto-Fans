@@ -57,6 +57,13 @@ public class Nota {
     @Column(nullable = false)
     private int version;
 
+    /**
+     * false = o lider tirou da lista da turma. So faz sentido em nota TURMA: a
+     * PESSOAL nunca sai para outra pessoa, entao nao ha o que ocultar.
+     */
+    @Column(name = "visivel_turma", nullable = false)
+    private boolean visivelTurma = true;
+
     @Column(name = "excluido_em")
     private Instant excluidoEm;
 
@@ -80,6 +87,19 @@ public class Nota {
         this.data = data;
         this.texto = texto;
         this.atualizadoEm = agora;
+    }
+
+    public boolean isVisivelTurma() {
+        return visivelTurma;
+    }
+
+    /**
+     * NAO mexe em `atualizadoEm` nem na version: ocultar e ato do lider sobre a
+     * lista, nao edicao do registro. Se contasse como edicao, quem estivesse com
+     * a anotacao aberta levaria 409 por causa de uma acao que nao mudou o texto.
+     */
+    public void definirVisibilidadeTurma(boolean visivel) {
+        this.visivelTurma = visivel;
     }
 
     public void excluirLogicamente(Instant agora) {

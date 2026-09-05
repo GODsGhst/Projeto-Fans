@@ -4,14 +4,17 @@ import com.projetofans.domain.AcaoModeracao;
 import com.projetofans.domain.AcaoModeracaoTipo;
 import com.projetofans.domain.Evento;
 import com.projetofans.domain.Material;
+import com.projetofans.domain.Nota;
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
+import com.projetofans.domain.AlcanceNota;
 import com.projetofans.domain.RegistroTipo;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.NaoLiderException;
 import com.projetofans.repo.AcaoModeracaoRepository;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.repo.MaterialRepository;
+import com.projetofans.repo.NotaRepository;
 import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
@@ -53,17 +56,20 @@ public class ModeracaoService {
 
     private final EventoRepository eventos;
     private final MaterialRepository materiais;
+    private final NotaRepository notas;
     private final MembroRepository membros;
     private final AcaoModeracaoRepository acoes;
     private final UsuarioRepository usuarios;
     private final TurmaScopeResolver escopo;
 
     public ModeracaoService(EventoRepository eventos, MaterialRepository materiais,
+                            NotaRepository notas,
                             MembroRepository membros, AcaoModeracaoRepository acoes,
                             UsuarioRepository usuarios,
                             TurmaScopeResolver escopo) {
         this.eventos = eventos;
         this.materiais = materiais;
+        this.notas = notas;
         this.membros = membros;
         this.acoes = acoes;
         this.usuarios = usuarios;
@@ -181,6 +187,17 @@ public class ModeracaoService {
             exigirTurmaELider(lider, evento.getTurmaId());
             evento.definirVisibilidadeTurma(visivel);
             eventos.saveAndFlush(evento);
+        } else if (registroTipo == RegistroTipo.NOTA) {
+            Nota nota = notas.findById(registroId).orElseThrow(AcessoNegadoException::new);
+            exigirTurmaELider(lider, nota.getTurmaId());
+            // O lider so oculta o que ele consegue LER. Nota PESSOAL nunca sai
+            // para outra pessoa, entao ocultar uma seria poder sobre o
+            // invisivel — e a porta para descobrir que ela existe.
+            if (nota.getAlcance() != AlcanceNota.TURMA) {
+                throw new AcessoNegadoException();
+            }
+            nota.definirVisibilidadeTurma(visivel);
+            notas.saveAndFlush(nota);
         } else {
             Material material = materiais.findById(registroId)
                     .orElseThrow(AcessoNegadoException::new);
@@ -192,9 +209,14 @@ public class ModeracaoService {
 
     private void exigirLiderDoRegistro(UsuarioAtual lider, RegistroTipo registroTipo,
                                        UUID registroId) {
-        UUID turmaDoRegistro = registroTipo == RegistroTipo.EVENTO
-                ? eventos.findById(registroId).orElseThrow(AcessoNegadoException::new).getTurmaId()
-                : materiais.findById(registroId).orElseThrow(AcessoNegadoException::new).getTurmaId();
+        UUID turmaDoRegistro = switch (registroTipo) {
+            case EVENTO -> eventos.findById(registroId)
+                    .orElseThrow(AcessoNegadoException::new).getTurmaId();
+            case NOTA -> notas.findById(registroId)
+                    .orElseThrow(AcessoNegadoException::new).getTurmaId();
+            case MATERIAL -> materiais.findById(registroId)
+                    .orElseThrow(AcessoNegadoException::new).getTurmaId();
+        };
         exigirTurmaELider(lider, turmaDoRegistro);
     }
 

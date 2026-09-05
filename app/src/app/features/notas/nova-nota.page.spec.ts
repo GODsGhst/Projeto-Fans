@@ -22,6 +22,7 @@ const MINHA: Nota = {
   criadoEm: '2026-09-01T12:00:00Z',
   atualizadoEm: '2026-09-01T12:00:00Z',
   version: 3,
+  visivelTurma: true,
 };
 
 describe('NovaNotaPage', () => {
