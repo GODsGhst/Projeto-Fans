@@ -298,4 +298,30 @@ describe('CalendarioPage', () => {
       'tirou esta anotação da lista',
     );
   });
+
+  it('anotacao visivel NAO leva o aviso de oculta', async () => {
+    // O teste acima passava mesmo com o campo ausente do view-model: `undefined`
+    // e falsy, entao o aviso aparecia sempre. Foi o `ng build` que pegou, nao o
+    // teste — este par existe para o teste pegar da proxima vez.
+    await abrir(
+      (r) => r.flush([]),
+      [
+        {
+          id: 'n-visivel',
+          alcance: 'TURMA',
+          data: '2026-08-14',
+          texto: 'meu recado',
+          autorId: 'u1',
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: true,
+        },
+      ],
+    );
+
+    expect(fixture.nativeElement.textContent as string).not.toContain(
+      'tirou esta anotação da lista',
+    );
+  });
 });

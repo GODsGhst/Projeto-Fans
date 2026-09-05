@@ -219,6 +219,7 @@ export class CalendarioPage {
       texto: n.texto,
       dia: diaCurto(n.data),
       minha: !n.autorNome,
+      visivelTurma: n.visivelTurma,
       autoria: n.autorNome
         ? assinatura(
             {
