@@ -61,6 +61,27 @@ describe('CalendarioPage', () => {
     fixture = TestBed.createComponent(CalendarioPage);
   });
 
+  /**
+   * Um dia do mes em foco, em ISO. A grade abre no mes de HOJE, entao fixture
+   * com mes fixo passa em setembro e quebra em outubro — bomba-relogio num
+   * teste de calendario, que e justamente onde ela nao pode existir.
+   */
+  function diaDesteMes(dia: number): string {
+    const h = new Date();
+    const m = String(h.getMonth() + 1).padStart(2, '0');
+    return `${h.getFullYear()}-${m}-${String(dia).padStart(2, '0')}`;
+  }
+
+  function celula(dia: number): HTMLElement {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.cal-dia',
+      ) as NodeListOf<HTMLElement>,
+    ).find(
+      (b) => b.querySelector('.num')!.textContent!.trim() === String(dia),
+    )!;
+  }
+
   afterEach(() => backend.verify());
 
   async function abrir(
@@ -323,5 +344,91 @@ describe('CalendarioPage', () => {
     expect(fixture.nativeElement.textContent as string).not.toContain(
       'tirou esta anotação da lista',
     );
+  });
+  it('a grade mostra o mes inteiro, e o dia com prova vem marcado', async () => {
+    await abrir((r) => r.flush([evento('c-1', 'PROVA', diaDesteMes(12))]));
+
+    const dias = fixture.nativeElement.querySelectorAll('.cal-dia');
+    const h = new Date();
+    expect(dias.length)
+      .withContext('a grade tem exatamente os dias do mes')
+      .toBe(new Date(h.getFullYear(), h.getMonth() + 1, 0).getDate());
+    expect(celula(12).classList).toContain('tem-prova');
+  });
+
+  it('tocar num dia abre o painel com o que ha nele', async () => {
+    await abrir((r) => r.flush([evento('c-1', 'PROVA', diaDesteMes(12))]));
+
+    celula(12).click();
+    fixture.detectChanges();
+
+    const painel = fixture.nativeElement.querySelector('.dia-painel');
+    expect(painel).not.toBeNull();
+    expect(painel.textContent as string).toContain('12 de');
+  });
+
+  it('"Anotar neste dia" leva a data do dia aberto', async () => {
+    // O `?dia=` da tela de anotacao existia sem nenhum chamador: a lista corrida
+    // nao tinha dia para passar. A grade e o que finalmente da um.
+    await abrir((r) => r.flush([]));
+
+    celula(15).click();
+    fixture.detectChanges();
+
+    const anotar = fixture.nativeElement.querySelector(
+      '.dia-painel a[href*="/tabs/notas/nova"]',
+    ) as HTMLAnchorElement;
+    expect(anotar.getAttribute('href')).toContain(`dia=${diaDesteMes(15)}`);
+  });
+
+  it('dia sem nada diz que esta vazio, e nao se parece com falha', async () => {
+    await abrir((r) => r.flush([]));
+
+    celula(20).click();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('.dia-vazio')!.textContent,
+    ).toContain('Nada marcado neste dia');
+    expect(fixture.nativeElement.querySelector('.pf-aviso'))
+      .withContext('vazio de um dia nao pode virar aviso de falha')
+      .toBeNull();
+  });
+
+  it('o rotulo do dia fala as marcas — o pontinho colorido sozinho nao', async () => {
+    await abrir((r) => r.flush([evento('c-1', 'PROVA', diaDesteMes(12))]));
+
+    expect(celula(12).getAttribute('aria-label')).toBe('Dia 12, com prova');
+  });
+
+  it('andar de mes recarrega o periodo novo e fecha o dia aberto', async () => {
+    await abrir((r) => r.flush([evento('c-1', 'PROVA', diaDesteMes(12))]));
+    celula(12).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.dia-painel')).not.toBeNull();
+
+    (
+      fixture.nativeElement.querySelector(
+        'button[aria-label="Próximo mês"]',
+      ) as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    // Pede setembro, e nao agosto de novo.
+    const req = backend.expectOne((r) => r.url.endsWith('/eventos'));
+    const h = new Date();
+    const prox = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    const mm = String(prox.getMonth() + 1).padStart(2, '0');
+    expect(req.request.params.get('de')).toBe(`${prox.getFullYear()}-${mm}-01`);
+    req.flush([]);
+    backend.expectOne((r) => r.url.endsWith('/notas')).flush([]);
+    for (const t of backend.match((r) => r.url.endsWith('/turmas/minha'))) {
+      t.flush(null, { status: 500, statusText: 'x' });
+    }
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // O painel era de um dia de agosto: nao pode sobreviver a virada.
+    expect(fixture.nativeElement.querySelector('.dia-painel')).toBeNull();
   });
 });
