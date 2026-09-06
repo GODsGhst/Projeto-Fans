@@ -154,6 +154,16 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <!-- Gera build-info.properties. Serve a UMA pergunta: "o deploy que eu
+               empurrei ja esta no ar?". Sem isso a resposta exigia criar conta
+               descartavel e um registro so para ver se um campo novo aparecia. -->
+          <execution>
+            <goals>
+              <goal>build-info</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

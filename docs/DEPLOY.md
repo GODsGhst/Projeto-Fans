@@ -191,6 +191,40 @@ instalado é superfície que não precisa existir. Toda ação daqui fica no di�
 
 ---
 
+## O deploy subiu mesmo?
+
+`/api/v1/saude` devolve `{"status":"ok","build":"<8 hex>"}`. O `build` é um
+digesto opaco do instante da compilação: **muda a cada deploy** e não conta
+versão, data nem host — a rota continua sem ajudar quem estiver bisbilhando.
+
+```bash
+curl -s https://projetofans-api.onrender.com/api/v1/saude
+```
+
+Guarde o valor antes do push e compare depois. **Mudou, subiu.** Igual depois de
+vários minutos significa que o Render não redeployou — não que está lento.
+
+Antes disso existir, responder essa pergunta custava criar conta descartável,
+turma e registro só para ver se um campo novo aparecia na resposta. O ritual
+consumiu meia hora e deixou contas de teste no banco de produção.
+
+### Quando o `build` não muda
+
+O Render redeploya sozinho a cada push na branch configurada. Se o digesto não
+mudar depois de ~10 min, o problema **não é lentidão** — é que o deploy não
+disparou. Em `dashboard.render.com` → serviço `projetofans-api`:
+
+| Onde olhar | O que procura |
+|---|---|
+| Aba **Events** | Aparece um deploy novo? Se não, o gatilho não chegou |
+| **Settings → Build & Deploy** | `Auto-Deploy` está ligado? A branch é a que você empurrou? |
+| **Settings → Repository** | A conexão com o GitHub ainda está válida |
+| Aba **Logs** | Se o deploy rodou e falhou, o erro do Maven ou do Flyway está aqui |
+
+Botão **Manual Deploy → Deploy latest commit** força, quando o gatilho falhou.
+
+---
+
 ## Se der errado
 
 | Sintoma | Causa provável |
