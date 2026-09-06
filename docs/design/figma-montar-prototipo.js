@@ -39,7 +39,7 @@ const TELAS = [
     "y": 541,
     "w": 358,
     "h": 51,
-    "r": "Criar matéria",
+    "r": "Adicionar matéria",
     "back": false
    },
    {
@@ -923,7 +923,7 @@ const TELAS = [
     "y": 83,
     "w": 348,
     "h": 48,
-    "r": "+&nbsp;&nbsp;Nova matéria",
+    "r": "+&nbsp;&nbsp;Adicionar matér",
     "back": false
    },
    {
@@ -932,7 +932,7 @@ const TELAS = [
     "y": 725,
     "w": 348,
     "h": 48,
-    "r": "+ &nbsp;Enviar material",
+    "r": "+ &nbsp;Adicionar material",
     "back": false
    },
    {

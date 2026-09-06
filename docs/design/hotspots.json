@@ -9,7 +9,7 @@
       "alturaConteudo": 844,
       "aba": "materias",
       "semAbas": false,
-      "titulo": "Nova matéria",
+      "titulo": "Adicionar matéria",
       "alvos": [
         {
           "para": "materias",
@@ -22,7 +22,7 @@
         },
         {
           "para": "materias",
-          "rotulo": "Criar matéria",
+          "rotulo": "Adicionar matéria",
           "voltar": false,
           "x": 16,
           "y": 541,
@@ -864,7 +864,7 @@
       "alturaConteudo": 844,
       "aba": "cal",
       "semAbas": false,
-      "titulo": "Nova anotação",
+      "titulo": "Anotação",
       "alvos": [
         {
           "para": "cal",
@@ -920,7 +920,7 @@
       "alvos": [
         {
           "para": "nova-materia",
-          "rotulo": "+&nbsp;&nbsp;Nova matéria",
+          "rotulo": "+&nbsp;&nbsp;Adicionar matéria",
           "voltar": false,
           "x": 16,
           "y": 83,
@@ -929,7 +929,7 @@
         },
         {
           "para": "material",
-          "rotulo": "+ &nbsp;Enviar material",
+          "rotulo": "+ &nbsp;Adicionar material",
           "voltar": false,
           "x": 16,
           "y": 725,
@@ -1029,7 +1029,7 @@
       "alturaConteudo": 888,
       "aba": "materias",
       "semAbas": false,
-      "titulo": "Enviar material",
+      "titulo": "Adicionar material",
       "alvos": [
         {
           "para": "materias",

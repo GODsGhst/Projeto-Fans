@@ -34,6 +34,9 @@ AQUI = pathlib.Path(__file__).parent
 ORIGEM = AQUI / "telas-v3.html"
 DESTINO = AQUI / "hotspots.json"
 
+# Altura do quadro do aparelho; a medicao real sobrescreve no main.
+ALTURA_QUADRO = 844
+
 # Roda depois do script do mockup. Mede tudo e despeja num <pre> que o
 # --dump-dom devolve.
 MEDIDOR = """
@@ -170,6 +173,31 @@ def medir() -> dict:
     return json.loads(bruto)
 
 
+def ancorar_abas_no_rodape(dados: dict) -> int:
+    """
+    Poe as abas no rodape REAL de cada tela, e nao no do quadro de 844.
+
+    POR QUE ISTO EXISTE AQUI DENTRO
+    A medicao acontece com o aparelho na altura padrao (844), entao a barra de
+    abas e medida em y=783 para toda tela. Mas a tela que ROLA e exportada na
+    altura do conteudo — a Home tem 1309 —, e no PNG dela as abas ficam no fim,
+    em 1248. Com o valor da medicao, os quatro alvos caem no meio do conteudo:
+    as abas param de funcionar em toda tela que rola.
+
+    Ja foi consertado uma vez por fora, num comando avulso. Ai o extrator rodou
+    de novo e a correcao evaporou junto — por isso agora ela mora no extrator.
+    """
+    ajustados = 0
+    for tela in dados["telas"]:
+        altura = int(tela.get("alturaConteudo") or ALTURA_QUADRO)
+        if altura <= ALTURA_QUADRO:
+            continue
+        for aba in tela["abas"]:
+            aba["y"] = altura - (ALTURA_QUADRO - aba["y"])
+            ajustados += 1
+    return ajustados
+
+
 def conferir(dados: dict) -> None:
     """Falha alto em vez de entregar um mapa mudo e quebrado."""
     nomes = {t["nome"] for t in dados["telas"]}
@@ -191,6 +219,9 @@ def conferir(dados: dict) -> None:
 
 if __name__ == "__main__":
     dados = medir()
+    ALTURA_QUADRO_REAL = dados["quadro"]["h"]
+    globals()["ALTURA_QUADRO"] = ALTURA_QUADRO_REAL
+    movidas = ancorar_abas_no_rodape(dados)
     conferir(dados)
     DESTINO.write_text(json.dumps(dados, ensure_ascii=False, indent=2), encoding="utf-8")
     quadro = dados["quadro"]
@@ -199,4 +230,5 @@ if __name__ == "__main__":
     for t in dados["telas"]:
         print(f'  {t["nome"]:<20} {len(t["alvos"]):>2} alvos + {len(t["abas"])} abas')
     total = sum(len(t["alvos"]) + len(t["abas"]) for t in dados["telas"])
+    print(f'{movidas} alvos de aba ancorados no rodape das telas que rolam')
     print(f'{total} hotspots no total -> {DESTINO.name}')

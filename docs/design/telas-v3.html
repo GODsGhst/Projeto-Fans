@@ -754,7 +754,7 @@
         <div class="t-barra">
           <span class="esq">
             <button class="voltar" type="button" data-ir="materias" aria-label="Voltar">&larr;</button>
-            <h3>Nova matéria</h3>
+            <h3>Adicionar matéria</h3>
           </span>
         </div>
         <div class="t-corpo">
@@ -792,7 +792,7 @@
             Por isso a escolha é entre elas, e não livre.
           </p>
 
-          <button class="botao" type="button" data-ir="materias">Criar matéria</button>
+          <button class="botao" type="button" data-ir="materias">Adicionar matéria</button>
         </div>
       </div>
 
@@ -1445,14 +1445,14 @@
         <div class="t-barra">
           <span class="esq">
             <button class="voltar" type="button" data-ir="cal" aria-label="Voltar para o calendário">&larr;</button>
-            <h3>Nova anotação</h3>
+            <h3>Anotação</h3>
           </span>
           <span>25 ago</span>
         </div>
         <div class="t-corpo">
           <p class="rotulo">quem vai ver</p>
           <div class="seg" id="seg-alcance">
-            <button type="button" data-alcance="turma" aria-pressed="true">A turma toda</button>
+            <button type="button" data-alcance="turma" aria-pressed="true">A turma</button>
             <button type="button" data-alcance="pessoal" aria-pressed="false">Só eu</button>
           </div>
 
@@ -1474,7 +1474,7 @@
             <span>matéria</span>
           </div>
 
-          <button class="botao" type="button">Publicar para a turma</button>
+          <button class="botao" type="button">Salvar</button>
         </div>
       </div>
 
@@ -1486,7 +1486,7 @@
         </div>
         <div class="t-corpo">
           <button class="add-linha" type="button" data-ir="nova-materia">
-            +&nbsp;&nbsp;Nova matéria
+            +&nbsp;&nbsp;Adicionar matéria
           </button>
 
           <p class="rotulo">grade</p>
@@ -1538,7 +1538,7 @@
             </span>
           </div>
 
-          <button class="add-linha" type="button" data-ir="material">+ &nbsp;Enviar material</button>
+          <button class="add-linha" type="button" data-ir="material">+ &nbsp;Adicionar material</button>
 
           <p class="rotulo">eventos</p>
           <div class="ev ev--prova">
@@ -1607,7 +1607,7 @@
         <div class="t-barra">
           <span class="esq">
             <button class="voltar" type="button" data-ir="materias" aria-label="Voltar para Matérias">&larr;</button>
-            <h3>Enviar material</h3>
+            <h3>Adicionar material</h3>
           </span>
           <span>banco de dados</span>
         </div>
@@ -1681,7 +1681,7 @@
             <span>Todo mundo da turma vai ver, com o seu nome. Ninguém aprova antes — publica direto. Só você pode apagar depois.</span>
           </div>
 
-          <button class="botao" type="button">Publicar material</button>
+          <button class="botao" type="button">Adicionar material</button>
 
           <p class="aula-meta" style="text-align:center">Até 15 MB · pdf, imagem, slide ou doc</p>
 
@@ -1921,7 +1921,7 @@
     alertaTxt.textContent = turma
       ? 'Todo mundo da turma vai ver isto, com o seu nome. Só você pode editar ou apagar depois.'
       : 'Só você vê. Não aparece para mais ninguém e não altera o que a turma enxerga.';
-    botaoPub.textContent = turma ? 'Publicar para a turma' : 'Salvar só para mim';
+    botaoPub.textContent = turma ? 'Salvar' : 'Salvar só para mim';
   });
 
   // ---- calendario ------------------------------------------------------
