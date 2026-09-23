@@ -113,7 +113,7 @@ import { mensagemDeErro } from '../auth/erro';
             >
           }
 
-          <p class="cache-aviso">
+          <p class="pf-cache-aviso">
             O líder não edita nem apaga registro de ninguém. Ele só oculta o que
             não devia estar ali, e pode transferir a liderança.
           </p>
@@ -159,11 +159,11 @@ import { mensagemDeErro } from '../auth/erro';
       border: 1px solid var(--rule);
       background: transparent;
       color: var(--ink);
-      transition: transform 0.14s var(--mola);
+      transition: transform var(--dur-toque) var(--mola);
       -webkit-tap-highlight-color: transparent;
     }
     .botao-copiar:active {
-      transform: scale(0.98);
+      transform: scale(var(--press));
     }
     .botao-copiar:focus-visible {
       outline: 2px solid var(--accent);

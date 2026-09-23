@@ -69,6 +69,19 @@ describe('NotificacoesService', () => {
     expect(agendadas[0].schedule.at instanceof Date).toBeTrue();
   });
 
+  it('agenda com allowWhileIdle — sem ele o aviso das 19h nao dispara', async () => {
+    // Nao e detalhe de configuracao. Sem `allowWhileIdle` o plugin usa
+    // `alarmManager.set(RTC, ...)`: alarme inexato que nao acorda o aparelho, e
+    // as 19h o celular esta em Doze. Este teste existe porque o defeito e
+    // invisivel — a suite passava, o `schedule` era chamado, e nada aparecia no
+    // celular. Se alguem tirar a flag, quebra aqui e nao no dia da prova.
+    const p = plugin('granted');
+    await servicoCom(p).sincronizar([PROVA]);
+
+    const agendadas = p.schedule.calls.mostRecent().args[0].notifications;
+    expect(agendadas[0].schedule.allowWhileIdle).toBeTrue();
+  });
+
   it('cancela o que ja estava agendado antes de reagendar', async () => {
     // Reagendar sem cancelar duplicaria o aviso a cada abertura da Home.
     const p = plugin('granted', [111, 222]);
@@ -124,6 +137,38 @@ describe('NotificacoesService', () => {
     const p = plugin('granted');
     await servicoCom(p).sincronizar([{ ...PROVA, visivelTurma: false }]);
 
+    expect(p.schedule).not.toHaveBeenCalled();
+  });
+
+  it('estado() conta a verdade, inclusive o "nao" definitivo', async () => {
+    // O `denied` e o estado que justifica a tela de Ajustes existir: o servico
+    // volta em silencio, e sem alguem perguntando o estado o app nao tem um so
+    // lugar que diga que os avisos estao desligados.
+    expect(await servicoCom(plugin('denied')).estado()).toBe('denied');
+    TestBed.resetTestingModule();
+    expect(await servicoCom(plugin('granted')).estado()).toBe('granted');
+    TestBed.resetTestingModule();
+    expect(await servicoCom(null).estado()).toBe('sem-suporte');
+  });
+
+  it('testar() agenda para daqui a segundos, com a mesma flag do aviso real', async () => {
+    // "Mesma flag" e o ponto: um teste que passasse sem `allowWhileIdle`
+    // provaria que o BOTAO funciona e nao que o AVISO chega — que e a diferenca
+    // exata entre a suite verde e o celular mudo.
+    const p = plugin('granted');
+    const r = await servicoCom(p).testar();
+
+    expect(r).toBe('agendado');
+    const n = p.schedule.calls.mostRecent().args[0].notifications[0];
+    expect(n.schedule.allowWhileIdle).toBeTrue();
+    const emSegundos = n.schedule.at.getTime() - Date.now();
+    expect(emSegundos).toBeGreaterThan(0);
+    expect(emSegundos).toBeLessThanOrEqual(60_000);
+  });
+
+  it('testar() com permissao negada devolve negado e nao agenda', async () => {
+    const p = plugin('denied');
+    expect(await servicoCom(p).testar()).toBe('negado');
     expect(p.schedule).not.toHaveBeenCalled();
   });
 });

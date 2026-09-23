@@ -53,7 +53,7 @@
   font: inherit;
   font-size: 15px;
   color: var(--ink);
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--r-md);
 }
@@ -113,26 +113,10 @@
   color: var(--ink-3);
 }
 
-.alerta {
-  padding: 10px 12px;
-  font-size: 12.5px;
-  line-height: 1.42;
-  color: var(--ink-2);
-  background: var(--rule-soft);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-sm);
-}
-
-/* Falha da acao. Solido, nao tracejado: `.pf-aviso` e estado da tela ("sem
-   conexao", "carregando"); isto aqui e "o que voce pediu nao aconteceu", e as
-   duas coisas nao podem se parecer. */
-.pf-erro {
-  margin: 0;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--ink);
-  background: var(--rule-soft);
-  border: 1px solid var(--ink-3);
-  border-radius: var(--r-sm);
-}
+/* `.alerta` e `.pf-erro` MUDARAM-SE PARA global.scss em 2026-09-20.
+   Elas sao utilitario de PAGINA, nao estilo do formulario de auth, e morar aqui
+   as deixava invisiveis fora daqui: com encapsulamento Emulated, `styleUrls`
+   so alcanca o template do proprio componente. Quatro telas que nao importam
+   este arquivo — calendario, evento, anexar-material e transferir — usavam as
+   duas e renderizavam paragrafo cru. Em global.scss nao ha escopo e o problema
+   deixa de poder acontecer. */

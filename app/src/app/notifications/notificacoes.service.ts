@@ -25,7 +25,7 @@ export interface PluginNotificacoes {
       id: number;
       title: string;
       body: string;
-      schedule: { at: Date };
+      schedule: { at: Date; allowWhileIdle: boolean };
     }[];
   }): Promise<unknown>;
 }
@@ -94,9 +94,77 @@ export class NotificacoesService {
         id: idDe(a.eventoId),
         title: a.titulo,
         body: a.corpo,
-        schedule: { at: a.dispararEm },
+        // `allowWhileIdle` NAO e otimizacao: e a diferenca entre avisar e nao
+        // avisar. Sem ele o plugin chama `alarmManager.set(RTC, ...)` — alarme
+        // inexato e que NAO acorda o aparelho. As 19h o celular esta parado na
+        // mesa, em Doze, e o Android adia o disparo por horas. Com ele a chamada
+        // vira `RTC_WAKEUP`, que e o unico tipo que atravessa o Doze.
+        //
+        // O caminho exato nao salva: desde o Android 14 o SCHEDULE_EXACT_ALARM
+        // deixou de ser concedido na instalacao, entao `canScheduleExactAlarms()`
+        // e falso e o plugin cai no ramo inexato de qualquer jeito. Quem decide
+        // se o aviso aparece e esta linha, nao a permissao.
+        //
+        // Preco: em Doze o disparo pode derivar alguns minutos. Para um aviso da
+        // vespera as 19h isso nao e nada — e a alternativa e nao avisar.
+        schedule: { at: a.dispararEm, allowWhileIdle: true },
       })),
     });
+  }
+
+  /**
+   * O que o sistema operacional responde sobre avisos, neste aparelho, agora.
+   *
+   * Existe porque o servico falha em silencio de proposito: permissao negada
+   * faz `sincronizar` voltar sem agendar e sem reclamar, que e o certo no meio
+   * de uma carga de tela — mas deixava o app sem NENHUM lugar que dissesse
+   * "o Android esta bloqueando os seus avisos". No Android o "nao" e para
+   * sempre; se a tela nao contar, ninguem descobre.
+   */
+  async estado(): Promise<EstadoAviso> {
+    if (this.plugin === null) {
+      return 'sem-suporte';
+    }
+    const atual = await this.plugin.checkPermissions();
+    return atual.display === 'granted' || atual.display === 'denied'
+      ? atual.display
+      : 'prompt';
+  }
+
+  /**
+   * Um aviso daqui a dez segundos.
+   *
+   * O aviso de verdade e da vespera as 19h — o que significa que conferir se a
+   * notificacao funciona custava esperar ate o dia seguinte. Foi exatamente
+   * esse custo que deixou um defeito real (alarme sem `allowWhileIdle`, que o
+   * Doze engolia) viver sem ninguem perceber: a suite passava, `schedule` era
+   * chamado, e o celular nao tocava.
+   *
+   * Dez segundos, e nao um ou dois: o alarme atravessa o AlarmManager de
+   * verdade, com a mesma flag do aviso real. Um teste que desenhasse a
+   * notificacao na hora provaria menos do que o usuario precisa saber.
+   */
+  async testar(): Promise<ResultadoTeste> {
+    if (this.plugin === null) {
+      return 'sem-suporte';
+    }
+    if (!(await this.permitido())) {
+      return 'negado';
+    }
+    await this.plugin.schedule({
+      notifications: [
+        {
+          id: ID_TESTE,
+          title: 'Teste de aviso',
+          body: 'Se voce esta lendo isto, o aviso da vespera vai chegar.',
+          schedule: {
+            at: new Date(Date.now() + 10_000),
+            allowWhileIdle: true,
+          },
+        },
+      ],
+    });
+    return 'agendado';
   }
 
   private async limparPendentes(): Promise<void> {
@@ -136,3 +204,19 @@ function idDe(eventoId: string): number {
   }
   return Math.abs(h);
 }
+
+/** O que a tela de Ajustes precisa saber para nao mentir sobre os avisos. */
+export type EstadoAviso = 'sem-suporte' | 'granted' | 'denied' | 'prompt';
+
+/** `negado` e informacao, nao erro: e o unico estado que o usuario pode consertar. */
+export type ResultadoTeste = 'agendado' | 'negado' | 'sem-suporte';
+
+/**
+ * Id fixo do aviso de teste.
+ *
+ * Fora da faixa que `idDe` produz na pratica, mas a garantia real e outra: uma
+ * carga da Home cancela TODO pendente antes de reagendar, inclusive este. Quem
+ * toca em "testar" fica dez segundos na tela de Ajustes, entao na pratica nao
+ * colide com nada — e se colidisse, o preco seria um aviso de teste perdido.
+ */
+const ID_TESTE = 2_000_000_001;

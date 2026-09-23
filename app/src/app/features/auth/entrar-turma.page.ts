@@ -191,7 +191,7 @@ interface TurmaCriada {
       letter-spacing: 0.22em;
       text-align: center;
       padding: 18px 12px;
-      border-radius: 14px;
+      border-radius: var(--r-md);
       background: var(--surface-2, #fdfefc);
       border: 1px solid var(--accent-line, rgba(15, 118, 110, 0.28));
       color: var(--ink, #14181a);

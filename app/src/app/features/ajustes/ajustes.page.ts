@@ -14,6 +14,8 @@ import {
 } from '@ionic/angular/standalone';
 
 import { ChaveIaService } from '../../core/chave-ia.service';
+import { NotificacoesService } from '../../notifications/notificacoes.service';
+import type { EstadoAviso } from '../../notifications/notificacoes.service';
 
 /**
  * Ajustes: hoje, só a chave da IA.
@@ -55,6 +57,25 @@ import { ChaveIaService } from '../../core/chave-ia.service';
 
     <ion-content [fullscreen]="true">
       <div class="pf-auth">
+        <div class="marca">
+          <b>Avisos da véspera</b>
+          <span>
+            Um aviso às 19h do dia anterior a cada prova e entrega. Ele é
+            agendado neste aparelho, então chega mesmo com o app fechado.
+          </span>
+        </div>
+
+        <p class="rot-campo">estado neste aparelho</p>
+        <p class="pf-aviso" role="status">{{ frase() }}</p>
+
+        @if (estado() !== 'sem-suporte') {
+          <button class="botao botao--fantasma" type="button" (click)="testar()">
+            Testar agora
+          </button>
+        }
+
+        <hr class="separa" />
+
         <div class="marca">
           <b>Chave da IA</b>
           <span>
@@ -114,6 +135,12 @@ import { ChaveIaService } from '../../core/chave-ia.service';
     </ion-content>
   `,
   styles: `
+    .separa {
+      margin: 22px 0 4px;
+      border: 0;
+      border-top: 1px solid var(--rule-soft);
+    }
+
     .valor-chave {
       font-family: var(--mono);
       font-size: 14px;
@@ -124,12 +151,39 @@ import { ChaveIaService } from '../../core/chave-ia.service';
 })
 export class AjustesPage {
   private readonly chaves = inject(ChaveIaService);
+  private readonly avisos = inject(NotificacoesService);
 
   protected readonly mascarada = signal('');
   protected readonly salvo = signal(false);
+  protected readonly estado = signal<EstadoAviso>('prompt');
+  protected readonly frase = signal('Verificando…');
 
   constructor() {
     void this.atualizar();
+    void this.lerEstado();
+  }
+
+  /**
+   * Dispara o teste e escreve o que aconteceu.
+   *
+   * `negado` nao e erro: e o unico estado que a pessoa consegue consertar
+   * sozinha, e a frase tem de dizer ONDE. No Android o app ja gastou a unica
+   * pergunta que tinha — insistir daqui nao abre caixa nenhuma.
+   */
+  protected async testar(): Promise<void> {
+    this.frase.set('Agendando…');
+    const r = await this.avisos.testar();
+    if (r === 'agendado') {
+      this.frase.set('Agendado. O aviso deve aparecer em uns 10 segundos — pode sair desta tela.');
+      return;
+    }
+    await this.lerEstado();
+  }
+
+  private async lerEstado(): Promise<void> {
+    const e = await this.avisos.estado();
+    this.estado.set(e);
+    this.frase.set(FRASES[e]);
   }
 
   protected async guardar(valor: string): Promise<void> {
@@ -142,3 +196,22 @@ export class AjustesPage {
     this.mascarada.set(await this.chaves.mascarada());
   }
 }
+
+/**
+ * Uma frase por estado, e cada uma diz o que fazer a seguir.
+ *
+ * `denied` e a que justifica a tela existir: no Android a recusa e definitiva,
+ * o servico volta em silencio, e sem isto o app inteiro nao tinha um so lugar
+ * que contasse que os avisos estavam desligados.
+ */
+const FRASES: Record<EstadoAviso, string> = {
+  granted: 'Ligado. Você recebe o aviso às 19h da véspera.',
+  denied:
+    'O Android está bloqueando os avisos deste app, e daqui não dá para pedir de novo. ' +
+    'Para religar: Ajustes do celular › Apps › projetoFans › Notificações.',
+  prompt:
+    'O Android ainda não perguntou. Ele pergunta na primeira prova que houver para avisar — ' +
+    'ou agora, se você tocar em Testar.',
+  'sem-suporte':
+    'Avisos só existem no app instalado no celular. No navegador não há o que agendar.',
+};

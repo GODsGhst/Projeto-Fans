@@ -108,6 +108,51 @@
   line-height: 1.4;
 }
 
+/* Falha da acao. Solido, nao tracejado: `.pf-aviso` e estado da tela ("sem
+   conexao", "carregando"); isto aqui e "o que voce pediu nao aconteceu", e as
+   duas coisas nao podem se parecer.
+
+   Vivia em `features/auth/auth.scss`, e quatro telas de fora de auth a usavam
+   sem importar o arquivo — o erro saia como paragrafo cru justamente na hora em
+   que a pessoa precisa ler que algo deu errado. */
+.pf-erro {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--rule-soft);
+  border: 1px solid var(--ink-3);
+  border-radius: var(--r-sm);
+}
+
+/* Aviso neutro dentro de um formulario. Mesmo motivo de mudanca do `.pf-erro`. */
+.alerta {
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.42;
+  color: var(--ink-2);
+  background: var(--rule-soft);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+}
+
+/* Explicacao da regra: "so o autor edita", "o codigo vale para a turma toda".
+   Texto corrido, sem caixa.
+
+   NAO reaproveita `.pf-aviso` de proposito. Aquele e tracejado e significa
+   estado degradado da tela; este e a regra do app funcionando normalmente.
+   Fazer os dois iguais ensinaria a pessoa a ignorar o tracejado.
+
+   Era `.cache-aviso` e nao existia em lugar nenhum: sete paragrafos em seis
+   telas saiam com o tamanho default do navegador. */
+.pf-cache-aviso {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
 /* Envelope de toque: transforma um card inteiro em link sem mudar como ele se
    parece. O alvo e o card todo de proposito — num celular, um "ver mais" de
    12px ao lado do card e um alvo que erra. Usada por Home, Calendario e a tela
@@ -146,12 +191,12 @@
   border: 0;
   border-radius: var(--r-md);
   cursor: pointer;
-  transition: transform 0.14s var(--mola);
+  transition: transform var(--dur-toque) var(--mola);
   -webkit-tap-highlight-color: transparent;
 }
 
 .botao:active {
-  transform: scale(0.975);
+  transform: scale(var(--press));
 }
 
 .botao:focus-visible {
@@ -174,4 +219,65 @@
   color: var(--ink);
   background: transparent;
   border: 1px solid var(--rule);
+}
+
+/* Contorno, largura do CONTEUDO — o irmao do `.botao--fantasma`, que e de
+   largura cheia. Nasceu pelo mesmo motivo que o `.botao` nasceu: o desenho
+   estava copiado com outro nome em cada tela que precisava dele (`.cal-nav`,
+   `.ocultar-nota`, `.botao-copiar`, `.do-autor .neutro`), divergindo no
+   tamanho da fonte e no padding sem que ninguem tivesse decidido isso.
+
+   O CSS embutido do calendario ja tinha estourado o orcamento de build por
+   causa dessas copias: duas pilulas de contorno no mesmo arquivo, com cinco
+   declaracoes identicas cada. */
+.botao--fio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--rule);
+}
+
+.botao--pilula {
+  border-radius: var(--r-pill);
+}
+
+/* Alvo pequeno recua mais: em 36px, 2% nao se percebe. */
+.botao--fio.botao--pilula:active {
+  transform: scale(var(--press-forte));
+}
+
+/* ---------------------------------------------------------------------------
+   Quem pediu menos movimento recebe menos movimento.
+
+   Isto entrou junto com `--mola`, e por causa dela. Enquanto o token era
+   indefinido, `transition: transform .14s var(--mola)` era invalida no tempo de
+   valor computado e as quatro longhands caiam para o inicial — `duration: 0s`.
+   Nada animava, e a ausencia desta regra era inofensiva POR ACIDENTE. Definir o
+   token ligou oito gestos de uma vez e transformou o furo teorico em real.
+
+   `0.01ms` e nao `0`: o evento `transitionend` ainda dispara, entao codigo que
+   espera o fim de uma transicao nao trava. E o `!important` e necessario porque
+   as telas trazem estilo inline — mesma origem, e sem ele a especificidade do
+   componente ganha desta regra global.
+
+   Repare no que ela NAO faz: `transform: scale()` continua sendo aplicado. O
+   alvo continua recuando sob o dedo, so deixa de ser interpolado. Isso importa
+   porque `-webkit-tap-highlight-color: transparent` ja desligou o realce nativo
+   do Android — sem o recuo, o toque ficaria sem nenhuma confirmacao visual.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

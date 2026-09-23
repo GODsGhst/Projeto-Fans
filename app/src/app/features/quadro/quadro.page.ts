@@ -168,7 +168,7 @@ export interface CartaoVm {
                 <span class="quem">{{ p.pedidoPor }} pediu · você decide</span>
               </a>
             }
-            <p class="cache-aviso">
+            <p class="pf-cache-aviso">
               O líder não apaga registro de ninguém — ele pede. Quem apaga é
               sempre quem criou, e ignorar o pedido é uma resposta válida.
             </p>
@@ -283,8 +283,11 @@ export interface CartaoVm {
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
+    .marcar {
+      transition: transform var(--dur-toque) var(--mola);
+    }
     .marcar:active {
-      transform: scale(0.97);
+      transform: scale(var(--press));
     }
     /* O vetor herda a cor do botao: um traco, sem preenchimento, do mesmo peso
        dos icones da barra de abas. Marcado ganha o quadro cheio — o estado se le

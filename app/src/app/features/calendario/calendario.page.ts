@@ -79,7 +79,7 @@ import { mensagemDeErro } from '../auth/erro';
              unica pergunta que se faz olhando um calendario. -->
         <div class="cal-topo">
           <button
-            class="cal-nav"
+            class="botao botao--fio botao--pilula cal-nav"
             type="button"
             (click)="andarMes(-1)"
             aria-label="Mês anterior"
@@ -88,7 +88,7 @@ import { mensagemDeErro } from '../auth/erro';
           </button>
           <p class="cal-mes">{{ grade().nome }} {{ grade().ano }}</p>
           <button
-            class="cal-nav"
+            class="botao botao--fio botao--pilula cal-nav"
             type="button"
             (click)="andarMes(1)"
             aria-label="Próximo mês"
@@ -234,7 +234,7 @@ import { mensagemDeErro } from '../auth/erro';
               <!-- O lider so oculta o que ele consegue LER. Rascunho pessoal de
                    outra pessoa nunca chega aqui, entao nao ha botao para ele. -->
               <button
-                class="ocultar-nota"
+                class="botao botao--fio botao--pilula ocultar-nota"
                 type="button"
                 [disabled]="moderando()"
                 (click)="ocultarNota(n.id)"
@@ -269,20 +269,13 @@ import { mensagemDeErro } from '../auth/erro';
       font-weight: 700;
       letter-spacing: -0.01em;
     }
+    /* So o que difere de .botao--fio.botao--pilula: seta quadrada de 36px. */
     .cal-nav {
-      font: inherit;
       font-size: 20px;
       line-height: 1;
-      cursor: pointer;
       width: 36px;
       height: 36px;
-      border-radius: var(--r-pill);
-      border: 1px solid var(--rule);
-      background: transparent;
-      color: var(--ink-2);
-    }
-    .cal-nav:active {
-      transform: scale(0.92);
+      padding: 0;
     }
 
     .cal {
@@ -316,8 +309,11 @@ import { mensagemDeErro } from '../auth/erro';
       color: var(--ink);
       -webkit-tap-highlight-color: transparent;
     }
+    .cal-dia {
+      transition: transform var(--dur-toque) var(--mola);
+    }
     .cal-dia:active {
-      transform: scale(0.88);
+      transform: scale(var(--press-forte));
     }
     /* Prova e fundo cheio; entrega e contorno. Forma, nao cor: sobrevive a
        escala de cinza e ao daltonismo, como no resto do app. */
@@ -356,6 +352,14 @@ import { mensagemDeErro } from '../auth/erro';
       background: none;
       box-shadow: inset 0 0 0 1px var(--ink-3);
     }
+    /* Dentro do dia-prova o fundo inverte e o contorno tem de inverter junto.
+       Com --ink-3 sobre --prova-bg a marca media 3.23:1 no claro e 2.74:1 no
+       escuro — abaixo dos 3:1 que a 1.4.11 pede para elemento grafico, num
+       alvo de 4x4px. Num dia que tem prova, a marca de anotacao praticamente
+       sumia, e ela e o unico sinal de que ha anotacao naquele dia. */
+    .cal-dia.tem-prova .marca-nota {
+      box-shadow: inset 0 0 0 1px var(--prova-fg-2);
+    }
 
     .dia-painel {
       display: flex;
@@ -374,16 +378,10 @@ import { mensagemDeErro } from '../auth/erro';
     }
 
     .ocultar-nota {
-      font: inherit;
       font-size: 12px;
-      cursor: pointer;
       align-self: flex-start;
       padding: 5px 10px;
       margin-bottom: 4px;
-      border-radius: var(--r-pill);
-      border: 1px solid var(--rule);
-      background: transparent;
-      color: var(--ink-2);
     }
     .nota-oculta {
       font-size: 12px;

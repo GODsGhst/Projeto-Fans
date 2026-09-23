@@ -139,7 +139,7 @@ export const PALETA: readonly {
           aria-label="Professor"
         />
 
-        <p class="cache-aviso">
+        <p class="pf-cache-aviso">
           A sala aqui é a de sempre. Quando uma prova cair em outra sala, dá
           para dizer isso na própria prova — sem mexer na matéria.
         </p>
@@ -199,8 +199,12 @@ export const PALETA: readonly {
       -webkit-tap-highlight-color: transparent;
     }
 
+    .cores-pick button {
+      transition: transform var(--dur-toque) var(--mola);
+    }
+
     .cores-pick button:active {
-      transform: scale(0.9);
+      transform: scale(var(--press-forte));
     }
 
     /* Anel, nao brilho: em escala de cinza o anel sobrevive e o brilho nao. */

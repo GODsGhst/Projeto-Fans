@@ -135,7 +135,7 @@ import { mensagemDeErro } from '../auth/erro';
               </div>
             }
 
-            <p class="cache-aviso">
+            <p class="pf-cache-aviso">
               A autoria não muda de dono junto com o cargo: tudo o que você
               cadastrou continua seu depois de passar a liderança.
             </p>
@@ -159,11 +159,11 @@ import { mensagemDeErro } from '../auth/erro';
       border: 1px solid var(--rule);
       box-shadow: var(--e1);
       color: var(--ink);
-      transition: transform 0.14s var(--mola);
+      transition: transform var(--dur-toque) var(--mola);
       -webkit-tap-highlight-color: transparent;
     }
     .candidato:active {
-      transform: scale(0.99);
+      transform: scale(var(--press));
     }
     .candidato:focus-visible {
       outline: 2px solid var(--accent);

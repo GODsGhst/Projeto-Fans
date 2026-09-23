@@ -42,6 +42,10 @@ import { materialVm } from '../material-vm';
   selector: 'app-evento',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // `.rot-campo` e `.campo--linha` sao do formulario do design system e vivem
+  // em auth.scss. Sem esta linha o motivo da moderacao era um <input> cru: com
+  // encapsulamento Emulated, a classe existe no HTML e o estilo nao alcanca.
+  styleUrls: ['../auth/auth.scss'],
   imports: [
     IonHeader,
     IonToolbar,
@@ -138,7 +142,7 @@ import { materialVm } from '../material-vm';
                   placeholder="foto indevida, duplicado…"
                   aria-label="Motivo"
                 />
-                <p class="cache-aviso">
+                <p class="pf-cache-aviso">
                   Fica registrado com o seu nome. Quem criou continua vendo o
                   registro em "não listados". Você poderá desfazer aqui mesmo,
                   logo depois — mas só até sair desta tela.
@@ -171,7 +175,7 @@ import { materialVm } from '../material-vm';
                   placeholder="duplicado, informação errada…"
                   aria-label="Motivo"
                 />
-                <p class="cache-aviso">
+                <p class="pf-cache-aviso">
                   O pedido aparece no Meu quadro de quem criou, com o seu nome e
                   este motivo. Quem apaga é sempre a pessoa que criou — você
                   está pedindo, não apagando.
@@ -358,9 +362,15 @@ import { materialVm } from '../material-vm';
     /* Apagar não é vermelho gritante: o app usa forma, não cor, para peso — e a
        confirmação já é o freio. Vermelho aqui competiria com o vermelho de erro,
        que significa outra coisa. */
+    /* --ink-2, e nao vermelho, porque e exatamente o que o comentario acima
+       promete. Ate 2026-09-20 estas duas linhas diziam var(--m-vermelho,
+       #b91c1c): o token nunca existiu (o nome real e --m-09-vermelho), entao
+       so o fallback pintava — e o fallback e o hex da HUE DA MATERIA m-09.
+       Uma cor que identifica disciplina tinha virado cromo de UI, contra a
+       premissa escrita no variables.scss, e media 2.68:1 no escuro. */
     .do-autor .perigo {
-      border-color: var(--m-vermelho, #b91c1c);
-      color: var(--m-vermelho, #b91c1c);
+      border-color: var(--ink-2);
+      color: var(--ink-2);
     }
     .do-autor .neutro:focus-visible,
     .do-autor .perigo:focus-visible {

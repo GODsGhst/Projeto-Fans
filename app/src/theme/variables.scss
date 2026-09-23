@@ -1,9 +1,28 @@
 // ============================================================================
 // projetoFans — tokens do design system
 //
-// Fonte: docs/design/design-system-v1.html, secao "O que vira SCSS".
-// Os nomes sao identicos aos do mockup de proposito: quando alguem comparar a
-// tela com o arquivo aprovado, os tokens tem que bater sem traducao.
+// Fonte: docs/design/telas-v3.html, o mockup aprovado e levado ao testplay.
+//
+// ANTES DE 2026-09-20 ESTE ARQUIVO SEGUIA docs/design/design-system-v1.html,
+// que e de julho. As telas, porem, foram escritas copiando CSS do v3. Os dois
+// vocabularios nunca se encontraram, e o resultado era silencioso e caro:
+//
+//   - 7 tokens que as telas usam (--surface, --surface-2, --e1, --r-pill,
+//     --mola, --accent-soft, --accent-line) nao existiam aqui. Sao 29
+//     declaracoes em 8 telas que o navegador descartava inteiras — cartao sem
+//     fundo, sem sombra, canto quadrado onde era pilula, botao sem animacao.
+//     Nenhum erro de build, nenhum teste vermelho: `var()` indefinido invalida
+//     a declaracao no tempo de valor computado e ela some.
+//   - --ink-3 estava em #7C8486: 3.33:1 sobre --paper. REPROVA AA para texto
+//     pequeno — e --ink-3 e a cor da AUTORIA, que e o nao-negociavel numero 1.
+//     No escuro reprovava em 3 das 3 superficies.
+//
+// O v3 ja tinha consertado as duas coisas. Isto aqui e a porta dele, nao um
+// redesenho: os valores abaixo sao os do arquivo aprovado, nao valores novos.
+//
+// Medido, nao afirmado — `node docs/design/validar-cromo.mjs`:
+//   claro:  ink 14.72 / ink-2 7.01 / ink-3 4.56 sobre --paper. 6/6 passam.
+//   escuro: 12/12 combinacoes de tinta x superficie passam AA.
 //
 // O cromo e cromaticamente quieto porque os dados ja carregam 12 hues, uma por
 // materia. UI colorida brigaria com o unico canal que identifica materia.
@@ -13,26 +32,60 @@
 // ============================================================================
 
 :root {
-  // ---- cromo ----
-  --paper:      #EEF0EC;   // ground da tela — cinza-papel, vies verde
-  --panel:      #F7F8F6;   // superficie elevada
+  // ---- escada de superficie ----
+  // A mudanca central do v3. Na v1 havia dois tons quase iguais (1.077:1) e a
+  // tela lia como documento impresso: o cartao era DESENHADO SOBRE o fundo. Com
+  // tres degraus e sombra de verdade o cartao fica ACIMA do fundo.
+  --paper:      #E7EAE5;   // ground rebaixado — cinza-papel, vies verde
+  --surface:    #F7F9F6;   // cartao
+  --surface-2:  #FDFEFC;   // flutuante (folha, menu, o que sobe mais)
+
+  // ---- tinta ----
   --ink:        #14181A;   // texto primario
-  --ink-2:      #4A5254;   // texto secundario
-  --ink-3:      #7C8486;   // rotulo, autoria, metadado
-  --rule:       rgba(20, 24, 26, .14);
-  --rule-soft:  rgba(20, 24, 26, .07);
-  --accent:     #0F766E;   // so o que e interativo. NUNCA identifica materia
-  --accent-ink: #FFFFFF;
+  --ink-2:      #464E50;   // texto secundario
+  --ink-3:      #626A6C;   // rotulo, AUTORIA, metadado — 4.56:1, passa AA
+  --rule:       rgba(20, 24, 26, .10);
+  --rule-soft:  rgba(20, 24, 26, .05);
+
+  // ---- acento: so o que e interativo. NUNCA identifica materia ----
+  --accent:      #0F766E;
+  --accent-ink:  #FFFFFF;
+  --accent-soft: rgba(15, 118, 110, .12);   // fundo de estado selecionado
+  --accent-line: rgba(15, 118, 110, .28);   // borda do mesmo estado
 
   // prova = bloco solido no valor OPOSTO ao da pagina
   --prova-bg:   #14181A;
   --prova-fg:   #EEF0EC;
-  --prova-fg-2: rgba(238, 240, 236, .62);
+  --prova-fg-2: rgba(238, 240, 236, .64);
+
+  // ---- elevacao ----
+  // So --e1 existe aqui. O v3 define --e2 e --e3 tambem, e nenhuma tela usa:
+  // entram quando alguma usar, nao antes.
+  --e1: 0 1px 1.5px rgba(16, 20, 22, .055), 0 2px 6px -2px rgba(16, 20, 22, .07);
 
   // ---- raio ----
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 18px;
+  --r-sm:   8px;
+  --r-md:   14px;
+  --r-pill: 999px;
+  // --r-lg: 22px;   // 0 usos. Mesma regra de --e2/--e3 duas linhas acima: volta
+  //                 // quando uma tela pedir. Escala viva: 8 / 14 / 999.
+
+  // ---- movimento ----
+  // Sai rapido e assenta sem passar do ponto — a curva de um toque, nao a de um
+  // slide. Medida, nao estimada: entrega 30% do recuo em 10ms, 76% em 35ms e 96%
+  // em 70ms. O `ease` que rodava de fato enquanto o token nao existia so chega a
+  // 41% em 35ms, ou seja, comeca lento — o oposto do que um press pede.
+  --mola: cubic-bezier(.22, 1, .36, 1);
+  --dur-toque: 0.14s;   // a unica duracao do app
+
+  // Profundidade do toque. Eram SEIS valores (0.88 0.9 0.97 0.975 0.98 0.99) para
+  // oito alvos, em seis telas. Havia logica por tras — alvo pequeno precisa de
+  // escala relativa maior para o recuo ser perceptivel — mas ela nao estava
+  // escrita em lugar nenhum, entao 0.975 / 0.98 / 0.99 eram o mesmo gesto
+  // digitado tres vezes. Meio por cento ninguem percebe; o que se percebe e nao
+  // existir regra. Dois degraus, porque sao dois tamanhos de alvo.
+  --press:       0.98;  // bloco largo: botao de largura cheia, cartao, linha
+  --press-forte: 0.92;  // alvo de ate ~40px: seta do mes, dia, amostra de cor
 
   // ---- tipografia ----
   --ui:   Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -56,7 +109,7 @@
 
   // ---- mapeamento para o Ionic ----
   --ion-background-color: var(--paper);
-  --ion-background-color-rgb: 238, 240, 236;
+  --ion-background-color-rgb: 231, 234, 229;
   --ion-text-color: var(--ink);
   --ion-text-color-rgb: 20, 24, 26;
   --ion-font-family: var(--ui);
@@ -77,22 +130,31 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper:      #101315;
-    --panel:      #191E20;
+    --paper:      #0C0F11;
+    --surface:    #171B1D;
+    --surface-2:  #202527;
+
     --ink:        #E8EBE6;
-    --ink-2:      #A7AFB0;
-    --ink-3:      #767E80;
-    --rule:       rgba(232, 235, 230, .16);
-    --rule-soft:  rgba(232, 235, 230, .08);
-    --accent:     #4DBFB3;
-    --accent-ink: #06201D;
+    --ink-2:      #AEB6B7;
+    --ink-3:      #878F91;   // 5.83:1 sobre --paper, 4.70:1 sobre --surface-2
+    --rule:       rgba(232, 235, 230, .12);
+    --rule-soft:  rgba(232, 235, 230, .06);
+
+    --accent:      #4DBFB3;
+    --accent-ink:  #06201D;
+    --accent-soft: rgba(77, 191, 179, .16);
+    --accent-line: rgba(77, 191, 179, .34);
 
     // no escuro o bloco de prova inverte junto: continua sendo o valor oposto
     --prova-bg:   #E8EBE6;
     --prova-fg:   #14181A;
-    --prova-fg-2: rgba(20, 24, 26, .6);
+    --prova-fg-2: rgba(20, 24, 26, .62);
 
-    --ion-background-color-rgb: 16, 19, 21;
+    // sombra no escuro e preto puro e mais opaca: o que separa as superficies
+    // aqui e a sombra, porque a diferenca de luminancia entre elas e pequena.
+    --e1: 0 1px 1.5px rgba(0, 0, 0, .4), 0 2px 6px -2px rgba(0, 0, 0, .5);
+
+    --ion-background-color-rgb: 12, 15, 17;
     --ion-text-color-rgb: 232, 235, 230;
 
     --ion-color-primary-rgb: 77, 191, 179;

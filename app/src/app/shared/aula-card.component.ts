@@ -85,7 +85,7 @@ import type { Materia } from './tipos';
       height: 46px;
       border-radius: var(--r-sm);
       border: 1px solid var(--rule);
-      background: var(--panel);
+      background: var(--surface);
       display: flex;
       flex-direction: column;
       align-items: center;

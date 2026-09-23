@@ -93,7 +93,7 @@ import { mensagemDeErro } from '../auth/erro';
             </button>
           }
 
-          <p class="cache-aviso">
+          <p class="pf-cache-aviso">
             Anexar não move o material: ele continua na matéria e pode ser
             anexado a outra prova. Desanexar tira só o vínculo.
           </p>
@@ -130,11 +130,11 @@ import { mensagemDeErro } from '../auth/erro';
       border: 1px solid var(--rule);
       box-shadow: var(--e1);
       color: var(--ink);
-      transition: transform 0.14s var(--mola);
+      transition: transform var(--dur-toque) var(--mola);
       -webkit-tap-highlight-color: transparent;
     }
     .anexavel:active {
-      transform: scale(0.99);
+      transform: scale(var(--press));
     }
     .anexavel:focus-visible {
       outline: 2px solid var(--accent);
@@ -151,8 +151,12 @@ import { mensagemDeErro } from '../auth/erro';
       stroke-linecap: round;
       stroke-linejoin: round;
     }
+    /* Cor cheia, nao --accent-line: aqui a borda e o UNICO indicador de que o
+       item esta escolhido, e --accent-line sobre --surface compoe 1.49:1 — bem
+       abaixo dos 3:1 da 1.4.11. --accent-line continua servindo onde e poco
+       decorativo (turma.page.ts), que e para o que foi desenhada. */
     .anexavel[aria-pressed='true'] {
-      border-color: var(--accent-line);
+      border-color: var(--accent);
     }
     .anexavel[aria-pressed='true'] .marca svg rect {
       fill: var(--accent);
