@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,8 +34,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * chegar ao MVC e levava 401.
  *
  * Eles seguram bem o que sabem segurar: origem coringa reprova em
- * `origemDesconhecidaNaoEPermitida`, e remover If-Match da lista reprova em
- * `preflightLiberaIfMatch`. Para a ligacao em si, a prova e o curl contra a API
+ * `origemDesconhecidaNaoEPermitida`, e remover If-Match ou X-IA-Key da lista
+ * reprova os testes de preflight — desde 2026-09-25, quando passaram a olhar
+ * `Access-Control-Allow-Headers`. Antes olhavam so o status, que e 200 mesmo
+ * com o header recusado. Para a ligacao em si, a prova e o curl contra a API
  * no ar, registrado no LOG.md de 2026-09-01.
  */
 @Transactional
@@ -66,7 +69,37 @@ class CorsTest extends TesteDeApi {
                         .header("Access-Control-Request-Method", "PATCH")
                         .header("Access-Control-Request-Headers", "authorization, if-match"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Access-Control-Allow-Origin", CAPACITOR_ANDROID));
+                .andExpect(header().string("Access-Control-Allow-Origin", CAPACITOR_ANDROID))
+                // O status sozinho nao prova nada: o Spring responde 200 com o
+                // SUBCONJUNTO permitido dos headers pedidos, e quem bloqueia e o
+                // navegador ao nao achar o dele aqui. Verificado por mutacao.
+                .andExpect(header().string("Access-Control-Allow-Headers",
+                        containsStringIgnoringCase("if-match")));
+    }
+
+    @Test
+    @DisplayName("preflight libera X-IA-Key — sem ele o resumo por IA morre como 'Sem conexao'")
+    void preflightLiberaChaveDaIa() throws Exception {
+        http.perform(MockMvcRequestBuilders.options("/api/v1/materiais/qualquer/resumo")
+                        .header("Origin", CAPACITOR_ANDROID)
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "authorization, x-ia-key"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Headers",
+                        containsStringIgnoringCase("x-ia-key")));
+    }
+
+    @Test
+    @DisplayName("a origem da versao web, vinda de CORS_ORIGENS, e aceita")
+    void origemConfiguradaEAceita() throws Exception {
+        // O perfil test define app.cors-origens-extras com este valor. Em producao
+        // e a variavel CORS_ORIGENS do render.yaml, com o dominio do site.
+        http.perform(MockMvcRequestBuilders.options("/api/v1/home")
+                        .header("Origin", "https://site-da-turma.teste")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://site-da-turma.teste"));
     }
 
     @Test

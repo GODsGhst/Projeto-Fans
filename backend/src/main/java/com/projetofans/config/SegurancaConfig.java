@@ -2,6 +2,7 @@ package com.projetofans.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projetofans.security.JwtFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -54,18 +56,26 @@ public class SegurancaConfig {
      * `http://localhost:8100` e o `ionic serve` de quem desenvolve.
      */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            // A versao web do app mora num dominio de verdade, e ele so se sabe
+            // depois que o site existe. Vem de CORS_ORIGENS (lista separada por
+            // virgula, origem exata) em vez de literal aqui. Vazio por padrao:
+            // sem a variavel, a lista e exatamente a de antes.
+            @Value("${app.cors-origens-extras:}") List<String> origensExtras) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
+        List<String> origens = new ArrayList<>(List.of(
                 "https://localhost",      // Capacitor Android
                 "capacitor://localhost",  // Capacitor iOS
                 "http://localhost",       // WebView em configuracao antiga
                 "http://localhost:8100")); // ionic serve
+        origensExtras.stream().map(String::trim).filter(o -> !o.isEmpty()).forEach(origens::add);
+        config.setAllowedOrigins(origens);
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"));
         // If-Match nao e header simples: sem ele aqui, todo PATCH e DELETE do app
         // morre no preflight, e so eles — um bug que aparece semanas depois,
-        // quando alguem tenta editar.
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "If-Match"));
+        // quando alguem tenta editar. X-IA-Key idem: sem ele o resumo por IA
+        // morria no preflight e o app dizia "Sem conexao".
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "If-Match", "X-IA-Key"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource fonte = new UrlBasedCorsConfigurationSource();

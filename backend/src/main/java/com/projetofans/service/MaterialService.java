@@ -111,6 +111,14 @@ public class MaterialService {
     Material daTurmaDoUsuario(UsuarioAtual usuario, UUID materialId) {
         Material material = materiais.findById(materialId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), material.getTurmaId());
+        // Mesma regra do EventoService.buscar (A14): oculto pelo lider ou excluido
+        // existe SO para o autor. Aqui, e nao no buscar, porque o resumo por IA
+        // passa por este metodo tambem — e ler o resumo de um material oculto e
+        // ler o material oculto. 404, nunca 403: o status nao pode vazar moderacao.
+        if ((material.estaExcluido() || !material.isVisivelTurma())
+                && !material.getAutorId().equals(usuario.usuarioId())) {
+            throw new AcessoNegadoException();
+        }
         return material;
     }
 

@@ -22,6 +22,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -162,6 +163,34 @@ class MaterialCrudTest extends TesteDeApi {
         Material apagado = materiais.findById(id).orElseThrow();
         assertThat(apagado.getExcluidoEm()).isNotNull();
         assertThat(apagado.getTitulo()).isEqualTo("Slides aula 3");
+    }
+
+    @Test
+    @DisplayName("material oculto ou excluido some pelo id direto para quem nao e o autor")
+    void materialOcultoOuExcluidoSoRespondeParaOAutor() throws Exception {
+        // O furo da A14, que tinha sido fechado so para evento: GET /materiais/{id}
+        // e POST /materiais/{id}/resumo liam o material que o lider ocultou.
+        String id = materialCriado().get("id").asText();
+        Usuario colega = membroDe(turma, "Colega", PapelMembro.ALUNO);
+        Usuario lider = membroDe(turma, "Lider", PapelMembro.LIDER);
+
+        http.perform(get("/api/v1/materiais/" + id).header("Authorization", bearer(colega)))
+                .andExpect(status().isOk());
+
+        http.perform(post("/api/v1/moderacao/material/" + id + "/ocultar")
+                        .header("Authorization", bearer(lider))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(corpo(Map.of("motivo", "link errado"))))
+                .andExpect(status().isOk());
+
+        http.perform(get("/api/v1/materiais/" + id).header("Authorization", bearer(colega)))
+                .andExpect(status().isNotFound());
+        http.perform(post("/api/v1/materiais/" + id + "/resumo")
+                        .header("Authorization", bearer(colega))
+                        .header("X-IA-Key", "chave-qualquer"))
+                .andExpect(status().isNotFound());
+        http.perform(get("/api/v1/materiais/" + id).header("Authorization", bearerAutor))
+                .andExpect(status().isOk());
     }
 
     @Test

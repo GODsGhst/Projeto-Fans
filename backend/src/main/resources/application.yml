@@ -23,6 +23,8 @@ spring:
 
 app:
   timezone: America/Sao_Paulo
+  # Origem exata da versao web do app, separada por virgula. Nunca "*".
+  cors-origens-extras: ${CORS_ORIGENS:}
   # Base do link que vai no e-mail de reset. Em dev/test o LogEmailSender so
   # imprime; em prod o SMTP manda.
   reset-senha-url-base: http://localhost:8100/senha/reset
@@ -82,6 +84,7 @@ spring:
 app:
   jwt-secret: test-apenas-chave-de-teste-com-256-bits-de-comprimento-suficiente
   jwt-expiracao-horas: 1
+  cors-origens-extras: https://site-da-turma.teste
   google-oauth-client-id: test-client-id-fake
 
 ---
