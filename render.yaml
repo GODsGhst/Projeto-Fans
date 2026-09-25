@@ -1,4 +1,4 @@
-# Blueprint do Render para a API do projetoFans.
+# Blueprint do Render para a API e o site do projetoFans.
 #
 # Com este arquivo no repo, o Render monta o servico sozinho: em
 # https://dashboard.render.com/blueprints voce aponta para este repositorio e ele
@@ -27,6 +27,12 @@ services:
     # no Flyway passaria por "no ar".
     healthCheckPath: /api/v1/saude
 
+    # So o backend rebuilda a API. Sem isto, commit de docs, design ou app
+    # disparava um build Maven completo (~5 min) e um redeploy com cold start.
+    buildFilter:
+      paths:
+        - backend/**
+
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: teste
@@ -44,3 +50,34 @@ services:
       # chance de esquecer o prefixo jdbc:.
       - key: DATABASE_URL
         sync: false
+
+      # De onde a versao web do app pode chamar a API. Origem EXATA do site
+      # abaixo, nunca "*". Nao e segredo: e o endereco publico do site.
+      - key: CORS_ORIGENS
+        value: https://projetofans.onrender.com
+
+  # A versao web do app: o mesmo build do APK, servido como site. E o caminho
+  # de quem tem iPhone (o APK e so Android) e de quem nao quer instalar nada.
+  # Site estatico no Render e gratis e NAO hiberna — so a API dorme.
+  #
+  # Ressalva que a turma precisa saber: o aviso da vespera e notificacao LOCAL
+  # do Android (@capacitor/local-notifications). No navegador ele nao existe;
+  # o resto do app funciona igual.
+  - type: web
+    name: projetofans
+    runtime: static
+    buildCommand: cd app && npm ci && npx ng build
+    staticPublishPath: ./app/www
+    buildFilter:
+      paths:
+        - app/**
+    # O router do Angular usa caminho de verdade (/calendario, /materias/...).
+    # Sem o rewrite, abrir um link direto ou dar F5 fora da raiz da 404.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Angular 20 exige Node 20.19+/22.12+. Fixado para o Render nao escolher.
+      - key: NODE_VERSION
+        value: "22"
