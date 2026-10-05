@@ -5,14 +5,10 @@ export const environment = {
   /**
    * O servidor sabe mandar e-mail de reset?
    *
-   * `false` porque o deploy roda com `SPRING_PROFILES_ACTIVE=teste`
-   * (backend/Dockerfile:32) e o `SmtpEmailSender` e `@Profile("prod")`. No
-   * perfil `teste` quem atende e o `LogEmailSender`, que so escreve o link no
-   * log do Render — ninguem recebe nada.
-   *
-   * Com a flag em `false` a tela de recuperar diz isso em vez de prometer um
-   * e-mail que nao vem. Ligue quando houver SMTP de verdade configurado; a tela
-   * volta sozinha ao texto normal.
+   * Sim, desde que SMTP_HOST/SMTP_USER/SMTP_PASSWORD estejam no painel do
+   * Render: o SmtpEmailSender liga pela presenca do SMTP_HOST, em qualquer
+   * perfil. Se essas variaveis sumirem, volte esta flag para `false` — senao a
+   * tela promete um e-mail que so vai para o log.
    */
-  recuperacaoPorEmail: false,
+  recuperacaoPorEmail: true,
 };
