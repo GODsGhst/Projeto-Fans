@@ -544,6 +544,31 @@ o mesmo nulo.
 
 **Levantada em 2026-09-01**, implementando `GET /turmas/minha`.
 
+### A23. Trocar a senha pelo perfil derruba também a sessão de quem trocou
+
+A revisão do perfil apontou que `POST /eu/senha` não invalidava os JWTs já emitidos (30 dias):
+quem troca a senha porque desconfia de invasão não expulsava o invasor. Era para ficar registrado
+como risco aceito, porque a correção parecia exigir migration.
+
+**Quando isto foi escrito, o trabalho da auditoria de segurança (ainda não commitado) já fecha o
+risco sem migration:** o `JwtService` grava no token a claim `sv`, um resumo do `senha_hash`, e
+recusa o token quando ela não bate com o banco. Como `/eu/senha` e o reset passam os dois por
+`Usuario.trocarSenha`, a regra vale para o perfil sem código no `AuthService`. Se esse trabalho não
+entrar, o risco volta exatamente como a revisão descreveu.
+
+**O que fica em aberto é o efeito colateral:** o token *da própria pessoa* cai junto. `/eu/senha`
+responde 204 sem JWT novo, a requisição seguinte volta 401, e o interceptor do app trata 401 como
+sessão expirada — quem acabou de trocar a senha é jogado no login. Duas saídas:
+
+1. `/eu/senha` devolve um JWT novo (200 com corpo), como o `PATCH /eu` já faz ao renomear, e o
+   app troca o token guardado. As outras sessões caem; a atual continua.
+2. Aceitar o logout como comportamento ("troque a senha e entre de novo") e a tela avisar antes.
+
+**Default aplicado: nada no perfil.** A correção pedida era só registrar, e a 1 muda o contrato da
+rota e a tela de perfil. Sugiro a **1**.
+
+**Levantada em 2026-10-05**, na revisão do perfil (`/api/v1/eu`).
+
 
 
 ---

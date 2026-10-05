@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -15,8 +16,14 @@ import java.util.UUID;
  *
  * Consequencia: o codigo de convite e a fronteira de confianca, nao o provedor de
  * login. E por isso que nome autodeclarado nao e furo — so quem tem o codigo entra.
+ *
+ * {@code @DynamicUpdate} porque usuario nao tem coluna version e o Hibernate, por
+ * padrao, grava a linha inteira no UPDATE. Um renomear concorrente com uma troca de
+ * senha regravaria o senha_hash ANTIGO que leu antes — a senha nova sumiria sem
+ * erro. Gravando so a coluna que mudou, as duas edicoes nao se pisam.
  */
 @Entity
+@DynamicUpdate
 @Table(name = "usuario")
 public class Usuario {
 
@@ -101,6 +108,11 @@ public class Usuario {
 
     public void trocarSenha(String novoHash) {
         this.senhaHash = novoHash;
+    }
+
+    /** Nome autodeclarado, como no cadastro: quem garante a turma e o convite, nao o nome. */
+    public void renomear(String nome) {
+        this.nome = nome;
     }
 
     /** Liga o login por Google numa conta que ja existia por e-mail+senha. */

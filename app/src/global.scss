@@ -164,6 +164,23 @@
   color: inherit;
 }
 
+/* Inicial do nome num circulo, na cor de destaque. Global porque aparece em
+   dois lugares que nao se enxergam: o menu (TabsPage) e a tela de perfil, que
+   so muda o tamanho. */
+.pf-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: var(--r-pill);
+}
+
 /* ---------------------------------------------------------------------------
    O botão de ação, largura cheia.
 
@@ -393,6 +410,68 @@
     background: var(--surface-2);
   }
 
+  /* Perfil no rodape do menu, como a conta no Google e no Claude. O fio e o
+     ::after da propria barra, e nao uma borda do botao, para nao herdar o
+     arredondamento nem o fundo de selecionado; `order` poe o fio e depois o
+     perfil no fim, e o `margin-top: auto` do fio empurra os dois para baixo.
+     Em janela baixa o auto vira 0 e o fio continua entre as abas e o perfil. */
+  ion-tab-bar::after {
+    content: "";
+    order: 1;
+    align-self: stretch;
+    margin: auto 0 4px;
+    border-top: 1px solid var(--rule);
+  }
+
+  ion-tab-button.pf-aba-perfil {
+    order: 2;
+    height: 56px;
+  }
+
+  .pf-aba-perfil .pf-avatar {
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+    font-size: 13px;
+  }
+
+  /* `min-width: 0` e o que deixa o texto encolher e ganhar reticencias; sem ele
+     um e-mail comprido alarga o item alem do menu e o corte fica no meio da
+     letra. */
+  .pf-aba-perfil ion-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+  }
+
+  /* Recorte, e nao display:none: sem "Perfil" o leitor de tela anunciava so
+     "nome e-mail", e nada dizia que o item abre a conta. */
+  .pf-perfil-curto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .pf-perfil-nome,
+  .pf-perfil-email {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pf-perfil-nome {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .pf-perfil-email {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
   ion-tab-button:hover:not(.tab-selected) {
     background: var(--surface);
   }
@@ -406,7 +485,7 @@
   }
 
   .pf-abas--recolhida ion-tab-bar::before {
-    content: " a0";
+    content: "\a0";
   }
 
   .pf-abas--recolhida .pf-recolher {
@@ -419,7 +498,8 @@
     padding-inline: 0;
   }
 
-  .pf-abas--recolhida ion-tab-button ion-icon {
+  .pf-abas--recolhida ion-tab-button ion-icon,
+  .pf-abas--recolhida .pf-aba-perfil .pf-avatar {
     margin: 0;
   }
 
@@ -436,6 +516,33 @@
 /* No celular a barra fica embaixo; nao ha menu para recolher. */
 @media (max-width: 767.98px) {
   .pf-recolher {
+    display: none;
+  }
+
+  /* Cinco abas em 320px: o padding do Ionic e o min-width automatico de item
+     flex faziam a barra transbordar abaixo de ~361px. Com min-width 0 a aba
+     encolhe e o rotulo ganha reticencias (o Ionic ja poe ellipsis no
+     ion-label da aba). */
+  ion-tab-button {
+    --padding-start: 2px;
+    --padding-end: 2px;
+    min-width: 0;
+  }
+
+  /* Perfil vira a quinta aba: o avatar no lugar do icone. As margens fecham
+     52px, a mesma altura de icone + rotulo das outras abas (o avatar tem 24px,
+     o icone 22), e o "Perfil" cai na mesma linha dos outros nomes. Nome e
+     e-mail nao cabem em 1/5 da largura. */
+  .pf-aba-perfil .pf-avatar {
+    margin: 5px 0 1px;
+  }
+
+  .pf-aba-perfil ion-label {
+    margin: 0 0 6px;
+  }
+
+  .pf-perfil-nome,
+  .pf-perfil-email {
     display: none;
   }
 }

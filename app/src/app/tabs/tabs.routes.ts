@@ -48,6 +48,11 @@ export const tabsRoutes: Routes = [
           import('../features/materias/resumo.page').then((m) => m.ResumoPage),
       },
       {
+        path: 'perfil',
+        loadComponent: () =>
+          import('../features/perfil/perfil.page').then((m) => m.PerfilPage),
+      },
+      {
         path: 'ajustes',
         loadComponent: () =>
           import('../features/ajustes/ajustes.page').then((m) => m.AjustesPage),

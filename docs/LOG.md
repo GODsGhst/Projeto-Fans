@@ -2369,3 +2369,32 @@ commitada, passa 9/9 com isto.
 **Travas / dúvidas:** para a feature de perfil: `POST /eu/senha` devolve 204, e depois dele o JWT do
 próprio aparelho deixa de valer — o app vai cair no login na requisição seguinte. Se a intenção é
 manter a pessoa logada, a rota deve devolver um JWT novo (como `PATCH /eu` já faz com o nome).
+
+---
+
+### [2026-10-05] Fora do plano — perfil no rodapé do menu, e o menu lateral que recolhe (Claude)
+**Status:** concluída; publicada junto com as duas entradas de segurança acima.
+**O que foi feito:** pedido do dono — no PC, menu lateral "como o do Claude", que recolhe, com a
+conta no rodapé "estilo Google". Backend: `GET/PATCH /api/v1/eu` (nome) e `POST /api/v1/eu/senha`.
+Front: `features/perfil` (nome, senha, Minha turma, Ajustes, Sair) e a aba `pf-aba-perfil` — no PC
+vai para o rodapé do menu (avatar, nome, e-mail; recolhido, só o avatar), no celular é a 5ª aba.
+**Arquivos principais:** `EuController`, `AuthService` (perfil/renomear/trocarSenha/hashDaSenha/
+nomeValido), `Usuario` (`@DynamicUpdate`, `renomear`), `perfil.page.ts`, `tabs.page.ts`,
+`auth.service.ts` (`renovarSessao`), `global.scss` (bloco do PC). Testes: `PerfilTest`,
+`perfil.page.spec.ts`, `tabs.page.spec.ts`.
+**Critério de aceite:** backend 192/192, front 232/232, `ng build` ok. Conferido no navegador em
+1440×900 (aberto e recolhido) e 320×640 (5 abas de 64px, sem transbordo).
+**Decisões que eu tomei:**
+- *`POST /eu/senha` devolve `{jwt}` (200), não 204.* Com a versão da senha no JWT (entrada acima),
+  a troca derruba toda sessão — inclusive a de quem trocou. Os outros aparelhos saem, que é o
+  objetivo; quem trocou segue com o token novo. `PATCH /eu` também devolve JWT, porque ele carrega o nome.
+- *Resposta descartada se a sessão mudou no meio.* Sair com o PATCH no ar não pode ressuscitar a
+  conta num PC compartilhado.
+- *Senha acima de 72 bytes é 400.* O BCrypt do spring-security-crypto 6.5 lança exceção acima disso
+  (era 500 no cadastro, no reset e na troca); uma guarda só, em `hashDaSenha`.
+- *`ion-tabs.pf-abas`, não `ion-tabs`.* O host Angular do Ionic usa `[_nghost-…]`, que ganha de
+  seletor de tag: com `ion-tabs` puro a barra virava coluna e as telas sumiam (bug que chegou ao ar).
+**Travas / dúvidas:** e-mail não se troca pelo perfil (exigiria confirmar o endereço novo). Ficaram
+de fora achados leves da revisão: avatar com emoji em `turma.page.ts`/`transferir.page.ts`, oráculo
+403 em `NotaService.minha`, `SyncService` com cópia da regra de visibilidade, e o teto de login por
+e-mail permitir trancar a conta de um colega por 15 min.

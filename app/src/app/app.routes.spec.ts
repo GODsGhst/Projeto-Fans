@@ -69,7 +69,7 @@ describe('rotas do app', () => {
     // -1 para o que nao existe, e -1 e menor que qualquer indice. A tela some do
     // app inteiro e a suite continua verde.
     const caminhos = (tabsRoutes[0].children ?? []).map((r) => r.path);
-    for (const rota of ['materias/nova', 'eventos/novo', 'turma']) {
+    for (const rota of ['materias/nova', 'eventos/novo', 'turma', 'perfil']) {
       expect(caminhos)
         .withContext(`${rota} nao registrada — a tela existe mas nao abre`)
         .toContain(rota);

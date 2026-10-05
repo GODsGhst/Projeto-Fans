@@ -1,6 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
-import type { Membro, SessaoResponse, Usuario } from '../data/models';
+import type {
+  AtualizarNomeResponse,
+  Membro,
+  Perfil,
+  SessaoResponse,
+  Usuario,
+} from '../data/models';
 import { ApiService } from './api.service';
 import { StorageService } from './storage.service';
 
@@ -70,6 +76,45 @@ export class AuthService {
     await this.api.post<void>('/auth/senha/reset', { token, novaSenha });
   }
 
+  async obterPerfil(): Promise<Perfil> {
+    return this.api.get<Perfil>('/eu');
+  }
+
+  /**
+   * Renomeia e ja troca a sessao: o JWT carrega o nome, entao o servidor sempre
+   * devolve um token novo, e guardar so o perfil deixaria o token velho valendo.
+   */
+  async atualizarNome(nome: string): Promise<Perfil> {
+    // Token de antes da ida: se a pessoa saiu (ou outra entrou) enquanto o PATCH
+    // estava no ar, gravar a resposta ressuscitaria a sessao encerrada — num PC
+    // compartilhado, quem senta depois acharia a conta de quem saiu logada.
+    const antes = this._token();
+    const r = await this.api.patch<AtualizarNomeResponse>('/eu', { nome });
+    if (this._token() === antes) {
+      const { id, email } = r.perfil;
+      await this.renovarSessao(r.jwt, { id, nome: r.perfil.nome, email });
+    }
+    return r.perfil;
+  }
+
+  /**
+   * Senha atual errada volta 400, nunca 401 — de proposito: 401 aqui passaria
+   * pelo interceptor como sessao expirada e deslogaria quem so errou a senha.
+   */
+  async trocarSenha(senhaAtual: string, novaSenha: string): Promise<void> {
+    // A troca derruba todo token emitido antes, inclusive o desta sessao; o
+    // servidor devolve um novo para quem trocou. Mesma guarda do atualizarNome.
+    const antes = this._token();
+    const r = await this.api.post<{ jwt: string }>('/eu/senha', {
+      senhaAtual,
+      novaSenha,
+    });
+    const usuario = this._usuario();
+    if (this._token() === antes && usuario) {
+      await this.renovarSessao(r.jwt, usuario);
+    }
+  }
+
   async entrarNaTurma(codigoConvite: string): Promise<Membro> {
     const membro = await this.api.post<Membro>('/turmas/entrar', {
       codigoConvite,
@@ -104,6 +149,17 @@ export class AuthService {
     this._token.set(jwt);
     this._usuario.set(usuario);
     this._turmaId.set(turmaId ?? null);
+  }
+
+  /**
+   * Token e usuario novos, mesma turma. Nao passa por `definirSessao` porque ela
+   * zera a turma quando nao recebe uma, e quem so trocou o nome cairia na tela
+   * de entrar na turma.
+   */
+  async renovarSessao(jwt: string, usuario: Usuario): Promise<void> {
+    this._token.set(jwt);
+    this._usuario.set(usuario);
+    await this.storage.gravarSessao(jwt, usuario, this._turmaId());
   }
 
   /**

@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import {
   IonIcon,
   IonLabel,
@@ -15,6 +15,8 @@ import {
   libraryOutline,
   listOutline,
 } from 'ionicons/icons';
+
+import { AuthService } from '../core/auth.service';
 
 /** Preferencia de quem esta neste navegador, nao dado da turma. */
 const CHAVE_RECOLHIDO = 'pf.menuRecolhido';
@@ -61,12 +63,37 @@ const CHAVE_RECOLHIDO = 'pf.menuRecolhido';
           <ion-icon aria-hidden="true" name="checkbox-outline"></ion-icon>
           <ion-label>Meu quadro</ion-label>
         </ion-tab-button>
+
+        <!-- Por ultimo de proposito: no PC o global.scss o empurra para o rodape
+             do menu, como a conta no Google e no Claude. No celular e a quinta
+             aba, so com "Perfil" — nome e e-mail nao cabem em 1/5 da tela. -->
+        <ion-tab-button
+          class="pf-aba-perfil"
+          tab="perfil"
+          href="/tabs/perfil"
+          title="Perfil"
+        >
+          <span class="pf-avatar" aria-hidden="true">{{ inicial() }}</span>
+          <ion-label>
+            <span class="pf-perfil-curto">Perfil</span>
+            <span class="pf-perfil-nome">{{ usuario()?.nome }}</span>
+            <span class="pf-perfil-email">{{ usuario()?.email }}</span>
+          </ion-label>
+        </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
   `,
 })
 export class TabsPage {
   protected readonly recolhido = signal(lerRecolhido());
+
+  /** Da sessao, e nao de `GET /eu`: renomear troca a sessao e o menu acompanha. */
+  protected readonly usuario = inject(AuthService).usuario;
+  // Espalhar quebra por code point, nao por unidade UTF-16: `trim()[0]` de um
+  // nome que comeca com emoji pegava meia surrogate e o avatar mostrava lixo.
+  protected readonly inicial = computed(() =>
+    ([...(this.usuario()?.nome ?? '').trim()][0] ?? '?').toUpperCase(),
+  );
 
   constructor() {
     addIcons({

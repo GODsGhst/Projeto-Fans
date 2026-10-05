@@ -29,6 +29,25 @@ export interface Usuario {
   email: string;
 }
 
+/** `GET /eu` — a conta de quem esta logado, com o que so a tela de perfil precisa. */
+export interface Perfil extends Usuario {
+  adminPlataforma: boolean;
+  /**
+   * `false` para conta que so entra pelo Google (sem `senha_hash`). A tela usa
+   * isto para nao oferecer "trocar senha" a quem nao tem senha nenhuma.
+   */
+  temSenha: boolean;
+}
+
+/**
+ * `PATCH /eu`. O JWT volta junto porque o token atual carrega o nome: sem trocar
+ * o token, o nome antigo continuaria circulando em toda requisicao.
+ */
+export interface AtualizarNomeResponse {
+  jwt: string;
+  perfil: Perfil;
+}
+
 /** Resposta de `POST /auth/*`. */
 export interface SessaoResponse {
   jwt: string;

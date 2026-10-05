@@ -12,6 +12,8 @@ import com.projetofans.security.GoogleIdentidade;
 import com.projetofans.security.GoogleTokenVerifier;
 import com.projetofans.security.JwtService;
 import com.projetofans.web.dto.AuthResponse;
+import com.projetofans.web.dto.PerfilAtualizadoResponse;
+import com.projetofans.web.dto.PerfilResponse;
 import com.projetofans.web.dto.UsuarioDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,12 +65,13 @@ public class AuthService {
     }
 
     public AuthResponse registrar(String nome, String endereco, String senha) {
+        String nomeLimpo = nomeValido(nome);
         if (usuarios.existsByEmail(endereco)) {
             // 409, e nao 400: o pedido esta bem formado, o estado do servidor e que conflita.
             throw new ErroDeNegocio(HttpStatus.CONFLICT, "Ja existe conta com este e-mail");
         }
         Usuario novo = usuarios.save(Usuario.comSenha(
-                UUID.randomUUID(), nome, endereco, senhas.encode(senha)));
+                UUID.randomUUID(), nomeLimpo, endereco, hashDaSenha(senha)));
         return resposta(novo);
     }
 
@@ -150,10 +153,92 @@ public class AuthService {
         }
         Usuario usuario = usuarios.findById(registro.getUsuarioId())
                 .orElseThrow(() -> new ErroDeNegocio(HttpStatus.BAD_REQUEST, "Token de reset invalido"));
-        usuario.trocarSenha(senhas.encode(novaSenha));
+        usuario.trocarSenha(hashDaSenha(novaSenha));
         registro.consumir(Instant.now());
         usuarios.save(usuario);
         tokensReset.save(registro);
+    }
+
+    @Transactional(readOnly = true)
+    public PerfilResponse perfil(UUID usuarioId) {
+        return PerfilResponse.de(dono(usuarioId));
+    }
+
+    /**
+     * Devolve JWT novo porque o atual carrega o nome. A limpeza e aqui e nao so no
+     * @NotBlank: "  Ana  " passaria na validacao e iria com espacos para a autoria
+     * de tudo que a pessoa posta. Ver nomeValido.
+     */
+    @Transactional
+    public PerfilAtualizadoResponse renomear(UUID usuarioId, String nome) {
+        Usuario usuario = dono(usuarioId);
+        usuario.renomear(nomeValido(nome));
+        usuarios.save(usuario);
+        return new PerfilAtualizadoResponse(jwt.emitir(usuario.getId(), usuario.getNome()),
+                PerfilResponse.de(usuario));
+    }
+
+    /**
+     * Senha atual errada e 400, NUNCA 401: o interceptor do app trata 401 como
+     * sessao expirada e desloga — errar a senha atual jogaria a pessoa no login.
+     * Aqui ela ja esta autenticada; o erro e do formulario, nao da sessao.
+     */
+    /**
+     * Devolve um JWT novo: o token carrega a versao da senha (JwtService), entao
+     * trocar a senha derruba TODA sessao emitida antes — inclusive a de quem esta
+     * trocando. Os outros aparelhos saem, que e o objetivo; quem trocou continua
+     * logado com o token devolvido aqui.
+     */
+    @Transactional
+    public String trocarSenha(UUID usuarioId, String senhaAtual, String novaSenha) {
+        Usuario usuario = dono(usuarioId);
+        if (usuario.getSenhaHash() == null) {
+            throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "Esta conta entra pelo Google e nao tem senha");
+        }
+        if (!senhas.matches(senhaAtual, usuario.getSenhaHash())) {
+            throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "Senha atual incorreta");
+        }
+        usuario.trocarSenha(hashDaSenha(novaSenha));
+        usuarios.saveAndFlush(usuario);
+        return jwt.emitir(usuario.getId(), usuario.getNome());
+    }
+
+    /**
+     * Unica porta para virar senha em hash — cadastro, reset e troca passam aqui.
+     * O BCrypt so le 72 BYTES, e o spring-security-crypto 6.5 passou a lancar
+     * IllegalArgumentException acima disso em vez de truncar: sem esta guarda, o
+     * @Size(max = 100) dos pedidos deixava passar senha que estourava 500. Conta em
+     * bytes UTF-8, nao em caracteres, porque acento e emoji ocupam mais de um.
+     * O login nao precisa dela: matches() acima de 72 bytes so devolve false.
+     */
+    private String hashDaSenha(String senha) {
+        if (senha.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "Senha muito longa: use no maximo 72 caracteres");
+        }
+        return senhas.encode(senha);
+    }
+
+    /**
+     * strip() e nao trim(): trim, como o @NotBlank, so corta ate U+0020, e um nome
+     * so de NBSP ou U+3000 passava nos dois e virava autoria invisivel. Nem strip()
+     * tira NBSP ou U+200B (nao sao "whitespace" para o Java), por isso quem decide
+     * e exigir ao menos uma letra ou digito. Cadastro e renomear usam a mesma regra.
+     */
+    private String nomeValido(String nome) {
+        String limpo = nome.strip();
+        if (limpo.codePoints().noneMatch(Character::isLetterOrDigit)) {
+            throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "Nome precisa ter ao menos uma letra ou numero");
+        }
+        return limpo;
+    }
+
+    /**
+     * JWT valido de conta que nao existe mais: 401, porque a sessao e que esta
+     * morta — e e o 401 que faz o app limpar o token e voltar ao login.
+     */
+    private Usuario dono(UUID usuarioId) {
+        return usuarios.findById(usuarioId)
+                .orElseThrow(() -> new ErroDeNegocio(HttpStatus.UNAUTHORIZED, "Sessao invalida"));
     }
 
     /**
