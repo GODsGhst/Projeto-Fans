@@ -291,8 +291,70 @@
     padding-inline: max(0px, calc((100% - clamp(720px, 60vw, 1100px)) / 2));
   }
 
-  ion-toolbar,
-  ion-tab-bar {
+  ion-toolbar {
     padding-inline: max(0px, calc((100% - clamp(720px, 60vw, 1100px)) / 2));
+  }
+
+  /* Barra de abas vira menu lateral, como em app de desktop: no PC sobra
+     largura e falta altura, entao a navegacao vai para a esquerda e a tela
+     inteira fica para o conteudo. A coluna centralizada acima passa a
+     centralizar no espaco que sobra a direita. */
+  ion-tabs {
+    flex-direction: row;
+  }
+
+  ion-tab-bar {
+    order: -1;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+    width: clamp(200px, 14vw, 260px);
+    height: 100%;
+    padding: 20px 12px;
+    border-top: 0;
+    border-right: 1px solid var(--rule);
+  }
+
+  ion-tab-bar::before {
+    content: "projetoFans";
+    align-self: flex-start;
+    padding: 4px 12px 18px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+
+  ion-tab-button {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    height: 44px;
+    border-radius: var(--r-sm);
+  }
+
+  ion-tab-button::part(native) {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding-inline: 12px;
+  }
+
+  ion-tab-button ion-icon {
+    margin: 0 12px 0 0;
+    font-size: 20px;
+  }
+
+  ion-tab-button ion-label {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  ion-tab-button.tab-selected {
+    background: var(--surface-2);
+  }
+
+  ion-tab-button:hover:not(.tab-selected) {
+    background: var(--surface);
   }
 }
