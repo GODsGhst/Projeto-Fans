@@ -283,15 +283,16 @@
 }
 
 /* PC/notebook: o app nasceu para celular. Em tela larga, conteudo, cabecalho
-   e barra de abas ficam numa coluna de 720px centralizada, em vez de esticar
+   e barra de abas ficam numa coluna centralizada que cresce com o monitor
+   (720px no notebook, ate 1100px em 2K/4K), em vez de esticar
    cada cartao e botao ate a borda. O padding cresce; nenhuma tela muda. */
 @media (min-width: 768px) {
   ion-content::part(scroll) {
-    padding-inline: max(0px, calc((100% - 720px) / 2));
+    padding-inline: max(0px, calc((100% - clamp(720px, 60vw, 1100px)) / 2));
   }
 
   ion-toolbar,
   ion-tab-bar {
-    padding-inline: max(0px, calc((100% - 720px) / 2));
+    padding-inline: max(0px, calc((100% - clamp(720px, 60vw, 1100px)) / 2));
   }
 }

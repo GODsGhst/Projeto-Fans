@@ -125,8 +125,9 @@
    A partir de 768px ele vira um cartao de 420px no meio da tela. */
 @media (min-width: 768px) {
   .pf-auth {
-    max-width: 420px;
-    min-height: 100dvh;
+    max-width: clamp(380px, 30vw, 520px);
+    box-sizing: border-box;
+    min-height: 100%;
     margin: 0 auto;
     justify-content: center;
     padding: 40px 16px;
