@@ -56,6 +56,20 @@ services:
       - key: CORS_ORIGENS
         value: https://projetofans.onrender.com
 
+      # Recuperacao de senha. O link do e-mail aponta para a tela do site.
+      - key: RESET_SENHA_URL_BASE
+        value: https://projetofans.onrender.com/senha/reset
+
+      # SMTP do e-mail de reset — preencher no painel, nunca no git. Sem
+      # SMTP_HOST o link so vai para o log. Gmail: smtp.gmail.com / 587, usuario
+      # = o endereco, senha = "senha de app" (myaccount.google.com/apppasswords).
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+
   # A versao web do app: o mesmo build do APK, servido como site. E o caminho
   # de quem tem iPhone (o APK e so Android) e de quem nao quer instalar nada.
   # Site estatico no Render e gratis e NAO hiberna — so a API dorme.

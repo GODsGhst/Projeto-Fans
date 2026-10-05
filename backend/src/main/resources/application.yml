@@ -114,6 +114,17 @@ spring:
     url: ${DATABASE_URL}
   flyway:
     locations: classpath:db/migration
+  # E-mail de reset de senha. Sem SMTP_HOST tudo fica vazio e o link cai no log
+  # (LogEmailSender); com ele, o SmtpEmailSender assume. Gmail: smtp.gmail.com,
+  # porta 587, SMTP_USER = o endereco, SMTP_PASSWORD = senha de app (nao a do Gmail).
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
 
 server:
   # O Render injeta PORT e espera que a aplicacao escute nela. Fixar 8080 aqui

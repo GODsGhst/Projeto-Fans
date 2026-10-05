@@ -1,14 +1,14 @@
 package com.projetofans.service;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
-/** O mesmo contrato, por SMTP de tier gratuito. So em producao. */
+/** O mesmo contrato, por SMTP de tier gratuito. Liga quando spring.mail.host existe. */
 @Component
-@Profile("prod")
+@ConditionalOnExpression("!'${spring.mail.host:}'.isEmpty()")
 public class SmtpEmailSender implements EmailSender {
 
     private final JavaMailSender correio;
