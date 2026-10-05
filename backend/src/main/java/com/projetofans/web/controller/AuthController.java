@@ -1,5 +1,6 @@
 package com.projetofans.web.controller;
 
+import com.projetofans.security.LimiteDeTentativas;
 import com.projetofans.service.AuthService;
 import com.projetofans.web.dto.AuthResponse;
 import com.projetofans.web.dto.EsqueciSenhaRequest;
@@ -25,9 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService auth;
+    private final LimiteDeTentativas limite;
 
-    public AuthController(AuthService auth) {
+    public AuthController(AuthService auth, LimiteDeTentativas limite) {
         this.auth = auth;
+        this.limite = limite;
     }
 
     @PostMapping("/registrar")
@@ -37,6 +40,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest pedido) {
+        limite.login(pedido.email());
         return auth.login(pedido.email(), pedido.senha());
     }
 
@@ -48,6 +52,7 @@ public class AuthController {
     /** 204 sempre, exista o e-mail ou nao. Ver AuthService.esqueciSenha. */
     @PostMapping("/senha/esqueci")
     public ResponseEntity<Void> esqueciSenha(@Valid @RequestBody EsqueciSenhaRequest pedido) {
+        limite.esqueciSenha(pedido.email());
         auth.esqueciSenha(pedido.email());
         return ResponseEntity.noContent().build();
     }

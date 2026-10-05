@@ -27,16 +27,16 @@ class SegredoVersionadoTest {
     @Test
     @DisplayName("segredo versionado sobe em dev e test na maquina local")
     void versionadoValeNaMaquinaLocal() {
-        assertThatCode(() -> new JwtService(DEV, 1, perfil("dev"))).doesNotThrowAnyException();
-        assertThatCode(() -> new JwtService(TEST, 1, perfil("test"))).doesNotThrowAnyException();
+        assertThatCode(() -> new JwtService(DEV, 1, perfil("dev"), null)).doesNotThrowAnyException();
+        assertThatCode(() -> new JwtService(TEST, 1, perfil("test"), null)).doesNotThrowAnyException();
     }
 
     @Test
     @DisplayName("segredo versionado em perfil hospedado recusa subir")
     void versionadoEmPerfilHospedadoRecusa() {
-        assertThatThrownBy(() -> new JwtService(DEV, 1, perfil("teste")))
+        assertThatThrownBy(() -> new JwtService(DEV, 1, perfil("teste"), null))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("JWT_SECRET");
-        assertThatThrownBy(() -> new JwtService(TEST, 1, perfil("prod")))
+        assertThatThrownBy(() -> new JwtService(TEST, 1, perfil("prod"), null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -45,14 +45,14 @@ class SegredoVersionadoTest {
     void devNoRenderRecusa() {
         MockEnvironment render = perfil("dev").withProperty("RENDER", "true");
 
-        assertThatThrownBy(() -> new JwtService(DEV, 1, render))
+        assertThatThrownBy(() -> new JwtService(DEV, 1, render, null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     @DisplayName("segredo proprio sobe em qualquer perfil")
     void segredoProprioSobe() {
-        assertThatCode(() -> new JwtService(GERADO, 1, perfil("teste").withProperty("RENDER", "true")))
+        assertThatCode(() -> new JwtService(GERADO, 1, perfil("teste").withProperty("RENDER", "true"), null))
                 .doesNotThrowAnyException();
     }
 }

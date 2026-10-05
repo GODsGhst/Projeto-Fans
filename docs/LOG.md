@@ -2338,3 +2338,34 @@ bloqueado e a violação apareceu, o que prova que o console estava sendo lido.
 **Travas / dúvidas:** publicar exige `git push origin master:acelera-backend`; confirmar antes no
 painel do Render que `SMTP_HOST`, `SMTP_USER` e `SMTP_PASSWORD` estão preenchidos. Fora do escopo,
 sem issue no relatório: rate limiting em login/esqueci/entrar, e JWT de 720 h sem revogação no reset.
+
+---
+
+### [2026-10-05] Fora do plano — teto de tentativas e reset de senha que derruba sessões (Claude)
+**Status:** concluída; commitada, **não publicada**.
+**O que foi feito:** as duas observações da auditoria que ficaram sem issue. (1) `LimiteDeTentativas`:
+10 logins por e-mail a cada 15 min, 5 "esqueci a senha" por e-mail por hora, 10 códigos de convite
+por usuário a cada 15 min; acima disso, 429. (2) O JWT carrega a versão da senha (claim `sv`, resumo
+SHA-256 do hash); trocar a senha invalida todo token emitido antes.
+**Arquivos principais:** `security/LimiteDeTentativas.java`, `security/JwtService.java`,
+`AuthController`, `TurmaController`. Testes: `LimiteDeTentativasTest`, `ForcaBrutaTest`,
+`SessaoRevogadaTest`; `SegredoVersionadoTest` ajustado ao construtor novo.
+**Critério de aceite:** `./mvnw test` numa worktree limpa (HEAD + só estes arquivos) → 183/183.
+Mutação: sem a checagem de `sv` o `SessaoRevogadaTest` falha (200 em vez de 401); sem as chamadas
+ao limitador os 3 testes do `ForcaBrutaTest` falham. `PerfilTest`, da feature de perfil ainda não
+commitada, passa 9/9 com isto.
+**Decisões que eu tomei:**
+- *Chave por e-mail/usuário, não por IP.* Atrás do proxy do Render o IP vem do X-Forwarded-For, que
+  o cliente também escreve. Custo: "uma senha contra muitas contas" não é barrado. O 429 sai igual
+  para e-mail com e sem conta, então não reabre a enumeração.
+- *Em memória.* O free tier roda uma instância; com réplicas, o contador iria para o banco. Se
+  passar de 10 mil chaves, varre as vencidas e, se não bastar, zera — para inundação não estourar
+  a memória.
+- *Versão da senha em vez de coluna nova.* Reset por e-mail e troca pelo perfil passam pelo mesmo
+  `Usuario.trocarSenha`, então uma regra no `JwtService` cobre os dois, sem migration e sem tocar
+  em `AuthService`/`Usuario`, que estavam com a feature de perfil em andamento. Custo: uma busca
+  do usuário por requisição autenticada.
+- *Tokens antigos, sem `sv`, deixam de valer.* Depois do deploy todo mundo entra de novo uma vez.
+**Travas / dúvidas:** para a feature de perfil: `POST /eu/senha` devolve 204, e depois dele o JWT do
+próprio aparelho deixa de valer — o app vai cair no login na requisição seguinte. Se a intenção é
+manter a pessoa logada, a rota deve devolver um JWT novo (como `PATCH /eu` já faz com o nome).

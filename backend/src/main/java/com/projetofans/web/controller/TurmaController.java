@@ -1,5 +1,6 @@
 package com.projetofans.web.controller;
 
+import com.projetofans.security.LimiteDeTentativas;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.service.TurmaService;
 import com.projetofans.web.dto.AtualizarTurmaRequest;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class TurmaController {
 
     private final TurmaService turmas;
+    private final LimiteDeTentativas limite;
 
-    public TurmaController(TurmaService turmas) {
+    public TurmaController(TurmaService turmas, LimiteDeTentativas limite) {
         this.turmas = turmas;
+        this.limite = limite;
     }
 
     /**
@@ -55,6 +58,8 @@ public class TurmaController {
     @PostMapping("/entrar")
     public MembroDto entrar(@AuthenticationPrincipal UsuarioAtual eu,
                             @Valid @RequestBody EntrarNaTurmaRequest pedido) {
+        // O codigo de convite tem 32 bits: sem teto, da para varrer (auditoria 05/10).
+        limite.entrarNaTurma(eu.usuarioId());
         return MembroDto.de(turmas.entrar(eu.usuarioId(), pedido.codigoConvite()));
     }
 }
