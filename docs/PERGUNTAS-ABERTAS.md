@@ -546,6 +546,10 @@ o mesmo nulo.
 
 ### A23. Trocar a senha pelo perfil derruba também a sessão de quem trocou
 
+> **Resolvida em 2026-10-05 (c7c2d33):** `POST /eu/senha` passou a devolver `{jwt}` (200) e o app
+> renova a sessão com ele. Os outros aparelhos saem; quem trocou continua logado. O texto abaixo
+> fica como registro de como se chegou nisso.
+
 A revisão do perfil apontou que `POST /eu/senha` não invalidava os JWTs já emitidos (30 dias):
 quem troca a senha porque desconfia de invasão não expulsava o invasor. Era para ficar registrado
 como risco aceito, porque a correção parecia exigir migration.
