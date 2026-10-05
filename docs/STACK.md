@@ -97,7 +97,7 @@ conta sequer.
 | Google Cloud + OAuth Client ID | Google Sign-In | validador de token fake injetado |
 | Firebase + service account | FCM data-push | `FakeNotifier` |
 | Postgres gerenciado (Neon/Supabase/Railway) | rodar em aparelho real | Postgres embutido nos testes |
-| SMTP (Brevo tem 300/dia grátis) | reset de senha | logger imprime o link no console |
+| SMTP (Gmail com senha de app) | reset de senha | em dev/test, logger imprime o link no console; perfis hospedados exigem SMTP |
 | Cloudflare R2 | envio de arquivo | `FakeArmazenamento` em diretório temporário |
 
 Elas viram necessárias só no aceite da Seção 8 — rodar em dois aparelhos de verdade.

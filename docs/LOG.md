@@ -2298,3 +2298,43 @@ filha — subindo até o primeiro ancestral de 390, 34 das 36 abas ficavam de fo
 por JavaScript depois de tocar num dia, não existe no HTML estático e não chega no import; para
 ligá-lo, precisa primeiro ser desenhado. E o script **não foi rodado no Figma** — a árvore de nós
 de lá não é idêntica à do DOM.
+
+---
+
+### [2026-10-05] Fora do plano — correções da auditoria de segurança (Claude)
+**Status:** concluída no código; **não commitada nem publicada**.
+**O que foi feito:** corrigidos os achados A1, A2, A3, B1, B2, C1 e C2 de
+`docs/security-audit/relatorio-auditoria-seguranca.pdf` (fora do git, é confidencial). A4 e D1 ficaram como estavam (ver decisões).
+**Arquivos principais:** `LogEmailSender`, `application.yml`, `JwtService`, `docker-compose.yml`,
+`Evento`/`Material` (`visivelPara`), `EventoService`, `EstadoPessoalService`, `MaterialService`,
+`ModeracaoService`, `NotaService`, `Criar/AtualizarMaterialRequest`, `material-vm.ts`, `angular.json`,
+`render.yaml`. Testes novos: `OraculoDeExistenciaTest`, `SegredoVersionadoTest`, casos novos em
+`EscolhaDoEmailSenderTest`, `MaterialCrudTest`, `NotaTest` e `material-vm.spec.ts`.
+**Critério de aceite:** `./mvnw test` → 175/175 verdes. `ng test` → 210/210. Mutação: com as
+checagens de B1/B2 desligadas, os 5 testes de `OraculoDeExistenciaTest` falham. Build de produção
+servida localmente com a CSP do `render.yaml` (API trocada por localhost): login, home, calendário,
+matérias, matéria e resumo sem nenhuma violação no console; um `<script>` inline injetado foi
+bloqueado e a violação apareceu, o que prova que o console estava sendo lido.
+**Decisões que eu tomei:**
+- *A1:* `LogEmailSender` agora só existe em `dev`/`test`, e o perfil `teste` exige `SMTP_HOST`,
+  `SMTP_USER` e `SMTP_PASSWORD` sem default. Faltou uma, a API não sobe — em vez de subir mandando o
+  token para o log. O Render mantém o deploy anterior no ar quando o novo falha, mas um **restart**
+  sem as variáveis derruba a API: é o preço escolhido, porque o outro lado é tomada de conta.
+- *A2:* a trava fica no `JwtService`: segredo que começa com `dev-`/`test-` só sobe com perfil
+  dev/test **e** sem a variável `RENDER`. Isso cobre também "perfil dev no Render".
+- *B2:* a visibilidade entrou em `daTurmaDoUsuario`/`materialDaTurmaDoUsuario` do `EventoService`,
+  e não só em `marcar`/`vincular`. Efeito colateral deliberado: editar/excluir evento oculto alheio
+  passou de 403 para 404, e o autor do evento não desvincula mais um material que o líder ocultou
+  (ele também não o vê na lista).
+- *B1:* a nota PESSOAL alheia responde 404 **antes** da checagem de papel, em ocultar, pedir exclusão
+  e editar (`NotaService`). O 403 para aluno também confirmava a nota. `NotaTest.editar` mudou de
+  403 para 404 nesse caso e ganhou o 403 depois que a nota vira TURMA.
+- *C2:* `inlineCritical` desligado no build de produção. Ele carrega o CSS com
+  `onload="this.media='all'"`, que a CSP sem `'unsafe-inline'` em script bloquearia — o site
+  subiria sem CSS. `style-src` mantém `'unsafe-inline'` (Angular e Ionic injetam estilo em runtime).
+  A CSP vale só para o site; o APK não lê headers do Render.
+- *A4* (senha `senha123` do seed) ficou: só existe no perfil dev, que a trava do A2 impede no Render.
+- *D1* (RLS) ficou: o próprio relatório classifica como informativo e de custo alto.
+**Travas / dúvidas:** publicar exige `git push origin master:acelera-backend`; confirmar antes no
+painel do Render que `SMTP_HOST`, `SMTP_USER` e `SMTP_PASSWORD` estão preenchidos. Fora do escopo,
+sem issue no relatório: rate limiting em login/esqueci/entrar, e JWT de 720 h sem revogação no reset.

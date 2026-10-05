@@ -27,11 +27,14 @@ Não é limitação de esforço, é de arquitetura:
 |---|---|
 | `backend/Dockerfile` | build em duas fases, imagem final só com JRE + jar |
 | `render.yaml` | o Render monta o serviço sozinho a partir dele |
-| perfil `teste` | Postgres real, e-mail no log, Google desligado — **uma conta só** |
+| perfil `teste` | Postgres e SMTP reais, Google desligado |
 | `GET /api/v1/saude` | health check, público, não expõe nada |
 
 O perfil `prod` continua existindo e continua exigente: sem `SMTP_*` nem `FCM_SERVICE_ACCOUNT_JSON`
-ele **não sobe**, e isso é correto para produção de verdade. O `teste` é o que troca rigor por
+ele **não sobe**, e isso é correto para produção de verdade. O `teste` também exige `SMTP_HOST`,
+`SMTP_USER` e `SMTP_PASSWORD` desde 05/10/2026: antes, sem eles, o link de reset ia para o log do
+Render — e qualquer pessoa com acesso ao log pedia o reset do e-mail de outra e entrava na conta
+(achado A1 da auditoria de segurança de 05/10/2026; relatório fora do git). O `teste` é o que troca rigor por
 "consigo mandar para um colega hoje".
 
 ---
@@ -142,9 +145,6 @@ Consciente, e cada um por um motivo:
 - **Login por Google.** Precisa de projeto no Google Cloud e OAuth Client ID. O botão aparece
   explicitamente desabilitado no app — botão presente e morto mente sobre o que o app faz. E-mail
   e senha funcionam normalmente.
-- **E-mail de "esqueci a senha".** Cai no log do Render em vez de chegar na caixa de entrada. Para
-  recuperar uma senha no teste, você lê o link no painel do Render. Ligar SMTP de verdade é uma
-  variável de ambiente e uma conta na Brevo (300/dia grátis).
 - **Notificação push.** Não existe, e não é falta: o aviso da véspera é **local**, agendado no
   próprio aparelho (decisão 2.3 do spec). Host gratuito hiberna, e um job das 19h não roda num
   servidor dormindo.

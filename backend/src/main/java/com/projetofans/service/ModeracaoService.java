@@ -188,14 +188,8 @@ public class ModeracaoService {
             evento.definirVisibilidadeTurma(visivel);
             eventos.saveAndFlush(evento);
         } else if (registroTipo == RegistroTipo.NOTA) {
-            Nota nota = notas.findById(registroId).orElseThrow(AcessoNegadoException::new);
+            Nota nota = notaDaTurma(registroId);
             exigirTurmaELider(lider, nota.getTurmaId());
-            // O lider so oculta o que ele consegue LER. Nota PESSOAL nunca sai
-            // para outra pessoa, entao ocultar uma seria poder sobre o
-            // invisivel — e a porta para descobrir que ela existe.
-            if (nota.getAlcance() != AlcanceNota.TURMA) {
-                throw new AcessoNegadoException();
-            }
             nota.definirVisibilidadeTurma(visivel);
             notas.saveAndFlush(nota);
         } else {
@@ -212,12 +206,24 @@ public class ModeracaoService {
         UUID turmaDoRegistro = switch (registroTipo) {
             case EVENTO -> eventos.findById(registroId)
                     .orElseThrow(AcessoNegadoException::new).getTurmaId();
-            case NOTA -> notas.findById(registroId)
-                    .orElseThrow(AcessoNegadoException::new).getTurmaId();
+            case NOTA -> notaDaTurma(registroId).getTurmaId();
             case MATERIAL -> materiais.findById(registroId)
                     .orElseThrow(AcessoNegadoException::new).getTurmaId();
         };
         exigirTurmaELider(lider, turmaDoRegistro);
+    }
+
+    /**
+     * O lider so modera o que ele consegue LER. Nota PESSOAL nunca sai para outra
+     * pessoa, entao ocultar ou pedir exclusao de uma seria poder sobre o invisivel
+     * — e a porta para descobrir que ela existe. Responde como nota inexistente,
+     * e ANTES da checagem de papel: um 403 para aluno tambem confirmaria a nota.
+     * Valia so para ocultar; pedir exclusao respondia 200 (achado B1).
+     */
+    private Nota notaDaTurma(UUID registroId) {
+        return notas.findById(registroId)
+                .filter(n -> n.getAlcance() == AlcanceNota.TURMA)
+                .orElseThrow(AcessoNegadoException::new);
     }
 
     /** 404 se o registro nao e da sua turma; so depois 403 se voce nao e o lider. */

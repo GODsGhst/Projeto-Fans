@@ -66,11 +66,16 @@ public class EstadoPessoalService {
      * atualiza em vez de duplicar. Nao ha checagem de autoria — o quadro e de quem
      * le, e qualquer membro marca qualquer evento da propria turma como feito.
      * Ha checagem de turma: marcar evento de outra turma daria 404 pelo escopo.
+     * E de visibilidade: evento oculto ou excluido tambem da 404 para quem nao e o
+     * autor, senao o 204 confirmaria que ele ainda existe (achado B2).
      */
     @Transactional
     public void marcar(UsuarioAtual usuario, UUID eventoId, boolean feito) {
         Evento evento = eventos.findById(eventoId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), evento.getTurmaId());
+        if (!evento.visivelPara(usuario.usuarioId())) {
+            throw new AcessoNegadoException();
+        }
 
         Instant agora = Instant.now();
         EstadoPessoal estado = estados

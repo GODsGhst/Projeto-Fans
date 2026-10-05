@@ -6,8 +6,10 @@ services:
       POSTGRES_DB: projetofans
       POSTGRES_USER: projetofans
       POSTGRES_PASSWORD: dev
+    # So no loopback: "5432:5432" publica em 0.0.0.0, e com a senha "dev"
+    # versionada qualquer maquina do Wi-Fi le e grava o banco (achado A3).
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

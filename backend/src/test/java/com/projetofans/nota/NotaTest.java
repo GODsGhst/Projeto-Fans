@@ -117,13 +117,15 @@ class NotaTest extends TesteDeApi {
     void editar() throws Exception {
         String id = criar(eu, "PESSOAL", "2026-09-15", "rascunho");
 
+        // 404, nao 403: o rascunho PESSOAL nem existe para o colega, e um 403
+        // confirmaria que ele esta la (achado B1 da auditoria de 05/10/2026).
         http.perform(patch("/api/v1/notas/" + id)
                         .header("Authorization", bearer(colega))
                         .header("If-Match", "0")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of(
                                 "alcance", "TURMA", "data", "2026-09-15", "texto", "sequestrado"))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
 
         // O erro que mais acontece: escrever como rascunho e perceber que era
         // recado. Sem poder trocar o alcance, a saida seria apagar e reescrever.
@@ -138,6 +140,15 @@ class NotaTest extends TesteDeApi {
                 .andExpect(jsonPath("$.autorNome").value("Eu"));
 
         assertThat(listar(colega)).hasSize(1);
+
+        // Agora que e da turma o colega a ve — e continua sem poder editar.
+        http.perform(patch("/api/v1/notas/" + id)
+                        .header("Authorization", bearer(colega))
+                        .header("If-Match", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "alcance", "TURMA", "data", "2026-09-15", "texto", "sequestrado"))))
+                .andExpect(status().isForbidden());
     }
 
     @Test

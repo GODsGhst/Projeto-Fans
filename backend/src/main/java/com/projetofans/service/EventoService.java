@@ -152,17 +152,6 @@ public class EventoService {
     @Transactional(readOnly = true)
     public EventoDetalheResponse buscar(UsuarioAtual usuario, UUID eventoId) {
         Evento evento = daTurmaDoUsuario(usuario, eventoId);
-        // Oculto pelo lider ou excluido pelo autor existe SO para o autor — Secao
-        // 6.5 do handoff, que ganha do spec em regra de negocio. Sem isto a
-        // moderacao da Task 7 e reversivel por quem souber o id, e os ids ja estao
-        // em todo aparelho que sincronizou (snapshot local, Secao 8).
-        //
-        // 404 e nao 403: 403 confirmaria que o registro esta la, e a moderacao
-        // vazaria pelo status. As listas ja se comportam assim; faltava o detalhe.
-        if ((evento.estaExcluido() || !evento.isVisivelTurma())
-                && !evento.getAutorId().equals(usuario.usuarioId())) {
-            throw new AcessoNegadoException();
-        }
         List<MaterialResponse> vinculados = materiais.vinculadosAoEvento(eventoId).stream()
                 .map(m -> MaterialResponse.de(m, nomeDoAutor(m.getAutorId())))
                 .toList();
@@ -213,15 +202,31 @@ public class EventoService {
         vinculos.deleteByChaveEventoIdAndChaveMaterialId(evento.getId(), material.getId());
     }
 
+    /**
+     * Turma e depois visibilidade, para todo caminho por id. Oculto pelo lider ou
+     * excluido existe SO para o autor (Secao 6.5 do handoff, que ganha do spec em
+     * regra de negocio). Sem a segunda checagem a moderacao vazava para quem
+     * guardou o id antes — os ids estao em todo aparelho que sincronizou (Secao
+     * 8): o detalhe ja dava 404, mas vincular respondia 204 e editar 403, os dois
+     * confirmando que o registro oculto continuava la (achado B2, 05/10/2026).
+     *
+     * 404 e nao 403: 403 confirmaria que o registro esta la.
+     */
     private Evento daTurmaDoUsuario(UsuarioAtual usuario, UUID eventoId) {
         Evento evento = eventos.findById(eventoId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), evento.getTurmaId());
+        if (!evento.visivelPara(usuario.usuarioId())) {
+            throw new AcessoNegadoException();
+        }
         return evento;
     }
 
     private Material materialDaTurmaDoUsuario(UsuarioAtual usuario, UUID materialId) {
         Material material = materiais.findById(materialId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), material.getTurmaId());
+        if (!material.visivelPara(usuario.usuarioId())) {
+            throw new AcessoNegadoException();
+        }
         return material;
     }
 

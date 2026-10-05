@@ -168,6 +168,16 @@ public class Material {
         return excluidoEm != null;
     }
 
+    /**
+     * Oculto pelo lider ou excluido pelo autor existe SO para o autor (Secao 6.5
+     * do handoff). Todo caminho que recebe um id passa por aqui, e quem nao ve o
+     * registro recebe 404 — igual a id inexistente, para o status nao vazar
+     * moderacao.
+     */
+    public boolean visivelPara(UUID usuarioId) {
+        return (!estaExcluido() && visivelTurma) || autorId.equals(usuarioId);
+    }
+
     /** Mesmo cuidado do Evento: PATCH substitui, entao `dataAula` entra aqui. */
     public void editar(UUID materiaId, TipoMaterial tipo, String titulo, String url,
                        LocalDate dataAula, Instant agora) {

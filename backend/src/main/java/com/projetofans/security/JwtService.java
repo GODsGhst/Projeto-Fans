@@ -6,6 +6,8 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -29,9 +31,28 @@ public class JwtService {
     private final Duration validade;
 
     public JwtService(@Value("${app.jwt-secret}") String segredo,
-                      @Value("${app.jwt-expiracao-horas}") long expiracaoHoras) {
+                      @Value("${app.jwt-expiracao-horas}") long expiracaoHoras,
+                      Environment ambiente) {
+        exigirSegredoNaoVersionado(segredo, ambiente);
         this.chave = Keys.hmacShaKeyFor(segredo.getBytes(StandardCharsets.UTF_8));
         this.validade = Duration.ofHours(expiracaoHoras);
+    }
+
+    /**
+     * Os segredos de dev e test estao no git (application.yml): com eles qualquer
+     * pessoa forja um JWT com o UUID de outra e entra na conta dela. So valem na
+     * maquina de quem desenvolve — perfil dev ou test E fora do Render, que injeta
+     * RENDER em todo servico. Qualquer outra combinacao recusa subir, em vez de
+     * subir aberta. Achado A2 da auditoria de 05/10/2026.
+     */
+    static void exigirSegredoNaoVersionado(String segredo, Environment ambiente) {
+        boolean versionado = segredo.startsWith("dev-") || segredo.startsWith("test-");
+        boolean maquinaLocal = ambiente.acceptsProfiles(Profiles.of("dev | test"))
+                && !ambiente.containsProperty("RENDER");
+        if (versionado && !maquinaLocal) {
+            throw new IllegalStateException("app.jwt-secret e o segredo versionado de dev/test;"
+                    + " fora da maquina local defina JWT_SECRET com um valor proprio");
+        }
     }
 
     public String emitir(UUID usuarioId, String nome) {

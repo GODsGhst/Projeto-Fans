@@ -224,4 +224,40 @@ class MaterialCrudTest extends TesteDeApi {
         assertThat(materiais.findById(UUID.fromString(criado.get("id").asText())).orElseThrow()
                 .getArquivoRef()).isNull();
     }
+
+    /**
+     * Achado C1 da auditoria de 05/10/2026. A url vira href para a turma inteira, e
+     * o sanitizador do Angular so barra javascript: — no WebView, intent: abre app
+     * externo e data:/file: servem de phishing com cara de material da turma.
+     */
+    @Test
+    @DisplayName("url fora de http/https e recusada ao criar e ao editar")
+    void urlForaDeHttpEhRecusada() throws Exception {
+        JsonNode criado = materialCriado();
+        for (String url : List.of("javascript:alert(1)", "data:text/html,<b>oi</b>",
+                "intent://abrir#Intent;scheme=x;end", "file:///sdcard/a.pdf", "exemplo.dev/sem-esquema")) {
+            Map<String, Object> pedido = pedidoDeMaterial();
+            pedido.put("url", url);
+
+            http.perform(post("/api/v1/materiais")
+                            .header("Authorization", bearerAutor)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(corpo(pedido)))
+                    .andExpect(status().isBadRequest());
+            http.perform(patch("/api/v1/materiais/" + criado.get("id").asText())
+                            .header("Authorization", bearerAutor)
+                            .header("If-Match", criado.get("version").asInt())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(corpo(pedido)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        Map<String, Object> maiuscula = pedidoDeMaterial();
+        maiuscula.put("url", "HTTPS://exemplo.dev/slides");
+        http.perform(post("/api/v1/materiais")
+                        .header("Authorization", bearerAutor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(corpo(maiuscula)))
+                .andExpect(status().isCreated());
+    }
 }

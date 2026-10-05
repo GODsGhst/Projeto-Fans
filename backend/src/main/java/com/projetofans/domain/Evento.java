@@ -172,6 +172,16 @@ public class Evento {
         return excluidoEm != null;
     }
 
+    /**
+     * Oculto pelo lider ou excluido pelo autor existe SO para o autor (Secao 6.5
+     * do handoff). Todo caminho que recebe um id passa por aqui, e quem nao ve o
+     * registro recebe 404 — igual a id inexistente, para o status nao vazar
+     * moderacao.
+     */
+    public boolean visivelPara(UUID usuarioId) {
+        return (!estaExcluido() && visivelTurma) || autorId.equals(usuarioId);
+    }
+
     /** So o autor chega aqui — a checagem de autoria e do service, e tem teste proprio. */
     /**
      * PATCH SUBSTITUI o objeto inteiro (A13), entao todo campo editavel entra

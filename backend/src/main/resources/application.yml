@@ -26,7 +26,7 @@ app:
   # Origem exata da versao web do app, separada por virgula. Nunca "*".
   cors-origens-extras: ${CORS_ORIGENS:}
   # Base do link que vai no e-mail de reset. Em dev/test o LogEmailSender so
-  # imprime; em prod o SMTP manda.
+  # imprime; nos perfis hospedados o SMTP manda.
   reset-senha-url-base: http://localhost:8100/senha/reset
   # Lida pelo reagendador de notificacao (Task 8).
   notificacao-hora-vespera: "19:00"
@@ -90,14 +90,15 @@ app:
 ---
 # Perfil do ambiente HOSPEDADO de teste (Render + Neon).
 #
-# Diferenca para prod: aqui NADA que exija conta externa e obrigatorio. E-mail cai
-# no LogEmailSender (@Profile("!prod")) e o login por Google entra desligado, com
-# mensagem clara. So o Postgres e real, porque sem banco compartilhado o app nao
-# testa o que ele e: uma turma vendo a mesma coisa.
+# Diferenca para prod: o login por Google entra desligado, com mensagem clara, e
+# FCM nao e exigido. Postgres e SMTP sao reais: sem banco compartilhado o app nao
+# testa o que ele e, uma turma vendo a mesma coisa; e sem SMTP o token de reset
+# iria para o log, que aqui e lido por quem tem acesso ao painel (achado A1).
 #
-# Duas variaveis obrigatorias, e so:
+# Variaveis obrigatorias:
 #   DATABASE_URL   jdbc:postgresql://HOST/BANCO?sslmode=require
 #   JWT_SECRET     >= 256 bits; o Render gera sozinho se voce deixar
+#   SMTP_HOST      + SMTP_USER e SMTP_PASSWORD; sem eles a API nao sobe
 spring:
   config:
     activate:
@@ -114,14 +115,16 @@ spring:
     url: ${DATABASE_URL}
   flyway:
     locations: classpath:db/migration
-  # E-mail de reset de senha. Sem SMTP_HOST tudo fica vazio e o link cai no log
-  # (LogEmailSender); com ele, o SmtpEmailSender assume. Gmail: smtp.gmail.com,
-  # porta 587, SMTP_USER = o endereco, SMTP_PASSWORD = senha de app (nao a do Gmail).
+  # E-mail de reset de senha, pelo SmtpEmailSender. SEM default de proposito: o
+  # LogEmailSender nao existe neste perfil, e cair nele poria o token de reset no
+  # log do Render. Faltou a variavel, a API recusa subir com "Could not resolve
+  # placeholder 'SMTP_HOST'". Gmail: smtp.gmail.com, porta 587, SMTP_USER = o
+  # endereco, SMTP_PASSWORD = senha de app (nao a do Gmail).
   mail:
-    host: ${SMTP_HOST:}
+    host: ${SMTP_HOST}
     port: ${SMTP_PORT:587}
-    username: ${SMTP_USER:}
-    password: ${SMTP_PASSWORD:}
+    username: ${SMTP_USER}
+    password: ${SMTP_PASSWORD}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true

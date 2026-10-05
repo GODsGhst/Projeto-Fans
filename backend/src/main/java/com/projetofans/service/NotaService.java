@@ -1,5 +1,6 @@
 package com.projetofans.service;
 
+import com.projetofans.domain.AlcanceNota;
 import com.projetofans.domain.Nota;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ConflitoVersaoException;
@@ -107,7 +108,10 @@ public class NotaService {
     private Nota minha(UsuarioAtual eu, UUID notaId) {
         Nota nota = notas.findById(notaId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(eu.usuarioId(), nota.getTurmaId());
-        if (nota.getExcluidoEm() != null) {
+        // Nota PESSOAL alheia nem existe para mim: 403 confirmaria que ela esta la.
+        boolean pessoalAlheia = nota.getAlcance() != AlcanceNota.TURMA
+                && !nota.getAutorId().equals(eu.usuarioId());
+        if (nota.getExcluidoEm() != null || pessoalAlheia) {
             throw new AcessoNegadoException();
         }
         if (!nota.getAutorId().equals(eu.usuarioId())) {

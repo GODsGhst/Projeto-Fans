@@ -34,12 +34,22 @@ export function materialVm(m: Material, agora: Date): MaterialVm {
     // que aparecia na tela e nao abria — a unica coisa que material precisa
     // fazer. `arquivoRef` ainda e sempre nulo (upload e a Task 15), entao hoje e
     // sempre a url.
-    url: m.arquivoRef ?? m.url,
+    url: abrivel(m.arquivoRef ?? m.url),
     daAula: rotuloDaAula(m.dataAula),
     autorId: m.autoria.autorId,
     autoria: assinatura(m.autoria, agora),
     temResumo: (m.resumo ?? null) !== null,
   };
+}
+
+/**
+ * So http(s) vira link. O servidor ja recusa o resto ao gravar (achado C1 da
+ * auditoria de 05/10/2026), mas o sanitizador do Angular so barra `javascript:`:
+ * `data:`, `intent:` e `file:` chegariam ao href, e no WebView `intent:` abre
+ * app externo. Sem esquema aceito a linha aparece, so nao vira link.
+ */
+function abrivel(ref: string | null): string | null {
+  return ref !== null && /^https?:\/\//i.test(ref) ? ref : null;
 }
 
 /**
