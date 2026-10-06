@@ -6,6 +6,7 @@ import com.projetofans.domain.Turma;
 import com.projetofans.domain.Usuario;
 import com.projetofans.erro.NaoLiderException;
 import com.projetofans.erro.AcessoNegadoException;
+import com.projetofans.erro.ErroDeNegocio;
 import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.TurmaRepository;
 import com.projetofans.repo.UsuarioRepository;
@@ -14,6 +15,7 @@ import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.MembroDaTurmaResponse;
 import com.projetofans.web.dto.AtualizarTurmaRequest;
 import com.projetofans.web.dto.MinhaTurmaResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,6 +128,7 @@ public class TurmaService {
 
     @Transactional
     public Turma criar(UUID criadorId, String nome, String semestre) {
+        exigirSemTurma(criadorId);
         Turma turma = turmas.save(new Turma(UUID.randomUUID(), nome, semestre, novoCodigoConvite()));
         membros.save(new Membro(UUID.randomUUID(), criadorId, turma.getId(), PapelMembro.LIDER));
         return turma;
@@ -136,15 +139,38 @@ public class TurmaService {
      * chuta codigo nao pode aprender nada sobre quais existem.
      *
      * Idempotente de proposito — tocar duas vezes no botao nao pode estourar o
-     * UNIQUE (usuario_id, turma_id) na cara do aluno.
+     * UNIQUE (usuario_id, turma_id) na cara do aluno. Por isso a mesma turma
+     * devolve o vinculo que ja existe, e so OUTRA turma leva o 409.
      */
     @Transactional
     public Membro entrar(UUID usuarioId, String codigoConvite) {
         Turma turma = turmas.findByCodigoConvite(codigoConvite)
                 .orElseThrow(AcessoNegadoException::new);
         return membros.findByUsuarioIdAndTurmaId(usuarioId, turma.getId())
-                .orElseGet(() -> membros.save(
-                        new Membro(UUID.randomUUID(), usuarioId, turma.getId(), PapelMembro.ALUNO)));
+                .orElseGet(() -> {
+                    exigirSemTurma(usuarioId);
+                    return membros.save(
+                            new Membro(UUID.randomUUID(), usuarioId, turma.getId(), PapelMembro.ALUNO));
+                });
+    }
+
+    /**
+     * Um vinculo por pessoa. Sem isto, criar ou entrar numa segunda turma dava
+     * certo, e o TurmaScopeResolver passava a resolver pelo vinculo mais recente:
+     * a turma original sumia do app sem aviso, com tudo que a pessoa postou nela.
+     *
+     * Regra de ALUNO e LIDER. Professor e coordenador vao precisar de varias
+     * turmas; quando esse papel ganhar o seu fluxo, esta guarda e o resolver sao
+     * revistos juntos.
+     *
+     * ponytail: dois pedidos simultaneos para turmas diferentes passam os dois.
+     * Um indice unico em membro.usuario_id fecharia, mas travaria o professor de
+     * varias turmas; o resolver loga aviso se acontecer.
+     */
+    private void exigirSemTurma(UUID usuarioId) {
+        if (!membros.findByUsuarioIdOrderByEntrouEmDesc(usuarioId).isEmpty()) {
+            throw new ErroDeNegocio(HttpStatus.CONFLICT, "Voce ja esta numa turma");
+        }
     }
 
     /**

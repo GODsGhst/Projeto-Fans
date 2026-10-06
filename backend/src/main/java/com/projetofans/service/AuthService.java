@@ -144,8 +144,14 @@ public class AuthService {
         }
     }
 
+    /**
+     * Devolve o e-mail da conta so para o controller destravar o teto de login
+     * (LimiteDeTentativas.loginCerto): o token chega sem e-mail, e quem o tem
+     * provou posse da caixa. Sem isso, quem sabe o e-mail mantem a conta trancada
+     * e o "esqueci a senha" nao ajuda a dona.
+     */
     @Transactional
-    public void resetarSenha(String token, String novaSenha) {
+    public String resetarSenha(String token, String novaSenha) {
         TokenResetSenha registro = tokensReset.findByTokenHash(hashDe(token))
                 .orElseThrow(() -> new ErroDeNegocio(HttpStatus.BAD_REQUEST, "Token de reset invalido"));
         if (!registro.utilizavelEm(Instant.now())) {
@@ -157,6 +163,7 @@ public class AuthService {
         registro.consumir(Instant.now());
         usuarios.save(usuario);
         tokensReset.save(registro);
+        return usuario.getEmail();
     }
 
     @Transactional(readOnly = true)

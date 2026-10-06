@@ -122,10 +122,15 @@ start. Isso é do free tier do Render, não do app.
 exatamente o sintoma relatado no dia 1º, o botão preso em "Criando…". Subir o teto não resolve:
 um spinner de dois minutos é indistinguível de app travado.
 
-**A saída de graça é não deixar dormir.** `.github/workflows/manter-acordado.yml` faz um ping a
-cada 10 minutos. Ele está no repositório mas **não está rodando**: o GitHub só executa `schedule`
-a partir do branch padrão (`master`), e o arquivo hoje vive em `acelera-backend`. Mesclar liga.
-Antes de pedir para alguém abrir o app, dá para acordar na hora pela aba Actions → Run workflow.
+**A saída de graça é não deixar dormir, e o ping do GitHub Actions não faz isso.**
+`.github/workflows/manter-acordado.yml` **está rodando**: ele já está em `master`, e o GitHub
+executa `schedule` a partir do branch padrão. Só que o cron de 10 em 10 minutos não sai a cada 10:
+na prática o GitHub dispara umas **6 execuções por dia**, muito espaçadas, e a API (que dorme com 15
+min de silêncio) está **sempre dormindo** quando o ping chega. Cada execução paga o cold start
+inteiro e dura **3 a 4 minutos**, então o workflow gasta minutos de Actions sem segurar a API. Ele
+**será desligado** quando o monitor externo (UptimeRobot, ver "Manter a API acordada" abaixo)
+estiver ativo; até lá, o único uso útil dele é o disparo manual: dá para acordar na hora pela aba
+Actions → Run workflow, minutos antes de pedir para alguém abrir o app.
 
 Na prática, para a turma: quem abre o app primeiro no dia espera; os outros não. O app guarda
 snapshot local, então quem já usou continua vendo o que tinha mesmo enquanto o servidor acorda.
@@ -222,6 +227,59 @@ disparou. Em `dashboard.render.com` → serviço `projetofans-api`:
 | Aba **Logs** | Se o deploy rodou e falhou, o erro do Maven ou do Flyway está aqui |
 
 Botão **Manual Deploy → Deploy latest commit** força, quando o gatilho falhou.
+
+---
+
+## Rotina de operação
+
+### Antes de um deploy com migration
+
+Migration aplicada não volta: o Flyway não desfaz, e a regra do projeto proíbe editar uma que já
+rodou. Se ela estragar dado, o único caminho de volta é o banco de antes. Então **antes** do push
+que leva uma `V<N>__*.sql` nova:
+
+1. No console do Neon → **Branches → New branch**, a partir de `main`, no instante atual. Nome:
+   `antes-V<N>`. É instantâneo e não copia nada (copy-on-write) — custa só o que divergir depois.
+2. Faça o push e confira o `build` do `/saude` (seção acima).
+3. Deu certo e a turma usou por um ou dois dias: apague o branch. O plano free tem limite de
+   branches, e branch esquecido ocupa vaga.
+
+**Para voltar**, se a migration estragou dado:
+
+1. Volte o código primeiro: `git revert` do commit e push, ou **Manual Deploy** do commit anterior
+   no Render. Se o código novo continuar no ar, ele roda a migration de novo no banco restaurado.
+2. No Neon → branch `main` → **Restore**, com origem no branch `antes-V<N>` (CLI:
+   `neon branches restore main antes-V<N>`). O Neon guarda o estado sobrescrito num branch
+   `main_old_<data>`, então o restore também tem volta. O endpoint e a `DATABASE_URL` não mudam:
+   o Render não precisa de nada.
+3. Tudo que a turma postou entre o deploy e o restore se perde. Por isso o restore é para dado
+   estragado, não para "a tela ficou feia" — esse caso se resolve com o revert do passo 1 sozinho,
+   quando a migration é só aditiva.
+
+### Manter a API acordada
+
+O Render free dorme com 15 min sem tráfego, e o cold start medido passa de 120 s (ver "O que
+esperar do plano gratuito"). Quem resolve é um **monitor externo gratuito**, como o UptimeRobot:
+
+- Monitor tipo **HTTP(s)**, URL `https://projetofans-api.onrender.com/api/v1/saude`, intervalo
+  **5 minutos** (o mínimo do plano free).
+- Ganho extra: ele avisa por e-mail quando a API cai — hoje ninguém fica sabendo até um colega
+  reclamar.
+- As 750 h/mês de instância do Render free cobrem um serviço ligado o mês inteiro (744 h).
+
+**Por que não o GitHub Actions** (o `manter-acordado.yml`): ele roda em `master`, mas não segura a
+API. O `schedule` do GitHub atrasa e se espaça sob carga — cerca de 6 execuções por dia em vez de
+144 —, e com 15 min de silêncio a API já dormiu em todas elas, então cada uma leva 3 a 4 minutos
+esperando o cold start e não mantém nada acordado. O monitor externo, a cada 5 minutos, não tem esse
+problema. **Quando o UptimeRobot estiver ativo, desligue o workflow** (aba Actions → Disable
+workflow, ou apague o arquivo) — ainda não foi desligado.
+
+**O banco não acorda junto, e isso é de propósito.** O `/saude` não consulta o banco, e o pool do
+perfil `teste` não segura conexão ociosa (`spring.datasource.hikari` no `application.yml`). Assim o
+Neon free suspende o compute quando ninguém usa o app, e a cota mensal de compute não acaba no
+meio do mês com a API acordada 24 h. Quem abre o app depois de um tempo parado espera o Neon
+acordar (alguns segundos), não o Render (minutos). **Não ponha consulta ao banco no `/saude`**: o
+ping de 5 em 5 min manteria o Neon ligado o mês inteiro.
 
 ---
 

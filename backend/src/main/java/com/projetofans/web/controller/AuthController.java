@@ -41,7 +41,10 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest pedido) {
         limite.login(pedido.email());
-        return auth.login(pedido.email(), pedido.senha());
+        AuthResponse resposta = auth.login(pedido.email(), pedido.senha());
+        // So chega aqui quem acertou: o 401 sobe antes e a falha fica contada.
+        limite.loginCerto(pedido.email());
+        return resposta;
     }
 
     @PostMapping("/google")
@@ -59,7 +62,10 @@ public class AuthController {
 
     @PostMapping("/senha/reset")
     public ResponseEntity<Void> resetarSenha(@Valid @RequestBody ResetSenhaRequest pedido) {
-        auth.resetarSenha(pedido.token(), pedido.novaSenha());
+        String email = auth.resetarSenha(pedido.token(), pedido.novaSenha());
+        // O token do e-mail prova posse da conta: destrava o teto de login, que
+        // senao ficaria renovavel nas maos de quem so sabe o e-mail da vitima.
+        limite.loginCerto(email);
         return ResponseEntity.noContent().build();
     }
 }

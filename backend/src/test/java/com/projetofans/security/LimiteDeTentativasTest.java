@@ -64,6 +64,22 @@ class LimiteDeTentativasTest {
     }
 
     @Test
+    void loginCertoZeraAsFalhas() {
+        for (int i = 0; i < 9; i++) {
+            limite.login("ana@ex.dev");
+        }
+        limite.loginCerto("ANA@ex.dev ");
+
+        // Sem o zero, a decima primeira daqui ja seria 429.
+        for (int i = 0; i < 10; i++) {
+            limite.login("ana@ex.dev");
+        }
+        assertThatThrownBy(() -> limite.login("ana@ex.dev"))
+                .as("as erradas depois do acerto voltam a acumular")
+                .isInstanceOf(ErroDeNegocio.class);
+    }
+
+    @Test
     void inundacaoDeChavesNaoCresceSemFim() {
         for (int i = 0; i <= LimiteDeTentativas.MAXIMO_DE_CHAVES + 1; i++) {
             tentar("lixo-" + i);

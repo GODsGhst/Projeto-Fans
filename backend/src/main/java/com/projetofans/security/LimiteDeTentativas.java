@@ -46,9 +46,27 @@ public class LimiteDeTentativas {
         this.relogio = relogio;
     }
 
-    /** Uma pessoa nao erra a propria senha dez vezes em quinze minutos. */
+    /**
+     * Uma pessoa nao erra a propria senha dez vezes em quinze minutos.
+     *
+     * Conta ANTES de conferir a senha, e o login certo devolve a ficha em
+     * loginCerto: no fim so as falhas ficam. Contar so depois de errar deixaria
+     * cem pedidos simultaneos passarem pela checagem antes do primeiro erro
+     * gravar. Travado, nem a senha certa entra — se entrasse, o 200 no meio dos
+     * 429 entregaria a senha ao atacante.
+     *
+     * ponytail: quem sabe o e-mail ainda tranca a conta errando dez vezes. E o
+     * preco de teto por conta sem teto por IP. A janela e fixa e renovavel enquanto
+     * o atacante insistir (cada rodada de dez erros abre outra de 15 min); destrava
+     * com reset de senha, e antes de estourar qualquer login certo da dona zera.
+     */
     public void login(String email) {
-        contar("login:" + normalizado(email), 10, Duration.ofMinutes(15));
+        contar(chaveDoLogin(email), 10, Duration.ofMinutes(15));
+    }
+
+    /** Senha certa zera: quem errou nove e acertou nao fica a uma falha do 429. */
+    public void loginCerto(String email) {
+        janelas.remove(chaveDoLogin(email));
     }
 
     /** Tambem impede usar o app para encher a caixa de alguem de e-mail de reset. */
@@ -84,6 +102,10 @@ public class LimiteDeTentativas {
     /** So para o teste de inundacao. */
     int chavesGuardadas() {
         return janelas.size();
+    }
+
+    private static String chaveDoLogin(String email) {
+        return "login:" + normalizado(email);
     }
 
     private static String normalizado(String email) {

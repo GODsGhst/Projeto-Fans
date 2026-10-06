@@ -113,6 +113,17 @@ spring:
     # Quem preferir separado nao fica de fora: SPRING_DATASOURCE_USERNAME e
     # SPRING_DATASOURCE_PASSWORD continuam funcionando por binding relaxado do Boot.
     url: ${DATABASE_URL}
+    # O padrao do Hikari segura 10 conexoes abertas para sempre. Conexao aberta
+    # impede o Neon free de suspender o compute, e a API fica acordada 24h pelo
+    # monitor externo (docs/DEPLOY.md): seriam 24h de compute por dia, a cota do
+    # mes acabando no meio dele. Com zero ociosas e 60 s de folga, o pool esvazia
+    # quando ninguem usa e o Neon dorme; a primeira query depois paga a reconexao.
+    # Por isso o /saude NAO consulta o banco: o ping acordaria o Neon a cada 5 min.
+    # 5 e nao 10: uma instancia so, e o free do Neon nao precisa de mais.
+    hikari:
+      minimum-idle: 0
+      idle-timeout: 60000
+      maximum-pool-size: 5
   flyway:
     locations: classpath:db/migration
   # E-mail de reset de senha, pelo SmtpEmailSender. SEM default de proposito: o
