@@ -53,6 +53,19 @@ describe('eventoVm', () => {
     expect(comHora.quando).toBe('19:00');
   });
 
+  it('hora com segundos, como o backend serializa, mostra so HH:mm', () => {
+    // O LocalTime do servidor chega como "19:00:00". Sem o corte o card mostrava
+    // isso cru, e as quatro telas dependem deste unico mapeamento.
+    const agora = new Date('2026-08-21T14:00:00Z');
+
+    expect(eventoVm(item({ hora: '19:00:00' }), agora).quando).toBe('19:00');
+    expect(eventoVm(item({ hora: '07:05:30' }), agora).quando).toBe('07:05');
+    // Hora vazia e hora ausente se comportam igual: rotulo do tipo, nunca "".
+    expect(eventoVm(item({ hora: '', tipo: 'PROVA' }), agora).quando).toBe(
+      'prova',
+    );
+  });
+
   it('autoria sempre aparece, mesmo com timestamp ilegivel', () => {
     // Autoria e o unico mecanismo de confianca do app (nao-negociavel 1): a
     // linha nunca pode sumir nem virar "Otávio · NaN".

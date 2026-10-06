@@ -2398,3 +2398,57 @@ nomeValido), `Usuario` (`@DynamicUpdate`, `renomear`), `perfil.page.ts`, `tabs.p
 de fora achados leves da revisão: avatar com emoji em `turma.page.ts`/`transferir.page.ts`, oráculo
 403 em `NotaService.minha`, `SyncService` com cópia da regra de visibilidade, e o teto de login por
 e-mail permitir trancar a conta de um colega por 15 min.
+
+---
+
+### [2026-10-06] Fora do plano — lembretes (dia, vespera, 1h, personalizado) e correcoes rapidas (Claude)
+**Status:** concluída no working tree; **não commitada, não publicada**. Versão do app: 1.1.0.
+**O que foi feito:** (1) Lembretes no aparelho: no dia, véspera e uma hora antes de cada prova e
+entrega, mais o alarme personalizado que a pessoa marca no evento; ligam e desligam nos Ajustes. A
+fonte passou a ser o `/sync` completo (`SyncRepository`), cancela tudo e reagenda tudo a cada carga
+e a cada mudança de preferência. (2) Correções rápidas da revisão: hora sem segundos nos cards,
+teto de login só por falhas e destravado pelo reset de senha, um aluno uma turma (409 curado na
+tela de entrar), zoom liberado com campos de 16px, ocultar material pelo líder, turma recarregada
+depois de transferir a liderança e zerada ao sair da conta, Google escondido, pool do Hikari
+enxuto no perfil `teste`.
+**Arquivos principais:** `notifications/*`, `data/sync.repository.ts`, `evento-vm.ts`,
+`entrar-turma.page.ts`, `turma.repository.ts`, `moderacao.repository.ts`, `global.scss`,
+`auth.scss`, `LimiteDeTentativas`, `AuthService.resetarSenha`, `AuthController`, `TurmaService`
+(um aluno, uma turma), `application.yml`, `docs/DEPLOY.md`. Testes: `ForcaBrutaTest`,
+`UmaTurmaPorPessoaTest`, `evento-vm.spec`, `entrar-turma.page.spec`, `turma.repository.spec`,
+`moderacao.repository.spec`, `sync.repository.spec`, `reagendador.spec`, `notificacoes.service.spec`.
+**Critério de aceite:** backend `./mvnw -q test` → 198 testes em 27 classes, 0 falhas. Front
+`ng test` → 325 de 326 verdes; o único vermelho é `NotificacoesService › o alarme personalizado
+entra no agendamento e sai quando removido` (`getPending` chamado 4 vezes em vez de 3), do código de
+lembretes ainda em ajuste, fora destas correções. `ng build` ok (aviso de orçamento de 39 bytes
+no CSS inline de `calendario.page.ts`). Mutação: sem o corte
+`slice(0, 5)`, sem o `loginCerto` no reset, sem o efeito de logout do `TurmaRepository`, sem o zerar
+na releitura que falhou e com o campo de volta a 15px, cada teste correspondente falha.
+**Decisões que eu tomei:**
+- *Lembretes pelo `/sync`, não pela Home.* A Home tem teto de 6 e janela de 14 dias: a sétima prova
+  da semana ficava sem aviso. O `/sync` é a única rota que devolve oculto e excluído, e é assim que o
+  aparelho aprende o que desagendar.
+- *Hora cortada em `eventoVm`, não em cada tela.* O backend serializa `LocalTime` com segundos
+  (`19:00:00`) e as quatro telas passam por esse mapeamento. O campo de editar evento corta ao
+  preencher, senão o PATCH devolvia os segundos.
+- *Teto de login só conta falha.* Login certo devolve a ficha; travado, nem a senha certa entra
+  (o 200 no meio dos 429 entregaria a senha). A janela é fixa e renovável enquanto o atacante
+  insistir, então quem sabe o e-mail ainda tranca a conta: o reset de senha concluído (o token do
+  e-mail prova posse) destrava. `AuthService.resetarSenha` passou a devolver o e-mail para o
+  controller chamar `loginCerto`.
+- *Um aluno, uma turma (409).* Quem já tem turma e tenta criar ou entrar em outra recebe 409; a
+  tela lê `/turmas/minha`, grava o vínculo na sessão e abre a Home, em vez de repetir o erro a cada
+  toque. Se a leitura falhar, o erro aparece e a Home não abre.
+- *Zoom liberado.* O Safari dá zoom sozinho ao focar campo abaixo de 16px, então campos usam
+  `max(16px, 1em)` e botões `touch-action: manipulation` (tira só o duplo toque; o pinça fica).
+- *`TurmaRepository` zera quando o usuário da sessão some*, lendo `usuario()` e não `autenticado()`:
+  o AuthService apaga os dois juntos e `usuario` é o sinal que `souLider` já lê. Na transferência de
+  liderança, releitura que falha também zera: o dado velho é o que acabou de deixar de valer.
+- *Hikari com zero conexões ociosas e `/saude` sem consulta ao banco*, para o Neon free suspender o
+  compute com a API acordada pelo monitor externo.
+**Travas / dúvidas:** pendências: (1) testar os lembretes num **Android real** — alarme exato,
+permissão e canal só se provam no aparelho, o karma usa plugin falso; (2) ativar o **monitor
+externo** (UptimeRobot, `docs/DEPLOY.md`, "Manter a API acordada"); (3) o workflow
+`manter-acordado.yml` **roda em `master`** e não segura a API (~6 execuções por dia, 3 a 4 min
+cada, a API sempre dormindo) — **desligar quando o monitor estiver ativo**; ainda não foi
+desligado.

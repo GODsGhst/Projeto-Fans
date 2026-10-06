@@ -270,6 +270,32 @@
 }
 
 /* ---------------------------------------------------------------------------
+   iPhone: campo e toque, agora que o zoom esta liberado.
+
+   O Safari da zoom automatico ao focar um campo com fonte abaixo de 16px, e
+   os campos usavam 15px: a tela inteira dava um pulo a cada toque no formulario
+   e a pessoa tinha de dar pinca para voltar. Antes o zoom era travado no
+   viewport e o problema ficava escondido. `max(16px, 1em)` em vez de `16px`
+   fixo para nao DIMINUIR um campo que alguem queira maior.
+
+   `touch-action: manipulation` tira o duplo toque como gesto de zoom nos
+   botoes — dois toques rapidos no mesmo botao viravam zoom em vez de dois
+   toques — e mantem o pinca-para-ampliar, que e o motivo de o zoom ter sido
+   liberado (acessibilidade).
+--------------------------------------------------------------------------- */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+
+button,
+.botao,
+ion-tab-button {
+  touch-action: manipulation;
+}
+
+/* ---------------------------------------------------------------------------
    Quem pediu menos movimento recebe menos movimento.
 
    Isto entrou junto com `--mola`, e por causa dela. Enquanto o token era

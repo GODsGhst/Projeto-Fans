@@ -11,6 +11,7 @@ import { provideIonicAngular } from '@ionic/angular/standalone';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth.service';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
+import { TurmaRepository } from '../../data/turma.repository';
 import { TransferirPage } from './transferir.page';
 
 const EU = { id: 'u1', nome: 'Otávio', email: 'voce@exemplo.com' };
@@ -121,10 +122,31 @@ describe('TransferirPage', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ novoLiderUsuarioId: 'u2' });
     req.flush(null);
+
+    // A turma e buscada de novo ANTES de voltar: o repositorio e compartilhado
+    // e o `garantirCarregada` das outras telas nao rebusca o que ja tem — sem
+    // isto a tela da turma seguia mostrando quem passou o cargo como lider.
+    await new Promise((r) => setTimeout(r));
+    expect(irPara)
+      .withContext('so volta depois de saber o papel novo')
+      .not.toHaveBeenCalled();
+    backend.expectOne(`${environment.apiUrl}/turmas/minha`).flush({
+      ...TURMA,
+      membros: TURMA.membros.map((m) => ({
+        ...m,
+        papel: m.usuarioId === 'u2' ? 'LIDER' : 'ALUNO',
+      })),
+    });
+    // A cadeia GET -> carregar -> transferir -> navegar e so de microtarefas;
+    // uma volta de macrotarefa garante que ela terminou.
+    await new Promise((r) => setTimeout(r));
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(irPara).toHaveBeenCalledWith('/tabs/turma');
+    expect(TestBed.inject(TurmaRepository).souLider())
+      .withContext('quem passou o cargo deixa de ser lider na tela')
+      .toBeFalse();
   });
 
   it('quem NAO e o lider nao ve candidato nenhum', async () => {

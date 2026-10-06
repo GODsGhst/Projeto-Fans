@@ -15,10 +15,19 @@ import {
 
 import { ChaveIaService } from '../../core/chave-ia.service';
 import { NotificacoesService } from '../../notifications/notificacoes.service';
-import type { EstadoAviso } from '../../notifications/notificacoes.service';
+import type {
+  EstadoAviso,
+  EstadoExato,
+} from '../../notifications/notificacoes.service';
+import { LEMBRETES_PADRAO } from '../../notifications/reagendador';
+import type { PreferenciasLembrete } from '../../notifications/reagendador';
 
 /**
- * Ajustes: hoje, só a chave da IA.
+ * Ajustes: os lembretes deste aparelho e a chave da IA.
+ *
+ * **Lembrete é preferência de quem usa, não fato da turma.** Os três
+ * liga/desliga ficam no aparelho e não vão para o servidor: desligar o aviso
+ * das 7h não muda nada para o colega.
  *
  * **A chave fica no aparelho, e essa é a decisão inteira.** Ela não está dentro
  * do APK porque APK é arquivo: quem recebe extrai o conteúdo em um minuto —
@@ -29,8 +38,9 @@ import type { EstadoAviso } from '../../notifications/notificacoes.service';
  * **Cada um usa a sua e paga a sua.** O resumo gerado, esse sim, fica com a
  * turma: quem tem chave gera uma vez e os trinta leem.
  *
- * **É temporário por desenho.** Quando o resumo virar recurso pago do projeto,
- * a chave passa a sair da configuração do servidor e esta tela sai junto.
+ * **A chave é temporária por desenho.** Quando o resumo virar recurso pago do
+ * projeto, ela passa a sair da configuração do servidor e a seção dela sai
+ * desta tela.
  */
 @Component({
   selector: 'app-ajustes',
@@ -58,17 +68,65 @@ import type { EstadoAviso } from '../../notifications/notificacoes.service';
     <ion-content [fullscreen]="true">
       <div class="pf-auth">
         <div class="marca">
-          <b>Avisos da véspera</b>
+          <b>Lembretes</b>
           <span>
-            Um aviso às 19h do dia anterior a cada prova e entrega. Ele é
-            agendado neste aparelho, então chega mesmo com o app fechado.
+            Avisos de cada prova e entrega da turma, agendados neste aparelho —
+            chegam mesmo com o app fechado.
           </span>
         </div>
 
-        <p class="rot-campo">estado neste aparelho</p>
-        <p class="pf-aviso" role="status">{{ frase() }}</p>
+        @if (!suportado) {
+          <p class="pf-aviso" role="status">
+            Lembretes funcionam no app Android.
+          </p>
+        } @else {
+          <fieldset class="lembretes">
+            <legend class="rot-campo">quando avisar</legend>
+            @for (o of opcoes; track o.campo) {
+              <label class="opcao">
+                <input
+                  #caixa
+                  type="checkbox"
+                  [attr.data-lembrete]="o.campo"
+                  [checked]="preferencias()[o.campo]"
+                  (change)="mudar(o.campo, caixa.checked)"
+                />
+                <span>{{ o.rotulo }}</span>
+              </label>
+            }
+          </fieldset>
 
-        @if (estado() !== 'sem-suporte') {
+          <!-- Aparece ao LIGAR "1 hora antes": e o aviso que mais perde com o
+               atraso do alarme inexato, e e aqui que a pessoa esta olhando. -->
+          @if (avisoExato()) {
+            <p class="pf-aviso" role="status">
+              Sem o alarme no horário exato, o Android pode atrasar este aviso
+              em até 1 hora.
+            </p>
+            <button
+              class="botao botao--fantasma"
+              type="button"
+              (click)="permitirExato()"
+            >
+              Permitir horário exato
+            </button>
+          }
+
+          <p class="rot-campo">estado neste aparelho</p>
+          <p class="pf-aviso" role="status">{{ frase() }}</p>
+
+          <p class="rot-campo">horário exato</p>
+          <p class="pf-aviso" role="status">{{ FRASES_EXATO[exato()] }}</p>
+          @if (exato() === 'denied') {
+            <button
+              class="botao botao--fantasma"
+              type="button"
+              (click)="permitirExato()"
+            >
+              Permitir horário exato
+            </button>
+          }
+
           <button class="botao botao--fantasma" type="button" (click)="testar()">
             Testar agora
           </button>
@@ -135,6 +193,34 @@ import type { EstadoAviso } from '../../notifications/notificacoes.service';
     </ion-content>
   `,
   styles: `
+    .lembretes {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    /* A linha inteira e o alvo de toque, nao so a caixinha de 16px. */
+    .opcao {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+      padding: 0 2px;
+      font-size: 15px;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .opcao input {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
     .separa {
       margin: 22px 0 4px;
       border: 0;
@@ -155,12 +241,57 @@ export class AjustesPage {
 
   protected readonly mascarada = signal('');
   protected readonly salvo = signal(false);
+
+  protected readonly suportado = this.avisos.suportado;
   protected readonly estado = signal<EstadoAviso>('prompt');
   protected readonly frase = signal('Verificando…');
+  protected readonly exato = signal<EstadoExato>('granted');
+  /** Ligado ao ligar "1 hora antes" com o exato negado; some ao permitir. */
+  protected readonly avisoExato = signal(false);
+  protected readonly preferencias = signal<PreferenciasLembrete>(
+    LEMBRETES_PADRAO,
+  );
+  protected readonly FRASES_EXATO = FRASES_EXATO;
+
+  /** O rótulo diz a hora: "no dia" sozinho não conta que é às 7h. */
+  protected readonly opcoes: readonly {
+    campo: keyof PreferenciasLembrete;
+    rotulo: string;
+  }[] = [
+    { campo: 'noDia', rotulo: 'No dia · 7h' },
+    { campo: 'vespera', rotulo: 'Na véspera · 19h' },
+    { campo: 'umaHora', rotulo: '1 hora antes · só com horário' },
+  ];
 
   constructor() {
     void this.atualizar();
-    void this.lerEstado();
+    if (this.suportado) {
+      void this.lerEstado();
+      void this.lerPreferencias();
+    }
+  }
+
+  /** Grava e reagenda na hora — o serviço refaz a lista com a preferência nova. */
+  protected async mudar(
+    campo: keyof PreferenciasLembrete,
+    ligado: boolean,
+  ): Promise<void> {
+    const novas = { ...this.preferencias(), [campo]: ligado };
+    this.preferencias.set(novas);
+    await this.avisos.salvarPreferencias(novas);
+    if (campo === 'umaHora') {
+      // So ao ligar, e relendo o sistema: a pessoa pode ter mexido na permissao
+      // desde que a tela abriu. Desligar limpa o aviso — nao ha mais o que atrasar.
+      this.avisoExato.set(
+        ligado && (await this.avisos.estadoExato()) === 'denied',
+      );
+    }
+  }
+
+  protected async permitirExato(): Promise<void> {
+    const r = await this.avisos.permitirExato();
+    this.exato.set(r);
+    this.avisoExato.set(r === 'denied' && this.avisoExato());
   }
 
   /**
@@ -184,6 +315,16 @@ export class AjustesPage {
     const e = await this.avisos.estado();
     this.estado.set(e);
     this.frase.set(FRASES[e]);
+    this.exato.set(await this.avisos.estadoExato());
+  }
+
+  private async lerPreferencias(): Promise<void> {
+    const c = await this.avisos.config();
+    this.preferencias.set({
+      noDia: c.noDia,
+      vespera: c.vespera,
+      umaHora: c.umaHora,
+    });
   }
 
   protected async guardar(valor: string): Promise<void> {
@@ -205,13 +346,25 @@ export class AjustesPage {
  * que contasse que os avisos estavam desligados.
  */
 const FRASES: Record<EstadoAviso, string> = {
-  granted: 'Ligado. Você recebe o aviso às 19h da véspera.',
+  granted: 'Ligado. Os lembretes marcados acima chegam neste aparelho.',
   denied:
     'O Android está bloqueando os avisos deste app, e daqui não dá para pedir de novo. ' +
     'Para religar: Ajustes do celular › Apps › projetoFans › Notificações.',
   prompt:
     'O Android ainda não perguntou. Ele pergunta na primeira prova que houver para avisar — ' +
     'ou agora, se você tocar em Testar.',
-  'sem-suporte':
-    'Avisos só existem no app instalado no celular. No navegador não há o que agendar.',
+  'sem-suporte': 'Lembretes funcionam no app Android.',
+};
+
+/**
+ * Sem o exato o aviso ainda chega, mas o Android 12+ pode atrasá-lo em até 1
+ * HORA (documentação oficial) — não "alguns minutos", como esta frase já disse.
+ * Para o aviso das 7h isso é incômodo; para o de "1 hora antes" é falha. Por
+ * isso a frase diz o número e a tela oferece o botão logo abaixo.
+ */
+const FRASES_EXATO: Record<EstadoExato, string> = {
+  granted: 'Permitido: o aviso chega na hora marcada.',
+  denied:
+    'Sem o alarme no horário exato, o Android pode atrasar o aviso em até 1 hora.',
+  'sem-suporte': 'Lembretes funcionam no app Android.',
 };

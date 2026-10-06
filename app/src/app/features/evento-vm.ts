@@ -43,7 +43,7 @@ export type FonteEvento = Pick<
   readonly sala?: string | null;
 };
 
-const MESES = [
+export const MESES = [
   'jan',
   'fev',
   'mar',
@@ -79,7 +79,15 @@ export function eventoVm(e: FonteEvento, agora: Date): EventoVm {
     mes: MESES[Number(mes) - 1] ?? mes,
     // Horario quando existe; senao o rotulo do tipo. Hora e opcional por
     // decisao 2.6 do spec, e inventar "00:00" seria mentir sobre o combinado.
-    quando: e.hora ?? (e.tipo === 'PROVA' ? 'prova' : 'entrega'),
+    // `slice(0, 5)` porque o backend serializa LocalTime COM segundos
+    // ("19:00:00") e o card mostrava isso cru. O corte e aqui, e nao em cada
+    // tela, porque este e o ponto unico por onde Home, Calendario, Materia e
+    // Evento formatam o horario. Hora vazia cai no rotulo, como a ausente.
+    quando: e.hora
+      ? e.hora.slice(0, 5)
+      : e.tipo === 'PROVA'
+        ? 'prova'
+        : 'entrega',
     titulo: e.titulo,
     materia: { sigla: e.materiaSigla, cor: e.materiaCorHex },
     autoria: assinatura(e.autoria, agora),

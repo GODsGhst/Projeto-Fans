@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
@@ -19,6 +20,9 @@ import {
 
 import { MateriaRepository } from '../../data/materia.repository';
 import type { MateriaDetalhe } from '../../data/models';
+import { ModeracaoRepository } from '../../data/moderacao.repository';
+import { TurmaRepository } from '../../data/turma.repository';
+import { mensagemDeErro } from '../auth/erro';
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import { MaterialLinhaComponent } from '../../shared/material-linha.component';
 import { eventoVm } from '../evento-vm';
@@ -48,6 +52,7 @@ import { materialVm } from '../material-vm';
     IonContent,
     EventoCardComponent,
     MaterialLinhaComponent,
+    NgTemplateOutlet,
     RouterLink,
   ],
   template: `
@@ -81,6 +86,50 @@ import { materialVm } from '../material-vm';
         >
           Adicionar material
         </a>
+
+        <!-- O lider tira da lista; editar e apagar continuam so do autor.
+             Fora do @if(m.url) de proposito: material sem endereco tambem
+             precisa poder sair. O proprio material o autor apaga, entao nao ha
+             botao para ele — mesmo criterio da anotacao no calendario. -->
+        <ng-template #moderar let-m>
+          @if (souLider() && m.autorId !== meuId()) {
+            @if (confirmandoOcultar() === m.id) {
+              <p class="alerta" role="status">
+                Ocultar <b>{{ m.titulo }}</b> da turma? Fica registrado com o
+                seu nome, e quem criou continua vendo em "não listados".
+              </p>
+              @if (erroDaModeracao(); as e) {
+                <p class="pf-erro" role="alert">{{ e }}</p>
+              }
+              <span class="confirmar">
+                <button
+                  class="botao botao--fio botao--pilula"
+                  type="button"
+                  [disabled]="moderando()"
+                  (click)="ocultar(m.id)"
+                >
+                  {{ moderando() ? 'Ocultando…' : 'Ocultar da turma' }}
+                </button>
+                <button
+                  class="botao botao--fio botao--pilula"
+                  type="button"
+                  [disabled]="moderando()"
+                  (click)="confirmandoOcultar.set(null)"
+                >
+                  Cancelar
+                </button>
+              </span>
+            } @else {
+              <button
+                class="botao botao--fio botao--pilula ocultar"
+                type="button"
+                (click)="pedirConfirmacao(m.id)"
+              >
+                Ocultar
+              </button>
+            }
+          }
+        </ng-template>
 
         @if (aula().length) {
           <p class="pf-rotulo">material de aula</p>
@@ -129,6 +178,10 @@ import { materialVm } from '../material-vm';
                 [autoria]="m.autoria"
               />
             }
+            <ng-container
+              [ngTemplateOutlet]="moderar"
+              [ngTemplateOutletContext]="{ $implicit: m }"
+            />
           }
         }
 
@@ -179,6 +232,10 @@ import { materialVm } from '../material-vm';
                 [autoria]="m.autoria"
               />
             }
+            <ng-container
+              [ngTemplateOutlet]="moderar"
+              [ngTemplateOutletContext]="{ $implicit: m }"
+            />
           }
         }
 
@@ -225,6 +282,18 @@ import { materialVm } from '../material-vm';
       color: var(--accent);
       text-decoration: none;
       padding: 2px;
+    }
+
+    /* Pequeno e alinhado a esquerda, como o "Ocultar da turma" da anotacao:
+       e acao rara do lider, nao pode disputar o toque com abrir o material. */
+    .ocultar {
+      align-self: flex-start;
+      font-size: 12px;
+      padding: 5px 10px;
+    }
+    .confirmar {
+      display: flex;
+      gap: 8px;
     }
 
     .onde-e-quem {
@@ -319,10 +388,54 @@ export class MateriaPage {
       this.eventos().length === 0,
   );
 
+  private readonly turmas = inject(TurmaRepository);
+  private readonly moderacao = inject(ModeracaoRepository);
+
+  /** O papel é lido da turma, nunca da sessão: a liderança se transfere. */
+  protected readonly souLider = this.turmas.souLider;
+  /** Qual material está pedindo confirmação. Um por vez: é ação rara. */
+  protected readonly confirmandoOcultar = signal<string | null>(null);
+  protected readonly moderando = signal(false);
+  protected readonly erroDaModeracao = signal<string | null>(null);
+
   constructor() {
     const id = inject(ActivatedRoute).snapshot.paramMap.get('id');
     this.id = id ?? '';
     void this.carregar(id ?? '');
+    void this.turmas.garantirCarregada();
+  }
+
+  protected pedirConfirmacao(id: string): void {
+    this.erroDaModeracao.set(null);
+    this.confirmandoOcultar.set(id);
+  }
+
+  /**
+   * Tira o material da lista da turma. Não apaga: o autor continua vendo.
+   *
+   * Pergunta antes porque, ao contrário da tela do evento, aqui não há
+   * "desfazer": o material some da lista do próprio líder na recarga, e não
+   * sobra tela onde reexibir.
+   */
+  protected async ocultar(materialId: string): Promise<void> {
+    if (this.moderando()) {
+      return;
+    }
+    this.moderando.set(true);
+    this.erroDaModeracao.set(null);
+    try {
+      await this.moderacao.ocultar('material', materialId, null);
+      this.confirmandoOcultar.set(null);
+      // Recarrega em vez de filtrar aqui: quem decide o que é visível é o
+      // servidor (R14), e a tela não replica essa regra.
+      await this.carregar(this.id);
+    } catch (e) {
+      // A confirmação fica aberta com o motivo: o material continua na lista da
+      // turma, e a tela não pode sugerir o contrário.
+      this.erroDaModeracao.set(mensagemDeErro(e));
+    } finally {
+      this.moderando.set(false);
+    }
   }
 
   private async carregar(id: string): Promise<void> {

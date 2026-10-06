@@ -19,6 +19,7 @@ import { EventoRepository } from '../../data/evento.repository';
 import { HomeRepository } from '../../data/home.repository';
 import { MateriaRepository } from '../../data/materia.repository';
 import type { EventoDetalhe, TipoEvento } from '../../data/models';
+import { SyncRepository } from '../../data/sync.repository';
 import { MateriaChipComponent } from '../../shared/materia-chip.component';
 import { Espera } from '../auth/espera';
 import { mensagemDeErro } from '../auth/erro';
@@ -276,6 +277,7 @@ export class NovoEventoPage {
   private readonly materiasRepo = inject(MateriaRepository);
   private readonly eventos = inject(EventoRepository);
   private readonly home = inject(HomeRepository);
+  private readonly sync = inject(SyncRepository);
   private readonly router = inject(Router);
 
   protected readonly materias = this.materiasRepo.materias;
@@ -310,7 +312,9 @@ export class NovoEventoPage {
     return {
       titulo: o?.titulo ?? '',
       data: o?.data ?? '',
-      hora: o?.hora ?? '',
+      // O servidor devolve "19:00:00"; o input type=time mostraria os segundos e
+      // devolveria "19:00:00" no PATCH. Corta para HH:mm, como eventoVm.
+      hora: o?.hora ? o.hora.slice(0, 5) : '',
       sala: o?.sala ?? '',
     };
   });
@@ -416,6 +420,14 @@ export class NovoEventoPage {
       this.enviando.set(false);
       this.espera.terminar();
     }
+
+    // Os lembretes sao calculados de uma lista que o aparelho baixou ANTES deste
+    // evento existir: sem baixar de novo, o alarme que a pessoa marcar na tela
+    // seguinte seria gravado, a tela diria "Vai tocar" e nada tocaria. `forcar`
+    // porque a janela de 60 s deixaria passar justo a lista velha. Sem `await`:
+    // a tela abre ja, e `reagendarAvisos` nao lanca. Vale tambem para a edicao —
+    // mudar data ou hora muda quando os avisos tocam.
+    void this.sync.reagendarAvisos(true);
 
     // Abre o que acabou de ser criado, em vez de voltar para a Home.
     //

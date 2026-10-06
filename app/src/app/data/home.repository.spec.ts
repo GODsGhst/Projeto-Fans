@@ -10,6 +10,8 @@ import { erroHttpInterceptor } from '../core/http-error.interceptor';
 import { StorageService } from '../core/storage.service';
 import type { SnapshotLocal } from '../core/storage.service';
 import { environment } from '../../environments/environment';
+import { PLUGIN_NOTIFICACOES } from '../notifications/notificacoes.service';
+import type { PluginNotificacoes } from '../notifications/notificacoes.service';
 import { HomeRepository } from './home.repository';
 import type { ItemHome } from './models';
 
@@ -170,5 +172,79 @@ describe('HomeRepository', () => {
     expect(repo.offline()).toBeTrue();
     expect(repo.ultimoSync()).toBe('2026-08-30T09:15:00Z');
     expect(repo.erro()).not.toBeNull();
+  });
+});
+
+describe('HomeRepository e os lembretes', () => {
+  let backend: HttpTestingController;
+  let repo: HomeRepository;
+  let plugin: jasmine.SpyObj<PluginNotificacoes>;
+
+  beforeEach(() => {
+    // Com plugin: e o caso do aparelho, o unico em que o /sync e chamado.
+    plugin = jasmine.createSpyObj<PluginNotificacoes>('plugin', [
+      'checkPermissions',
+      'getPending',
+      'cancel',
+      'schedule',
+    ]);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([erroHttpInterceptor])),
+        provideHttpClientTesting(),
+        { provide: StorageService, useValue: new StorageFake() },
+        { provide: PLUGIN_NOTIFICACOES, useValue: plugin },
+      ],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    repo = TestBed.inject(HomeRepository);
+  });
+
+  afterEach(() => backend.verify());
+
+  it('o /sync sai junto com o /home, e a falha dele nao quebra a Home', async () => {
+    spyOn(console, 'error');
+    const pronto = repo.carregar();
+
+    // Em paralelo: o /sync ja saiu antes de o /home responder.
+    const sync = backend.expectOne(`${environment.apiUrl}/sync`);
+    backend
+      .expectOne(`${environment.apiUrl}/home`)
+      .flush([item('a', '2026-09-01', 'PROVA')]);
+    sync.error(new ProgressEvent('error'));
+    await pronto;
+    await new Promise((r) => setTimeout(r));
+
+    expect(repo.itens().map((i) => i.eventoId)).toEqual(['a']);
+    expect(repo.erro()).toBeNull();
+    expect(repo.offline()).toBeFalse();
+    // Falhou o /sync: os avisos de antes continuam — nada cancelado.
+    expect(plugin.cancel).not.toHaveBeenCalled();
+    expect(plugin.schedule).not.toHaveBeenCalled();
+  });
+
+  it('voltar para a Home em seguida nao baixa a turma inteira de novo', async () => {
+    // Antes cada entrada na Home (e cada `resume`) baixava o /sync completo,
+    // mesmo com o que ja estava agendado valendo.
+    plugin.getPending.and.resolveTo({ notifications: [] });
+    const sync = `${environment.apiUrl}/sync`;
+    const turma = { eventosAlterados: [], materias: [], servidorEm: 'x' };
+
+    const primeira = repo.carregar();
+    backend.expectOne(sync).flush(turma);
+    backend.expectOne(`${environment.apiUrl}/home`).flush([]);
+    await primeira;
+    // O /sync termina atras da Home; so conta como "bom" depois de entregue
+    // aos lembretes, que e quando `getPending` (o cancelar) roda.
+    for (let i = 0; i < 100 && plugin.getPending.calls.count() === 0; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    await new Promise((r) => setTimeout(r));
+
+    const segunda = repo.carregar();
+    backend.expectNone(sync);
+    backend.expectOne(`${environment.apiUrl}/home`).flush([]);
+    await segunda;
   });
 });

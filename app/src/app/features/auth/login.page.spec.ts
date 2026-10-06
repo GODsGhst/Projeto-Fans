@@ -106,16 +106,10 @@ describe('LoginPage', () => {
     expect(irPara).not.toHaveBeenCalledWith('/tabs/home');
   });
 
-  it('o botao do Google aparece desabilitado', () => {
-    const botoes = Array.from(
-      fixture.nativeElement.querySelectorAll('button'),
-    ) as HTMLButtonElement[];
-    const google = botoes.find((b) => b.textContent!.includes('Google'));
-    expect(google)
-      .withContext('o mockup mostra o botao presente')
-      .toBeDefined();
-    expect(google!.disabled)
-      .withContext('botao presente e vivo mentiria: nao ha Client ID')
-      .toBeTrue();
+  it('sem Client ID do Google, o botao e o aviso do Google nao aparecem', () => {
+    // Botao desabilitado com explicacao embaixo era lido como "o app quebrou".
+    // Enquanto nao ha projeto no Google Cloud, a tela simplesmente nao oferece.
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).not.toContain('Google');
   });
 });

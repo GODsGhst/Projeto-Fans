@@ -7,6 +7,7 @@ import type {
   SessaoResponse,
   Usuario,
 } from '../data/models';
+import { NotificacoesService } from '../notifications/notificacoes.service';
 import { ApiService } from './api.service';
 import { StorageService } from './storage.service';
 
@@ -17,6 +18,8 @@ export const ROTA_LOGIN = '/login';
 export class AuthService {
   private readonly api = inject(ApiService);
   private readonly storage = inject(StorageService);
+  // Sem ciclo de DI: `NotificacoesService` so conhece o plugin do Capacitor.
+  private readonly lembretes = inject(NotificacoesService);
 
   private readonly _token = signal<string | null>(null);
   private readonly _usuario = signal<Usuario | null>(null);
@@ -136,11 +139,12 @@ export class AuthService {
     }
   }
 
-  /** Sai de verdade: token, usuario e o snapshot local da turma. */
+  /** Sai de verdade: token, usuario, o snapshot local da turma e os lembretes. */
   async sair(): Promise<void> {
     this._token.set(null);
     this._usuario.set(null);
     this._turmaId.set(null);
+    this.esquecerLembretes();
     await this.storage.limparSessao();
     await this.storage.limpar();
   }
@@ -170,10 +174,27 @@ export class AuthService {
     this._token.set(null);
     this._usuario.set(null);
     this._turmaId.set(null);
+    this.esquecerLembretes();
     this.storage
       .limparSessao()
       .catch((e: unknown) =>
         console.error('[auth] falha ao apagar a sessao local', e),
+      );
+  }
+
+  /**
+   * Os avisos agendados no aparelho sao da conta que saiu — e tocam por semanas
+   * se ninguem os cancelar: o alarme nao sabe que a sessao acabou. Cai aqui por
+   * `sair()` e por 401 (`encerrarSessao`), os dois caminhos que perdem a sessao.
+   *
+   * Sem `await`, como o apagar da sessao: o 401 nao espera disco para
+   * redirecionar, e falha aqui vai para o console em vez de travar a saida.
+   */
+  private esquecerLembretes(): void {
+    this.lembretes
+      .esquecer()
+      .catch((e: unknown) =>
+        console.error('[auth] falha ao cancelar os lembretes', e),
       );
   }
 

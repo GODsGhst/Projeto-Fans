@@ -150,6 +150,39 @@ está assinado para a Play Store — para um teste de turma isso é o esperado.
 
 ---
 
+## A cada APK novo: subir a versão, nos DOIS lugares
+
+A versão que o app mostra (Perfil → "Versão X") sai de **um lugar só**: o campo `version` de
+`app/package.json`, importado pelo `perfil.page.ts`. É ali que se muda.
+
+Só que o Android tem a dele, e ela não sai do `package.json`: `versionCode` e `versionName` em
+`app/android/app/build.gradle`. Como `android/` é ignorado pelo git, **essa troca não aparece em
+diff nenhum** — tem de ser feita à mão, a cada APK, junto com a do `package.json`:
+
+| Onde | Campo | 1.1.0 (06/10/2026) |
+|---|---|---|
+| `app/package.json` | `version` | `"1.1.0"` |
+| `app/android/app/build.gradle` | `versionCode` | `2` — **inteiro, sempre +1** |
+| `app/android/app/build.gradle` | `versionName` | `"1.1.0"` — igual ao `package.json` |
+
+O `versionCode` é o que o Android compara: APK com código **menor** que o instalado é recusado
+(downgrade), e o colega teria de desinstalar — perdendo a sessão — para instalar. Código **igual**
+instala, mas aí "Versão X" no Perfil e o APK no celular deixam de dizer a mesma coisa, e um relato
+de bug não diz mais de qual build ele fala.
+
+### O keystore de debug precisa de cópia fora deste notebook
+
+O APK de debug é assinado com `~/.android/debug.keystore` (aqui:
+`C:\Users\gh0st\.android\debug.keystore`). O Android só instala por cima um APK **assinado com a
+mesma chave** do que já está no celular. Se esse arquivo se perder — formatação, troca de máquina,
+limpeza da pasta `.android` —, o Gradle gera outro sozinho, sem avisar, e o próximo APK **não
+instala por cima** em nenhum celular da turma: cada pessoa teria de desinstalar e entrar de novo.
+
+Guarde uma cópia do `debug.keystore` fora do notebook (Drive, pendrive). Ao montar outra máquina,
+coloque a cópia em `~/.android/` **antes** do primeiro `assembleDebug`.
+
+---
+
 ## Antes de mandar para alguém: aponte para a API certa
 
 O APK usa `app/src/environments/environment.prod.ts`, porque `ng build` já constrói em modo de

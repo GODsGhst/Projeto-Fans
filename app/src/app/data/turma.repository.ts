@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { ApiService } from '../core/api.service';
 import { AuthService } from '../core/auth.service';
@@ -43,6 +43,21 @@ export class TurmaRepository {
   readonly carregando = signal(false);
   readonly erro = signal<string | null>(null);
 
+  constructor() {
+    // Este repositório é `providedIn: 'root'` e vive até fechar o app, mas a
+    // sessão não: sair e entrar com outra conta, no mesmo aparelho, deixava a
+    // turma e o papel da conta anterior na tela até recarregar, e o
+    // `garantirCarregada` das telas não busca de novo o que já tem. Zerar aqui,
+    // e não em `auth.service.ts`, mantém a regra ao lado do dado que ela limpa.
+    // Lê `usuario()` e não `autenticado()` porque o AuthService apaga os dois
+    // juntos (sair, 401) e `usuario` é o sinal que `souLider` já lê.
+    effect(() => {
+      if (this.auth.usuario() === null) {
+        this.limpar();
+      }
+    });
+  }
+
   /** `false` enquanto não se sabe. Na dúvida, não oferecer é melhor que oferecer e falhar. */
   readonly souLider = computed(() => {
     const eu = this.auth.usuario();
@@ -81,6 +96,12 @@ export class TurmaRepository {
     } finally {
       this.carregando.set(false);
     }
+  }
+
+  /** Esquece a turma e o aviso de erro: a próxima tela que precisar busca de novo. */
+  limpar(): void {
+    this.turma.set(null);
+    this.erro.set(null);
   }
 
   /** Carrega só se ainda não houver nada — para quem precisa do papel, não da tela. */

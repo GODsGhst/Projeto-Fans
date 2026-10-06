@@ -3,8 +3,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { ErroApi } from '../core/http-error.interceptor';
 import { StorageService } from '../core/storage.service';
-import { NotificacoesService } from '../notifications/notificacoes.service';
 import type { ItemHome } from './models';
+import { SyncRepository } from './sync.repository';
 
 /**
  * `GET /home`.
@@ -18,7 +18,7 @@ import type { ItemHome } from './models';
 export class HomeRepository {
   private readonly api = inject(ApiService);
   private readonly storage = inject(StorageService);
-  private readonly notificacoes = inject(NotificacoesService);
+  private readonly sync = inject(SyncRepository);
 
   readonly itens = signal<ItemHome[]>([]);
   readonly carregando = signal(false);
@@ -37,6 +37,12 @@ export class HomeRepository {
     this.servidorRespondeu = false;
     const doServidorEmVoo = this.api.get<ItemHome[]>('/home');
     void this.aquecerDoDisco();
+    // Lembretes saem do `/sync`, NAO desta lista: a Home tem teto de 6 e janela
+    // de 14 dias, e com ela de fonte a setima prova da semana ficava sem aviso.
+    // Em paralelo e sem `await`: a tela nao espera a turma inteira descer, nem
+    // o sistema operacional responder sobre permissao, para mostrar as provas.
+    // `reagendarAvisos` nao lanca — falha dele nao vira erro da Home.
+    void this.sync.reagendarAvisos();
     try {
       const doServidor = await doServidorEmVoo;
       this.servidorRespondeu = true;
@@ -44,17 +50,6 @@ export class HomeRepository {
       this.offline.set(false);
       this.ultimoSync.set(null);
       await this.storage.mesclar({ eventos: doServidor });
-      // Aqui, e so aqui, porque e o unico ponto em que a lista completa e
-      // recem-vinda do servidor esta na mao. Reagendar a partir do snapshot em
-      // disco ressuscitaria aviso de prova que a turma ja tirou do ar.
-      //
-      // Nao segura o `carregar`: a tela nao espera o sistema operacional
-      // responder sobre permissao para mostrar as provas.
-      void this.notificacoes
-        .sincronizar(doServidor)
-        .catch((erro: unknown) =>
-          console.error('[home] falha ao reagendar avisos', erro),
-        );
     } catch (e) {
       await this.degradar(e);
     } finally {

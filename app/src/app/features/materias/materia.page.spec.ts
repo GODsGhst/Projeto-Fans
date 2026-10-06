@@ -3,6 +3,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ActivatedRoute,
@@ -19,6 +20,7 @@ import type {
   MateriaDetalhe,
   TipoMaterial,
 } from '../../data/models';
+import { TurmaRepository } from '../../data/turma.repository';
 import { MateriaPage } from './materia.page';
 
 const AUTORIA = {
@@ -83,6 +85,8 @@ function detalhe(parcial: Partial<MateriaDetalhe> = {}): MateriaDetalhe {
 describe('MateriaPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<MateriaPage>;
+  // O papel vem do repositorio da turma; aqui ele e so um sinal que o teste liga.
+  const souLider = signal(false);
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -91,6 +95,10 @@ describe('MateriaPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
+        {
+          provide: TurmaRepository,
+          useValue: { souLider, garantirCarregada: () => Promise.resolve() },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 'm1' }) } },
@@ -101,7 +109,10 @@ describe('MateriaPage', () => {
     fixture = TestBed.createComponent(MateriaPage);
   });
 
-  afterEach(() => backend.verify());
+  afterEach(() => {
+    backend.verify();
+    souLider.set(false);
+  });
 
   async function abrir(
     responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
@@ -261,5 +272,84 @@ describe('MateriaPage', () => {
     );
 
     expect(fixture.nativeElement.querySelector('.onde-e-quem')).toBeNull();
+  });
+
+  describe('ocultar material (lider)', () => {
+    const COM_MATERIAL = detalhe({
+      materiaisAula: [
+        material('a1', 'AULA', 'Formas normais', 'https://x/fn.pdf'),
+      ],
+    });
+
+    function botao(rotulo: string): HTMLButtonElement | undefined {
+      return (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.trim() === rotulo);
+    }
+
+    it('so o lider ve o botao de ocultar', async () => {
+      // A tela de editar promete "o lider pode ocultar" e nao havia botao. Ao
+      // aluno comum ele nao aparece: o servidor recusaria, e oferecer o que vai
+      // falhar ensina a desconfiar da tela.
+      await abrir((r) => r.flush(COM_MATERIAL));
+      expect(botao('Ocultar')).toBeUndefined();
+
+      souLider.set(true);
+      fixture.detectChanges();
+      expect(botao('Ocultar')).toBeDefined();
+    });
+
+    it('pergunta antes, oculta pela rota de moderacao e recarrega a materia', async () => {
+      souLider.set(true);
+      await abrir((r) => r.flush(COM_MATERIAL));
+
+      botao('Ocultar')!.click();
+      fixture.detectChanges();
+      backend.expectNone(`${environment.apiUrl}/moderacao/material/a1/ocultar`);
+      expect(fixture.nativeElement.querySelector('.alerta').textContent)
+        .withContext('a pergunta diz qual material sai')
+        .toContain('Formas normais');
+
+      botao('Ocultar da turma')!.click();
+      const req = backend.expectOne(
+        `${environment.apiUrl}/moderacao/material/a1/ocultar`,
+      );
+      expect(req.request.method).toBe('POST');
+      req.flush(null);
+
+      // O servidor ja nao manda o oculto (R14); a tela recarrega em vez de
+      // filtrar por conta propria.
+      await new Promise((r) => setTimeout(r));
+      backend.expectOne(`${environment.apiUrl}/materias/m1`).flush(detalhe());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(textos('app-material-linha .titulo')).toEqual([]);
+      expect(fixture.nativeElement.querySelector('.pf-erro')).toBeNull();
+    });
+
+    it('falha ao ocultar aparece na tela e o material continua', async () => {
+      souLider.set(true);
+      await abrir((r) => r.flush(COM_MATERIAL));
+      botao('Ocultar')!.click();
+      fixture.detectChanges();
+      botao('Ocultar da turma')!.click();
+
+      backend
+        .expectOne(`${environment.apiUrl}/moderacao/material/a1/ocultar`)
+        .flush(
+          { detail: 'Servidor fora do ar.' },
+          { status: 500, statusText: 'Server Error' },
+        );
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.pf-erro'))
+        .withContext('falha de moderacao nunca em silencio')
+        .not.toBeNull();
+      expect(textos('app-material-linha .titulo')).toEqual(['Formas normais']);
+    });
   });
 });

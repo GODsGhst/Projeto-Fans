@@ -14,6 +14,8 @@ import {
 
 import { ApiService } from '../../core/api.service';
 import { AuthService, ROTA_LOGIN } from '../../core/auth.service';
+import { ErroApi } from '../../core/http-error.interceptor';
+import type { MinhaTurma } from '../../data/turma.repository';
 import { mensagemDeErro } from './erro';
 
 /** O que `POST /turmas` devolve. O `codigoConvite` é o motivo desta tela existir. */
@@ -222,7 +224,13 @@ export class EntrarTurmaPage {
     // O servidor guarda o código em caixa alta; quem digita minúsculo não pode
     // levar um 404 por causa disso.
     await this.tentar(async () => {
-      await this.auth.entrarNaTurma(limpo);
+      try {
+        await this.auth.entrarNaTurma(limpo);
+      } catch (e) {
+        if (!(await this.curarSeJaTemTurma(e))) {
+          throw e;
+        }
+      }
       await this.router.navigateByUrl('/tabs/home');
     });
   }
@@ -233,13 +241,24 @@ export class EntrarTurmaPage {
       return;
     }
     await this.tentar(async () => {
-      const turma = await this.api.post<TurmaCriada>('/turmas', {
-        nome: nome.trim(),
-        // Opcional e anulável: a turma é o grupo de pessoas, não o semestre.
-        // Quem cria nem sempre sabe o período, e obrigar faz inventar — e o
-        // valor inventado envelhece sem ninguém poder corrigir.
-        semestre: semestre.trim() === '' ? null : semestre.trim(),
-      });
+      let turma: TurmaCriada;
+      try {
+        turma = await this.api.post<TurmaCriada>('/turmas', {
+          nome: nome.trim(),
+          // Opcional e anulável: a turma é o grupo de pessoas, não o semestre.
+          // Quem cria nem sempre sabe o período, e obrigar faz inventar — e o
+          // valor inventado envelhece sem ninguém poder corrigir.
+          semestre: semestre.trim() === '' ? null : semestre.trim(),
+        });
+      } catch (e) {
+        // Já tem turma: não há turma nova nem código para mostrar, só a
+        // sessão a corrigir e a Home a abrir.
+        if (await this.curarSeJaTemTurma(e)) {
+          await this.router.navigateByUrl('/tabs/home');
+          return;
+        }
+        throw e;
+      }
       // Registrar o vínculo ANTES de mostrar o código: sem isto a guarda ainda
       // acha que a pessoa não tem turma e a devolve para cá ao tocar em Continuar.
       await this.auth.registrarTurma(turma.id);
@@ -266,6 +285,27 @@ export class EntrarTurmaPage {
   protected async sair(): Promise<void> {
     await this.auth.sair();
     await this.router.navigateByUrl(ROTA_LOGIN);
+  }
+
+  /**
+   * 409 aqui é "Você já está numa turma" (um aluno, uma turma). O servidor já
+   * tem o vínculo; quem está desatualizada é a sessão do aparelho — o app caiu
+   * antes de gravar o `turmaId`, ou a pessoa entrou por outro aparelho. Sem
+   * curar, a guarda a devolve para esta tela e o 409 se repete a cada toque,
+   * sem saída. Então lê a turma que o servidor diz ser dela, grava o vínculo
+   * e deixa o chamador seguir para a Home.
+   *
+   * Devolve `false` para qualquer outro erro, que o chamador relança. Se a
+   * leitura da turma falhar (sem rede, por exemplo), o erro dela sobe e a Home
+   * não abre: abrir sem vínculo gravado só devolveria a pessoa para cá.
+   */
+  private async curarSeJaTemTurma(e: unknown): Promise<boolean> {
+    if (!(e instanceof ErroApi) || e.status !== 409) {
+      return false;
+    }
+    const turma = await this.api.get<MinhaTurma>('/turmas/minha');
+    await this.auth.registrarTurma(turma.id);
+    return true;
   }
 
   private async tentar(acao: () => Promise<unknown>): Promise<void> {

@@ -13,6 +13,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
+import pacote from '../../../../package.json';
 import { AuthService, ROTA_LOGIN } from '../../core/auth.service';
 import type { Perfil } from '../../data/models';
 import { mensagemDeErro } from '../auth/erro';
@@ -159,6 +160,10 @@ import { mensagemDeErro } from '../auth/erro';
         <button class="botao botao--fantasma" type="button" (click)="sair()">
           Sair da conta
         </button>
+
+        <!-- Para quem reporta um problema dizer de qual APK fala. Fora dos @if:
+             perfil que nao carregou ainda precisa responder isso. -->
+        <p class="versao">Versão {{ versao }}</p>
       </div>
     </ion-content>
   `,
@@ -192,6 +197,12 @@ import { mensagemDeErro } from '../auth/erro';
       height: 72px;
       font-size: 30px;
     }
+    .versao {
+      margin: 16px 0 0;
+      text-align: center;
+      font-size: 11px;
+      color: var(--ink-3);
+    }
     /* Papel, nao posto: mesma marca discreta do "lider" na tela da turma. */
     .topo .selo {
       margin-top: 4px;
@@ -207,6 +218,9 @@ import { mensagemDeErro } from '../auth/erro';
 export class PerfilPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+
+  /** Do `package.json`, o unico lugar onde a versao e escrita (docs/ANDROID.md). */
+  protected readonly versao = pacote.version;
 
   protected readonly perfil = signal<Perfil | null>(null);
   protected readonly carregando = signal(true);

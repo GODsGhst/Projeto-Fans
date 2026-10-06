@@ -94,7 +94,11 @@ export interface ItemHome {
   titulo: string;
   /** ISO `AAAA-MM-DD`. */
   data: string;
-  /** `HH:mm`, ou null — hora e opcional. */
+  /**
+   * `HH:mm:ss`, ou null — hora e opcional. O backend serializa LocalTime COM
+   * segundos; quem exibe corta para `HH:mm` em `eventoVm`, e o dado fica como
+   * veio.
+   */
   hora: string | null;
   materiaSigla: string;
   materiaCorHex: string;
@@ -108,6 +112,7 @@ export interface Evento {
   tipo: TipoEvento;
   titulo: string;
   data: string;
+  /** Mesmo formato de `ItemHome.hora`: `HH:mm:ss`, ou null. */
   hora: string | null;
   materiaId: string;
   materiaSigla: string;
@@ -173,6 +178,7 @@ export interface CriarEventoRequest {
   tipo: TipoEvento;
   titulo: string;
   data: string;
+  /** `HH:mm` (o que o `input type="time"` entrega), ou null para nao ter horario. */
   hora: string | null;
   /** `null` = na sala de sempre. Preenchida so quando for a excecao daquele dia. */
   sala: string | null;

@@ -89,13 +89,11 @@ import { mensagemDeErro } from './erro';
           Criar conta
         </button>
 
-        <button class="botao botao--fantasma" type="button" disabled>
-          Entrar com Google
-        </button>
-        <p class="alerta">
-          O login por Google fica disponível quando o projeto no Google Cloud
-          existir. Enquanto isso, e-mail e senha funcionam normalmente.
-        </p>
+        @if (googleConfigurado) {
+          <button class="botao botao--fantasma" type="button">
+            Entrar com Google
+          </button>
+        }
       </div>
     </ion-content>
   `,
@@ -103,6 +101,14 @@ import { mensagemDeErro } from './erro';
 export class LoginPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+
+  /**
+   * O projeto no Google Cloud (e o Client ID que ele da) ainda nao existe, e
+   * `auth.entrarComGoogle` nao tem quem lhe entregue um ID token. Botao
+   * desabilitado com um aviso embaixo parecia defeito para quem chegava; e
+   * melhor nao oferecer. Liga junto com o clique chamando `entrarComGoogle`.
+   */
+  protected readonly googleConfigurado = false;
 
   protected readonly enviando = signal(false);
   private readonly espera = new Espera();

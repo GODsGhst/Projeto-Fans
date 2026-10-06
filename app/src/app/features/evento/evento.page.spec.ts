@@ -16,7 +16,15 @@ import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
 import type { EventoDetalhe, Material } from '../../data/models';
 import { AuthService } from '../../core/auth.service';
+import { SyncRepository } from '../../data/sync.repository';
 import { TurmaRepository } from '../../data/turma.repository';
+import { NotificacoesService } from '../../notifications/notificacoes.service';
+import {
+  LEMBRETES_PADRAO,
+  TIMEZONE_PADRAO,
+  instantePersonalizado,
+} from '../../notifications/reagendador';
+import type { AlarmePersonalizado } from '../../notifications/reagendador';
 import { EventoPage } from './evento.page';
 
 const AUTORIA = {
@@ -527,5 +535,354 @@ describe('EventoPage', () => {
     expect(fixture.nativeElement.textContent as string)
       .withContext('o lider precisa saber que pediu, nao que apagou')
       .toContain('Pedido enviado');
+  });
+});
+
+describe('EventoPage — lembrete personalizado', () => {
+  let backend: HttpTestingController;
+  let fixture: ComponentFixture<EventoPage>;
+  let avisos: jasmine.SpyObj<NotificacoesService> & { suportado: boolean };
+  let sync: jasmine.SpyObj<SyncRepository>;
+  /** So desinstala o que este arquivo instalou: `uninstall` sem `install` troca os timers por nativos. */
+  let relogioFalso = false;
+
+  /** Longe no futuro: o instante calculado nao pode virar "ja passou" com o tempo. */
+  const NO_FUTURO = {
+    ...detalhe([]),
+    data: '2030-10-11',
+    hora: '19:00:00',
+  };
+
+  /**
+   * `comAparelho` falso usa o servico DE VERDADE, sem plugin — o mesmo caminho
+   * do site. Verdadeiro troca o servico por um falso que diz "estou no app".
+   */
+  async function abrir(
+    evento: object,
+    comAparelho: boolean,
+    gravados: Record<string, AlarmePersonalizado> = {},
+    exato: 'granted' | 'denied' = 'granted',
+  ): Promise<HTMLElement> {
+    avisos = Object.assign(
+      jasmine.createSpyObj<NotificacoesService>('avisos', [
+        'config',
+        'salvarAlarme',
+        'estadoExato',
+        'permitirExato',
+      ]),
+      { suportado: true },
+    );
+    avisos.config.and.resolveTo({
+      ...LEMBRETES_PADRAO,
+      personalizados: gravados,
+    });
+    avisos.salvarAlarme.and.resolveTo();
+    avisos.estadoExato.and.resolveTo(exato);
+    avisos.permitirExato.and.resolveTo('granted');
+    // O `/sync` de verdade e do SyncRepository (testado a parte): aqui so
+    // importa se a tela o pede, e como.
+    sync = jasmine.createSpyObj<SyncRepository>('sync', ['reagendarAvisos']);
+    sync.reagendarAvisos.and.resolveTo();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideIonicAngular(),
+        provideHttpClient(withInterceptors([erroHttpInterceptor])),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { usuario: usuarioAtual } },
+        {
+          provide: TurmaRepository,
+          useValue: {
+            souLider: liderancaMinha,
+            garantirCarregada: () => Promise.resolve(),
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: 'e1' }) } },
+        },
+        ...(comAparelho
+          ? [
+              { provide: NotificacoesService, useValue: avisos },
+              { provide: SyncRepository, useValue: sync },
+            ]
+          : []),
+      ],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(EventoPage);
+    fixture.detectChanges();
+    backend.expectOne(`${environment.apiUrl}/eventos/e1`).flush(evento);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => {
+    if (relogioFalso) {
+      jasmine.clock().uninstall();
+      relogioFalso = false;
+    }
+    backend.verify();
+  });
+
+  function botao(tela: HTMLElement, texto: string): HTMLButtonElement {
+    return Array.from(tela.querySelectorAll('button')).find(
+      (b) => b.textContent!.trim() === texto,
+    )!;
+  }
+
+  function previa(tela: HTMLElement): string {
+    return tela.querySelector('.previa')!.textContent!.trim();
+  }
+
+  async function mudar(el: HTMLInputElement | HTMLSelectElement, valor: string) {
+    el.value = valor;
+    el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  it('no site diz que lembrete e coisa do app', async () => {
+    const tela = await abrir(NO_FUTURO, false);
+
+    expect(tela.querySelector('.lembrete')!.textContent).toContain(
+      'Lembretes funcionam no app Android',
+    );
+    expect(botao(tela, 'Marcar um lembrete')).toBeUndefined();
+  });
+
+  it('relativo: a tela mostra QUANDO vai tocar, antes de salvar', async () => {
+    const tela = await abrir(NO_FUTURO, true);
+    botao(tela, 'Marcar um lembrete').click();
+    fixture.detectChanges();
+
+    // Padrao: 1 dia antes da prova de sex, 11 out, 19:00.
+    expect(previa(tela)).toBe('Vai tocar qui, 10 out, 19:00.');
+
+    await mudar(tela.querySelector('input[type="number"]')!, '36');
+    await mudar(tela.querySelector('select')!, 'horas');
+    expect(previa(tela)).toBe('Vai tocar qui, 10 out, 07:00.');
+  });
+
+  it('relativo sem hora no evento conta das 7h do dia, e a tela avisa', async () => {
+    const semHora: Record<string, unknown> = { ...NO_FUTURO };
+    delete semHora['hora'];
+    const tela = await abrir(semHora, true);
+    botao(tela, 'Marcar um lembrete').click();
+    fixture.detectChanges();
+
+    await mudar(tela.querySelector('input[type="number"]')!, '36');
+    await mudar(tela.querySelector('select')!, 'horas');
+
+    expect(tela.textContent).toContain('conta a partir das 7h do dia');
+    // 11/10 07:00 menos 36 h = 09/10 19:00.
+    expect(previa(tela)).toBe('Vai tocar qua, 9 out, 19:00.');
+  });
+
+  it('data e hora exatas: hora de parede de Sao Paulo', async () => {
+    const tela = await abrir(NO_FUTURO, true);
+    botao(tela, 'Marcar um lembrete').click();
+    fixture.detectChanges();
+    botao(tela, 'Data e hora').click();
+    fixture.detectChanges();
+
+    await mudar(
+      tela.querySelector('input[type="datetime-local"]')!,
+      '2030-10-09T19:00',
+    );
+    expect(previa(tela)).toBe('Vai tocar qua, 9 out, 19:00.');
+
+    botao(tela, 'Salvar lembrete').click();
+    await fixture.whenStable();
+
+    // O rotulo "qua, 9 out, 19:00" sozinho nao prova nada: numa maquina ja em
+    // Sao Paulo ele sai igual com `new Date(valor)`, que usa o fuso da maquina.
+    // O que vai para o disco e a hora de PAREDE, e o INSTANTE que dela resulta
+    // e 19:00 de SP = 22:00 UTC (UTC-3), em qualquer maquina.
+    const [id, gravado] = avisos.salvarAlarme.calls.mostRecent().args;
+    expect(id).toBe('e1');
+    expect(gravado).toEqual({
+      modo: 'EXATO',
+      data: '2030-10-09',
+      hora: '19:00',
+    });
+    expect(
+      instantePersonalizado(gravado!, NO_FUTURO, TIMEZONE_PADRAO)!.getTime(),
+    ).toBe(Date.UTC(2030, 9, 9, 22, 0));
+  });
+
+  it('passado nao salva, e a tela diz', async () => {
+    const tela = await abrir(NO_FUTURO, true);
+    botao(tela, 'Marcar um lembrete').click();
+    fixture.detectChanges();
+    botao(tela, 'Data e hora').click();
+    fixture.detectChanges();
+
+    await mudar(
+      tela.querySelector('input[type="datetime-local"]')!,
+      '2020-01-01T10:00',
+    );
+
+    expect(previa(tela)).toBe('Esse horário já passou — não vai tocar.');
+    expect(botao(tela, 'Salvar lembrete').disabled).toBeTrue();
+  });
+
+  it('salvar grava um por evento, e remover apaga', async () => {
+    const tela = await abrir(NO_FUTURO, true);
+    botao(tela, 'Marcar um lembrete').click();
+    fixture.detectChanges();
+    await mudar(tela.querySelector('input[type="number"]')!, '36');
+    await mudar(tela.querySelector('select')!, 'horas');
+
+    botao(tela, 'Salvar lembrete').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(avisos.salvarAlarme).toHaveBeenCalledWith('e1', {
+      modo: 'RELATIVO',
+      horasAntes: 36,
+    });
+    expect(tela.querySelector('.lembrete .alerta')!.textContent).toContain(
+      'Vai tocar qui, 10 out, 07:00',
+    );
+
+    botao(tela, 'Remover lembrete').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(avisos.salvarAlarme).toHaveBeenCalledWith('e1', null);
+    expect(botao(tela, 'Marcar um lembrete')).toBeDefined();
+  });
+
+  it('o alarme ja gravado no aparelho aparece ao abrir', async () => {
+    const tela = await abrir(NO_FUTURO, true, {
+      e1: { modo: 'EXATO', data: '2030-10-09', hora: '19:00' },
+    });
+
+    expect(tela.querySelector('.lembrete .alerta')!.textContent).toContain(
+      'Vai tocar qua, 9 out, 19:00',
+    );
+  });
+
+  it('salvar e remover baixam o /sync de novo, forcado — o evento pode ser mais novo que a lista', async () => {
+    // O aparelho so agenda evento que esta na ultima lista do /sync. Sem baixar
+    // de novo, o alarme era gravado, a tela dizia "Vai tocar" e nada tocava.
+    const tela = await abrir(NO_FUTURO, true);
+    botao(tela, 'Marcar um lembrete').click();
+    fixture.detectChanges();
+
+    botao(tela, 'Salvar lembrete').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(sync.reagendarAvisos).toHaveBeenCalledOnceWith(true);
+
+    botao(tela, 'Remover lembrete').click();
+    await fixture.whenStable();
+    expect(sync.reagendarAvisos).toHaveBeenCalledTimes(2);
+    expect(sync.reagendarAvisos.calls.mostRecent().args).toEqual([true]);
+  });
+
+  describe('alarme no horario exato', () => {
+    const AVISO = 'pode atrasar o lembrete em até 1 hora';
+
+    it('negado: avisa que o lembrete pode chegar 1 hora depois e oferece o botao', async () => {
+      const tela = await abrir(NO_FUTURO, true, {}, 'denied');
+
+      expect(tela.querySelector('.lembrete')!.textContent).toContain(AVISO);
+
+      botao(tela, 'Permitir horário exato').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(avisos.permitirExato).toHaveBeenCalled();
+      expect(tela.querySelector('.lembrete')!.textContent).not.toContain(AVISO);
+      expect(botao(tela, 'Permitir horário exato')).toBeUndefined();
+    });
+
+    it('permitido: nao avisa nada', async () => {
+      const tela = await abrir(NO_FUTURO, true, {}, 'granted');
+
+      expect(tela.querySelector('.lembrete')!.textContent).not.toContain(AVISO);
+      expect(botao(tela, 'Permitir horário exato')).toBeUndefined();
+    });
+
+    it('ao salvar o alarme a tela le o sistema de novo, e o aviso sai se a pessoa ja permitiu', async () => {
+      // A permissao pode ter mudado desde que a tela abriu (a pessoa foi aos
+      // ajustes do Android e voltou).
+      const tela = await abrir(NO_FUTURO, true, {}, 'denied');
+      expect(tela.querySelector('.lembrete')!.textContent).toContain(AVISO);
+
+      avisos.estadoExato.and.resolveTo('granted');
+      botao(tela, 'Marcar um lembrete').click();
+      fixture.detectChanges();
+      botao(tela, 'Salvar lembrete').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(tela.querySelector('.lembrete')!.textContent).not.toContain(AVISO);
+    });
+  });
+
+  describe('o relogio da tela', () => {
+    /** Um alarme exato as 19:00 de SP, com a tela aberta a 20 s dessa hora. */
+    async function abrirPertoDoAlarme(): Promise<HTMLElement> {
+      // Antes de abrir: o intervalo e criado no construtor, e so o relogio
+      // falso consegue dispara-lo sem esperar 30 s de verdade.
+      jasmine.clock().install();
+      relogioFalso = true;
+      jasmine.clock().mockDate(new Date('2030-10-09T21:59:40Z')); // 18:59:40 em SP
+      const tela = await abrir(NO_FUTURO, true);
+      botao(tela, 'Marcar um lembrete').click();
+      fixture.detectChanges();
+      botao(tela, 'Data e hora').click();
+      fixture.detectChanges();
+      await mudar(
+        tela.querySelector('input[type="datetime-local"]')!,
+        '2030-10-09T19:00',
+      );
+      expect(previa(tela)).toBe('Vai tocar qua, 9 out, 19:00.');
+      expect(botao(tela, 'Salvar lembrete').disabled).toBeFalse();
+      return tela;
+    }
+
+    it('a previa vira "ja passou" sozinha, sem a pessoa mexer em nada', async () => {
+      // `previa` e `podeSalvar` liam `Date.now()` dentro de `computed`, que nao
+      // recalcula: a tela aberta por minutos seguia oferecendo salvar um
+      // alarme que ja tinha passado.
+      const tela = await abrirPertoDoAlarme();
+
+      jasmine.clock().tick(30_000); // 19:00:10 em SP
+      fixture.detectChanges();
+
+      expect(previa(tela)).toBe('Esse horário já passou — não vai tocar.');
+      expect(botao(tela, 'Salvar lembrete').disabled).toBeTrue();
+    });
+
+    it('salvar confere o relogio de novo: entre dois tiques o horario pode ter passado', async () => {
+      const tela = await abrirPertoDoAlarme();
+
+      // O relogio anda sem o tique de 30 s disparar (o celular dormiu): o botao
+      // ainda esta habilitado, com a conta velha.
+      jasmine.clock().mockDate(new Date('2030-10-09T22:00:10Z'));
+      botao(tela, 'Salvar lembrete').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(avisos.salvarAlarme).not.toHaveBeenCalled();
+      expect(previa(tela)).toBe('Esse horário já passou — não vai tocar.');
+    });
+
+    it('o intervalo sai quando a tela e destruida', async () => {
+      // `setInterval` solto vaza: cada visita a um evento deixaria um tique a
+      // mais acordando um componente que ja nao existe.
+      spyOn(window, 'setInterval').and.returnValue(4242 as never);
+      const parar = spyOn(window, 'clearInterval');
+      await abrir(NO_FUTURO, true);
+
+      fixture.destroy();
+
+      expect(parar).toHaveBeenCalledWith(4242);
+    });
   });
 });

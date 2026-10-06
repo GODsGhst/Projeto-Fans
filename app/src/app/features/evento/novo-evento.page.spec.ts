@@ -12,6 +12,7 @@ import { erroHttpInterceptor } from '../../core/http-error.interceptor';
 import { StorageService } from '../../core/storage.service';
 import type { SnapshotLocal } from '../../core/storage.service';
 import type { Materia } from '../../data/models';
+import { SyncRepository } from '../../data/sync.repository';
 import { NovoEventoPage } from './novo-evento.page';
 
 const BD: Materia = {
@@ -59,8 +60,13 @@ describe('NovoEventoPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<NovoEventoPage>;
   let irPara: jasmine.Spy;
+  let sync: jasmine.SpyObj<SyncRepository>;
 
   beforeEach(() => {
+    // O `/sync` e do SyncRepository (testado a parte); aqui importa se a tela o
+    // pede depois de salvar.
+    sync = jasmine.createSpyObj<SyncRepository>('sync', ['reagendarAvisos']);
+    sync.reagendarAvisos.and.resolveTo();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -68,6 +74,7 @@ describe('NovoEventoPage', () => {
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
         { provide: StorageService, useValue: new StorageFake() },
+        { provide: SyncRepository, useValue: sync },
         // O `id` da rota é o que separa adicionar de editar. `Map` de propósito:
         // cada teste ajusta o seu, e o padrão (vazio) é o modo de adicionar.
         {
@@ -247,6 +254,35 @@ describe('NovoEventoPage', () => {
     expect(irPara).toHaveBeenCalledWith('/tabs/eventos/ev-9');
   });
 
+  it('depois de adicionar, baixa o /sync de novo (forcado) para o aviso do evento novo nascer', async () => {
+    // Os lembretes saem de uma lista baixada ANTES deste evento existir. Sem
+    // baixar de novo, o alarme marcado na tela seguinte era gravado, a tela
+    // dizia "Vai tocar" e nada tocava.
+    await abrir((r) => r.flush([BD]));
+    preencher('Prova 2', '2026-09-10');
+    cadastrar();
+    expect(sync.reagendarAvisos).not.toHaveBeenCalled();
+
+    backend.expectOne(`${environment.apiUrl}/eventos`).flush({ id: 'ev-9' });
+    await assentar();
+
+    expect(sync.reagendarAvisos).toHaveBeenCalledOnceWith(true);
+    // Antes de navegar: a tela seguinte ja nasce com a lista nova a caminho.
+    expect(sync.reagendarAvisos).toHaveBeenCalledBefore(irPara);
+  });
+
+  it('cadastro que falha nao baixa o /sync: nao ha evento novo', async () => {
+    await abrir((r) => r.flush([BD]));
+    preencher('Prova 1', '2026-09-10');
+    cadastrar();
+    backend
+      .expectOne(`${environment.apiUrl}/eventos`)
+      .flush({ detail: 'Deu ruim' }, { status: 500, statusText: 'Server Error' });
+    await assentar();
+
+    expect(sync.reagendarAvisos).not.toHaveBeenCalled();
+  });
+
   it('em modo de edicao carrega o evento, preenche os campos e manda PATCH com If-Match', async () => {
     // A mesma página atende adicionar e editar porque é o MESMO formulário: seis
     // campos, a mesma validação, a mesma lista de matérias. Duas páginas seriam
@@ -266,7 +302,8 @@ describe('NovoEventoPage', () => {
       tipo: 'ENTREGA',
       titulo: 'Lista 4',
       data: '2026-09-12',
-      hora: '19:30',
+      // Com segundos, como o LocalTime do backend chega de verdade.
+      hora: '19:30:00',
       sala: 'A-101',
       materiaId: CALC.id,
       materiaSigla: CALC.sigla,
@@ -291,7 +328,9 @@ describe('NovoEventoPage', () => {
       .withContext('editar sem os campos preenchidos obriga a redigitar tudo')
       .toBe('Lista 4');
     expect(campo('input[type="date"]').value).toBe('2026-09-12');
-    expect(campo('input[type="time"]').value).toBe('19:30');
+    expect(campo('input[type="time"]').value)
+      .withContext('sem o corte o campo mostra e devolve os segundos')
+      .toBe('19:30');
 
     (
       Array.from(
@@ -307,6 +346,7 @@ describe('NovoEventoPage', () => {
       .withContext('sem If-Match a edicao passa por cima da de outra pessoa')
       .toBe('3');
     expect(req.request.body.titulo).toBe('Lista 4');
+    expect(req.request.body.hora).toBe('19:30');
     expect(req.request.body.sala)
       .withContext(
         'PATCH substitui o objeto inteiro: campo omitido vira null no servidor',
@@ -317,5 +357,7 @@ describe('NovoEventoPage', () => {
     outra.detectChanges();
 
     expect(irPara).toHaveBeenCalledWith('/tabs/eventos/e1');
+    // Mudar data ou hora muda quando os avisos tocam.
+    expect(sync.reagendarAvisos).toHaveBeenCalledOnceWith(true);
   });
 });

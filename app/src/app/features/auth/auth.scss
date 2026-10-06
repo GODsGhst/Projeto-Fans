@@ -51,7 +51,10 @@
   width: 100%;
   padding: 12px 13px;
   font: inherit;
-  font-size: 15px;
+  /* 16px e o piso do iPhone: abaixo disso o Safari da zoom ao focar o campo.
+     O global.scss tem a mesma regra, mas esta classe tem mais especificidade e
+     a sobrescreveria. */
+  font-size: max(16px, 1em);
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--rule);

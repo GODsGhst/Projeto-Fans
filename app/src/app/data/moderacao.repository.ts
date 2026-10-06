@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 
 import { ApiService } from '../core/api.service';
+import { TurmaRepository } from './turma.repository';
 
 /** Os dois tipos que o líder pode moderar. A rota do spec é em minúsculas. */
 export type TipoModeravel = 'evento' | 'material' | 'nota';
@@ -33,6 +34,7 @@ export interface PedidoDeExclusao {
 @Injectable({ providedIn: 'root' })
 export class ModeracaoRepository {
   private readonly api = inject(ApiService);
+  private readonly turmas = inject(TurmaRepository);
 
   /**
    * Os pedidos de exclusão sobre o que EU criei.
@@ -71,10 +73,24 @@ export class ModeracaoRepository {
   /**
    * Passa a liderança. Quem chama deixa de ser líder na mesma operação — a turma
    * nunca fica sem líder nem com dois.
+   *
+   * Recarrega a turma em seguida, e aqui e não na tela: o papel de todas as
+   * telas sai do mesmo `TurmaRepository`, e o `garantirCarregada` delas não
+   * busca de novo o que já tem. Sem isto a turma continuava mostrando o
+   * ex-líder como líder até fechar o app.
+   *
+   * `carregar` não lança: guarda a falha em `erro` e mantém o dado velho, que é
+   * certo para "não consegui atualizar" e errado aqui — o dado velho é
+   * justamente o que acabou de deixar de valer. Então, se a releitura falhou,
+   * esquece a turma e força uma busca nova na próxima tela.
    */
-  transferirLideranca(novoLiderUsuarioId: string): Promise<void> {
-    return this.api.post<void>('/turmas/lideranca/transferir', {
+  async transferirLideranca(novoLiderUsuarioId: string): Promise<void> {
+    await this.api.post<void>('/turmas/lideranca/transferir', {
       novoLiderUsuarioId,
     });
+    await this.turmas.carregar();
+    if (this.turmas.erro() !== null) {
+      this.turmas.limpar();
+    }
   }
 }

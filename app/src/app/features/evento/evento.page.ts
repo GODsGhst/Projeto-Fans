@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  NgZone,
   computed,
   inject,
   signal,
@@ -19,6 +21,7 @@ import { ErroApi } from '../../core/http-error.interceptor';
 import { EventoRepository } from '../../data/evento.repository';
 import { AuthService } from '../../core/auth.service';
 import { ModeracaoRepository } from '../../data/moderacao.repository';
+import { SyncRepository } from '../../data/sync.repository';
 import { TurmaRepository } from '../../data/turma.repository';
 import { mensagemDeErro } from '../auth/erro';
 import type { EventoDetalhe } from '../../data/models';
@@ -26,6 +29,14 @@ import { EventoCardComponent } from '../../shared/evento-card.component';
 import { MaterialLinhaComponent } from '../../shared/material-linha.component';
 import { eventoVm } from '../evento-vm';
 import { materialVm } from '../material-vm';
+import { NotificacoesService } from '../../notifications/notificacoes.service';
+import type { EstadoExato } from '../../notifications/notificacoes.service';
+import {
+  TIMEZONE_PADRAO,
+  instantePersonalizado,
+  rotuloInstante,
+} from '../../notifications/reagendador';
+import type { AlarmePersonalizado } from '../../notifications/reagendador';
 
 /**
  * A tela de uma prova ou entrega.
@@ -273,6 +284,148 @@ import { materialVm } from '../material-vm';
             </p>
           }
 
+          <!-- O lembrete e deste aparelho, nao da turma: ninguem mais ve, e
+               por isso qualquer membro marca o seu, sem ser autor nem lider. -->
+          <section class="lembrete" aria-labelledby="rot-lembrete">
+            <p class="pf-rotulo" id="rot-lembrete">seu lembrete</p>
+            @if (!suportaLembrete) {
+              <p class="pf-cache-aviso">Lembretes funcionam no app Android.</p>
+            } @else if (alarmeGravado(); as g) {
+              <p class="alerta" role="status">
+                @if (g.passou) {
+                  Já passou — era {{ g.quando }}.
+                } @else {
+                  Vai tocar {{ g.quando }}.
+                }
+              </p>
+              <button
+                class="botao botao--fantasma"
+                type="button"
+                (click)="removerAlarme()"
+              >
+                Remover lembrete
+              </button>
+            } @else if (marcando()) {
+              <div class="seg" role="group" aria-label="Como marcar o lembrete">
+                <button
+                  type="button"
+                  [attr.aria-pressed]="modoAlarme() === 'RELATIVO'"
+                  (click)="modoAlarme.set('RELATIVO')"
+                >
+                  Antes do evento
+                </button>
+                <button
+                  type="button"
+                  [attr.aria-pressed]="modoAlarme() === 'EXATO'"
+                  (click)="modoAlarme.set('EXATO')"
+                >
+                  Data e hora
+                </button>
+              </div>
+
+              @if (modoAlarme() === 'RELATIVO') {
+                <div class="antes">
+                  <input
+                    #quantoAntes
+                    class="campo--linha"
+                    type="number"
+                    min="1"
+                    inputmode="decimal"
+                    aria-label="Quanto antes"
+                    [value]="quanto()"
+                    (input)="quanto.set(quantoAntes.valueAsNumber)"
+                  />
+                  <select
+                    #unidadeAntes
+                    class="campo--linha"
+                    aria-label="Horas ou dias antes"
+                    (change)="unidade.set(unidadeAntes.value === 'horas' ? 'horas' : 'dias')"
+                  >
+                    <option value="dias" [selected]="unidade() === 'dias'">
+                      dias antes
+                    </option>
+                    <option value="horas" [selected]="unidade() === 'horas'">
+                      horas antes
+                    </option>
+                  </select>
+                </div>
+                <p class="pf-cache-aviso">
+                  {{
+                    temHora()
+                      ? 'Contando da hora do evento.'
+                      : 'O evento não tem horário: conta a partir das 7h do dia.'
+                  }}
+                </p>
+              } @else {
+                <input
+                  #quandoExato
+                  class="campo--linha"
+                  type="datetime-local"
+                  aria-label="Data e hora do lembrete"
+                  [value]="exatoParede()"
+                  (input)="exatoParede.set(quandoExato.value)"
+                />
+              }
+
+              <!-- O instante calculado ANTES de salvar: "36 horas antes" de uma
+                   prova sem hora so nao surpreende se a tela disser quando. -->
+              <p class="previa" role="status">
+                @if (previa(); as p) {
+                  @if (p.passou) {
+                    Esse horário já passou — não vai tocar.
+                  } @else {
+                    Vai tocar {{ p.quando }}.
+                  }
+                } @else {
+                  Escolha quando.
+                }
+              </p>
+              <button
+                class="botao"
+                type="button"
+                [disabled]="!podeSalvar()"
+                (click)="salvarAlarme()"
+              >
+                Salvar lembrete
+              </button>
+              <button
+                class="botao botao--fantasma"
+                type="button"
+                (click)="marcando.set(false)"
+              >
+                Cancelar
+              </button>
+            } @else {
+              <button
+                class="botao botao--fantasma"
+                type="button"
+                (click)="marcando.set(true)"
+              >
+                Marcar um lembrete
+              </button>
+            }
+            @if (erroLembrete(); as e3) {
+              <p class="pf-erro" role="alert">{{ e3 }}</p>
+            }
+            <!-- Sem o alarme exato o Android pode atrasar o lembrete em ate 1
+                 hora. Dito aqui, onde a pessoa marca o dela, e com a saida ao
+                 lado: o botao e o unico caminho — daqui nada abre a tela do
+                 Android sozinho. -->
+            @if (suportaLembrete && exato() === 'denied') {
+              <p class="pf-cache-aviso" role="status">
+                Sem o alarme no horário exato, o Android pode atrasar o lembrete
+                em até 1 hora.
+              </p>
+              <button
+                class="botao botao--fantasma"
+                type="button"
+                (click)="permitirExato()"
+              >
+                Permitir horário exato
+              </button>
+            }
+          </section>
+
           <!-- FORA do @if de materiais de proposito. Anexar e mais necessario
                quando nao ha nada anexado; escondido ali, o botao so aparecia para
                quem ja tinha resolvido o problema. -->
@@ -323,6 +476,55 @@ import { materialVm } from '../material-vm';
     </ion-content>
   `,
   styles: `
+    .lembrete {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .antes {
+      display: grid;
+      grid-template-columns: 5.5em 1fr;
+      gap: 8px;
+    }
+
+    .previa {
+      margin: 0;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    /* Mesmo seletor de dois lados do cadastro de evento (novo-evento.page). */
+    .seg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 4px;
+      border-radius: var(--r-md);
+      background: var(--rule-soft);
+    }
+    .seg button {
+      padding: 9px 8px;
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--ink-2);
+      background: transparent;
+      border: 0;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .seg button[aria-pressed='true'] {
+      color: var(--accent-ink);
+      background: var(--accent);
+    }
+    .seg button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
     .de-outra-pessoa {
       font-size: 13px;
       line-height: 1.5;
@@ -413,15 +615,22 @@ export class EventoPage {
   /** 404: excluido pelo autor ou oculto pelo lider. Nao e falha. */
   protected readonly sumiu = signal(false);
 
-  private readonly agora = new Date();
+  /**
+   * O "agora" da tela, e um signal: a previa do lembrete ("Vai tocar…" ou "Esse
+   * horario ja passou") e o `podeSalvar` dependem dele, e um `Date.now()` solto
+   * dentro de um `computed` nao recalcula — a tela aberta por minutos seguia
+   * oferecendo salvar um alarme que ja tinha passado. Anda de 30 em 30 s (ver o
+   * construtor).
+   */
+  private readonly agora = signal(new Date());
 
   protected readonly evento = computed(() => {
     const d = this.detalhe();
-    return d === null ? null : eventoVm(d, this.agora);
+    return d === null ? null : eventoVm(d, this.agora());
   });
 
   protected readonly materiais = computed(() =>
-    (this.detalhe()?.materiais ?? []).map((m) => materialVm(m, this.agora)),
+    (this.detalhe()?.materiais ?? []).map((m) => materialVm(m, this.agora())),
   );
 
   protected readonly rotulo = computed(() => {
@@ -582,11 +791,161 @@ export class EventoPage {
     await this.router.navigateByUrl('/tabs/home');
   }
 
+  private readonly avisos = inject(NotificacoesService);
+  private readonly sync = inject(SyncRepository);
+  /**
+   * Se o Android deixa agendar no horario exato. Comeca `granted` de proposito:
+   * o aviso de atraso so aparece depois de o sistema dizer que NAO deixa, nunca
+   * como susto enquanto a resposta nao chegou.
+   */
+  protected readonly exato = signal<EstadoExato>('granted');
+  /** Falso no navegador: lá a seção só diz que lembrete é coisa do app. */
+  protected readonly suportaLembrete = this.avisos.suportado;
+  /** O alarme gravado neste aparelho para este evento. Um por evento. */
+  private readonly alarme = signal<AlarmePersonalizado | null>(null);
+  protected readonly marcando = signal(false);
+  protected readonly modoAlarme = signal<'RELATIVO' | 'EXATO'>('RELATIVO');
+  protected readonly quanto = signal(1);
+  protected readonly unidade = signal<'horas' | 'dias'>('dias');
+  /** O valor cru do `datetime-local`: "2026-10-09T19:00", hora de parede. */
+  protected readonly exatoParede = signal('');
+  protected readonly erroLembrete = signal<string | null>(null);
+
+  protected readonly temHora = computed(() => !!this.detalhe()?.hora);
+
+  /** O alarme que o formulário descreve agora; `null` enquanto incompleto. */
+  private readonly rascunho = computed<AlarmePersonalizado | null>(() => {
+    if (this.modoAlarme() === 'RELATIVO') {
+      const n = this.quanto();
+      return n > 0
+        ? {
+            modo: 'RELATIVO',
+            horasAntes: this.unidade() === 'dias' ? n * 24 : n,
+          }
+        : null;
+    }
+    // O `datetime-local` devolve hora de PAREDE, sem fuso. `new Date(valor)`
+    // a leria no fuso da MAQUINA — certo no celular de quem esta em Sao Paulo,
+    // errado no de quem viajou. Quebrada em data e hora, ela vai para
+    // `instante()`, que converte como America/Sao_Paulo de forma explicita.
+    const [data, hora] = this.exatoParede().split('T');
+    return data && hora ? { modo: 'EXATO', data, hora } : null;
+  });
+
+  protected readonly previa = computed(() => this.descrever(this.rascunho()));
+  protected readonly alarmeGravado = computed(() =>
+    this.descrever(this.alarme()),
+  );
+  /** Passado nao agenda: salvar um alarme que nunca vai tocar seria mentir. */
+  protected readonly podeSalvar = computed(() => {
+    const p = this.previa();
+    return p !== null && !p.passou;
+  });
+
+  protected async salvarAlarme(): Promise<void> {
+    const a = this.rascunho();
+    if (a === null) {
+      return;
+    }
+    // Confere DE NOVO com o relogio de agora: o signal anda de 30 em 30 s, e o
+    // botao pode ter sido tocado no meio de um intervalo em que o instante
+    // acabou de passar. Atualizar o signal tambem faz a previa dizer isso.
+    this.agora.set(new Date());
+    if (!this.podeSalvar()) {
+      return;
+    }
+    await this.gravarAlarme(a);
+    this.marcando.set(false);
+  }
+
+  /**
+   * Abre a tela "Alarmes e lembretes" do Android. So por toque da pessoa, nunca
+   * dentro do agendamento: o `resume` reagenda, e abrir a tela de dentro dele
+   * reabriria a tela a cada volta.
+   */
+  protected async permitirExato(): Promise<void> {
+    try {
+      this.exato.set(await this.avisos.permitirExato());
+    } catch (e) {
+      this.erroLembrete.set(mensagemDeErro(e));
+    }
+  }
+
+  private async lerExato(): Promise<void> {
+    try {
+      this.exato.set(await this.avisos.estadoExato());
+    } catch (e) {
+      // Nao saber nao e "negado": fica como esta, sem aviso falso na tela.
+      console.error('[evento] nao deu para ler o alarme exato', e);
+    }
+  }
+
+  protected async removerAlarme(): Promise<void> {
+    await this.gravarAlarme(null);
+  }
+
+  /**
+   * Grava e reagenda. Se falhar, a tela relê o disco em vez de supor: gravar e
+   * agendar sao dois passos, e a falha pode ter sido so no segundo.
+   */
+  private async gravarAlarme(a: AlarmePersonalizado | null): Promise<void> {
+    this.erroLembrete.set(null);
+    try {
+      await this.avisos.salvarAlarme(this.id, a);
+      this.alarme.set(a);
+      // O aparelho so agenda evento que esta na ultima lista do `/sync`, e esta
+      // pode ser anterior a este evento: sem baixar de novo, a tela diria "Vai
+      // tocar" e nada tocaria. `forcar`: a janela de 60 s deixaria passar justo
+      // a lista velha. Sem `await`, a tela nao espera o servidor acordar.
+      void this.sync.reagendarAvisos(true);
+      // A pessoa pode ter mexido na permissao desde que a tela abriu.
+      void this.lerExato();
+    } catch (e) {
+      this.erroLembrete.set(mensagemDeErro(e));
+      await this.lerAlarme();
+    }
+  }
+
+  private async lerAlarme(): Promise<void> {
+    this.alarme.set(
+      (await this.avisos.config()).personalizados[this.id] ?? null,
+    );
+  }
+
+  /** "sex, 9 out, 19:00", e se ja passou. Le o signal `agora`, entao recalcula quando ele anda. */
+  private descrever(
+    a: AlarmePersonalizado | null,
+  ): { quando: string; passou: boolean } | null {
+    const d = this.detalhe();
+    if (a === null || d === null) {
+      return null;
+    }
+    const t = instantePersonalizado(a, d, TIMEZONE_PADRAO);
+    return t === null
+      ? null
+      : {
+          quando: rotuloInstante(t, TIMEZONE_PADRAO),
+          passou: t.getTime() <= this.agora().getTime(),
+        };
+  }
+
   constructor() {
     // O papel do usuário na turma não vem na sessão; esta tela precisa dele para
     // decidir se oferece moderar. `garantir` não refaz a chamada se já houver.
     void this.turmas.garantirCarregada();
     void this.carregar(this.id);
+    if (this.suportaLembrete) {
+      void this.lerAlarme();
+      void this.lerExato();
+    }
+    // Fora da zona: um `setInterval` dentro dela nunca deixa a tela "estavel",
+    // e quem espera por isso (`whenStable`, o SSR) esperaria para sempre. So o
+    // tique volta para dentro, para a mudanca do signal desenhar.
+    const zona = inject(NgZone);
+    const relogio = zona.runOutsideAngular(() =>
+      setInterval(() => zona.run(() => this.agora.set(new Date())), 30_000),
+    );
+    inject(DestroyRef).onDestroy(() => clearInterval(relogio));
   }
 
   private async carregar(id: string): Promise<void> {
