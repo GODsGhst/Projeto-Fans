@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+} from '@angular/core';
+import { SeloComponent, prefixoDoSelo } from './selo.component';
+import type { Selo } from './tipos';
 
 /**
  * Uma linha da lista de material: pdf, slide, foto, link.
@@ -13,12 +20,27 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   selector: 'app-material-linha',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [SeloComponent],
   template: `
     <div class="linha">
       <span class="tipo">{{ tipo() }}</span>
       <span class="corpo">
         <span class="titulo">{{ titulo() }}</span>
-        <span class="autoria">{{ autoria() }}</span>
+        <span class="autoria">
+          <span>{{ prefixoAutor() }}{{ autoria() }}</span>
+          @if (autoriaSelo(); as s) {
+            <app-selo [selo]="s" />
+          }
+        </span>
+        <!-- Quem corrigiu, quando nao e quem postou: autoria visivel, sempre. -->
+        @if (editadoPor(); as quem) {
+          <span class="autoria">
+            <span>editado por {{ prefixoEditor() }}{{ quem }}</span>
+            @if (editadoPorSelo(); as s) {
+              <app-selo [selo]="s" />
+            }
+          </span>
+        }
       </span>
     </div>
   `,
@@ -59,6 +81,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     }
 
     .autoria {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2px 6px;
       font-size: 11px;
       line-height: 1.35;
       color: var(--ink-3);
@@ -71,4 +97,18 @@ export class MaterialLinhaComponent {
   readonly titulo = input.required<string>();
   /** "Ana Beatriz · 22 jul" — autoria visivel e o que faz a lista ter dono. */
   readonly autoria = input.required<string>();
+
+  /** Selo de quem postou: so existe quando essa pessoa tem poder NESTA materia. */
+  readonly autoriaSelo = input<Selo | null>(null);
+
+  /** Nome de quem corrigiu o material; ausente quando foi o proprio autor. */
+  readonly editadoPor = input<string | null>(null);
+  readonly editadoPorSelo = input<Selo | null>(null);
+
+  protected readonly prefixoAutor = computed(() =>
+    prefixoDoSelo(this.autoriaSelo()),
+  );
+  protected readonly prefixoEditor = computed(() =>
+    prefixoDoSelo(this.editadoPorSelo()),
+  );
 }

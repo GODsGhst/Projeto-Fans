@@ -8,10 +8,8 @@ import com.projetofans.repo.EstadoPessoalRepository;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MaterialRepository;
-import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
-import com.projetofans.web.dto.AutoriaResponse;
 import com.projetofans.web.dto.EventoResponse;
 import com.projetofans.web.dto.ItemHomeResponse;
 import com.projetofans.web.dto.MaterialResponse;
@@ -47,17 +45,17 @@ public class EstadoPessoalService {
     private final EventoRepository eventos;
     private final MaterialRepository materiais;
     private final MateriaRepository materias;
-    private final UsuarioRepository usuarios;
+    private final Autorias autorias;
     private final TurmaScopeResolver escopo;
 
     public EstadoPessoalService(EstadoPessoalRepository estados, EventoRepository eventos,
                                 MaterialRepository materiais, MateriaRepository materias,
-                                UsuarioRepository usuarios, TurmaScopeResolver escopo) {
+                                Autorias autorias, TurmaScopeResolver escopo) {
         this.estados = estados;
         this.eventos = eventos;
         this.materiais = materiais;
         this.materias = materias;
-        this.usuarios = usuarios;
+        this.autorias = autorias;
         this.escopo = escopo;
     }
 
@@ -101,11 +99,12 @@ public class EstadoPessoalService {
             }
         }
 
+        Autorias.Listagem autoria = autorias.daListagem();
         List<ItemHomeResponse> aFazer = new ArrayList<>();
         List<ItemHomeResponse> feito = new ArrayList<>();
         for (Evento evento : eventos.visiveisDaTurma(turmaId)) {
             boolean marcado = feitos.contains(evento.getId());
-            (marcado ? feito : aFazer).add(item(evento, marcado));
+            (marcado ? feito : aFazer).add(item(evento, marcado, autoria));
         }
         return new MeuQuadroResponse(aFazer, feito);
     }
@@ -113,18 +112,20 @@ public class EstadoPessoalService {
     /** Registros DO PROPRIO usuario que estao ocultos ou logicamente excluidos. */
     @Transactional(readOnly = true)
     public NaoListadosResponse naoListados(UsuarioAtual usuario) {
+        // O selo e o de AGORA: se o poder do docente caiu, o registro dele ja sai sem selo.
+        Autorias.Listagem autoria = autorias.daListagem();
         List<EventoResponse> eventosOcultos =
                 eventos.naoListadosDoAutor(usuario.usuarioId()).stream()
-                        .map(e -> EventoResponse.de(e, materia(e.getMateriaId()), usuario.nome()))
+                        .map(e -> EventoResponse.de(e, materia(e.getMateriaId()), autoria.de(e)))
                         .toList();
         List<MaterialResponse> materiaisOcultos =
                 materiais.naoListadosDoAutor(usuario.usuarioId()).stream()
-                        .map(m -> MaterialResponse.de(m, usuario.nome()))
+                        .map(m -> MaterialResponse.de(m, autoria.de(m)))
                         .toList();
         return new NaoListadosResponse(eventosOcultos, materiaisOcultos);
     }
 
-    private ItemHomeResponse item(Evento evento, boolean feito) {
+    private ItemHomeResponse item(Evento evento, boolean feito, Autorias.Listagem autoria) {
         Materia materia = materia(evento.getMateriaId());
         return new ItemHomeResponse(
                 evento.getId(),
@@ -134,8 +135,7 @@ public class EstadoPessoalService {
                 evento.getHoraEvento(),
                 materia.getSigla(),
                 materia.getCorHex(),
-                new AutoriaResponse(evento.getAutorId(), nomeDoAutor(evento.getAutorId()),
-                        evento.getCriadoEm(), evento.getAtualizadoEm()),
+                autoria.de(evento),
                 feito);
     }
 
@@ -147,9 +147,5 @@ public class EstadoPessoalService {
      */
     private Materia materia(UUID materiaId) {
         return materias.findById(materiaId).orElseThrow(AcessoNegadoException::new);
-    }
-
-    private String nomeDoAutor(UUID autorId) {
-        return usuarios.findById(autorId).orElseThrow(AcessoNegadoException::new).getNome();
     }
 }

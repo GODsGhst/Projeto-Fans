@@ -22,7 +22,8 @@ public record MaterialResponse(
         String resumo,
         Instant resumoEm) {
 
-    public static MaterialResponse de(Material material, String autorNome) {
+    /** A autoria (com selo e "editado por") vem pronta de {@code Autorias}. */
+    public static MaterialResponse de(Material material, AutoriaResponse autoria) {
         return new MaterialResponse(
                 material.getId(),
                 material.getTipo(),
@@ -31,8 +32,7 @@ public record MaterialResponse(
                 material.getArquivoRef(),
                 material.getDataAula(),
                 material.getMateriaId(),
-                new AutoriaResponse(material.getAutorId(), autorNome,
-                        material.getCriadoEm(), material.getAtualizadoEm()),
+                autoria,
                 material.getVersion(),
                 material.isVisivelTurma(),
                 material.getExcluidoEm(),

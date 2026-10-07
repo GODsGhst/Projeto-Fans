@@ -6,7 +6,6 @@ import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ConflitoVersaoException;
 import com.projetofans.erro.NaoAutorException;
 import com.projetofans.repo.NotaRepository;
-import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.NotaResponse;
@@ -17,9 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -47,14 +44,14 @@ import java.util.UUID;
 public class NotaService {
 
     private final NotaRepository notas;
-    private final UsuarioRepository usuarios;
+    private final Autorias autorias;
     private final TurmaScopeResolver escopo;
     private final EntityManager em;
 
-    public NotaService(NotaRepository notas, UsuarioRepository usuarios,
+    public NotaService(NotaRepository notas, Autorias autorias,
                        TurmaScopeResolver escopo, EntityManager em) {
         this.notas = notas;
-        this.usuarios = usuarios;
+        this.autorias = autorias;
         this.escopo = escopo;
         this.em = em;
     }
@@ -63,11 +60,11 @@ public class NotaService {
     public List<NotaResponse> doPeriodo(UsuarioAtual eu, LocalDate de, LocalDate ate) {
         UUID turmaId = escopo.turmaDoUsuario(eu.usuarioId());
         List<Nota> encontradas = notas.queEuLeioNoPeriodo(turmaId, eu.usuarioId(), de, ate);
-        // Um mapa de nomes, e nao um findById por nota: trinta recados da turma
-        // no mes dariam trinta consultas para repetir cinco nomes.
-        Map<UUID, String> nomes = new HashMap<>();
+        // Uma Listagem guarda o nome de cada autor (trinta recados da turma no mes
+        // repetem cinco nomes) e le os docentes uma vez so, para o selo da coordenacao.
+        Autorias.Listagem autoria = autorias.daListagem();
         return encontradas.stream()
-                .map(n -> NotaResponse.de(n, nomes.computeIfAbsent(n.getAutorId(), this::nomeDe)))
+                .map(n -> NotaResponse.de(n, autoria.nomeDe(n.getAutorId()), autoria.seloDaNota(n)))
                 .toList();
     }
 
@@ -78,7 +75,7 @@ public class NotaService {
                 req.alcance(), req.data(), req.texto().trim(), Instant.now());
         Nota salva = notas.saveAndFlush(nota);
         em.refresh(salva);
-        return NotaResponse.de(salva, autor.nome());
+        return resposta(salva, autor);
     }
 
     @Transactional
@@ -87,7 +84,7 @@ public class NotaService {
         Nota nota = minha(eu, notaId);
         exigirVersao(nota, versionEsperada);
         nota.editar(req.alcance(), req.data(), req.texto().trim(), Instant.now());
-        return NotaResponse.de(notas.saveAndFlush(nota), eu.nome());
+        return resposta(notas.saveAndFlush(nota), eu);
     }
 
     @Transactional
@@ -120,8 +117,9 @@ public class NotaService {
         return nota;
     }
 
-    private String nomeDe(UUID usuarioId) {
-        return usuarios.findById(usuarioId).map(u -> u.getNome()).orElse("alguém");
+    /** Criar e editar so acontecem pelo autor: o nome e o do proprio usuario. */
+    private NotaResponse resposta(Nota nota, UsuarioAtual autor) {
+        return NotaResponse.de(nota, autor.nome(), autorias.daListagem().seloDaNota(nota));
     }
 
     private static void exigirVersao(Nota nota, int versionEsperada) {

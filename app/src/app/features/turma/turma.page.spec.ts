@@ -11,6 +11,8 @@ import { provideIonicAngular } from '@ionic/angular/standalone';
 import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
 import { AuthService } from '../../core/auth.service';
+import { StorageService } from '../../core/storage.service';
+import { TurmaAtivaService } from '../../core/turma-ativa.service';
 import { TurmaPage, convite } from './turma.page';
 
 const TURMA = {
@@ -59,6 +61,9 @@ describe('convite', () => {
 const OTAVIO = { id: 'u1', nome: 'Otávio', email: 'voce@exemplo.com' };
 const eu = signal<{ id: string; nome: string; email: string } | null>(OTAVIO);
 const URL_TURMA = `${environment.apiUrl}/turmas/minha`;
+const URL_MATERIAS = `${environment.apiUrl}/materias`;
+/** O nome da turma ativa do DOCENTE; nulo = aluno (nunca escolheu turma). */
+const nomeAtivo = signal<string | null>(null);
 const URL_OCULTADOS = `${environment.apiUrl}/moderacao/ocultados`;
 
 describe('TurmaPage', () => {
@@ -76,6 +81,13 @@ describe('TurmaPage', () => {
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
         { provide: AuthService, useValue: { usuario: eu, turmaId: () => 't1', registrarTurma } },
+        { provide: TurmaAtivaService, useValue: { nome: nomeAtivo } },
+        // A lista de materias (que o professor le para declarar) grava um snapshot
+        // no disco; aqui ele nao e o assunto e nao pode vazar entre testes.
+        {
+          provide: StorageService,
+          useValue: { ler: async () => null, mesclar: async () => undefined },
+        },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
@@ -86,6 +98,7 @@ describe('TurmaPage', () => {
   afterEach(() => {
     backend.verify();
     eu.set(OTAVIO);
+    nomeAtivo.set(null);
   });
 
   /**
@@ -605,6 +618,365 @@ describe('TurmaPage', () => {
       expect(registrarTurma).not.toHaveBeenCalled();
       expect(irPara).not.toHaveBeenCalled();
       expect(fixture.nativeElement.querySelector('.pf-aviso')).not.toBeNull();
+    });
+  });
+
+  describe('docentes na turma', () => {
+    const MARCOS = { id: 'u4', nome: 'Marcos', email: 'marcos@exemplo.com' };
+    const URL_CONTESTAR = `${URL_TURMA}/docentes/u4/contestar`;
+    const URL_RESTAURAR = `${URL_TURMA}/docentes/u5/restaurar`;
+    const ALUNO = { id: 'u2', nome: 'Ana Beatriz', email: 'ana@exemplo.com' };
+
+    const MATERIAS = [
+      { id: 'm-bd', nome: 'Banco de Dados', sigla: 'BD', corHex: '#0369A1' },
+      { id: 'm-es', nome: 'Engenharia de Software', sigla: 'ENG SW', corHex: '#B45309' },
+      { id: 'm-calc', nome: 'Cálculo', sigla: 'CALC', corHex: '#1D4ED8' },
+    ];
+
+    /** Lider, aluna, um professor com poder, uma coordenadora e uma professora contestada. */
+    const DOCENTES = {
+      ...TURMA,
+      meuAlcance: { tipo: 'NENHUM', materiaIds: [] },
+      membros: [
+        ...TURMA.membros.slice(0, 2),
+        {
+          usuarioId: 'u4',
+          nome: 'Marcos',
+          papel: 'PROFESSOR',
+          entrouEm: '2026-09-02T12:00:00Z',
+          selo: 'PROFESSOR',
+          contestado: false,
+          lecionadas: ['BD', 'ENG SW'],
+        },
+        {
+          usuarioId: 'u6',
+          nome: 'Helena',
+          papel: 'COORDENADOR',
+          entrouEm: '2026-09-02T13:00:00Z',
+          selo: 'COORDENACAO',
+          contestado: false,
+          lecionadas: [],
+        },
+        {
+          usuarioId: 'u5',
+          nome: 'Lúcia',
+          papel: 'PROFESSOR',
+          entrouEm: '2026-09-02T14:00:00Z',
+          contestado: true,
+          lecionadas: ['CALC'],
+        },
+      ],
+    };
+
+    const membro = (nome: string): HTMLElement =>
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('.membro'),
+        ) as HTMLElement[]
+      ).find((m) => m.querySelector('.nome')!.textContent!.includes(nome))!;
+
+    describe('a lista mostra o poder de cada um', () => {
+      it('selo, materias declaradas e marca "contestado" — para todo membro, nao so o lider', async () => {
+        eu.set(ALUNO);
+        await abrir((r) => r.flush(DOCENTES));
+
+        expect(membro('Marcos').querySelector('app-selo')!.textContent).toContain(
+          'Professor',
+        );
+        expect(membro('Marcos').querySelector('.leciona')!.textContent).toContain(
+          'leciona BD, ENG SW',
+        );
+        expect(membro('Helena').querySelector('app-selo')!.textContent).toContain(
+          'Coordenação',
+        );
+        expect(membro('Helena').querySelector('.leciona')!.textContent).toContain(
+          'turma inteira',
+        );
+        // Contestada: sem selo, com a marca que diz por que.
+        expect(membro('Lúcia').querySelector('app-selo')).toBeNull();
+        expect(membro('Lúcia').querySelector('.tag')!.textContent).toContain(
+          'contestado',
+        );
+        // Aluno nao tem nada disso.
+        expect(membro('Ana').querySelector('app-selo')).toBeNull();
+        expect(membro('Ana').querySelector('.leciona')).toBeNull();
+        expect(membro('Ana').querySelector('.tag')).toBeNull();
+      });
+    });
+
+    describe('contestar e restaurar (lider)', () => {
+      const botaoDe = (rotulo: string) =>
+        fixture.nativeElement.querySelector(
+          `button[aria-label="${rotulo}"]`,
+        ) as HTMLButtonElement | null;
+
+      it('o lider ve Contestar nos docentes e Restaurar so no contestado; aluno e lider ficam de fora', async () => {
+        await abrir((r) => r.flush(DOCENTES));
+
+        expect(botaoDe('Contestar Marcos')).not.toBeNull();
+        expect(botaoDe('Contestar Helena')).not.toBeNull();
+        expect(botaoDe('Restaurar Lúcia')).not.toBeNull();
+        expect(botaoDe('Contestar Lúcia'))
+          .withContext('ja contestada: o botao vira Restaurar')
+          .toBeNull();
+        expect(botaoDe('Restaurar Marcos')).toBeNull();
+        expect(botaoDe('Contestar Ana Beatriz')).toBeNull();
+        expect(botaoDe('Contestar Otávio')).toBeNull();
+      });
+
+      it('quem nao e lider nao ve Contestar nem Restaurar', async () => {
+        eu.set(ALUNO);
+        await abrir((r) => r.flush(DOCENTES));
+
+        expect(botaoDe('Contestar Marcos')).toBeNull();
+        expect(botaoDe('Restaurar Lúcia')).toBeNull();
+      });
+
+      it('pergunta antes (o que perde, e que so o lider desfaz) e nao chama nada ate confirmar', async () => {
+        await abrir((r) => r.flush(DOCENTES));
+
+        botaoDe('Contestar Marcos')!.click();
+        fixture.detectChanges();
+
+        backend.expectNone(URL_CONTESTAR);
+        const aviso = fixture.nativeElement.querySelector('.alerta')
+          .textContent as string;
+        expect(aviso).toContain('Marcos');
+        expect(aviso).toContain('perde o poder e o selo');
+        expect(aviso)
+          .withContext('contestar nao e banir: so tira o poder DAQUI')
+          .toContain('Nas outras turmas');
+        expect(aviso).toContain('Restaurar');
+
+        botao('Cancelar')!.click();
+        fixture.detectChanges();
+        backend.expectNone(URL_CONTESTAR);
+        expect(fixture.nativeElement.querySelector('.alerta')).toBeNull();
+      });
+
+      it('confirmar contesta pela rota certa, relê a turma e a linha perde o selo', async () => {
+        await abrir((r) => r.flush(DOCENTES));
+        botaoDe('Contestar Marcos')!.click();
+        fixture.detectChanges();
+
+        confirmar('contestar-confirmar').click();
+        const req = backend.expectOne(URL_CONTESTAR);
+        expect(req.request.method).toBe('POST');
+        req.flush(null, { status: 204, statusText: 'No Content' });
+        // Aguarda a requisicao GET ser disparada: yield para a promise de
+        // contestacao resolver, entao o recarregar disparar o GET.
+        for (let i = 0; i < 10; i++) {
+          await Promise.resolve();
+        }
+        fixture.detectChanges();
+
+        backend.expectOne(URL_TURMA).flush({
+          ...DOCENTES,
+          membros: DOCENTES.membros.map((m) =>
+            m.usuarioId === 'u4' ? { ...m, selo: null, contestado: true } : m,
+          ),
+        });
+        await assentar();
+
+        expect(membro('Marcos').querySelector('app-selo')).toBeNull();
+        expect(membro('Marcos').querySelector('.tag')!.textContent).toContain(
+          'contestado',
+        );
+        expect(botaoDe('Restaurar Marcos'))
+          .withContext('o botao troca de lado')
+          .not.toBeNull();
+        expect(fixture.nativeElement.querySelector('.alerta'))
+          .withContext('a pergunta fecha depois de contestar')
+          .toBeNull();
+      });
+
+      it('Restaurar nao pergunta (so devolve o que contestar tirou) e relê a turma', async () => {
+        await abrir((r) => r.flush(DOCENTES));
+
+        botaoDe('Restaurar Lúcia')!.click();
+        const req = backend.expectOne(URL_RESTAURAR);
+        expect(req.request.method).toBe('POST');
+        req.flush(null, { status: 204, statusText: 'No Content' });
+        // Aguarda a requisicao GET ser disparada: yield para a promise de
+        // restauracao resolver, entao o recarregar disparar o GET.
+        for (let i = 0; i < 10; i++) {
+          await Promise.resolve();
+        }
+        fixture.detectChanges();
+
+        backend.expectOne(URL_TURMA).flush({
+          ...DOCENTES,
+          membros: DOCENTES.membros.map((m) =>
+            m.usuarioId === 'u5' ? { ...m, selo: 'PROFESSOR', contestado: false } : m,
+          ),
+        });
+        await assentar();
+
+        expect(membro('Lúcia').querySelector('.tag')).toBeNull();
+        expect(membro('Lúcia').querySelector('app-selo')!.textContent).toContain(
+          'Professor',
+        );
+      });
+
+      it('contestar que falha mostra o motivo e a pergunta continua aberta', async () => {
+        await abrir((r) => r.flush(DOCENTES));
+        botaoDe('Contestar Marcos')!.click();
+        fixture.detectChanges();
+        confirmar('contestar-confirmar').click();
+
+        backend.expectOne(URL_CONTESTAR).flush(
+          { detail: 'Só o líder contesta' },
+          { status: 403, statusText: 'Forbidden' },
+        );
+        await assentar();
+
+        expect(
+          fixture.nativeElement.querySelector('.pf-erro').textContent,
+        ).toContain('Só o líder contesta');
+        expect(confirmar('contestar-confirmar'))
+          .withContext('a pessoa continua com o poder: a tela nao sugere o contrario')
+          .not.toBeNull();
+        expect(membro('Marcos').querySelector('app-selo')).not.toBeNull();
+      });
+    });
+
+    describe('"matérias que eu leciono" (professor)', () => {
+      const caixas = () =>
+        Array.from(
+          fixture.nativeElement.querySelectorAll('.vinc input[type="checkbox"]'),
+        ) as HTMLInputElement[];
+
+      /** Professor entra: turma, depois as materias que ele vai marcar. */
+      async function abrirComoProfessor(
+        turma: object = DOCENTES,
+        eu_: object = MARCOS,
+      ): Promise<void> {
+        eu.set(eu_ as typeof OTAVIO);
+        fixture.detectChanges();
+        fixture.componentInstance.ionViewWillEnter();
+        backend.expectOne(URL_TURMA).flush(turma);
+        await fixture.whenStable();
+        backend.expectOne(URL_MATERIAS).flush(MATERIAS);
+        await assentar();
+      }
+
+      it('uma caixa por materia da turma, ja marcadas as que ele declarou', async () => {
+        await abrirComoProfessor();
+
+        const rotulos = textos('.vinc label');
+        expect(rotulos.length).toBe(3);
+        expect(rotulos[0]).toContain('Banco de Dados');
+        expect(rotulos[1]).toContain('Engenharia de Software');
+        expect(rotulos[2]).toContain('Cálculo');
+        expect(caixas().map((c) => c.checked)).toEqual([true, true, false]);
+      });
+
+      it('so o professor tem o bloco — e so ele pede as materias', async () => {
+        // O `verify` do afterEach acusa um GET /materias que o aluno, o lider ou a
+        // coordenacao nao tinham motivo para fazer.
+        eu.set(ALUNO);
+        await abrir((r) => r.flush(DOCENTES));
+        expect(fixture.nativeElement.querySelector('.vinc')).toBeNull();
+      });
+
+      it('Salvar manda o conjunto inteiro (substitui) e relê a turma', async () => {
+        await abrirComoProfessor();
+
+        // Tira ENG SW, poe CALC.
+        caixas()[1].click();
+        caixas()[2].click();
+        fixture.detectChanges();
+        backend.expectNone(`${URL_TURMA}/lecionadas`);
+
+        botao('Salvar matérias')!.click();
+        const req = backend.expectOne(`${URL_TURMA}/lecionadas`);
+        expect(req.request.method).toBe('PUT');
+        expect(req.request.body).toEqual({ materiaIds: ['m-bd', 'm-calc'] });
+        req.flush(null, { status: 204, statusText: 'No Content' });
+        // Aguarda a requisicao GET ser disparada: yield para a promise de
+        // declaracao resolver, entao o recarregar disparar o GET.
+        for (let i = 0; i < 10; i++) {
+          await Promise.resolve();
+        }
+        fixture.detectChanges();
+
+        backend.expectOne(URL_TURMA).flush(DOCENTES);
+        await assentar();
+
+        expect(botao('Salvo ✓'))
+          .withContext('feedback de que gravou')
+          .toBeDefined();
+      });
+
+      it('salvar que falha mostra o motivo e mantem as marcas para tentar de novo', async () => {
+        await abrirComoProfessor();
+        caixas()[2].click();
+        fixture.detectChanges();
+
+        botao('Salvar matérias')!.click();
+        backend.expectOne(`${URL_TURMA}/lecionadas`).flush(
+          { detail: 'Matéria não encontrada' },
+          { status: 404, statusText: 'Not Found' },
+        );
+        await assentar();
+
+        expect(
+          fixture.nativeElement.querySelector('.pf-erro').textContent,
+        ).toContain('Matéria não encontrada');
+        expect(caixas().map((c) => c.checked)).toEqual([true, true, true]);
+      });
+
+      it('professor contestado: a nota diz que a declaracao nao vale ate o lider restaurar', async () => {
+        await abrirComoProfessor(
+          {
+            ...DOCENTES,
+            membros: DOCENTES.membros.map((m) =>
+              m.usuarioId === 'u4' ? { ...m, selo: null, contestado: true } : m,
+            ),
+          },
+          MARCOS,
+        );
+
+        expect(fixture.nativeElement.textContent as string).toContain(
+          'elas não valem até ele restaurar',
+        );
+      });
+
+      it('conta pendente declara, e a nota diz que fica guardada ate a aprovacao', async () => {
+        await abrirComoProfessor(DOCENTES, {
+          ...MARCOS,
+          tipoConta: 'PROFESSOR',
+          docenteStatus: 'PENDENTE',
+        });
+
+        expect(fixture.nativeElement.textContent as string).toContain(
+          'passa a valer quando sua conta for aprovada',
+        );
+        // Pendente nao tem alcance (meuAlcance NENHUM), mas a declaracao guardada
+        // continua marcada: so o alcance a faria sumir da tela.
+        expect(caixas().map((c) => c.checked)).toEqual([true, true, false]);
+      });
+    });
+
+    describe('titulo da turma', () => {
+      it('docente ve o nome da turma ativa enquanto a turma carrega; aluno ve o de sempre', async () => {
+        nomeAtivo.set('ADS 3A');
+        fixture.detectChanges();
+        expect(textos('ion-title')).toEqual(['ADS 3A']);
+
+        // Chegou: vale o nome lido, que e o mais fresco (o lider pode ter renomeado).
+        fixture.componentInstance.ionViewWillEnter();
+        backend.expectOne(URL_TURMA).flush(TURMA);
+        await fixture.whenStable();
+        for (const r of backend.match(URL_OCULTADOS)) r.flush([]);
+        await assentar();
+        expect(textos('ion-title')).toEqual(['Fans 2026.2']);
+      });
+
+      it('aluno: sem turma ativa guardada, o titulo continua "A turma" ate carregar', () => {
+        fixture.detectChanges();
+        expect(textos('ion-title')).toEqual(['A turma']);
+      });
     });
   });
 });

@@ -70,6 +70,9 @@ function detalhe(materiais: Material[]): EventoDetalhe {
 /** Se quem está olhando é o líder da turma. Muda por teste. */
 const liderancaMinha = signal(false);
 
+/** Materias em que quem olha tem poder de docente (professor nelas, ou coordenacao). */
+const alcancaEm = signal<string[]>([]);
+
 const usuarioAtual = signal<{ id: string; nome: string; email: string } | null>(
   {
     id: 'u1',
@@ -97,6 +100,8 @@ describe('EventoPage', () => {
           provide: TurmaRepository,
           useValue: {
             souLider: liderancaMinha,
+            alcanca: (materiaId: string | null) =>
+              materiaId !== null && alcancaEm().includes(materiaId),
             garantirCarregada: () => Promise.resolve(),
           },
         },
@@ -114,6 +119,7 @@ describe('EventoPage', () => {
     backend.verify();
     usuarioAtual.set({ id: 'u1', nome: 'Otavio', email: 'voce@exemplo.com' });
     liderancaMinha.set(false);
+    alcancaEm.set([]);
   });
 
   async function abrir(
@@ -503,6 +509,153 @@ describe('EventoPage', () => {
     expect(textos.join(' ')).not.toContain('Ocultar');
   });
 
+  describe('docente: professor na materia dele e coordenacao', () => {
+    const botoes = () =>
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button, a'),
+        ) as HTMLElement[]
+      ).map((b) => b.textContent!.trim());
+
+    beforeEach(() => {
+      // Nao e o autor (o autor e `u1`) e nao e lider: o poder vem so do alcance.
+      usuarioAtual.set({ id: 'prof', nome: 'Marcos', email: 'm@exemplo.com' });
+    });
+
+    it('quem alcanca a materia corrige e oculta, e NUNCA ve apagar em post alheio', async () => {
+      alcancaEm.set(['m1']);
+      await abrir((r) => r.flush(detalhe([])));
+
+      const rotulos = botoes();
+      expect(rotulos).toContain('Editar');
+      expect(rotulos).toContain('Ocultar da turma');
+      expect(rotulos).toContain('Pedir que apague');
+      // Excluir registro alheio nao existe para docente (spec 5.1). A tela nem
+      // oferece: ver o botao e levar 403 ensinaria a desconfiar dela.
+      expect(rotulos).not.toContain('Apagar');
+      expect(
+        fixture.nativeElement.querySelector('a[href="/tabs/eventos/e1/editar"]'),
+      ).not.toBeNull();
+      // A regra e dita: a autoria continua de quem postou.
+      expect(fixture.nativeElement.textContent).toContain('editado por');
+    });
+
+    it('materia que ele NAO leciona: aqui ele e aluno, sem editar nem ocultar', async () => {
+      // O poder segue a materia: Prof. Marcos em BD nao mexe em prova de CALC.
+      alcancaEm.set(['outra-materia']);
+      await abrir((r) => r.flush(detalhe([])));
+
+      const rotulos = botoes();
+      expect(rotulos).not.toContain('Editar');
+      expect(rotulos).not.toContain('Ocultar da turma');
+      expect(fixture.nativeElement.textContent).toContain('só essa pessoa');
+    });
+
+    it('o proprio autor com alcance nao ganha "Pedir que apague" no que ele mesmo postou', async () => {
+      usuarioAtual.set({ id: 'u1', nome: 'Otavio', email: 'o@exemplo.com' });
+      alcancaEm.set(['m1']);
+      await abrir((r) => r.flush(detalhe([])));
+
+      const rotulos = botoes();
+      expect(rotulos).toContain('Apagar');
+      expect(rotulos).not.toContain('Ocultar da turma');
+      expect(rotulos).not.toContain('Pedir que apague');
+    });
+
+    it('403 do servidor vira mensagem, nao tela quebrada', async () => {
+      // Permissao velha no app (a conta foi recusada ou contestada depois): o
+      // servidor decide de verdade, e a pessoa le o motivo.
+      alcancaEm.set(['m1']);
+      await abrir((r) => r.flush(detalhe([])));
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
+        .click();
+      fixture.detectChanges();
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
+        .click();
+
+      backend
+        .expectOne(`${environment.apiUrl}/moderacao/evento/e1/ocultar`)
+        .flush(
+          { detail: 'Sem permissão nesta matéria' },
+          { status: 403, statusText: 'Forbidden' },
+        );
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Ocultado.');
+    });
+  });
+
+  describe('selo e "editado por" na autoria', () => {
+    it('autoria com selo mostra "Prof." e o selo; editado por outra pessoa vira linha propria', async () => {
+      await abrir((r) =>
+        r.flush({
+          ...detalhe([]),
+          autoria: {
+            ...AUTORIA,
+            autorSelo: 'PROFESSOR',
+            editadoPorNome: 'Helena',
+            editadoPorSelo: 'COORDENACAO',
+          },
+        }),
+      );
+
+      const card = fixture.nativeElement.querySelector('app-evento-card')!;
+      const rodapes = Array.from(card.querySelectorAll('.rodape')).map((e) =>
+        (e as HTMLElement).textContent!.replace(/\s+/g, ' ').trim(),
+      );
+      expect(rodapes[0]).toContain('Prof. Otavio');
+      expect(rodapes[0]).toContain('Professor');
+      expect(rodapes[1]).toContain('editado por Coord. Helena');
+      expect(rodapes[1]).toContain('Coordenação');
+    });
+
+    it('sem selo e sem correcao, a autoria e so o nome — nem prefixo nem linha extra', async () => {
+      await abrir((r) => r.flush(detalhe([])));
+
+      const card = fixture.nativeElement.querySelector('app-evento-card')!;
+      expect(card.querySelector('app-selo')).toBeNull();
+      expect(card.querySelectorAll('.rodape').length).toBe(1);
+      expect(card.textContent).not.toContain('Prof.');
+      expect(card.textContent).not.toContain('editado por');
+    });
+
+    it('material com selo e correcao mostra os dois na linha', async () => {
+      await abrir((r) =>
+        r.flush(
+          detalhe([
+            {
+              ...material('mt1', 'Slides', 'https://x.test/a.pdf'),
+              autoria: {
+                ...AUTORIA,
+                autorSelo: 'COORDENACAO',
+                editadoPorNome: 'Marcos',
+                editadoPorSelo: 'PROFESSOR',
+              },
+            },
+          ]),
+        ),
+      );
+
+      const linha = (
+        fixture.nativeElement.querySelector('app-material-linha') as HTMLElement
+      ).textContent!.replace(/\s+/g, ' ');
+      expect(linha).toContain('Coord. Otavio');
+      expect(linha).toContain('editado por Prof. Marcos');
+    });
+  });
+
   it('motivo em branco ainda oculta — explicar e util, nao obrigatorio', async () => {
     // O servidor aceita motivo nulo. Exigir texto faria o líder inventar um para
     // conseguir agir, e motivo inventado é pior que motivo ausente: ele fica no
@@ -642,6 +795,8 @@ describe('EventoPage — lembrete personalizado', () => {
           provide: TurmaRepository,
           useValue: {
             souLider: liderancaMinha,
+            alcanca: (materiaId: string | null) =>
+              materiaId !== null && alcancaEm().includes(materiaId),
             garantirCarregada: () => Promise.resolve(),
           },
         },

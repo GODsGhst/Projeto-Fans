@@ -62,6 +62,10 @@ public class Material {
     @Column(name = "atualizado_em", nullable = false)
     private Instant atualizadoEm;
 
+    /** NULL = nunca editado, ou legado. Preenchido em TODA edicao, inclusive a do autor. */
+    @Column(name = "atualizado_por")
+    private UUID atualizadoPor;
+
     @Version
     @Column(nullable = false)
     private int version;
@@ -152,6 +156,10 @@ public class Material {
         return atualizadoEm;
     }
 
+    public UUID getAtualizadoPor() {
+        return atualizadoPor;
+    }
+
     public int getVersion() {
         return version;
     }
@@ -180,13 +188,14 @@ public class Material {
 
     /** Mesmo cuidado do Evento: PATCH substitui, entao `dataAula` entra aqui. */
     public void editar(UUID materiaId, TipoMaterial tipo, String titulo, String url,
-                       LocalDate dataAula, Instant agora) {
+                       LocalDate dataAula, UUID editorId, Instant agora) {
         this.materiaId = materiaId;
         this.tipo = tipo;
         this.titulo = titulo;
         this.url = url;
         this.dataAula = dataAula;
         this.atualizadoEm = agora;
+        this.atualizadoPor = editorId;
     }
 
     public String getResumo() {

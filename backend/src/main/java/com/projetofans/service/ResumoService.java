@@ -100,7 +100,7 @@ public class ResumoService {
         // Ja resumido e sem pedido de refazer: devolve o que existe. Sem esta
         // guarda, abrir a tela duas vezes cobraria duas vezes.
         if (material.getResumo() != null && !refazer) {
-            return MaterialResponse.de(material, materialService.nomeDoAutor(material.getAutorId()));
+            return materialService.resposta(material);
         }
         if (material.getUrl() == null || material.getUrl().isBlank()) {
             throw new ErroDeNegocio(HttpStatus.BAD_REQUEST,
@@ -111,7 +111,7 @@ public class ResumoService {
         String resumo = pedirAIa(chave, conteudoDe(arquivo));
         material.guardarResumo(resumo, eu.usuarioId(), Instant.now());
         materiais.save(material);
-        return MaterialResponse.de(material, materialService.nomeDoAutor(material.getAutorId()));
+        return materialService.resposta(material);
     }
 
     /**

@@ -113,12 +113,13 @@ import { materialVm } from '../material-vm';
           Adicionar material
         </a>
 
-        <!-- O lider tira da lista; editar e apagar continuam so do autor.
-             Fora do @if(m.url) de proposito: material sem endereco tambem
-             precisa poder sair. O proprio material o autor apaga, entao nao ha
-             botao para ele — mesmo criterio da anotacao no calendario. -->
+        <!-- O lider tira da lista, e o professor (na materia dele) e a
+             coordenacao tambem; apagar continua so do autor. Fora do
+             @if(m.url) de proposito: material sem endereco tambem precisa
+             poder sair. O proprio material o autor apaga, entao nao ha botao
+             para ele — mesmo criterio da anotacao no calendario. -->
         <ng-template #moderar let-m>
-          @if (souLider() && m.autorId !== meuId()) {
+          @if ((souLider() || alcanca()) && m.autorId !== meuId()) {
             @if (confirmandoOcultar() === m.id) {
               <p class="alerta" role="status">
                 Ocultar <b>{{ m.titulo }}</b> da turma? Fica registrado com o
@@ -172,16 +173,21 @@ import { materialVm } from '../material-vm';
                   [tipo]="m.tipo"
                   [titulo]="m.titulo"
                   [autoria]="m.autoria"
+                  [autoriaSelo]="m.autoriaSelo"
+                  [editadoPor]="m.editadoPor"
+                  [editadoPorSelo]="m.editadoPorSelo"
                 />
               </a>
               <span class="linha-meta">
                 @if (m.daAula) {
                   <span class="da-aula">{{ m.daAula }}</span>
                 }
-                <!-- So o autor. O toque na linha abre o arquivo, que e a acao
+                <!-- O autor, e quem alcanca a materia (professor na dele,
+                     coordenacao): corrigir material alheio e do poder docente,
+                     apagar nunca. O toque na linha abre o arquivo, que e a acao
                      principal; editar precisa de um alvo proprio para nao
                      disputar com ela. -->
-                @if (m.autorId === meuId()) {
+                @if (m.autorId === meuId() || alcanca()) {
                   <a
                     class="editar"
                     [routerLink]="['/tabs/materiais', m.id, 'editar']"
@@ -202,6 +208,9 @@ import { materialVm } from '../material-vm';
                 [tipo]="m.tipo"
                 [titulo]="m.titulo"
                 [autoria]="m.autoria"
+                [autoriaSelo]="m.autoriaSelo"
+                [editadoPor]="m.editadoPor"
+                [editadoPorSelo]="m.editadoPorSelo"
               />
             }
             <ng-container
@@ -226,16 +235,21 @@ import { materialVm } from '../material-vm';
                   [tipo]="m.tipo"
                   [titulo]="m.titulo"
                   [autoria]="m.autoria"
+                  [autoriaSelo]="m.autoriaSelo"
+                  [editadoPor]="m.editadoPor"
+                  [editadoPorSelo]="m.editadoPorSelo"
                 />
               </a>
               <span class="linha-meta">
                 @if (m.daAula) {
                   <span class="da-aula">{{ m.daAula }}</span>
                 }
-                <!-- So o autor. O toque na linha abre o arquivo, que e a acao
+                <!-- O autor, e quem alcanca a materia (professor na dele,
+                     coordenacao): corrigir material alheio e do poder docente,
+                     apagar nunca. O toque na linha abre o arquivo, que e a acao
                      principal; editar precisa de um alvo proprio para nao
                      disputar com ela. -->
-                @if (m.autorId === meuId()) {
+                @if (m.autorId === meuId() || alcanca()) {
                   <a
                     class="editar"
                     [routerLink]="['/tabs/materiais', m.id, 'editar']"
@@ -256,6 +270,9 @@ import { materialVm } from '../material-vm';
                 [tipo]="m.tipo"
                 [titulo]="m.titulo"
                 [autoria]="m.autoria"
+                [autoriaSelo]="m.autoriaSelo"
+                [editadoPor]="m.editadoPor"
+                [editadoPorSelo]="m.editadoPorSelo"
               />
             }
             <ng-container
@@ -277,6 +294,9 @@ import { materialVm } from '../material-vm';
                 [titulo]="e.titulo"
                 [materia]="e.materia"
                 [autoria]="e.autoria"
+                [autoriaSelo]="e.autoriaSelo"
+                [editadoPor]="e.editadoPor"
+                [editadoPorSelo]="e.editadoPorSelo"
               />
             </a>
           }
@@ -466,6 +486,11 @@ export class MateriaPage {
 
   /** O papel é lido da turma, nunca da sessão: a liderança se transfere. */
   protected readonly souLider = this.turmas.souLider;
+  /**
+   * Professor que declarou ESTA materia, ou coordenacao: edita e oculta material
+   * alheio daqui, nunca exclui. So esconde botao; o servidor confere.
+   */
+  protected readonly alcanca = computed(() => this.turmas.alcanca(this.id));
   /** Qual material está pedindo confirmação. Um por vez: é ação rara. */
   protected readonly confirmandoOcultar = signal<string | null>(null);
   protected readonly moderando = signal(false);

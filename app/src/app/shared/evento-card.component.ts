@@ -5,7 +5,8 @@ import {
   input,
 } from '@angular/core';
 import { MateriaChipComponent } from './materia-chip.component';
-import type { Materia, TipoEvento } from './tipos';
+import { SeloComponent, prefixoDoSelo } from './selo.component';
+import type { Materia, Selo, TipoEvento } from './tipos';
 
 /**
  * Cartao de prova ou entrega.
@@ -28,7 +29,7 @@ import type { Materia, TipoEvento } from './tipos';
   selector: 'app-evento-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MateriaChipComponent],
+  imports: [MateriaChipComponent, SeloComponent],
   template: `
     <article class="ev" [class.ev--prova]="ehProva()">
       <div class="data">
@@ -53,7 +54,37 @@ import type { Materia, TipoEvento } from './tipos';
         <p class="titulo">{{ titulo() }}</p>
 
         @if (autoria(); as a) {
-          <p class="rodape">{{ a }}</p>
+          <!-- O prefixo e o selo andam juntos: sem selo, e so o nome. -->
+          <p class="rodape">
+            <span>{{ prefixoAutor() }}{{ a }}</span>
+            @if (autoriaSelo(); as s) {
+              <app-selo [selo]="s" />
+            }
+          </p>
+        }
+
+        <!-- Quem CORRIGIU, quando nao e quem postou: a data da prova pode ter
+             sido mudada por um professor, e o card nao pode continuar dizendo
+             so o nome de quem a cadastrou (nao-negociavel 1). -->
+        @if (editadoPor(); as quem) {
+          <p class="rodape">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 20h4L19 9l-4-4L4 16z" />
+              <path d="M13.5 6.5l4 4" />
+            </svg>
+            <span>editado por {{ prefixoEditor() }}{{ quem }}</span>
+            @if (editadoPorSelo(); as s) {
+              <app-selo [selo]="s" />
+            }
+          </p>
         }
       </div>
     </article>
@@ -166,12 +197,36 @@ import type { Materia, TipoEvento } from './tipos';
 
     .rodape {
       margin: 0;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 3px 7px;
       font-size: 13px;
       color: var(--ink-3);
     }
 
+    .rodape svg {
+      width: 13px;
+      height: 13px;
+      flex: 0 0 auto;
+    }
+
     .ev--prova .rodape {
       color: var(--prova-fg-2);
+    }
+
+    /* O selo inverte dentro do bloco da prova, que e o valor oposto ao da
+       pagina: Professor na tinta do bloco, Coordenacao num teal que passa AA
+       sobre ele. Medidos no mockup: 9,9:1 (bloco escuro) e 6,3:1 (bloco claro). */
+    .ev--prova {
+      --selo-prof: var(--prova-fg);
+      --selo-coord: #5fd3c7;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .ev--prova {
+        --selo-coord: #0b5f58;
+      }
     }
 
     /* o tipo e visual para quem enxerga e textual para quem ouve */
@@ -206,5 +261,18 @@ export class EventoCardComponent {
   /** "Ana Beatriz · ha 2 dias". Ausente onde a autoria ja e obvia pelo contexto. */
   readonly autoria = input<string | null>(null);
 
+  /** Selo de quem postou: so existe quando essa pessoa tem poder NESTA materia. */
+  readonly autoriaSelo = input<Selo | null>(null);
+
+  /** Nome de quem corrigiu o registro; ausente quando foi o proprio autor. */
+  readonly editadoPor = input<string | null>(null);
+  readonly editadoPorSelo = input<Selo | null>(null);
+
   protected readonly ehProva = computed(() => this.tipo() === 'PROVA');
+  protected readonly prefixoAutor = computed(() =>
+    prefixoDoSelo(this.autoriaSelo()),
+  );
+  protected readonly prefixoEditor = computed(() =>
+    prefixoDoSelo(this.editadoPorSelo()),
+  );
 }

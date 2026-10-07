@@ -9,7 +9,7 @@ import com.projetofans.erro.ConflitoVersaoException;
 import com.projetofans.erro.NaoAutorException;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MaterialRepository;
-import com.projetofans.repo.UsuarioRepository;
+import com.projetofans.security.PoderNaTurma;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.AtualizarMaterialRequest;
@@ -23,8 +23,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Material segue as mesmas regras de evento: autor-only, If-Match, exclusao
- * logica e revisao com o estado anterior. A repeticao e deliberada — sao duas
+ * Material segue as mesmas regras de evento: edicao so do autor ou de docente com
+ * alcance na materia (excluir e so do autor), If-Match, exclusao logica e revisao
+ * com o estado anterior. A repeticao e deliberada — sao duas
  * entidades diferentes com o mesmo contrato, e uma superclasse generica aqui
  * custaria mais para ler do que os poucos metodos que ela economizaria.
  *
@@ -37,20 +38,23 @@ public class MaterialService {
 
     private final MaterialRepository materiais;
     private final MateriaRepository materias;
-    private final UsuarioRepository usuarios;
     private final RevisaoService revisoes;
     private final TurmaScopeResolver escopo;
     private final EntityManager em;
+    private final PoderNaTurma poderNaTurma;
+    private final Autorias autorias;
 
     public MaterialService(MaterialRepository materiais, MateriaRepository materias,
-                           UsuarioRepository usuarios, RevisaoService revisoes,
-                           TurmaScopeResolver escopo, EntityManager em) {
+                           RevisaoService revisoes,
+                           TurmaScopeResolver escopo, EntityManager em,
+                           PoderNaTurma poderNaTurma, Autorias autorias) {
         this.materiais = materiais;
         this.materias = materias;
-        this.usuarios = usuarios;
         this.revisoes = revisoes;
         this.escopo = escopo;
         this.em = em;
+        this.poderNaTurma = poderNaTurma;
+        this.autorias = autorias;
     }
 
     @Transactional
@@ -64,14 +68,15 @@ public class MaterialService {
         // Mesmo detalhe do EventoService: save() e merge, e criado_em vem do banco.
         Material salvo = materiais.saveAndFlush(material);
         em.refresh(salvo);
-        return MaterialResponse.de(salvo, autor.nome());
+        return resposta(salvo);
     }
 
     @Transactional
     public MaterialResponse atualizar(UsuarioAtual usuario, UUID materialId,
                                       int versionEsperada, AtualizarMaterialRequest req) {
         Material material = daTurmaDoUsuario(usuario, materialId);
-        exigirAutor(usuario, material);
+        // Autor OU docente com alcance na materia de origem E destino.
+        exigirAutorOuAlcance(usuario, material, req.materiaId());
         exigirVersao(material, versionEsperada);
         Materia materia = materiaDaTurmaDoUsuario(usuario, req.materiaId());
 
@@ -79,9 +84,9 @@ public class MaterialService {
                 AcaoRevisao.EDITAR, material);
 
         material.editar(materia.getId(), req.tipo(), req.titulo(), req.url(), req.dataAula(),
-                Instant.now());
+                usuario.usuarioId(), Instant.now());
         Material salvo = materiais.saveAndFlush(material);
-        return MaterialResponse.de(salvo, nomeDoAutor(salvo.getAutorId()));
+        return resposta(salvo);
     }
 
     @Transactional
@@ -100,7 +105,7 @@ public class MaterialService {
     @Transactional(readOnly = true)
     public MaterialResponse buscar(UsuarioAtual usuario, UUID materialId) {
         Material material = daTurmaDoUsuario(usuario, materialId);
-        return MaterialResponse.de(material, nomeDoAutor(material.getAutorId()));
+        return resposta(material);
     }
 
     /**
@@ -133,13 +138,30 @@ public class MaterialService {
         }
     }
 
+    /**
+     * Autor OU docente com alcance na materia. Docente pendente, recusado ou
+     * contestado nao alcanca ninguem (PoderNaTurma cobre isso).
+     */
+    private void exigirAutorOuAlcance(UsuarioAtual usuario, Material material, UUID materiaIdDestino) {
+        if (material.getAutorId().equals(usuario.usuarioId())) {
+            return;
+        }
+        PoderNaTurma.Docentes docentes = poderNaTurma.daTurma(material.getTurmaId());
+        // Precisa de alcance na materia de ORIGEM e destino (se diferentes).
+        if (!docentes.alcanca(usuario.usuarioId(), material.getMateriaId()) ||
+            !docentes.alcanca(usuario.usuarioId(), materiaIdDestino)) {
+            throw new NaoAutorException();
+        }
+    }
+
     private static void exigirVersao(Material material, int versionEsperada) {
         if (material.getVersion() != versionEsperada) {
             throw new ConflitoVersaoException(versionEsperada, material.getVersion());
         }
     }
 
-    String nomeDoAutor(UUID autorId) {
-        return usuarios.findById(autorId).orElseThrow(AcessoNegadoException::new).getNome();
+    /** Visivel no pacote para o ResumoService: toda resposta de material leva a mesma autoria. */
+    MaterialResponse resposta(Material material) {
+        return MaterialResponse.de(material, autorias.daListagem().de(material));
     }
 }

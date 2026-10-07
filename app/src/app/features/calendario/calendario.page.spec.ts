@@ -11,6 +11,7 @@ import { signal } from '@angular/core';
 import { AuthService } from '../../core/auth.service';
 
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
+import { TurmaAtivaService } from '../../core/turma-ativa.service';
 import type { Evento } from '../../data/models';
 import { CalendarioPage } from './calendario.page';
 
@@ -36,6 +37,9 @@ function evento(id: string, tipo: 'PROVA' | 'ENTREGA', data: string): Evento {
   };
 }
 
+/** O nome da turma ativa do DOCENTE; nulo = aluno (nunca escolheu turma). */
+const nomeAtivo = signal<string | null>(null);
+
 describe('CalendarioPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<CalendarioPage>;
@@ -56,6 +60,7 @@ describe('CalendarioPage', () => {
             turmaId: () => 't1',
           },
         },
+        { provide: TurmaAtivaService, useValue: { nome: nomeAtivo } },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
@@ -83,7 +88,10 @@ describe('CalendarioPage', () => {
     )!;
   }
 
-  afterEach(() => backend.verify());
+  afterEach(() => {
+    backend.verify();
+    nomeAtivo.set(null);
+  });
 
   async function abrir(
     responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
@@ -91,6 +99,8 @@ describe('CalendarioPage', () => {
     // testa evento nao devia ter de saber que a tela tambem carrega nota.
     notas: unknown[] = [],
     papel: 'LIDER' | 'ALUNO' = 'ALUNO',
+    // Ate onde a pessoa alcanca (docente); ausente = o servidor nao o manda.
+    meuAlcance?: { tipo: string; materiaIds: string[] },
   ) {
     // O Ionic chama isto ao entrar na aba; o TestBed nao chama sozinho.
     fixture.componentInstance.ionViewWillEnter();
@@ -114,6 +124,7 @@ describe('CalendarioPage', () => {
             entrouEm: '2026-08-01T12:00:00Z',
           },
         ],
+        ...(meuAlcance ? { meuAlcance } : {}),
       });
     }
     await fixture.whenStable();
@@ -358,6 +369,137 @@ describe('CalendarioPage', () => {
       } finally {
         jasmine.clock().uninstall();
       }
+    });
+  });
+
+  describe('docente', () => {
+    const botaoOcultar = () =>
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.includes('Ocultar da turma'));
+
+    it('titulo e o nome da turma ativa; aluno (sem turma ativa) ve "Calendário"', async () => {
+      await abrir((r) => r.flush([]));
+      expect(fixture.nativeElement.querySelector('ion-title').textContent.trim()).toBe(
+        'Calendário',
+      );
+
+      nomeAtivo.set('ADS 3A');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('ion-title').textContent.trim()).toBe(
+        'ADS 3A',
+      );
+    });
+
+    it('coordenacao (alcance da turma toda) oculta a anotacao da turma', async () => {
+      await abrir(
+        (r) => r.flush([]),
+        [{
+          id: 'n-turma',
+          alcance: 'TURMA',
+          data: '2026-08-12',
+          texto: 'aula cancelada quinta',
+          autorId: 'u2',
+          autorNome: 'Helena',
+          
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: true,
+        }],
+        'ALUNO',
+        { tipo: 'TURMA', materiaIds: [] },
+      );
+
+      expect(botaoOcultar()).toBeDefined();
+    });
+
+    it('professor NAO oculta anotacao: ela nao tem materia, entao ele nao a alcanca', async () => {
+      await abrir(
+        (r) => r.flush([]),
+        [{
+          id: 'n-turma',
+          alcance: 'TURMA',
+          data: '2026-08-12',
+          texto: 'aula cancelada quinta',
+          autorId: 'u2',
+          autorNome: 'Helena',
+          
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: true,
+        }],
+        'ALUNO',
+        { tipo: 'MATERIAS', materiaIds: ['m1'] },
+      );
+
+      expect(botaoOcultar()).toBeUndefined();
+    });
+
+    it('anotacao da turma escrita pela coordenacao leva o selo; sem selo, so o nome', async () => {
+      await abrir(
+        (r) => r.flush([]),
+        [
+          {
+          id: 'n-turma',
+          alcance: 'TURMA',
+          data: '2026-08-12',
+          texto: 'aula cancelada quinta',
+          autorId: 'u2',
+          autorNome: 'Helena',
+          autorSelo: 'COORDENACAO',
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: true,
+        },
+          { ...{
+          id: 'n-turma',
+          alcance: 'TURMA',
+          data: '2026-08-12',
+          texto: 'aula cancelada quinta',
+          autorId: 'u2',
+          autorNome: 'Helena',
+          
+          criadoEm: '2026-08-01T12:00:00Z',
+          atualizadoEm: '2026-08-01T12:00:00Z',
+          version: 0,
+          visivelTurma: true,
+        }, id: 'n-outra', autorNome: 'Ana' },
+        ],
+      );
+
+      const notas = Array.from(
+        fixture.nativeElement.querySelectorAll('app-nota'),
+      ) as HTMLElement[];
+      expect(notas.length).toBe(2);
+      expect(notas[0].textContent).toContain('Coord. Helena');
+      expect(notas[0].querySelector('app-selo')!.textContent).toContain(
+        'Coordenação',
+      );
+      expect(notas[1].textContent).toContain('Ana');
+      expect(notas[1].textContent).not.toContain('Coord.');
+      expect(notas[1].querySelector('app-selo')).toBeNull();
+    });
+
+    it('o card do evento mostra o selo de quem postou e "editado por" quem corrigiu', async () => {
+      const comSelo = evento('c-1', 'PROVA', '2026-08-12');
+      comSelo.autoria = {
+        ...comSelo.autoria,
+        autorSelo: 'PROFESSOR',
+        editadoPorNome: 'Helena',
+        editadoPorSelo: 'COORDENACAO',
+      };
+      await abrir((r) => r.flush([comSelo]));
+
+      const card = fixture.nativeElement.querySelector(
+        'app-evento-card',
+      ) as HTMLElement;
+      expect(card.textContent).toContain('Prof. Otavio');
+      expect(card.textContent).toContain('editado por Coord. Helena');
     });
   });
 

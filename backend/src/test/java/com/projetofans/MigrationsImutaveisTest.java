@@ -40,7 +40,8 @@ class MigrationsImutaveisTest {
             "V5__anotacoes.sql", -582117543,
             "V6__admin_de_plataforma.sql", 1160653929,
             "V7__lider_modera_anotacao.sql", 1717707491,
-            "V8__professor_e_coordenador.sql", 550963251);
+            "V8__professor_e_coordenador.sql", 550963251,
+            "V9__quem_editou.sql", -726529810);
 
     @Test
     @DisplayName("nenhuma migration registrada mudou, e toda migration esta registrada")

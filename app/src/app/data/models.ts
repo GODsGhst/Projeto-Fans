@@ -5,9 +5,9 @@
  * `shared/tipos.ts` de proposito, para que o tipo que os componentes visuais
  * aceitam e o tipo que a API devolve nao possam divergir em silencio.
  */
-import type { TipoEvento } from '../shared/tipos';
+import type { Selo, TipoEvento } from '../shared/tipos';
 
-export type { TipoEvento };
+export type { Selo, TipoEvento };
 
 export type TipoMaterial = 'AULA' | 'ADICIONAL';
 export type PapelMembro = 'ALUNO' | 'LIDER' | 'PROFESSOR' | 'COORDENADOR';
@@ -15,8 +15,6 @@ export type PapelMembro = 'ALUNO' | 'LIDER' | 'PROFESSOR' | 'COORDENADOR';
 /** Espelho dos enums do backend. O que a conta E (tipo) nao muda; o status muda. */
 export type TipoConta = 'ALUNO' | 'PROFESSOR' | 'COORDENADOR';
 export type DocenteStatus = 'PENDENTE' | 'APROVADO' | 'RECUSADO';
-/** "Esta pessoa tem poder aqui" (spec 2.6). Note: COORDENACAO, nao COORDENADOR. */
-export type Selo = 'PROFESSOR' | 'COORDENACAO';
 
 /**
  * Autoria visivel em tudo. Nao existe registro anonimo neste app — autoria e o

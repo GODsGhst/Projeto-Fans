@@ -28,8 +28,10 @@ import { TurmaAtivaService } from '../../core/turma-ativa.service';
 import { statusDocente, tipoDaConta } from '../../data/docente.models';
 import type { TurmaDoPainel } from '../../data/docente.models';
 import { PainelRepository } from '../../data/painel.repository';
+import { SyncRepository } from '../../data/sync.repository';
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import { MateriaChipComponent } from '../../shared/materia-chip.component';
+import { SeloComponent } from '../../shared/selo.component';
 import { eventoVm } from '../evento-vm';
 
 /**
@@ -60,6 +62,7 @@ import { eventoVm } from '../evento-vm';
     RouterLink,
     EventoCardComponent,
     MateriaChipComponent,
+    SeloComponent,
   ],
   template: `
     <ion-header [translucent]="true">
@@ -121,18 +124,10 @@ import { eventoVm } from '../evento-vm';
                   {{ g.eventos.length === 1 ? 'próximo' : 'próximos' }}</span
                 >
                 <span class="tc-linha">
-                  <!-- Texto + forma + contorno, nunca so cor, e nao parece chip
-                       de materia (que e pilula cheia): spec 8, Cards. -->
-                  @if (g.turma.selo === 'PROFESSOR') {
-                    <span class="selo selo--prof"
-                      ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z" /><path d="M6.5 11.8V16c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-4.2" /></svg
-                      >Professor</span
-                    >
-                  } @else if (g.turma.selo === 'COORDENACAO') {
-                    <span class="selo selo--coord"
-                      ><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 6v5.5c0 4.4-3.2 7.8-8 9.5-4.8-1.7-8-5.1-8-9.5V6z" /></svg
-                      >Coordenação</span
-                    >
+                  <!-- O mesmo selo da autoria dos cards: texto + forma +
+                       contorno, nunca so cor, e nao parece chip de materia. -->
+                  @if (g.turma.selo; as s) {
+                    <app-selo [selo]="s" />
                   }
                   @if (g.turma.contestado) {
                     <span class="tag"
@@ -172,6 +167,9 @@ import { eventoVm } from '../evento-vm';
                   [titulo]="e.titulo"
                   [materia]="e.materia"
                   [autoria]="e.autoria"
+                  [autoriaSelo]="e.autoriaSelo"
+                  [editadoPor]="e.editadoPor"
+                  [editadoPorSelo]="e.editadoPorSelo"
                 />
               </a>
             } @empty {
@@ -190,10 +188,10 @@ import { eventoVm } from '../evento-vm';
         @if (turmaAtiva.nome(); as nome) {
           <p class="pf-rotulo">criar em {{ nome }}</p>
           <div class="origem" role="group" aria-label="Atalhos">
-            <a routerLink="/tabs/eventos/novo" [queryParams]="{ tipo: 'PROVA' }">
+            <a routerLink="/tabs/eventos/novo" [queryParams]="atalhos().prova">
               <ion-icon aria-hidden="true" name="square" />Nova prova
             </a>
-            <a routerLink="/tabs/eventos/novo" [queryParams]="{ tipo: 'ENTREGA' }">
+            <a routerLink="/tabs/eventos/novo" [queryParams]="atalhos().entrega">
               <ion-icon aria-hidden="true" name="ellipse-outline" />Nova entrega
             </a>
             <a [routerLink]="rotaNovoMaterial()">
@@ -225,12 +223,10 @@ import { eventoVm } from '../evento-vm';
     .sub, .nada { font-size: 12px; color: var(--ink-3); }
     .tcard[aria-pressed='true'] .sub { color: var(--ink-2); }
     .tc-linha { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
-    .selo, .tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 4px; font-size: 11px; font-weight: 600; white-space: nowrap; border-radius: var(--r-sm); }
-    .selo { background: var(--surface-2); border: 1px solid currentColor; }
-    .selo svg { width: 12px; height: 12px; }
-    .selo--prof { color: var(--ink); }
-    .selo--coord { color: var(--accent); }
-    .tag { color: var(--ink-2); border: 1px dashed var(--ink-3); }
+    /* Sobre o accent-soft da turma ativa o accent puro so da 3,9:1: o selo ganha
+       fundo proprio e volta para 5,2:1 (medido no mockup). */
+    .tcard { --selo-bg: var(--surface-2); }
+    .tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 4px; font-size: 11px; font-weight: 600; white-space: nowrap; border-radius: var(--r-sm); color: var(--ink-2); border: 1px dashed var(--ink-3); }
     .origem { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
     .origem a { align-items: center; gap: 7px; min-height: 76px; padding: 14px 6px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); text-align: center; text-decoration: none; }
     .origem ion-icon { font-size: 22px; }
@@ -239,6 +235,7 @@ import { eventoVm } from '../evento-vm';
 export class PainelPage {
   private readonly repo = inject(PainelRepository);
   private readonly auth = inject(AuthService);
+  private readonly sync = inject(SyncRepository);
   protected readonly turmaAtiva = inject(TurmaAtivaService);
 
   protected readonly carregando = this.repo.carregando;
@@ -299,15 +296,30 @@ export class PainelPage {
   });
 
   /**
-   * "Novo material" precisa da materia na rota. Com uma so declarada na turma
-   * ativa nao ha o que perguntar; com varias (ou nenhuma, ou coordenacao) a lista
-   * de materias deixa escolher.
+   * A materia que os atalhos pre-escolhem: so quando nao ha o que perguntar, isto
+   * e, UMA declarada na turma ativa. Com varias (ou nenhuma, ou coordenacao) a
+   * tela de criar deixa a pessoa escolher; chutar a primeira poria a prova na
+   * materia errada sem ninguem perceber.
    */
-  protected readonly rotaNovoMaterial = computed(() => {
+  private readonly materiaDoAtalho = computed(() => {
     const ativa = this.grupos().find((g) => this.ativa(g.turma))?.turma;
-    return ativa?.lecionadas.length === 1
-      ? ['/tabs/materias', ativa.lecionadas[0].materiaId, 'material', 'novo']
-      : ['/tabs/materias'];
+    return ativa?.lecionadas.length === 1 ? ativa.lecionadas[0].materiaId : null;
+  });
+
+  /** Os params de "Nova prova" e "Nova entrega"; a tela de criar os le (?tipo=&materiaId=). */
+  protected readonly atalhos = computed(() => {
+    const materiaId = this.materiaDoAtalho();
+    const com = (tipo: 'PROVA' | 'ENTREGA') =>
+      materiaId === null ? { tipo } : { tipo, materiaId };
+    return { prova: com('PROVA'), entrega: com('ENTREGA') };
+  });
+
+  /** "Novo material" precisa da materia NA ROTA; sem uma so, a lista deixa escolher. */
+  protected readonly rotaNovoMaterial = computed(() => {
+    const materiaId = this.materiaDoAtalho();
+    return materiaId === null
+      ? ['/tabs/materias']
+      : ['/tabs/materias', materiaId, 'material', 'novo'];
   });
 
   constructor() {
@@ -356,6 +368,15 @@ export class PainelPage {
       await this.turmaAtiva.conciliar(
         painel.turmas.map(({ turmaId, nome }) => ({ turmaId, nome })),
       );
+      // O docente nao tem Home, e e ela quem reagenda os lembretes: sem isto a
+      // prova que um colega cadastrou ontem nunca tocaria para ele. Depois da
+      // conciliacao porque o `/sync` vai com o X-Turma-Id da turma ativa, e na
+      // primeira abertura ela so passa a existir ali. Sem turma ativa nao ha o
+      // que sincronizar (o `/sync` seria 404). `reagendarAvisos` nao lanca e nao
+      // repete trabalho dentro de 60 s, entao entrar na aba toda vez e barato.
+      if (this.turmaAtiva.turmaId() !== null) {
+        void this.sync.reagendarAvisos();
+      }
     }
   }
 }

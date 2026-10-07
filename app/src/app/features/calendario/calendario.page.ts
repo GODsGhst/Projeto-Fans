@@ -14,6 +14,7 @@ import {
 } from '@ionic/angular/standalone';
 
 import { JanelaDesfazer } from '../../core/janela-desfazer';
+import { TurmaAtivaService } from '../../core/turma-ativa.service';
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import { NotaComponent } from '../../shared/nota.component';
 import { EventoRepository } from '../../data/evento.repository';
@@ -63,7 +64,9 @@ import { mensagemDeErro } from '../auth/erro';
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
-        <ion-title>Calendário</ion-title>
+        <!-- Docente com varias turmas precisa ver de QUAL delas e este mes;
+             aluno tem uma so e nome() e nulo para ele: o titulo de sempre. -->
+        <ion-title>{{ turmaAtiva.nome() ?? 'Calendário' }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -143,6 +146,9 @@ import { mensagemDeErro } from '../auth/erro';
                   [titulo]="e.titulo"
                   [materia]="e.materia"
                   [autoria]="e.autoria"
+                  [autoriaSelo]="e.autoriaSelo"
+                  [editadoPor]="e.editadoPor"
+                  [editadoPorSelo]="e.editadoPorSelo"
                 />
               </a>
             }
@@ -152,6 +158,7 @@ import { mensagemDeErro } from '../auth/erro';
                 [alcance]="n.alcance"
                 [texto]="n.texto"
                 [autoria]="n.autoria"
+                [autoriaSelo]="n.autoriaSelo"
               />
             }
 
@@ -184,6 +191,9 @@ import { mensagemDeErro } from '../auth/erro';
                 [titulo]="e.titulo"
                 [materia]="e.materia"
                 [autoria]="e.autoria"
+                [autoriaSelo]="e.autoriaSelo"
+                [editadoPor]="e.editadoPor"
+                [editadoPorSelo]="e.editadoPorSelo"
               />
             </a>
           }
@@ -232,6 +242,7 @@ import { mensagemDeErro } from '../auth/erro';
                 [alcance]="n.alcance"
                 [texto]="n.texto"
                 [autoria]="n.autoria"
+                [autoriaSelo]="n.autoriaSelo"
               />
             </a>
             @if (!n.visivelTurma) {
@@ -248,8 +259,9 @@ import { mensagemDeErro } from '../auth/erro';
               [alcance]="n.alcance"
               [texto]="n.texto"
               [autoria]="n.autoria"
+              [autoriaSelo]="n.autoriaSelo"
             />
-            @if (souLider() && n.alcance === 'TURMA') {
+            @if ((souLider() || alcancaNota()) && n.alcance === 'TURMA') {
               <!-- O lider so oculta o que ele consegue LER. Rascunho pessoal de
                    outra pessoa nunca chega aqui, entao nao ha botao para ele. -->
               <button
@@ -427,6 +439,7 @@ export class CalendarioPage {
   private readonly notasRepo = inject(NotaRepository);
   private readonly moderacao = inject(ModeracaoRepository);
   private readonly turmaRepo = inject(TurmaRepository);
+  protected readonly turmaAtiva = inject(TurmaAtivaService);
 
   protected readonly diasDaSemana = DIAS_DA_SEMANA;
 
@@ -461,6 +474,11 @@ export class CalendarioPage {
    */
   protected readonly erroDasNotas = this.notasRepo.erro;
   protected readonly souLider = this.turmaRepo.souLider;
+  /**
+   * Nota nao tem materia, entao so a coordenacao (turma inteira) alcanca; professor
+   * nao. So esconde o botao: o servidor confere (spec 5).
+   */
+  protected readonly alcancaNota = computed(() => this.turmaRepo.alcanca(null));
   protected readonly moderando = signal(false);
   protected readonly erroDaModeracao = signal<string | null>(null);
 
@@ -522,6 +540,8 @@ export class CalendarioPage {
       dia: diaCurto(n.data),
       minha: !n.autorNome,
       visivelTurma: n.visivelTurma,
+      // Nota pessoal nao tem autoria nem selo; a da turma so tem COORDENACAO.
+      autoriaSelo: n.autorNome ? (n.autorSelo ?? null) : null,
       autoria: n.autorNome
         ? assinatura(
             {

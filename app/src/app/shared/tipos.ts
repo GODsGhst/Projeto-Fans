@@ -26,3 +26,11 @@ export type AlcanceNota = 'TURMA' | 'PESSOAL';
 
 /** Estado do cartao no Meu quadro. Estado pessoal, nunca gravado no fato compartilhado. */
 export type EstadoQuadro = 'A_FAZER' | 'FEITO';
+
+/**
+ * "Esta pessoa tem poder aqui" (spec 2.6): o que o selo diz na autoria. Note
+ * COORDENACAO, nao COORDENADOR — o selo nomeia a funcao, nao o papel do vinculo.
+ * Vive aqui, e nao em `data/`, porque os componentes visuais o aceitam como input
+ * e nao podem depender da camada de dados.
+ */
+export type Selo = 'PROFESSOR' | 'COORDENACAO';

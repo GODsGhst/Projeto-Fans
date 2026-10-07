@@ -15,12 +15,15 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
+import { AuthService } from '../../core/auth.service';
 import { EventoRepository } from '../../data/evento.repository';
 import { HomeRepository } from '../../data/home.repository';
 import { MateriaRepository } from '../../data/materia.repository';
 import type { EventoDetalhe, TipoEvento } from '../../data/models';
 import { SyncRepository } from '../../data/sync.repository';
+import { TurmaRepository } from '../../data/turma.repository';
 import { MateriaChipComponent } from '../../shared/materia-chip.component';
+import { SeloComponent, prefixoDoSelo } from '../../shared/selo.component';
 import { Espera } from '../auth/espera';
 import { mensagemDeErro } from '../auth/erro';
 
@@ -50,6 +53,7 @@ import { mensagemDeErro } from '../auth/erro';
     IonBackButton,
     IonContent,
     MateriaChipComponent,
+    SeloComponent,
     RouterLink,
   ],
   styleUrls: ['../auth/auth.scss'],
@@ -112,7 +116,7 @@ import { mensagemDeErro } from '../auth/erro';
 
           <p class="rot-campo">matéria</p>
           <div class="chips-pick" role="group" aria-label="Matéria">
-            @for (m of materias(); track m.id) {
+            @for (m of materiasEscolhiveis(); track m.id) {
               <button
                 type="button"
                 [attr.data-materia]="m.id"
@@ -178,9 +182,24 @@ import { mensagemDeErro } from '../auth/erro';
             continua aparecendo no dia certo.
           </p>
 
-          <p class="alerta alerta--turma">
-            Vai aparecer para a turma toda com o seu nome. Só você pode editar
-            ou apagar depois.
+          <p class="alerta alerta--turma" role="status">
+            @if (editandoAlheio()) {
+              <!-- Autoria visivel e o nao-negociavel 1: quem corrige NAO vira
+                   o autor, e o card diz quem mexeu. -->
+              A autoria continua sendo de <b>{{ autorDoOriginal() }}</b>: ao
+              salvar, o card passa a mostrar “editado por
+              {{ meuNomeNoCard() }}”. A versão de agora fica guardada no
+              histórico.
+            } @else if (seloAoSalvar(); as s) {
+              Vai aparecer para a turma toda com o seu nome e o selo
+              <app-selo [selo]="s" />. Só você pode apagar depois.
+            } @else if (docenteSemSelo()) {
+              Vai aparecer com o seu nome, <b>sem selo</b>: nesta matéria você
+              é aluno.
+            } @else {
+              Vai aparecer para a turma toda com o seu nome. Só você pode editar
+              ou apagar depois.
+            }
           </p>
 
           <button
@@ -279,13 +298,26 @@ export class NovoEventoPage {
   private readonly home = inject(HomeRepository);
   private readonly sync = inject(SyncRepository);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+  private readonly turmas = inject(TurmaRepository);
 
   protected readonly materias = this.materiasRepo.materias;
   protected readonly carregando = this.materiasRepo.carregando;
   protected readonly erroDasMaterias = this.materiasRepo.erro;
 
-  protected readonly tipo = signal<TipoEvento>('PROVA');
+  /**
+   * `?tipo=PROVA|ENTREGA&materiaId=` — os atalhos do painel do docente abrem esta
+   * tela ja com o tipo (e a materia, quando so ha uma declarada). Valor que nao
+   * for um dos dois tipos e ignorado: o padrao e o de sempre, nunca um tipo
+   * inventado pela URL.
+   */
+  private readonly consulta = inject(ActivatedRoute).snapshot.queryParamMap;
+  protected readonly tipo = signal<TipoEvento>(
+    this.consulta.get('tipo') === 'ENTREGA' ? 'ENTREGA' : 'PROVA',
+  );
   protected readonly materiaId = signal<string | null>(null);
+  /** Pre-escolha da URL; so vale se a materia existir na turma (ver `materiaEscolhida`). */
+  private readonly materiaDaRota = this.consulta.get('materiaId');
   protected readonly enviando = signal(false);
   protected readonly erro = signal<string | null>(null);
 
@@ -327,9 +359,61 @@ export class NovoEventoPage {
       this.materias().length === 0,
   );
 
-  /** A primeira ja vem marcada: um seletor sem escolha feita nao ajuda ninguem. */
-  protected readonly materiaEscolhida = computed(
-    () => this.materiaId() ?? this.materias()[0]?.id ?? null,
+  /**
+   * Corrigir o registro de OUTRA pessoa (so docente chega aqui: o servidor so
+   * deixa quem alcanca a materia). Muda o aviso e a lista de materias.
+   */
+  protected readonly editandoAlheio = computed(() => {
+    const o = this.original();
+    const eu = this.auth.usuario();
+    return o !== null && eu !== null && o.autoria.autorId !== eu.id;
+  });
+
+  /**
+   * Ao corrigir registro alheio, so as materias que a pessoa alcanca: o servidor
+   * confere origem E destino, e oferecer outra levaria o professor a um 403 so
+   * depois de preencher tudo.
+   */
+  protected readonly materiasEscolhiveis = computed(() =>
+    this.editandoAlheio()
+      ? this.materias().filter((m) => this.turmas.alcanca(m.id))
+      : this.materias(),
+  );
+
+  /**
+   * A tocada (ou a do registro, ao editar); senao a da URL, se existir na turma;
+   * senao a primeira — um seletor sem escolha feita nao ajuda ninguem.
+   */
+  protected readonly materiaEscolhida = computed(() => {
+    const lista = this.materiasEscolhiveis();
+    return (
+      this.materiaId() ??
+      lista.find((m) => m.id === this.materiaDaRota)?.id ??
+      lista[0]?.id ??
+      null
+    );
+  });
+
+  /** O selo que este registro vai levar, para AVISAR antes de salvar. */
+  protected readonly seloAoSalvar = computed(() =>
+    this.turmas.seloNa(this.materiaEscolhida()),
+  );
+
+  /** Conta docente, turma ja lida, e nenhum poder na materia escolhida. */
+  protected readonly docenteSemSelo = computed(
+    () =>
+      this.auth.ehDocente() &&
+      this.turmas.turma() !== null &&
+      this.seloAoSalvar() === null,
+  );
+
+  protected readonly autorDoOriginal = computed(
+    () => this.original()?.autoria.autorNome ?? '',
+  );
+
+  /** "Prof. Marcos" / "Coord. Helena": como o card vai assinar a correcao. */
+  protected readonly meuNomeNoCard = computed(
+    () => prefixoDoSelo(this.seloAoSalvar()) + (this.auth.usuario()?.nome ?? ''),
   );
 
   protected readonly rotuloDoBotao = computed(() => {
@@ -351,6 +435,12 @@ export class NovoEventoPage {
       .catch((e: unknown) =>
         console.error('[novo-evento] falha ao carregar as matérias', e),
       );
+
+    // O alcance vem da turma. Aluno nunca tem poder, entao nao pergunta: so a
+    // conta docente precisa do aviso de selo e da lista filtrada.
+    if (this.auth.ehDocente()) {
+      void this.turmas.garantirCarregada();
+    }
 
     // Falsy, não `!== null`: rota sem o parâmetro devolve `null` no Angular e
     // `undefined` num Map, e um `GET /eventos/undefined` é o tipo de chamada que

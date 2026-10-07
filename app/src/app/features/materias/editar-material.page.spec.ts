@@ -64,9 +64,25 @@ describe('EditarMaterialPage', () => {
 
   afterEach(() => backend.verify());
 
-  async function abrir(material: object = MATERIAL): Promise<void> {
+  async function abrir(
+    material: object = MATERIAL,
+    meuAlcance: object = { tipo: 'NENHUM', materiaIds: [] },
+  ): Promise<void> {
     fixture.detectChanges();
     backend.expectOne(`${environment.apiUrl}/materiais/mat-1`).flush(material);
+    await fixture.whenStable();
+    // Quem nao e o autor pergunta a turma o quanto alcanca; o autor nunca pergunta
+    // (se perguntasse, o `verify` do afterEach acusaria a requisicao aberta).
+    for (const r of backend.match(`${environment.apiUrl}/turmas/minha`)) {
+      r.flush({
+        id: 't1',
+        nome: 'ADS 3A',
+        semestre: null,
+        codigoConvite: 'ABC12345',
+        membros: [],
+        meuAlcance,
+      });
+    }
     await fixture.whenStable();
     fixture.detectChanges();
   }
@@ -150,6 +166,41 @@ describe('EditarMaterialPage', () => {
     expect(botao('Salvar')).toBeUndefined();
     expect(botao('Apagar')).toBeUndefined();
     expect(fixture.nativeElement.textContent as string).toContain('quem criou');
+  });
+
+  describe('docente: professor que leciona a materia, ou coordenacao', () => {
+    beforeEach(() => {
+      eu.set({ id: 'prof', nome: 'Marcos', email: 'm@exemplo.com' });
+    });
+
+    it('quem alcanca a materia corrige, mas NAO ve Apagar em material alheio', async () => {
+      await abrir(MATERIAL, { tipo: 'MATERIAS', materiaIds: ['m1'] });
+
+      expect(botao('Salvar')).toBeDefined();
+      expect(botao('Apagar')).toBeUndefined();
+      expect(fixture.nativeElement.textContent as string).toContain(
+        'editado por',
+      );
+    });
+
+    it('salvar manda o PATCH com If-Match, na MESMA materia (nao move o registro)', async () => {
+      await abrir(MATERIAL, { tipo: 'TURMA', materiaIds: [] });
+      botao('Salvar')!.click();
+
+      const req = backend.expectOne(`${environment.apiUrl}/materiais/mat-1`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.headers.get('If-Match')).toBe('2');
+      expect(req.request.body.materiaId).toBe('m1');
+      req.flush({ id: 'mat-1' });
+      await fixture.whenStable();
+    });
+
+    it('materia que ele nao leciona: continua sem editar nem apagar', async () => {
+      await abrir(MATERIAL, { tipo: 'MATERIAS', materiaIds: ['outra'] });
+
+      expect(botao('Salvar')).toBeUndefined();
+      expect(botao('Apagar')).toBeUndefined();
+    });
   });
 
   it('link invalido nao vai para o servidor', async () => {

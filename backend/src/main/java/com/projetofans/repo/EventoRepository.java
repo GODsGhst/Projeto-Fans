@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -107,28 +108,47 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
      *
      * feito sai do left join com estado_pessoal filtrado pelo usuario. Nao existe
      * coluna feito em evento, e criar uma apagaria o nao-negociavel 3.
+     *
+     * O filtro de materia (`todas = false`) e do /painel do professor e vive AQUI, no
+     * SQL, antes do LIMIT: filtrar em Java o que o LIMIT 6 ja cortou entregaria ao
+     * professor menos de 6 itens (ou nenhum) quando os 6 primeiros da turma sao de
+     * outra materia. Janela, ordem e teto continuam uma implementacao so.
+     *
+     * As duas ultimas colunas (atualizado_por, materia_id) existem para a Autorias montar
+     * o selo e o "editado por"; o NOME do autor ela mesma busca, uma vez por pessoa.
      */
     @Query(value = """
         select e.id, e.tipo, e.titulo, e.data_evento, e.hora_evento,
                m.sigla, m.cor_hex,
-               e.autor_id, u.nome as autor_nome, e.criado_em, e.atualizado_em,
-               coalesce(ep.feito, false) as feito
+               e.autor_id, e.criado_em, e.atualizado_em,
+               coalesce(ep.feito, false) as feito,
+               e.atualizado_por, e.materia_id
         from evento e
         join materia m on m.id = e.materia_id
-        join usuario u on u.id = e.autor_id
         left join estado_pessoal ep on ep.evento_id = e.id and ep.usuario_id = :usuarioId
         where e.turma_id = :turmaId
           and e.visivel_turma
           and e.excluido_em is null
           and e.data_evento >= current_date
           and e.data_evento <= current_date + 14
+          and (:todas or e.materia_id in (:materiaIds))
         order by e.data_evento asc,
                  e.hora_evento asc nulls last,
                  case e.tipo when 'PROVA' then 0 else 1 end,
                  e.criado_em asc
         limit 6
         """, nativeQuery = true)
-    List<Object[]> home(@Param("turmaId") UUID turmaId, @Param("usuarioId") UUID usuarioId);
+    List<Object[]> homeDeMaterias(@Param("turmaId") UUID turmaId, @Param("usuarioId") UUID usuarioId,
+                                  @Param("todas") boolean todas,
+                                  @Param("materiaIds") Collection<UUID> materiaIds);
+
+    /**
+     * A Home da turma inteira. `materiaIds` nunca pode ir vazio (`in ()` e erro de sintaxe
+     * no Postgres), entao "sem filtro" leva um id que nao existe; `todas` e quem manda.
+     */
+    default List<Object[]> home(UUID turmaId, UUID usuarioId) {
+        return homeDeMaterias(turmaId, usuarioId, true, List.of(new UUID(0, 0)));
+    }
 
     Optional<Evento> findByIdAndTurmaId(UUID id, UUID turmaId);
 

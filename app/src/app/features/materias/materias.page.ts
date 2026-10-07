@@ -12,6 +12,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
+import { TurmaAtivaService } from '../../core/turma-ativa.service';
 import { MateriaRepository } from '../../data/materia.repository';
 import { MateriaChipComponent } from '../../shared/materia-chip.component';
 
@@ -41,7 +42,9 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
-        <ion-title>Matérias</ion-title>
+        <!-- Docente com varias turmas precisa ver de QUAL delas sao estas
+             materias; aluno tem uma so e nome() e nulo para ele. -->
+        <ion-title>{{ turmaAtiva.nome() ?? 'Matérias' }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -100,6 +103,7 @@ import { MateriaChipComponent } from '../../shared/materia-chip.component';
 })
 export class MateriasPage {
   private readonly repo = inject(MateriaRepository);
+  protected readonly turmaAtiva = inject(TurmaAtivaService);
 
   protected readonly materias = this.repo.materias;
   protected readonly carregando = this.repo.carregando;

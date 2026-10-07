@@ -112,6 +112,9 @@ import type { AlarmePersonalizado } from '../../notifications/reagendador';
             [titulo]="e.titulo"
             [materia]="e.materia"
             [autoria]="e.autoria"
+            [autoriaSelo]="e.autoriaSelo"
+            [editadoPor]="e.editadoPor"
+            [editadoPorSelo]="e.editadoPorSelo"
           />
 
           @if (e.sala) {
@@ -122,8 +125,10 @@ import type { AlarmePersonalizado } from '../../notifications/reagendador';
 
           <!-- O líder tira da lista da turma. Não apaga: o registro continua
                existindo, com autoria, e volta em "não listados" para quem o
-               criou. É o contrapeso do papel. -->
-          @if (souLider()) {
+               criou. É o contrapeso do papel. O professor (na matéria dele) e a
+               coordenação fazem o mesmo: ocultar é reversível, e é o que sobra a
+               quem não pode excluir registro alheio. -->
+          @if (podeModerar()) {
             <div class="do-lider">
               @if (ocultado()) {
                 <!-- A janela do desfazer: alguns segundos. Ao sair desta tela o
@@ -278,9 +283,20 @@ import type { AlarmePersonalizado } from '../../notifications/reagendador';
                 </button>
               }
             </div>
-            @if (erroDaAcao(); as e2) {
-              <p class="pf-erro" role="alert">{{ e2 }}</p>
-            }
+          } @else if (alcanca()) {
+            <!-- Corrige, nunca apaga: excluir registro alheio nao existe para
+                 docente (spec 5.1). A autoria continua sendo de quem postou e o
+                 card passa a dizer quem corrigiu. -->
+            <div class="do-autor">
+              <a class="neutro" [routerLink]="['/tabs/eventos', id, 'editar']"
+                >Editar</a
+              >
+            </div>
+            <p class="de-outra-pessoa">
+              Quem cadastrou foi <b>{{ autorDoRegistro() }}</b> e continua como
+              autor: ao corrigir, o card passa a mostrar “editado por” com o seu
+              nome. Apagar é só dessa pessoa — você pode ocultar.
+            </p>
           } @else {
             <!-- A regra dita ANTES de tentar, e nao depois de um toque negado.
                  Esconder os botoes ja evitava o 403, mas ausencia de botao e
@@ -290,6 +306,13 @@ import type { AlarmePersonalizado } from '../../notifications/reagendador';
               Quem cadastrou foi <b>{{ autorDoRegistro() }}</b> — só essa pessoa
               edita ou apaga. Se a informação mudou, avise no quadro.
             </p>
+          }
+
+          <!-- Fora do ramo do autor: o 403 de quem oculta (lider, professor sem
+               o poder que o app achava ter) tambem precisa de uma frase. Antes
+               o erro de ocultar so aparecia para o autor, que nunca oculta. -->
+          @if (erroDaAcao(); as e2) {
+            <p class="pf-erro" role="alert">{{ e2 }}</p>
           }
 
           <!-- O lembrete e deste aparelho, nao da turma: ninguem mais ve, e
@@ -458,6 +481,9 @@ import type { AlarmePersonalizado } from '../../notifications/reagendador';
                     [tipo]="m.tipo"
                     [titulo]="m.titulo"
                     [autoria]="m.autoria"
+                    [autoriaSelo]="m.autoriaSelo"
+                    [editadoPor]="m.editadoPor"
+                    [editadoPorSelo]="m.editadoPorSelo"
                   />
                 </a>
               } @else {
@@ -465,6 +491,9 @@ import type { AlarmePersonalizado } from '../../notifications/reagendador';
                   [tipo]="m.tipo"
                   [titulo]="m.titulo"
                   [autoria]="m.autoria"
+                  [autoriaSelo]="m.autoriaSelo"
+                  [editadoPor]="m.editadoPor"
+                  [editadoPorSelo]="m.editadoPorSelo"
                 />
               }
             }
@@ -700,6 +729,24 @@ export class EventoPage {
     const eu = this.auth.usuario();
     return d !== null && eu !== null && d.autoria.autorId === eu.id;
   });
+
+  /**
+   * Professor (na materia DESTE evento) ou coordenacao: pode corrigir e ocultar o
+   * registro alheio, mas nunca excluir. Lido da turma, como `souLider`; o servidor
+   * confere de novo e o 403 vira a mensagem da acao.
+   */
+  protected readonly alcanca = computed(() => {
+    const d = this.detalhe();
+    return d !== null && this.turmas.alcanca(d.materiaId);
+  });
+
+  /**
+   * Quem ve "Ocultar" e "Pedir que apague". O proprio autor com alcance NAO entra
+   * por aqui: pedir a si mesmo que apague nao faz sentido, e ele ja tem Apagar.
+   */
+  protected readonly podeModerar = computed(
+    () => this.souLider() || (this.alcanca() && !this.souAutor()),
+  );
 
   /**
    * Tira da lista da turma. Não apaga.

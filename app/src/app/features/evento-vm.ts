@@ -1,5 +1,5 @@
 import type { Autoria, ItemHome } from '../data/models';
-import type { Materia, TipoEvento } from '../shared/tipos';
+import type { Materia, Selo, TipoEvento } from '../shared/tipos';
 
 /**
  * O que `EventoCardComponent` precisa para desenhar uma prova ou entrega.
@@ -16,6 +16,13 @@ export interface EventoVm {
   readonly titulo: string;
   readonly materia: Materia;
   readonly autoria: string;
+  /**
+   * Selo de quem postou e "editado por" (spec 6). Nulos quando nao ha poder ou
+   * quando o proprio autor editou: sem selo, a autoria e so o nome.
+   */
+  readonly autoriaSelo: Selo | null;
+  readonly editadoPor: string | null;
+  readonly editadoPorSelo: Selo | null;
   /** Sala deste evento quando difere da habitual; vazio = na sala da materia. */
   readonly sala: string;
 }
@@ -91,6 +98,11 @@ export function eventoVm(e: FonteEvento, agora: Date): EventoVm {
     titulo: e.titulo,
     materia: { sigla: e.materiaSigla, cor: e.materiaCorHex },
     autoria: assinatura(e.autoria, agora),
+    // O backend OMITE campo nulo do JSON, e o snapshot gravado no aparelho e
+    // anterior a estes campos: ausente chega como `undefined`, vira `null`.
+    autoriaSelo: e.autoria.autorSelo ?? null,
+    editadoPor: e.autoria.editadoPorNome ?? null,
+    editadoPorSelo: e.autoria.editadoPorSelo ?? null,
     sala: e.sala ?? '',
   };
 }

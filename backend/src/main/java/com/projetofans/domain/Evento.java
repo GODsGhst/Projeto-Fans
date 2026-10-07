@@ -70,6 +70,10 @@ public class Evento {
     @Column(name = "atualizado_em", nullable = false)
     private Instant atualizadoEm;
 
+    /** NULL = nunca editado, ou legado. Preenchido em TODA edicao, inclusive a do autor. */
+    @Column(name = "atualizado_por")
+    private UUID atualizadoPor;
+
     /** Locking otimista: edicao simultanea vira 409, nunca perda silenciosa. */
     @Version
     @Column(nullable = false)
@@ -156,6 +160,10 @@ public class Evento {
         return atualizadoEm;
     }
 
+    public UUID getAtualizadoPor() {
+        return atualizadoPor;
+    }
+
     public int getVersion() {
         return version;
     }
@@ -191,9 +199,11 @@ public class Evento {
      * ligado, e editar o titulo de uma prova ignorava a sala enviada, com
      * resposta 200. Perda silenciosa e o pior defeito possivel aqui, porque quem
      * editou nao tem como perceber.
+     *
+     * `editorId` e preenchido em TODA edicao, inclusive quando o autor edita a si mesmo.
      */
     public void editar(UUID materiaId, TipoEvento tipo, String titulo,
-                       LocalDate dataEvento, LocalTime horaEvento, String sala, Instant agora) {
+                       LocalDate dataEvento, LocalTime horaEvento, String sala, UUID editorId, Instant agora) {
         this.materiaId = materiaId;
         this.tipo = tipo;
         this.titulo = titulo;
@@ -201,6 +211,7 @@ public class Evento {
         this.horaEvento = horaEvento;
         this.sala = emBrancoViraNulo(sala);
         this.atualizadoEm = agora;
+        this.atualizadoPor = editorId;
     }
 
     public void excluirLogicamente(Instant agora) {

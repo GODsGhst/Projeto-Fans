@@ -18,6 +18,7 @@ import {
 import { AuthService } from '../../core/auth.service';
 import { MaterialRepository } from '../../data/material.repository';
 import type { Material, TipoMaterial } from '../../data/models';
+import { TurmaRepository } from '../../data/turma.repository';
 import { Espera } from '../auth/espera';
 import { mensagemDeErro } from '../auth/erro';
 
@@ -70,7 +71,7 @@ import { mensagemDeErro } from '../auth/erro';
         }
 
         @if (material(); as m) {
-          @if (!souAutor()) {
+          @if (!podeEditar()) {
             <div class="pf-vazio">
               <b>Este material não é seu.</b>
               <span>
@@ -80,6 +81,16 @@ import { mensagemDeErro } from '../auth/erro';
               </span>
             </div>
           } @else {
+            @if (!souAutor()) {
+              <!-- Professor na materia dele ou coordenacao: corrige, mas a
+                   autoria continua de quem postou e o material passa a dizer
+                   quem corrigiu. Apagar fica so com o autor (mais abaixo). -->
+              <p class="alerta">
+                Você está corrigindo um material de
+                <b>{{ m.autoria.autorNome }}</b>. A autoria continua sendo
+                de quem postou; o material passa a mostrar “editado por” com o seu nome.
+              </p>
+            }
             <p class="rot-campo">tipo</p>
             <div class="seg" role="group" aria-label="Tipo de material">
               <button
@@ -142,7 +153,10 @@ import { mensagemDeErro } from '../auth/erro';
               {{ rotulo() }}
             </button>
 
-            @if (confirmando()) {
+            <!-- Excluir registro alheio nao existe para docente (spec 5.1): so o
+                 autor ve o Apagar. -->
+            @if (souAutor()) {
+              @if (confirmando()) {
               <p class="alerta">
                 Apagar mesmo? Some da matéria e das provas em que está anexado.
               </p>
@@ -170,6 +184,7 @@ import { mensagemDeErro } from '../auth/erro';
                 Apagar
               </button>
             }
+            }
           }
         }
       </div>
@@ -180,6 +195,7 @@ export class EditarMaterialPage {
   private readonly repo = inject(MaterialRepository);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly turmas = inject(TurmaRepository);
 
   private readonly id =
     inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
@@ -204,6 +220,16 @@ export class EditarMaterialPage {
     return m !== null && eu !== null && m.autoria.autorId === eu.id;
   });
 
+  /**
+   * O autor, ou quem alcanca a materia (professor na dele, coordenacao): corrigir
+   * material alheio e do poder docente, apagar nunca. So esconde a tela; o
+   * servidor confere e o 403 vira a mensagem do salvar.
+   */
+  protected readonly podeEditar = computed(() => {
+    const m = this.material();
+    return this.souAutor() || (m !== null && this.turmas.alcanca(m.materiaId));
+  });
+
   protected readonly rotulo = computed(() => {
     if (!this.enviando()) {
       return 'Salvar';
@@ -220,6 +246,11 @@ export class EditarMaterialPage {
       const m = await this.repo.detalhe(this.id);
       this.material.set(m);
       this.tipo.set(m.tipo);
+      // So quem nao e o autor precisa saber o alcance; o autor nunca pergunta a
+      // turma aqui. Sem `await`: a tela abre ja, e o alcance chega e acende o form.
+      if (!this.souAutor()) {
+        void this.turmas.garantirCarregada();
+      }
     } catch (e) {
       this.erro.set(mensagemDeErro(e));
     } finally {

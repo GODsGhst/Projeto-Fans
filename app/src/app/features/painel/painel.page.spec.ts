@@ -16,6 +16,7 @@ import { TurmaAtivaService } from '../../core/turma-ativa.service';
 import type { TurmaRef } from '../../core/turma-ativa.service';
 import type { Painel, TurmaDoPainel } from '../../data/docente.models';
 import type { ItemHome, Usuario } from '../../data/models';
+import { SyncRepository } from '../../data/sync.repository';
 import { StorageFake, USUARIO } from '../auth/auth-teste';
 import { PainelPage } from './painel.page';
 
@@ -73,10 +74,15 @@ describe('PainelPage', () => {
   let backend: HttpTestingController;
   let auth: AuthService;
   let ativa: TurmaAtivaFake;
+  let sync: jasmine.SpyObj<SyncRepository>;
   let fixture: ComponentFixture<PainelPage>;
 
   beforeEach(() => {
     ativa = new TurmaAtivaFake();
+    // O `/sync` de verdade e do SyncRepository (testado a parte): aqui importa
+    // se o painel o pede, e quando.
+    sync = jasmine.createSpyObj<SyncRepository>('sync', ['reagendarAvisos']);
+    sync.reagendarAvisos.and.resolveTo();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -85,6 +91,7 @@ describe('PainelPage', () => {
         provideHttpClientTesting(),
         { provide: StorageService, useValue: new StorageFake() },
         { provide: TurmaAtivaService, useValue: ativa },
+        { provide: SyncRepository, useValue: sync },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
@@ -274,6 +281,69 @@ describe('PainelPage', () => {
     });
   });
 
+  describe('lembretes do docente', () => {
+    // O docente nao tem Home, e e a Home quem reagenda os lembretes.
+    it('ao entrar, com turma ativa, reagenda os avisos', async () => {
+      await abrir({ turmas: [turma({ turmaId: 't1' })] });
+
+      expect(sync.reagendarAvisos).toHaveBeenCalledTimes(1);
+    });
+
+    it('reagenda DEPOIS de conciliar: o /sync vai com o cabecalho da turma ativa', async () => {
+      const ordem: string[] = [];
+      ativa.conciliar.and.callFake(async () => {
+        ordem.push('conciliar');
+      });
+      sync.reagendarAvisos.and.callFake(async () => {
+        ordem.push('reagendar');
+      });
+      await abrir({ turmas: [turma({ turmaId: 't1' })] });
+
+      expect(ordem).toEqual(['conciliar', 'reagendar']);
+    });
+
+    it('sem turma ativa nao ha o que sincronizar (o /sync seria 404)', async () => {
+      ativa.turmaId.set(null);
+      await abrir({ turmas: [] });
+
+      expect(sync.reagendarAvisos).not.toHaveBeenCalled();
+    });
+
+    it('painel que falhou nao reagenda: turma velha na ativa viraria 404', async () => {
+      const pronto = fixture.componentInstance.ionViewWillEnter();
+      backend.expectOne(URL_PAINEL).error(new ProgressEvent('error'));
+      await pronto;
+
+      expect(sync.reagendarAvisos).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('selo e "editado por" nos cards', () => {
+    it('o card dos proximos mostra o selo de quem postou e quem corrigiu', async () => {
+      const comSelo = item('a', '2026-10-08');
+      comSelo.autoria = {
+        ...comSelo.autoria,
+        autorSelo: 'PROFESSOR',
+        editadoPorNome: 'Helena',
+        editadoPorSelo: 'COORDENACAO',
+      };
+      await abrir({ turmas: [turma({ turmaId: 't1', proximos: [comSelo] })] });
+
+      const card = el().querySelector('app-evento-card')!;
+      expect(card.textContent).toContain('Prof. Ana');
+      expect(card.textContent).toContain('editado por Coord. Helena');
+      expect(card.querySelectorAll('app-selo').length).toBe(2);
+    });
+
+    it('o selo da turma e o mesmo componente da autoria: texto + forma, nunca so cor', async () => {
+      await abrir({ turmas: [turma({ turmaId: 't1' })] });
+
+      const selo = cartoes()[0].querySelector('app-selo .selo') as HTMLElement;
+      expect(selo.textContent!.trim()).toBe('Professor');
+      expect(selo.querySelector('svg')).not.toBeNull();
+    });
+  });
+
   describe('atalhos', () => {
     const link = (rotulo: string): HTMLAnchorElement =>
       (Array.from(el().querySelectorAll('.origem a')) as HTMLAnchorElement[]).find((a) =>
@@ -284,8 +354,41 @@ describe('PainelPage', () => {
       await abrir({ turmas: [turma({ turmaId: 't1', nome: 'ADS 3A' })] });
 
       expect(texto()).toContain('criar em Turma t1');
+      expect(link('Nova prova').getAttribute('href')).toContain('/tabs/eventos/novo?tipo=PROVA');
+      expect(link('Nova entrega').getAttribute('href')).toContain('/tabs/eventos/novo?tipo=ENTREGA');
+    });
+
+    it('com UMA materia declarada, prova e entrega ja abrem nela (?materiaId=)', async () => {
+      await abrir({ turmas: [turma({ turmaId: 't1', lecionadas: [BD] })] });
+
+      expect(link('Nova prova').getAttribute('href')).toBe(
+        '/tabs/eventos/novo?tipo=PROVA&materiaId=m-bd',
+      );
+      expect(link('Nova entrega').getAttribute('href')).toBe(
+        '/tabs/eventos/novo?tipo=ENTREGA&materiaId=m-bd',
+      );
+    });
+
+    it('com varias (ou nenhuma, ou coordenacao) NAO chuta: so o tipo vai na URL', async () => {
+      // Chutar a primeira poria a prova na materia errada sem ninguem perceber.
+      await abrir({ turmas: [turma({ turmaId: 't1', lecionadas: [BD, ES] })] });
+
       expect(link('Nova prova').getAttribute('href')).toBe('/tabs/eventos/novo?tipo=PROVA');
       expect(link('Nova entrega').getAttribute('href')).toBe('/tabs/eventos/novo?tipo=ENTREGA');
+    });
+
+    it('o atalho usa a materia da turma ATIVA, nao a de outra turma do docente', async () => {
+      await abrir({
+        turmas: [
+          turma({ turmaId: 't1', lecionadas: [BD] }),
+          turma({ turmaId: 't2', lecionadas: [ES] }),
+        ],
+      });
+      cartoes()[1].click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(link('Nova prova').getAttribute('href')).toContain('materiaId=m-es');
     });
 
     it('novo material: com UMA materia declarada vai direto nela', async () => {

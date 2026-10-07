@@ -51,7 +51,8 @@ public record EventoResponse(
                 evento.getVersion(), evento.isVisivelTurma(), evento.getExcluidoEm());
     }
 
-    public static EventoResponse de(Evento evento, Materia materia, String autorNome) {
+    /** A autoria (com selo e "editado por") vem pronta de {@code Autorias}: aqui nao se calcula nada. */
+    public static EventoResponse de(Evento evento, Materia materia, AutoriaResponse autoria) {
         return new EventoResponse(
                 evento.getId(),
                 evento.getTipo(),
@@ -62,8 +63,7 @@ public record EventoResponse(
                 materia.getId(),
                 materia.getSigla(),
                 materia.getCorHex(),
-                new AutoriaResponse(evento.getAutorId(), autorNome,
-                        evento.getCriadoEm(), evento.getAtualizadoEm()),
+                autoria,
                 evento.getVersion(),
                 evento.isVisivelTurma(),
                 evento.getExcluidoEm());

@@ -4,7 +4,6 @@ import com.projetofans.domain.TipoEvento;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
-import com.projetofans.web.dto.AutoriaResponse;
 import com.projetofans.web.dto.ItemHomeResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,22 +35,46 @@ public class HomeService {
 
     private final EventoRepository eventos;
     private final TurmaScopeResolver escopo;
+    private final Autorias autorias;
 
-    public HomeService(EventoRepository eventos, TurmaScopeResolver escopo) {
+    public HomeService(EventoRepository eventos, TurmaScopeResolver escopo, Autorias autorias) {
         this.eventos = eventos;
         this.escopo = escopo;
+        this.autorias = autorias;
     }
 
     /** Maximo 6 itens, entre hoje e hoje+14, ordenados por urgencia. */
     @Transactional(readOnly = true)
     public List<ItemHomeResponse> home(UsuarioAtual usuario) {
         UUID turmaId = escopo.turmaDoUsuario(usuario.usuarioId());
-        return eventos.home(turmaId, usuario.usuarioId()).stream()
-                .map(HomeService::item)
-                .toList();
+        return proximosDaTurma(turmaId, usuario.usuarioId());
     }
 
-    private static ItemHomeResponse item(Object[] linha) {
+    /**
+     * Os proximos de uma turma restritos a algumas materias — o /painel do professor.
+     * Mesma query, mesma janela, mesma ordem e mesmo teto da Home; so o predicado de
+     * materia muda, e ele e do SQL (ver EventoRepository#homeDeMaterias). Sem materia
+     * nenhuma nao ha o que listar, e nem se pergunta ao banco.
+     */
+    List<ItemHomeResponse> proximosDasMaterias(UUID turmaId, UUID usuarioId,
+                                               Collection<UUID> materiaIds) {
+        if (materiaIds.isEmpty()) {
+            return List.of();
+        }
+        return itens(eventos.homeDeMaterias(turmaId, usuarioId, false, materiaIds), turmaId);
+    }
+
+    /** Os docentes da turma sao lidos UMA vez para os (no maximo 6) itens, no selo de cada autoria. */
+    List<ItemHomeResponse> proximosDaTurma(UUID turmaId, UUID usuarioId) {
+        return itens(eventos.home(turmaId, usuarioId), turmaId);
+    }
+
+    private List<ItemHomeResponse> itens(List<Object[]> linhas, UUID turmaId) {
+        Autorias.Listagem autoria = autorias.daListagem();
+        return linhas.stream().map(linha -> item(linha, turmaId, autoria)).toList();
+    }
+
+    private static ItemHomeResponse item(Object[] linha, UUID turmaId, Autorias.Listagem autoria) {
         return new ItemHomeResponse(
                 (UUID) linha[0],
                 TipoEvento.valueOf((String) linha[1]),
@@ -59,9 +83,9 @@ public class HomeService {
                 hora(linha[4]),
                 (String) linha[5],
                 (String) linha[6],
-                new AutoriaResponse((UUID) linha[7], (String) linha[8],
-                        instante(linha[9]), instante(linha[10])),
-                (Boolean) linha[11]);
+                autoria.de(turmaId, (UUID) linha[7], (UUID) linha[11], (UUID) linha[12],
+                        instante(linha[8]), instante(linha[9])),
+                (Boolean) linha[10]);
     }
 
     // Query nativa devolve o que o driver entregar. Os tres conversores abaixo

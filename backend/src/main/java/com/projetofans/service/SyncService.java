@@ -2,11 +2,9 @@ package com.projetofans.service;
 
 import com.projetofans.domain.Evento;
 import com.projetofans.domain.Materia;
-import com.projetofans.domain.Usuario;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.repo.MateriaRepository;
-import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.EventoResponse;
@@ -18,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -40,14 +40,14 @@ public class SyncService {
 
     private final EventoRepository eventos;
     private final MateriaRepository materias;
-    private final UsuarioRepository usuarios;
+    private final Autorias autorias;
     private final TurmaScopeResolver escopo;
 
     public SyncService(EventoRepository eventos, MateriaRepository materias,
-                       UsuarioRepository usuarios, TurmaScopeResolver escopo) {
+                       Autorias autorias, TurmaScopeResolver escopo) {
         this.eventos = eventos;
         this.materias = materias;
-        this.usuarios = usuarios;
+        this.autorias = autorias;
         this.escopo = escopo;
     }
 
@@ -65,16 +65,20 @@ public class SyncService {
                 .collect(Collectors.toMap(Materia::getId, Function.identity()));
 
         List<Evento> alterados = eventos.alteradosDesde(turmaId, desde);
-        // Um findAllById para a lista inteira, e nao um por evento: aqui a lista e
+        // Os nomes vem num findAllById so, e nao um por evento: aqui a lista e
         // "tudo que mudou desde o ultimo sync", que depois de um fim de semana
-        // offline nao e uma tela — pode ser a turma inteira.
-        Map<UUID, String> autores = usuarios.findAllById(
-                        alterados.stream().map(Evento::getAutorId).distinct().toList()).stream()
-                .collect(Collectors.toMap(Usuario::getId, Usuario::getNome));
+        // offline nao e uma tela — pode ser a turma inteira. Os docentes, para o selo,
+        // tambem sao lidos uma vez so (Autorias.Listagem).
+        Autorias.Listagem autoria = autorias.daListagem();
+        autoria.carregarNomes(alterados.stream()
+                .flatMap(e -> Stream.of(e.getAutorId(), e.getAtualizadoPor()))
+                .filter(Objects::nonNull)
+                .toList());
 
+        // Lapide continua SEM autoria: quem sumiu nao diz quem era.
         List<EventoResponse> resposta = alterados.stream()
                 .map(e -> visivelPara(e, usuario)
-                        ? EventoResponse.de(e, materiaDe(porId, e), autores.get(e.getAutorId()))
+                        ? EventoResponse.de(e, materiaDe(porId, e), autoria.de(e))
                         : EventoResponse.lapide(e))
                 .toList();
 

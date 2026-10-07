@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 
 import { ApiService } from '../core/api.service';
-import type { AlcanceNota } from '../shared/tipos';
+import type { AlcanceNota, Selo } from '../shared/tipos';
 
 export interface Nota {
   id: string;
@@ -12,6 +12,11 @@ export interface Nota {
   autorId: string;
   /** Só vem na nota da TURMA — assinar o próprio rascunho seria ruído. */
   autorNome?: string | null;
+  /**
+   * Selo de quem escreveu (spec 6). So pode ser COORDENACAO e so na nota da
+   * TURMA: nota nao tem materia, entao professor nunca alcanca. Ausente = sem selo.
+   */
+  autorSelo?: Selo | null;
   criadoEm: string;
   atualizadoEm: string;
   version: number;

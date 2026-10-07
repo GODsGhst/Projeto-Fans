@@ -89,6 +89,8 @@ describe('MateriaPage', () => {
   let fixture: ComponentFixture<MateriaPage>;
   // O papel vem do repositorio da turma; aqui ele e so um sinal que o teste liga.
   const souLider = signal(false);
+  // Materias em que a pessoa tem poder de docente (professor nelas, ou coordenacao).
+  const alcancaEm = signal<string[]>([]);
   let irPara: jasmine.Spy;
 
   beforeEach(() => {
@@ -109,7 +111,12 @@ describe('MateriaPage', () => {
         },
         {
           provide: TurmaRepository,
-          useValue: { souLider, garantirCarregada: () => Promise.resolve() },
+          useValue: {
+            souLider,
+            alcanca: (materiaId: string | null) =>
+              materiaId !== null && alcancaEm().includes(materiaId),
+            garantirCarregada: () => Promise.resolve(),
+          },
         },
         {
           provide: ActivatedRoute,
@@ -125,6 +132,7 @@ describe('MateriaPage', () => {
   afterEach(() => {
     backend.verify();
     souLider.set(false);
+    alcancaEm.set([]);
   });
 
   async function abrir(
@@ -294,6 +302,112 @@ describe('MateriaPage', () => {
     );
 
     expect(fixture.nativeElement.querySelector('.onde-e-quem')).toBeNull();
+  });
+
+  describe('docente: professor que leciona a materia, ou coordenacao', () => {
+    const COM_MATERIAL = detalhe({
+      materiaisAula: [
+        material('a1', 'AULA', 'Formas normais', 'https://x/fn.pdf'),
+      ],
+    });
+    const links = () =>
+      Array.from(fixture.nativeElement.querySelectorAll('a.editar')).map((a) =>
+        (a as HTMLAnchorElement).getAttribute('href'),
+      );
+    const rotulos = () =>
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).map((b) => b.textContent!.trim());
+
+    it('quem alcanca a materia ve Editar e Ocultar no material de OUTRA pessoa', async () => {
+      alcancaEm.set(['m1']);
+      await abrir((r) => r.flush(COM_MATERIAL));
+
+      expect(links()).toContain('/tabs/materiais/a1/editar');
+      expect(rotulos()).toContain('Ocultar');
+    });
+
+    it('materia que ele nao leciona: sem Editar nem Ocultar (aqui ele e aluno)', async () => {
+      alcancaEm.set(['outra-materia']);
+      await abrir((r) => r.flush(COM_MATERIAL));
+
+      expect(links()).not.toContain('/tabs/materiais/a1/editar');
+      expect(rotulos()).not.toContain('Ocultar');
+    });
+
+    it('ocultar pelo poder de docente usa a mesma rota de moderacao do lider', async () => {
+      alcancaEm.set(['m1']);
+      await abrir((r) => r.flush(COM_MATERIAL));
+
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent!.trim() === 'Ocultar')!
+        .click();
+      fixture.detectChanges();
+      (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      )
+        .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
+        .click();
+
+      const req = backend.expectOne(
+        `${environment.apiUrl}/moderacao/material/a1/ocultar`,
+      );
+      expect(req.request.method).toBe('POST');
+      req.flush(null);
+      // Aguarda a requisicao GET ser disparada (promise de moderacao resolvida,
+      // carregar iniciado). Sem isto o expectOne vem antes da requisicao ser feita.
+      await microtarefas();
+      // Recarrega a materia em seguida: quem decide o que e visivel e o servidor.
+      backend.expectOne(`${environment.apiUrl}/materias/m1`).flush(detalhe());
+      await fixture.whenStable();
+    });
+
+    it('selo e "editado por" aparecem no material e no evento da materia', async () => {
+      await abrir((r) =>
+        r.flush(
+          detalhe({
+            materiaisAula: [
+              {
+                ...material('a1', 'AULA', 'Slides', 'https://x/s.pdf'),
+                autoria: {
+                  ...AUTORIA,
+                  autorSelo: 'PROFESSOR',
+                  editadoPorNome: 'Helena',
+                  editadoPorSelo: 'COORDENACAO',
+                },
+              },
+            ],
+            eventos: [
+              {
+                ...evento('e1', 'Prova 1'),
+                autoria: { ...AUTORIA, autorSelo: 'COORDENACAO' },
+              },
+            ],
+          }),
+        ),
+      );
+
+      const linha = (
+        fixture.nativeElement.querySelector('app-material-linha') as HTMLElement
+      ).textContent!.replace(/\s+/g, ' ');
+      expect(linha).toContain('Prof. Otavio');
+      expect(linha).toContain('editado por Coord. Helena');
+      const card = fixture.nativeElement.querySelector(
+        'app-evento-card',
+      ) as HTMLElement;
+      expect(card.textContent).toContain('Coord. Otavio');
+      expect(card.querySelector('app-selo')!.textContent).toContain(
+        'Coordenação',
+      );
+    });
   });
 
   describe('ocultar material (lider)', () => {

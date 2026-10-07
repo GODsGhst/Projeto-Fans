@@ -4,7 +4,8 @@ import {
   computed,
   input,
 } from '@angular/core';
-import type { AlcanceNota } from './tipos';
+import { SeloComponent, prefixoDoSelo } from './selo.component';
+import type { AlcanceNota, Selo } from './tipos';
 
 /**
  * Anotacao presa a um dia.
@@ -26,6 +27,7 @@ import type { AlcanceNota } from './tipos';
   selector: 'app-nota',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [SeloComponent],
   template: `
     <article class="nota" [class.nota--turma]="ehTurma()">
       <span class="cabeca">{{
@@ -33,7 +35,12 @@ import type { AlcanceNota } from './tipos';
       }}</span>
       <p class="texto">{{ texto() }}</p>
       @if (autoria(); as a) {
-        <span class="autoria">{{ a }}</span>
+        <span class="autoria">
+          <span>{{ prefixoAutor() }}{{ a }}</span>
+          @if (autoriaSelo(); as s) {
+            <app-selo [selo]="s" />
+          }
+        </span>
       }
     </article>
   `,
@@ -82,6 +89,10 @@ import type { AlcanceNota } from './tipos';
     }
 
     .autoria {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2px 6px;
       font-size: 11px;
       color: var(--ink-3);
     }
@@ -94,5 +105,14 @@ export class NotaComponent {
   /** "Otávio · líder da turma · ontem". Vazio na nota pessoal: o dono e voce. */
   readonly autoria = input<string | null>(null);
 
+  /**
+   * Selo de quem escreveu. So a coordenacao tem (nota nao tem materia, entao
+   * professor nao alcanca) e so na nota da TURMA; a pessoal nem tem autoria.
+   */
+  readonly autoriaSelo = input<Selo | null>(null);
+
   protected readonly ehTurma = computed(() => this.alcance() === 'TURMA');
+  protected readonly prefixoAutor = computed(() =>
+    prefixoDoSelo(this.autoriaSelo()),
+  );
 }

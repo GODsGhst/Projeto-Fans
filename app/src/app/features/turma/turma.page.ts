@@ -14,7 +14,11 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
+import { AuthService } from '../../core/auth.service';
 import { CODIGO_SEM_TURMA, ErroApi } from '../../core/http-error.interceptor';
+import { TurmaAtivaService } from '../../core/turma-ativa.service';
+import { statusDocente } from '../../data/docente.models';
+import { MateriaRepository } from '../../data/materia.repository';
 import { ModeracaoRepository } from '../../data/moderacao.repository';
 import type {
   Ocultado,
@@ -22,6 +26,8 @@ import type {
 } from '../../data/moderacao.repository';
 import { TurmaRepository } from '../../data/turma.repository';
 import type { MinhaTurma } from '../../data/turma.repository';
+import { MateriaChipComponent } from '../../shared/materia-chip.component';
+import { SeloComponent } from '../../shared/selo.component';
 import { mensagemDeErro } from '../auth/erro';
 
 /**
@@ -51,11 +57,21 @@ import { mensagemDeErro } from '../auth/erro';
   selector: 'app-turma',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, RouterLink],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    RouterLink,
+    SeloComponent,
+    MateriaChipComponent,
+  ],
   template: `
     <ion-header [translucent]="true">
       <ion-toolbar>
-        <ion-title>{{ turma()?.nome ?? 'A turma' }}</ion-title>
+        <!-- A turma lida primeiro (e a mais fresca: o lider pode ter renomeado);
+             a ativa guardada cobre o docente enquanto ela ainda nao chegou. -->
+        <ion-title>{{ turma()?.nome ?? turmaAtiva.nome() ?? 'A turma' }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -72,6 +88,51 @@ import { mensagemDeErro } from '../auth/erro';
                turma; turma com o periodo do ano passado e uma mentira. -->
           @if (t.semestre) {
             <p class="pf-rotulo">período · {{ t.semestre }}</p>
+          }
+
+          @if (souProfessor()) {
+            <!-- Vale na hora, sem fila (spec 2.3): a correcao vem depois do
+                 fato, pelo lider. O status da conta so muda o que a nota diz. -->
+            <p class="pf-rotulo">matérias que eu leciono</p>
+            <div class="vinc" role="group" aria-label="Matérias que eu leciono">
+              @for (mt of materiasDaTurma(); track mt.id) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="marcadas().has(mt.id)"
+                    (change)="alternarMateria(mt.id)"
+                  />
+                  <span class="vt">
+                    <app-materia-chip [cor]="mt.corHex" [sigla]="mt.sigla" />
+                    <span>{{ mt.nome }}</span>
+                  </span>
+                </label>
+              } @empty {
+                <p class="pf-cache-aviso">
+                  Esta turma ainda não tem matéria. Qualquer membro cria na aba
+                  Matérias.
+                </p>
+              }
+            </div>
+            @if (erroLecionadas(); as e) {
+              <p class="pf-erro" role="alert">{{ e }}</p>
+            }
+            <button
+              class="botao"
+              type="button"
+              data-testid="salvar-lecionadas"
+              [disabled]="salvandoLecionadas()"
+              (click)="salvarLecionadas()"
+            >
+              {{
+                salvandoLecionadas()
+                  ? 'Salvando…'
+                  : lecionadasSalvas()
+                    ? 'Salvo ✓'
+                    : 'Salvar matérias'
+              }}
+            </button>
+            <p class="pf-cache-aviso">{{ notaLecionadas() }}</p>
           }
 
           <p class="pf-rotulo">código de convite</p>
@@ -143,29 +204,115 @@ import { mensagemDeErro } from '../auth/erro';
                  e a linha some quando ela sai. -->
             <p class="pf-erro" role="alert">{{ e }}</p>
           }
+          @if (erroDoDocente(); as e) {
+            <p class="pf-erro" role="alert">{{ e }}</p>
+          }
 
           @for (m of membros(); track m.usuarioId) {
-            <div class="membro">
+            <div class="membro" [class.membro--contestado]="m.contestado">
               <span class="inicial">{{ m.inicial }}</span>
               <span class="quem">
-                <span class="nome">{{ m.nome }}</span>
+                <span class="nome">
+                  {{ m.nome }}
+                  <!-- Selo = poder AQUI. Contestado nao tem, e a marca tracejada
+                       diz por que (estado, nao poder). -->
+                  @if (m.selo; as s) {
+                    <app-selo [selo]="s" />
+                  }
+                  @if (m.contestado) {
+                    <span class="tag">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 21V4" />
+                        <path d="M5 5h11l-2 4 2 4H5" /></svg
+                      >contestado
+                    </span>
+                  }
+                </span>
                 <span class="desde">{{ m.desde }}</span>
+                @if (m.leciona) {
+                  <span class="leciona">{{ m.leciona }}</span>
+                }
               </span>
               @if (m.ehLider) {
                 <span class="papel">líder</span>
-              } @else if (souLider() && confirmandoRemover() !== m.usuarioId) {
-                <!-- Só em quem não é o líder: o servidor recusa remover o
-                     próprio líder (409), então o botão nem é oferecido. -->
-                <button
-                  class="botao botao--fio botao--pilula remover"
-                  type="button"
-                  [attr.aria-label]="'Remover ' + m.nome"
-                  (click)="pedirRemocao(m.usuarioId)"
-                >
-                  Remover
-                </button>
+              } @else if (
+                souLider() &&
+                confirmandoRemover() !== m.usuarioId &&
+                confirmandoContestar() !== m.usuarioId
+              ) {
+                <span class="acoes">
+                  @if (m.docente) {
+                    <!-- Contestar nao tira ninguem da turma nem apaga o que a
+                         pessoa postou: so tira o poder e o selo DAQUI. -->
+                    @if (m.contestado) {
+                      <button
+                        class="botao botao--fio botao--pilula remover"
+                        type="button"
+                        [disabled]="agindo()"
+                        [attr.aria-label]="'Restaurar ' + m.nome"
+                        (click)="restaurar(m.usuarioId)"
+                      >
+                        Restaurar
+                      </button>
+                    } @else {
+                      <button
+                        class="botao botao--fio botao--pilula remover"
+                        type="button"
+                        [attr.aria-label]="'Contestar ' + m.nome"
+                        (click)="pedirContestar(m.usuarioId)"
+                      >
+                        Contestar
+                      </button>
+                    }
+                  }
+                  <!-- Só em quem não é o líder: o servidor recusa remover o
+                       próprio líder (409), então o botão nem é oferecido. -->
+                  <button
+                    class="botao botao--fio botao--pilula remover"
+                    type="button"
+                    [attr.aria-label]="'Remover ' + m.nome"
+                    (click)="pedirRemocao(m.usuarioId)"
+                  >
+                    Remover
+                  </button>
+                </span>
               }
             </div>
+            @if (confirmandoContestar() === m.usuarioId) {
+              <p class="alerta" role="status">
+                <b>{{ m.nome }}</b> perde o poder e o selo <b>nesta turma</b>,
+                na hora — inclusive nos registros antigos. Nas outras turmas
+                dele nada muda. Entrar de novo com o código não desfaz; só você,
+                tocando em Restaurar.
+              </p>
+              <span class="confirmar">
+                <button
+                  class="botao botao--fio botao--pilula"
+                  type="button"
+                  data-testid="contestar-confirmar"
+                  [disabled]="agindo()"
+                  (click)="contestar(m.usuarioId)"
+                >
+                  {{ agindo() ? 'Contestando…' : 'Sim, contestar' }}
+                </button>
+                <button
+                  class="botao botao--fio botao--pilula"
+                  type="button"
+                  [disabled]="agindo()"
+                  (click)="confirmandoContestar.set(null)"
+                >
+                  Cancelar
+                </button>
+              </span>
+            }
             @if (confirmandoRemover() === m.usuarioId) {
               <p class="alerta" role="status">
                 <b>{{ m.nome }}</b> perde o acesso à turma. O que ele postou
@@ -315,7 +462,10 @@ import { mensagemDeErro } from '../auth/erro';
     .membro {
       display: flex;
       align-items: center;
-      gap: 11px;
+      /* as acoes do lider (Contestar + Remover) descem para a linha de baixo no
+         celular estreito, em vez de espremer o nome */
+      flex-wrap: wrap;
+      gap: 8px 11px;
       padding: 11px 13px;
       border-radius: var(--r-md);
       background: var(--surface);
@@ -339,12 +489,83 @@ import { mensagemDeErro } from '../auth/erro';
       flex-direction: column;
       gap: 2px;
       min-width: 0;
-      flex: 1;
+      flex: 1 1 11rem;
     }
     .membro .nome {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 3px 6px;
       font-size: 14.5px;
       font-weight: 600;
       letter-spacing: -0.01em;
+    }
+    .membro .leciona {
+      font-size: 11.5px;
+      color: var(--ink-3);
+    }
+    .membro .acoes {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+    /* Contestado: tracejado e sem sombra — estado, nao poder (mesma regra do
+       .pf-aviso: tracejado = ausencia, solido = poder). */
+    .membro--contestado {
+      background: transparent;
+      border-style: dashed;
+      box-shadow: none;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 7px 1px 4px;
+      border: 1px dashed var(--ink-3);
+      border-radius: var(--r-sm);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--ink-2);
+      white-space: nowrap;
+    }
+    .tag svg {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 auto;
+    }
+
+    .vinc {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .vinc label {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      min-height: 52px;
+      padding: 8px 12px;
+      border: 1px solid var(--rule);
+      border-radius: var(--r-sm);
+      background: var(--surface);
+      box-shadow: var(--e1);
+      font-size: 13.5px;
+      cursor: pointer;
+    }
+    .vinc input {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+    .vinc .vt {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 9px;
+      min-width: 0;
     }
     .membro .desde {
       font-size: 11.5px;
@@ -379,6 +600,9 @@ import { mensagemDeErro } from '../auth/erro';
 })
 export class TurmaPage {
   private readonly repo = inject(TurmaRepository);
+  private readonly auth = inject(AuthService);
+  private readonly materiasRepo = inject(MateriaRepository);
+  protected readonly turmaAtiva = inject(TurmaAtivaService);
 
   protected readonly turma = this.repo.turma;
   protected readonly carregando = this.repo.carregando;
@@ -392,8 +616,67 @@ export class TurmaPage {
       ehLider: m.papel === 'LIDER',
       desde: entrouEm(m.entrouEm),
       inicial: (m.nome.trim()[0] ?? '?').toUpperCase(),
+      docente: m.papel === 'PROFESSOR' || m.papel === 'COORDENADOR',
+      selo: m.selo ?? null,
+      contestado: m.contestado ?? false,
+      // SIGLAS, como o servidor manda: o lider julga a declaracao por elas.
+      leciona:
+        m.papel === 'COORDENADOR'
+          ? 'turma inteira'
+          : m.papel === 'PROFESSOR'
+            ? m.lecionadas?.length
+              ? `leciona ${m.lecionadas.join(', ')}`
+              : 'nenhuma matéria declarada'
+            : '',
     })),
   );
+
+  // ---- "Minhas materias" (professor) --------------------------------------
+
+  protected readonly souProfessor = computed(
+    () => this.repo.meuMembro()?.papel === 'PROFESSOR',
+  );
+  protected readonly materiasDaTurma = this.materiasRepo.materias;
+
+  /**
+   * O que o professor ja declarou. Vem das SIGLAS do proprio membro (a declaracao
+   * guardada, valha ela ou nao) e do alcance (o que vale de fato): conta pendente
+   * declara, fica inerte e `meuAlcance` vem vazio — so o alcance a faria sumir da
+   * tela logo depois de salvar.
+   */
+  private readonly declaradas = computed(() => {
+    const siglas = this.repo.meuMembro()?.lecionadas ?? [];
+    const efetivas = this.turma()?.meuAlcance?.materiaIds ?? [];
+    return new Set(
+      this.materiasDaTurma()
+        .filter((m) => siglas.includes(m.sigla) || efetivas.includes(m.id))
+        .map((m) => m.id),
+    );
+  });
+
+  /** O que a pessoa marcou e ainda nao releu; `null` = vale o que o servidor tem. */
+  private readonly marcadasLocais = signal<ReadonlySet<string> | null>(null);
+  protected readonly marcadas = computed(
+    () => this.marcadasLocais() ?? this.declaradas(),
+  );
+  protected readonly salvandoLecionadas = signal(false);
+  protected readonly lecionadasSalvas = signal(false);
+  protected readonly erroLecionadas = signal<string | null>(null);
+
+  /** A nota muda com a situacao da conta: e ela que diz se a declaracao ja vale. */
+  protected readonly notaLecionadas = computed(() => {
+    if (this.repo.meuMembro()?.contestado) {
+      return 'O líder contestou sua declaração. Você pode ajustar as matérias, mas elas não valem até ele restaurar.';
+    }
+    switch (statusDocente(this.auth.usuario())) {
+      case 'PENDENTE':
+        return 'A declaração fica guardada e passa a valer quando sua conta for aprovada.';
+      case 'RECUSADO':
+        return 'Seu cadastro não foi aprovado: as matérias ficam guardadas, sem efeito.';
+      default:
+        return 'Vale na hora, sem fila. Se você marcar uma matéria que não leciona, o líder pode contestar — e você perde o selo desta turma até ele restaurar.';
+    }
+  });
 
   protected readonly souLider = this.repo.souLider;
 
@@ -402,6 +685,8 @@ export class TurmaPage {
   /** Um por vez: ação rara, e duas perguntas abertas juntas confundem. */
   protected readonly confirmandoCodigo = signal(false);
   protected readonly confirmandoRemover = signal<string | null>(null);
+  protected readonly confirmandoContestar = signal<string | null>(null);
+  protected readonly erroDoDocente = signal<string | null>(null);
   protected readonly agindo = signal(false);
   protected readonly erroDoCodigo = signal<string | null>(null);
   protected readonly erroDoMembro = signal<string | null>(null);
@@ -432,15 +717,86 @@ export class TurmaPage {
    * porque `ionViewWillEnter` roda também na primeira entrada.
    */
   ionViewWillEnter(): void {
-    void this.recarregar();
+    void this.preparar();
+  }
+
+  private async preparar(): Promise<void> {
+    await this.recarregar();
+    // Materias sao carregadas uma so vez, na primeira entrada. Reloads posteriores
+    // (apos salvar lecionadas, contestar, etc.) nao precisam refazer esse GET: a
+    // lista de materias nunca muda.
+    if (this.souProfessor()) {
+      await this.carregarMaterias();
+    }
   }
 
   private async recarregar(): Promise<void> {
     // `carregar` não lança: a falha fica em `erro`. E se a turma sumiu (404), ele
     // já levou a pessoa embora — `souLider` volta falso e nada abaixo roda.
     await this.repo.carregar();
-    if (this.souLider()) {
+    await this.depoisDeAgir(true);
+  }
+
+  /**
+   * O que toda ação bem-sucedida faz depois que a turma foi relida. Separado de
+   * `recarregar` porque contestar, restaurar e declarar matérias já releem a
+   * turma DENTRO do repositório: chamar `recarregar` ali fazia um segundo
+   * GET /turmas/minha igual ao primeiro.
+   */
+  private async depoisDeAgir(releOcultados = false): Promise<void> {
+    // Ações que abriram perguntas ao lider fecham aqui: remover, contestar, gerar
+    // novo código. Se falharem, a pergunta fica aberta e a tela tenta de novo.
+    this.confirmandoRemover.set(null);
+    this.confirmandoContestar.set(null);
+    this.confirmandoCodigo.set(false);
+    // O que a pessoa tinha marcado e nao salvou nao sobrevive a uma releitura:
+    // vale o que o servidor tem. Nao reseta `lecionadasSalvas`: o feedback de
+    // sucesso persiste ate a pessoa fazer uma nova alteracao (alternarMateria).
+    this.marcadasLocais.set(null);
+    // Contestar, restaurar e declarar materias nao mudam o que esta oculto:
+    // reler a lista ai seria um GET a mais por toque.
+    if (releOcultados && this.souLider()) {
       await this.carregarOcultados();
+    }
+  }
+
+  private async carregarMaterias(): Promise<void> {
+    this.erroLecionadas.set(null);
+    try {
+      await this.materiasRepo.carregar();
+    } catch (e) {
+      // A lista antiga (ou vazia) fica; o aviso diz que nao deu para atualizar.
+      this.erroLecionadas.set(mensagemDeErro(e));
+    }
+  }
+
+  protected alternarMateria(id: string): void {
+    const atual = new Set(this.marcadas());
+    if (!atual.delete(id)) {
+      atual.add(id);
+    }
+    this.marcadasLocais.set(atual);
+    this.lecionadasSalvas.set(false);
+  }
+
+  protected async salvarLecionadas(): Promise<void> {
+    if (this.salvandoLecionadas()) {
+      return;
+    }
+    this.salvandoLecionadas.set(true);
+    this.erroLecionadas.set(null);
+    try {
+      await this.repo.declararLecionadas([...this.marcadas()]);
+      this.lecionadasSalvas.set(true);
+      // O repositório já releu a turma; aqui só se descarta o que estava marcado
+      // localmente, porque agora vale o que o servidor gravou.
+      await this.depoisDeAgir();
+    } catch (e) {
+      // 403 (conta que nao e de professor) e 404 (materia de outra turma) viram
+      // a frase do servidor; as marcas ficam para a pessoa tentar de novo.
+      this.erroLecionadas.set(mensagemDeErro(e));
+    } finally {
+      this.salvandoLecionadas.set(false);
     }
   }
 
@@ -456,7 +812,52 @@ export class TurmaPage {
 
   protected pedirRemocao(usuarioId: string): void {
     this.erroDoMembro.set(null);
+    this.confirmandoContestar.set(null);
     this.confirmandoRemover.set(usuarioId);
+  }
+
+  protected pedirContestar(usuarioId: string): void {
+    this.erroDoDocente.set(null);
+    this.confirmandoRemover.set(null);
+    this.confirmandoContestar.set(usuarioId);
+  }
+
+  protected async contestar(usuarioId: string): Promise<void> {
+    if (this.agindo()) {
+      return;
+    }
+    this.agindo.set(true);
+    this.erroDoDocente.set(null);
+    try {
+      // O repositório marca o contestado e relê a turma; a pergunta só fecha
+      // depois disso, como no remover.
+      await this.repo.contestar(usuarioId);
+      await this.depoisDeAgir();
+    } catch (e) {
+      // A pergunta fica aberta: a pessoa continua com o poder, e a tela nao
+      // pode sugerir o contrario.
+      this.erroDoDocente.set(mensagemDeErro(e));
+    } finally {
+      this.agindo.set(false);
+    }
+  }
+
+  /** Sem pergunta: restaurar so devolve o que contestar tirou, e e reversivel. */
+  protected async restaurar(usuarioId: string): Promise<void> {
+    if (this.agindo()) {
+      return;
+    }
+    this.agindo.set(true);
+    this.erroDoDocente.set(null);
+    try {
+      // O repositório já relê a turma (contestado: false, selo de volta).
+      await this.repo.restaurar(usuarioId);
+      await this.depoisDeAgir();
+    } catch (e) {
+      this.erroDoDocente.set(mensagemDeErro(e));
+    } finally {
+      this.agindo.set(false);
+    }
   }
 
   /**

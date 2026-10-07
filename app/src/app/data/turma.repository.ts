@@ -3,13 +3,34 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { ApiService } from '../core/api.service';
 import { AuthService } from '../core/auth.service';
 import { CODIGO_SEM_TURMA, ErroApi } from '../core/http-error.interceptor';
-import type { PapelMembro } from './models';
+import type { PapelMembro, Selo } from './models';
 
 export interface MembroDaTurma {
   usuarioId: string;
   nome: string;
   papel: PapelMembro;
   entrouEm: string;
+  /**
+   * So docente tem os tres. Opcionais porque o backend OMITE campo nulo e porque
+   * aluno nao os tem. `selo` ausente = sem poder aqui (pendente, recusado ou
+   * contestado); `lecionadas` sao SIGLAS, o que o lider precisa para julgar a
+   * declaracao.
+   */
+  selo?: Selo | null;
+  contestado?: boolean;
+  lecionadas?: string[];
+}
+
+/**
+ * Ate onde ESTA pessoa alcanca nesta turma (spec 7): NENHUM = e aluno para
+ * efeito de poder; MATERIAS = so nas `materiaIds`; TURMA = na turma toda
+ * (coordenacao).
+ */
+export type TipoAlcance = 'NENHUM' | 'MATERIAS' | 'TURMA';
+
+export interface MeuAlcance {
+  tipo: TipoAlcance;
+  materiaIds: string[];
 }
 
 export interface MinhaTurma {
@@ -18,6 +39,8 @@ export interface MinhaTurma {
   semestre: string | null;
   codigoConvite: string;
   membros: MembroDaTurma[];
+  /** Opcional: servidor ou snapshot antigo nao o manda, e ausente quer dizer NENHUM. */
+  meuAlcance?: MeuAlcance;
 }
 
 /**
@@ -73,6 +96,91 @@ export class TurmaRepository {
     }
     return t.membros.some((m) => m.usuarioId === eu.id && m.papel === 'LIDER');
   });
+
+  /**
+   * Esta pessoa pode corrigir e ocultar o registro dessa materia (`null` = nota,
+   * que nao tem materia)? Mesmo padrao do `souLider`: lido da turma, nunca da
+   * sessao, e falso enquanto nao se sabe.
+   *
+   * So esconde botao. Quem decide e o servidor (que le o status do banco a cada
+   * requisicao); permissao velha aqui vira 403 com mensagem, nao brecha.
+   */
+  alcanca(materiaId: string | null): boolean {
+    const a = this.turma()?.meuAlcance;
+    switch (a?.tipo) {
+      case 'TURMA':
+        return true;
+      case 'MATERIAS':
+        return materiaId !== null && a.materiaIds.includes(materiaId);
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * O selo que o registro dessa materia vai levar se esta pessoa o postar ou
+   * corrigir: coordenacao na turma toda, professor nas materias dele. Serve para
+   * AVISAR antes de salvar; o selo de verdade e carimbado pelo servidor.
+   */
+  seloNa(materiaId: string | null): Selo | null {
+    if (!this.alcanca(materiaId)) {
+      return null;
+    }
+    return this.turma()?.meuAlcance?.tipo === 'TURMA' ? 'COORDENACAO' : 'PROFESSOR';
+  }
+
+  /** O papel desta pessoa NESTA turma, ou `null` enquanto nao se sabe. */
+  readonly meuMembro = computed(() => {
+    const eu = this.auth.usuario();
+    return eu === null
+      ? null
+      : (this.turma()?.membros.find((m) => m.usuarioId === eu.id) ?? null);
+  });
+
+  /**
+   * Substitui o conjunto de materias que o professor leciona. Vale na hora, sem
+   * fila (spec 2.3). Conta pendente pode declarar: fica inerte ate a aprovacao.
+   * Reler em seguida: o selo e o alcance dependem do que ficou gravado.
+   */
+  async declararLecionadas(materiaIds: string[]): Promise<void> {
+    await this.api.put<void>('/turmas/minha/lecionadas', { materiaIds });
+    await this.carregar();
+  }
+
+  /**
+   * O lider contesta a declaracao de um docente: ele perde poder e selo NESTA
+   * turma ate o lider restaurar (spec 2.4). Nao tira ninguem da turma.
+   *
+   * A marca entra na lista antes da releitura, como em `removerMembro`: o POST
+   * ja deu certo, e e isso que a tela tem de mostrar mesmo se `carregar` falhar.
+   */
+  async contestar(usuarioId: string): Promise<void> {
+    await this.api.post<void>(`/turmas/minha/docentes/${usuarioId}/contestar`);
+    this.marcarContestado(usuarioId, true);
+    await this.carregar();
+  }
+
+  async restaurar(usuarioId: string): Promise<void> {
+    await this.api.post<void>(`/turmas/minha/docentes/${usuarioId}/restaurar`);
+    this.marcarContestado(usuarioId, false);
+    await this.carregar();
+  }
+
+  private marcarContestado(usuarioId: string, contestado: boolean): void {
+    this.turma.update((t) =>
+      t === null
+        ? t
+        : {
+            ...t,
+            membros: t.membros.map((m) =>
+              m.usuarioId === usuarioId
+                ? // Contestado nao tem selo; restaurado so volta a ter com a releitura.
+                  { ...m, contestado, ...(contestado ? { selo: null } : {}) }
+                : m,
+            ),
+          },
+    );
+  }
 
   /**
    * Renomear a turma e acertar o período. Só o líder.

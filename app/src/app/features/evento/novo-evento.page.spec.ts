@@ -8,6 +8,7 @@ import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/auth.service';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
 import { StorageService } from '../../core/storage.service';
 import type { SnapshotLocal } from '../../core/storage.service';
@@ -55,6 +56,8 @@ class StorageFake implements Pick<
 
 /** Fica fora do beforeEach para o teste de edição poder mexer antes de criar. */
 const rotaParams = new Map<string, string>();
+/** `?tipo=&materiaId=` — os atalhos do painel do docente. Vazio = abertura de sempre. */
+const rotaConsulta = new Map<string, string>();
 
 describe('NovoEventoPage', () => {
   let backend: HttpTestingController;
@@ -79,11 +82,14 @@ describe('NovoEventoPage', () => {
         // cada teste ajusta o seu, e o padrão (vazio) é o modo de adicionar.
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: rotaParams } },
+          useValue: {
+            snapshot: { paramMap: rotaParams, queryParamMap: rotaConsulta },
+          },
         },
       ],
     });
     rotaParams.clear();
+    rotaConsulta.clear();
     backend = TestBed.inject(HttpTestingController);
     irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
     fixture = TestBed.createComponent(NovoEventoPage);
@@ -359,5 +365,208 @@ describe('NovoEventoPage', () => {
     expect(irPara).toHaveBeenCalledWith('/tabs/eventos/e1');
     // Mudar data ou hora muda quando os avisos tocam.
     expect(sync.reagendarAvisos).toHaveBeenCalledOnceWith(true);
+  });
+
+  /**
+   * Abre uma SEGUNDA tela depois de o teste ajustar rota e sessao (o componente do
+   * beforeEach ja nasceu como aluno, sem consulta). Responde as materias dos dois
+   * e, se a conta for docente, a turma que so ela pede.
+   */
+  async function abrirOutra(
+    turma?: object,
+  ): Promise<ComponentFixture<NovoEventoPage>> {
+    const outra = TestBed.createComponent(NovoEventoPage);
+    outra.detectChanges();
+    for (const r of backend.match(`${environment.apiUrl}/materias`))
+      r.flush([BD, CALC]);
+    if (turma !== undefined) {
+      backend.expectOne(`${environment.apiUrl}/turmas/minha`).flush(turma);
+    }
+    await outra.whenStable();
+    outra.detectChanges();
+    return outra;
+  }
+
+  describe('atalhos do painel: ?tipo= e ?materiaId=', () => {
+    const marcado = (tela: ComponentFixture<NovoEventoPage>, sel: string) =>
+      tela.nativeElement.querySelector(sel)!.getAttribute('aria-pressed');
+
+    it('?tipo=ENTREGA abre com Entrega marcada; sem consulta, Prova', async () => {
+      rotaConsulta.set('tipo', 'ENTREGA');
+      const outra = await abrirOutra();
+
+      expect(marcado(outra, 'button[data-tipo="ENTREGA"]')).toBe('true');
+      expect(marcado(outra, 'button[data-tipo="PROVA"]')).toBe('false');
+    });
+
+    it('tipo que a URL inventa e ignorado: vale Prova, nunca um tipo desconhecido', async () => {
+      rotaConsulta.set('tipo', 'PEGADINHA');
+      const outra = await abrirOutra();
+
+      expect(marcado(outra, 'button[data-tipo="PROVA"]')).toBe('true');
+    });
+
+    it('?materiaId= pre-escolhe a materia', async () => {
+      rotaConsulta.set('materiaId', CALC.id);
+      const outra = await abrirOutra();
+
+      expect(marcado(outra, `button[data-materia="${CALC.id}"]`)).toBe('true');
+      expect(marcado(outra, `button[data-materia="${BD.id}"]`)).toBe('false');
+    });
+
+    it('materia da URL que nao existe na turma cai na primeira, em vez de ficar sem nenhuma', async () => {
+      // Sem isto o POST sairia com um materiaId que o servidor recusa, e nenhum
+      // chip apareceria marcado: a pessoa nao saberia o que corrigir.
+      rotaConsulta.set('materiaId', 'de-outra-turma');
+      const outra = await abrirOutra();
+
+      expect(marcado(outra, `button[data-materia="${BD.id}"]`)).toBe('true');
+    });
+
+    it('a pre-escolha vai no corpo do POST', async () => {
+      rotaConsulta.set('tipo', 'ENTREGA');
+      rotaConsulta.set('materiaId', CALC.id);
+      const outra = await abrirOutra();
+
+      const campoDe = (rotulo: string) =>
+        outra.nativeElement.querySelector(
+          `input[aria-label="${rotulo}"]`,
+        ) as HTMLInputElement;
+      campoDe('Título').value = 'Lista 5';
+      campoDe('Data').value = '2026-10-08';
+      (outra.nativeElement.querySelector('.botao') as HTMLButtonElement).click();
+
+      const req = backend.expectOne(`${environment.apiUrl}/eventos`);
+      expect(req.request.body.tipo).toBe('ENTREGA');
+      expect(req.request.body.materiaId).toBe(CALC.id);
+      req.flush({ id: 'novo' });
+      await outra.whenStable();
+    });
+  });
+
+  describe('conta docente: o aviso diz se o registro sai com selo', () => {
+    const TURMA = (meuAlcance: object) => ({
+      id: 't1',
+      nome: 'ADS 3A',
+      semestre: '2026.2',
+      codigoConvite: 'ABC12345',
+      membros: [],
+      meuAlcance,
+    });
+
+    function entrarComo(
+      tipoConta: 'PROFESSOR' | 'COORDENADOR',
+      nome = 'Marcos',
+    ): void {
+      TestBed.inject(AuthService).definirSessao(
+        'jwt',
+        {
+          id: 'u9',
+          nome,
+          email: 'm@exemplo.com',
+          tipoConta,
+          docenteStatus: 'APROVADO',
+        },
+        't1',
+      );
+    }
+
+    const aviso = (tela: ComponentFixture<NovoEventoPage>): HTMLElement =>
+      tela.nativeElement.querySelector('.alerta--turma') as HTMLElement;
+
+    it('professor: com selo na materia que leciona, sem selo na que nao leciona', async () => {
+      entrarComo('PROFESSOR');
+      const outra = await abrirOutra(
+        TURMA({ tipo: 'MATERIAS', materiaIds: [CALC.id] }),
+      );
+
+      // A primeira materia (BD) nao e dele: aqui ele e aluno, e a tela diz.
+      expect(aviso(outra).textContent).toContain('sem selo');
+      expect(aviso(outra).querySelector('app-selo')).toBeNull();
+
+      (
+        outra.nativeElement.querySelector(
+          `button[data-materia="${CALC.id}"]`,
+        ) as HTMLButtonElement
+      ).click();
+      outra.detectChanges();
+
+      expect(aviso(outra).querySelector('app-selo')!.textContent).toContain(
+        'Professor',
+      );
+      expect(aviso(outra).textContent).not.toContain('sem selo');
+    });
+
+    it('coordenacao: selo em qualquer materia', async () => {
+      entrarComo('COORDENADOR', 'Helena');
+      const outra = await abrirOutra(TURMA({ tipo: 'TURMA', materiaIds: [] }));
+
+      expect(aviso(outra).querySelector('app-selo')!.textContent).toContain(
+        'Coordenação',
+      );
+    });
+
+    it('conta sem poder (pendente, recusada ou contestada): sem selo, e diz', async () => {
+      entrarComo('PROFESSOR');
+      const outra = await abrirOutra(TURMA({ tipo: 'NENHUM', materiaIds: [] }));
+
+      expect(aviso(outra).textContent).toContain('sem selo');
+    });
+
+    it('aluno nao pergunta a turma e le o aviso de sempre', async () => {
+      // `abrirOutra` sem turma: se a tela a pedisse, o `verify` do afterEach
+      // acusaria a requisicao aberta.
+      const outra = await abrirOutra();
+
+      expect(aviso(outra).textContent).toContain(
+        'Só você pode editar ou apagar depois',
+      );
+      expect(aviso(outra).querySelector('app-selo')).toBeNull();
+    });
+
+    it('corrigir registro ALHEIO: so as materias que alcanca, e o aviso diz quem continua autor', async () => {
+      rotaParams.set('id', 'e1');
+      entrarComo('PROFESSOR');
+      const tela = TestBed.createComponent(NovoEventoPage);
+      tela.detectChanges();
+      for (const r of backend.match(`${environment.apiUrl}/materias`))
+        r.flush([BD, CALC]);
+      backend
+        .expectOne(`${environment.apiUrl}/turmas/minha`)
+        .flush(TURMA({ tipo: 'MATERIAS', materiaIds: [CALC.id] }));
+      backend.expectOne(`${environment.apiUrl}/eventos/e1`).flush({
+        id: 'e1',
+        tipo: 'ENTREGA',
+        titulo: 'Lista 4',
+        data: '2026-09-12',
+        hora: null,
+        materiaId: CALC.id,
+        materiaSigla: CALC.sigla,
+        materiaCorHex: CALC.corHex,
+        autoria: {
+          autorId: 'u1',
+          autorNome: 'Otavio',
+          criadoEm: '2026-08-30T12:00:00Z',
+          atualizadoEm: '2026-08-30T12:00:00Z',
+        },
+        version: 3,
+        visivelTurma: true,
+        excluidoEm: null,
+        materiais: [],
+      });
+      await tela.whenStable();
+      tela.detectChanges();
+
+      // O servidor confere origem E destino: oferecer BD levaria a um 403 so
+      // depois de a pessoa preencher tudo.
+      const chips = Array.from(
+        tela.nativeElement.querySelectorAll('button[data-materia]'),
+      ).map((b) => (b as HTMLElement).getAttribute('data-materia'));
+      expect(chips).toEqual([CALC.id]);
+
+      const texto = aviso(tela).textContent!.replace(/\s+/g, ' ');
+      expect(texto).toContain('continua sendo de Otavio');
+      expect(texto).toContain('editado por Prof. Marcos');
+    });
   });
 });

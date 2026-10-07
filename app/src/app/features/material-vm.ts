@@ -1,4 +1,5 @@
 import type { Material } from '../data/models';
+import type { Selo } from '../shared/tipos';
 import { assinatura } from './evento-vm';
 
 /** O que `MaterialLinhaComponent` precisa para desenhar uma linha da lista. */
@@ -18,6 +19,10 @@ export interface MaterialVm {
   readonly tipo: string;
   readonly titulo: string;
   readonly autoria: string;
+  /** Selo de quem postou e "editado por" (spec 6); nulos quando nao ha. */
+  readonly autoriaSelo: Selo | null;
+  readonly editadoPor: string | null;
+  readonly editadoPorSelo: Selo | null;
   /**
    * Se ja existe resumo por IA. So o booleano: o texto inteiro numa lista de
    * vinte materiais seria carregado para nao ser lido.
@@ -38,6 +43,9 @@ export function materialVm(m: Material, agora: Date): MaterialVm {
     daAula: rotuloDaAula(m.dataAula),
     autorId: m.autoria.autorId,
     autoria: assinatura(m.autoria, agora),
+    autoriaSelo: m.autoria.autorSelo ?? null,
+    editadoPor: m.autoria.editadoPorNome ?? null,
+    editadoPorSelo: m.autoria.editadoPorSelo ?? null,
     temResumo: (m.resumo ?? null) !== null,
   };
 }

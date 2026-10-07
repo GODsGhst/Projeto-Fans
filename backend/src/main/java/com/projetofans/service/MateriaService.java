@@ -1,6 +1,5 @@
 package com.projetofans.service;
 
-import com.projetofans.domain.Evento;
 import com.projetofans.domain.Materia;
 import com.projetofans.domain.Paleta;
 import com.projetofans.domain.PapelMembro;
@@ -13,7 +12,6 @@ import com.projetofans.erro.SiglaDuplicadaException;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MaterialRepository;
-import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.CriarMateriaRequest;
@@ -44,16 +42,16 @@ public class MateriaService {
     private final MateriaRepository materias;
     private final EventoRepository eventos;
     private final MaterialRepository materiais;
-    private final UsuarioRepository usuarios;
+    private final Autorias autorias;
     private final TurmaScopeResolver escopo;
 
     public MateriaService(MateriaRepository materias, EventoRepository eventos,
-                          MaterialRepository materiais, UsuarioRepository usuarios,
+                          MaterialRepository materiais, Autorias autorias,
                           TurmaScopeResolver escopo) {
         this.materias = materias;
         this.eventos = eventos;
         this.materiais = materiais;
-        this.usuarios = usuarios;
+        this.autorias = autorias;
         this.escopo = escopo;
     }
 
@@ -68,12 +66,14 @@ public class MateriaService {
     @Transactional(readOnly = true)
     public MateriaDetalheResponse detalhe(UsuarioAtual usuario, UUID materiaId) {
         Materia materia = daTurmaDoUsuario(usuario, materiaId);
+        // A tela inteira e de uma turma so: os docentes sao lidos uma vez para ela toda.
+        Autorias.Listagem autoria = autorias.daListagem();
         return new MateriaDetalheResponse(
                 MateriaResponse.de(materia),
-                materiaisPorTipo(materia, TipoMaterial.AULA),
-                materiaisPorTipo(materia, TipoMaterial.ADICIONAL),
+                materiaisPorTipo(materia, TipoMaterial.AULA, autoria),
+                materiaisPorTipo(materia, TipoMaterial.ADICIONAL, autoria),
                 eventos.visiveisDaMateria(materia.getId()).stream()
-                        .map(e -> resposta(e, materia))
+                        .map(e -> EventoResponse.de(e, materia, autoria.de(e)))
                         .toList());
     }
 
@@ -170,18 +170,11 @@ public class MateriaService {
         }
     }
 
-    private List<MaterialResponse> materiaisPorTipo(Materia materia, TipoMaterial tipo) {
+    private List<MaterialResponse> materiaisPorTipo(Materia materia, TipoMaterial tipo,
+                                                    Autorias.Listagem autoria) {
         return materiais.visiveisDaMateriaPorTipo(materia.getId(), tipo).stream()
-                .map(m -> MaterialResponse.de(m, nomeDoAutor(m.getAutorId())))
+                .map(m -> MaterialResponse.de(m, autoria.de(m)))
                 .toList();
-    }
-
-    private EventoResponse resposta(Evento evento, Materia materia) {
-        return EventoResponse.de(evento, materia, nomeDoAutor(evento.getAutorId()));
-    }
-
-    private String nomeDoAutor(UUID autorId) {
-        return usuarios.findById(autorId).orElseThrow(AcessoNegadoException::new).getNome();
     }
 
     private Materia daTurmaDoUsuario(UsuarioAtual usuario, UUID materiaId) {

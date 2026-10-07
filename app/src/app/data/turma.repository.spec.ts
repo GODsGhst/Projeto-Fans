@@ -280,3 +280,226 @@ describe('TurmaRepository: ferramentas do lider', () => {
     });
   });
 });
+
+describe('TurmaRepository: alcance e docentes', () => {
+  let backend: HttpTestingController;
+  let repo: TurmaRepository;
+  const URL_TURMA = `${environment.apiUrl}/turmas/minha`;
+
+  /** A turma como ela chega para quem tem esse alcance. */
+  function com(meuAlcance: MinhaTurma['meuAlcance']): MinhaTurma {
+    return { ...TURMA, meuAlcance };
+  }
+
+  beforeEach(() => {
+    backend = configurarTeste(new StorageFake());
+    TestBed.inject(AuthService).definirSessao('jwt', USUARIO, 't1');
+    repo = TestBed.inject(TurmaRepository);
+  });
+
+  afterEach(() => backend.verify());
+
+  async function carregar(turma: MinhaTurma): Promise<void> {
+    const pronto = repo.carregar();
+    backend.expectOne(URL_TURMA).flush(turma);
+    await pronto;
+  }
+
+  describe('alcanca(materia): o mesmo padrao do souLider', () => {
+    it('antes de saber (turma nao carregada) nao alcanca nada — na duvida, nao oferecer', () => {
+      expect(repo.alcanca('m1')).toBeFalse();
+      expect(repo.alcanca(null)).toBeFalse();
+    });
+
+    it('NENHUM (aluno, ou docente pendente/recusado/contestado): nao alcanca', async () => {
+      await carregar(com({ tipo: 'NENHUM', materiaIds: [] }));
+
+      expect(repo.alcanca('m1')).toBeFalse();
+      expect(repo.alcanca(null)).toBeFalse();
+    });
+
+    it('servidor ou snapshot antigo sem meuAlcance: ausente quer dizer NENHUM', async () => {
+      await carregar(TURMA);
+
+      expect(repo.alcanca('m1')).toBeFalse();
+    });
+
+    it('MATERIAS (professor): so as materias declaradas — e nota (sem materia) nao', async () => {
+      await carregar(com({ tipo: 'MATERIAS', materiaIds: ['m1', 'm2'] }));
+
+      expect(repo.alcanca('m1')).toBeTrue();
+      expect(repo.alcanca('m2')).toBeTrue();
+      expect(repo.alcanca('m3')).toBeFalse();
+      expect(repo.alcanca(null))
+        .withContext('nota nao tem materia: professor nao a alcanca')
+        .toBeFalse();
+    });
+
+    it('TURMA (coordenacao): qualquer materia, e nota tambem', async () => {
+      await carregar(com({ tipo: 'TURMA', materiaIds: [] }));
+
+      expect(repo.alcanca('qualquer')).toBeTrue();
+      expect(repo.alcanca(null)).toBeTrue();
+    });
+
+    it('sair da conta zera o alcance junto com a turma', async () => {
+      await carregar(com({ tipo: 'TURMA', materiaIds: [] }));
+      TestBed.tick();
+      expect(repo.alcanca('m1')).toBeTrue();
+
+      TestBed.inject(AuthService).encerrarSessao();
+      TestBed.tick();
+
+      expect(repo.alcanca('m1')).toBeFalse();
+    });
+  });
+
+  describe('seloNa(materia): o que o registro vai levar', () => {
+    it('coordenacao -> COORDENACAO; professor na materia dele -> PROFESSOR; resto -> nenhum', async () => {
+      await carregar(com({ tipo: 'TURMA', materiaIds: [] }));
+      expect(repo.seloNa('m1')).toBe('COORDENACAO');
+
+      await carregar(com({ tipo: 'MATERIAS', materiaIds: ['m1'] }));
+      expect(repo.seloNa('m1')).toBe('PROFESSOR');
+      expect(repo.seloNa('m2')).toBeNull();
+
+      await carregar(com({ tipo: 'NENHUM', materiaIds: [] }));
+      expect(repo.seloNa('m1')).toBeNull();
+    });
+  });
+
+  describe('declararLecionadas', () => {
+    it('PUT com o conjunto inteiro e relê a turma (selo e alcance dependem do que ficou)', async () => {
+      await carregar(com({ tipo: 'NENHUM', materiaIds: [] }));
+
+      const pronto = repo.declararLecionadas(['m1', 'm2']);
+      const put = backend.expectOne(`${URL_TURMA}/lecionadas`);
+      expect(put.request.method).toBe('PUT');
+      expect(put.request.body).toEqual({ materiaIds: ['m1', 'm2'] });
+      put.flush(null, { status: 204, statusText: 'No Content' });
+      await new Promise((r) => setTimeout(r));
+
+      backend
+        .expectOne(URL_TURMA)
+        .flush(com({ tipo: 'MATERIAS', materiaIds: ['m1', 'm2'] }));
+      await pronto;
+
+      expect(repo.alcanca('m2')).toBeTrue();
+    });
+
+    it('403/404 sobe para a tela e a turma em memoria nao muda', async () => {
+      await carregar(com({ tipo: 'NENHUM', materiaIds: [] }));
+
+      const pronto = repo.declararLecionadas(['de-outra-turma']);
+      backend.expectOne(`${URL_TURMA}/lecionadas`).flush(
+        { detail: 'Registro nao encontrado' },
+        { status: 404, statusText: 'Not Found' },
+      );
+
+      await expectAsync(pronto).toBeRejected();
+      expect(repo.alcanca('de-outra-turma')).toBeFalse();
+    });
+  });
+
+  describe('contestar e restaurar', () => {
+    const DOCENTE = {
+      usuarioId: 'u7',
+      nome: 'Marcos',
+      papel: 'PROFESSOR' as const,
+      entrouEm: '2026-08-03T12:00:00Z',
+      selo: 'PROFESSOR' as const,
+      contestado: false,
+      lecionadas: ['BD'],
+    };
+    const COM_DOCENTE: MinhaTurma = {
+      ...TURMA,
+      membros: [...TURMA.membros, DOCENTE],
+    };
+
+    it('contestar: POST na rota certa, marca na lista (sem selo) ANTES da releitura, e rele', async () => {
+      await carregar(COM_DOCENTE);
+
+      const pronto = repo.contestar('u7');
+      const post = backend.expectOne(`${URL_TURMA}/docentes/u7/contestar`);
+      expect(post.request.method).toBe('POST');
+      post.flush(null, { status: 204, statusText: 'No Content' });
+      await new Promise((r) => setTimeout(r));
+
+      // O POST deu certo: e isso que a tela mostra mesmo se a releitura falhar.
+      const marcado = repo.turma()!.membros.find((m) => m.usuarioId === 'u7')!;
+      expect(marcado.contestado).toBeTrue();
+      expect(marcado.selo).toBeNull();
+
+      backend.expectOne(URL_TURMA).flush(COM_DOCENTE);
+      await pronto;
+    });
+
+    it('contestar: se a releitura falhar, a marca continua (o POST ja valeu)', async () => {
+      await carregar(COM_DOCENTE);
+
+      const pronto = repo.contestar('u7');
+      backend
+        .expectOne(`${URL_TURMA}/docentes/u7/contestar`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await new Promise((r) => setTimeout(r));
+      backend
+        .expectOne(URL_TURMA)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await pronto;
+
+      expect(repo.erro()).not.toBeNull();
+      expect(
+        repo.turma()!.membros.find((m) => m.usuarioId === 'u7')!.contestado,
+      ).toBeTrue();
+    });
+
+    it('contestar: 404 (alvo que nao e docente da turma) sobe e nada muda na lista', async () => {
+      await carregar(COM_DOCENTE);
+
+      const pronto = repo.contestar('u7');
+      backend.expectOne(`${URL_TURMA}/docentes/u7/contestar`).flush(
+        { detail: 'Registro nao encontrado' },
+        { status: 404, statusText: 'Not Found' },
+      );
+
+      await expectAsync(pronto).toBeRejected();
+      expect(
+        repo.turma()!.membros.find((m) => m.usuarioId === 'u7')!.contestado,
+      ).toBeFalse();
+    });
+
+    it('restaurar: POST na rota certa, tira a marca e rele (o selo volta com a releitura)', async () => {
+      await carregar({
+        ...COM_DOCENTE,
+        membros: [
+          ...TURMA.membros,
+          { ...DOCENTE, selo: null, contestado: true },
+        ],
+      });
+
+      const pronto = repo.restaurar('u7');
+      const post = backend.expectOne(`${URL_TURMA}/docentes/u7/restaurar`);
+      expect(post.request.method).toBe('POST');
+      post.flush(null, { status: 204, statusText: 'No Content' });
+      await new Promise((r) => setTimeout(r));
+
+      expect(
+        repo.turma()!.membros.find((m) => m.usuarioId === 'u7')!.contestado,
+      ).toBeFalse();
+
+      backend.expectOne(URL_TURMA).flush(COM_DOCENTE);
+      await pronto;
+      expect(
+        repo.turma()!.membros.find((m) => m.usuarioId === 'u7')!.selo,
+      ).toBe('PROFESSOR');
+    });
+  });
+
+  it('meuMembro: o vinculo desta pessoa NESTA turma (lido, nunca guardado na sessao)', async () => {
+    expect(repo.meuMembro()).toBeNull();
+
+    await carregar(TURMA);
+
+    expect(repo.meuMembro()?.papel).toBe('LIDER');
+  });
+});
