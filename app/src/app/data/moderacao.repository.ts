@@ -16,6 +16,17 @@ export interface PedidoDeExclusao {
   em: string;
 }
 
+/** Uma linha de `GET /moderacao/ocultados`. A rota é só do líder. */
+export interface Ocultado {
+  registroTipo: 'EVENTO' | 'MATERIAL' | 'NOTA';
+  registroId: string;
+  titulo: string;
+  autorId: string;
+  autorNome: string;
+  /** Pode vir nulo: registro oculto antes de o servidor anotar o instante. */
+  ocultadoEm: string | null;
+}
+
 /**
  * Os poderes do líder, e a transferência do cargo.
  *
@@ -57,6 +68,17 @@ export class ModeracaoRepository {
 
   reexibir(tipo: TipoModeravel, id: string): Promise<void> {
     return this.api.post<void>(`/moderacao/${tipo}/${id}/reexibir`);
+  }
+
+  /**
+   * Tudo que o líder tirou da lista e ainda está oculto.
+   *
+   * É o "desfazer" que não expira: o aviso logo depois de ocultar dura segundos,
+   * e quem percebe o engano na semana seguinte precisa de um lugar onde achar
+   * o registro — que, oculto, já não aparece em tela nenhuma da turma.
+   */
+  ocultados(): Promise<Ocultado[]> {
+    return this.api.get<Ocultado[]>('/moderacao/ocultados');
   }
 
   /** Avisa o autor. Não apaga: apagar é só de quem criou. */

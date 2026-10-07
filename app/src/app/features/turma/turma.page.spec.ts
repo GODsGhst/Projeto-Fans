@@ -5,7 +5,7 @@ import {
 } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
@@ -56,39 +56,70 @@ describe('convite', () => {
   });
 });
 
-const eu = signal<{ id: string; nome: string; email: string } | null>({
-  id: 'u1',
-  nome: 'Otávio',
-  email: 'voce@exemplo.com',
-});
+const OTAVIO = { id: 'u1', nome: 'Otávio', email: 'voce@exemplo.com' };
+const eu = signal<{ id: string; nome: string; email: string } | null>(OTAVIO);
+const URL_TURMA = `${environment.apiUrl}/turmas/minha`;
+const URL_OCULTADOS = `${environment.apiUrl}/moderacao/ocultados`;
 
 describe('TurmaPage', () => {
   let backend: HttpTestingController;
   let fixture: ComponentFixture<TurmaPage>;
+  let registrarTurma: jasmine.Spy;
+  let irPara: jasmine.Spy;
 
   beforeEach(() => {
+    registrarTurma = jasmine.createSpy('registrarTurma').and.resolveTo();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { usuario: eu } },
+        { provide: AuthService, useValue: { usuario: eu, registrarTurma } },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
+    irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
     fixture = TestBed.createComponent(TurmaPage);
   });
 
-  afterEach(() => backend.verify());
+  afterEach(() => {
+    backend.verify();
+    eu.set(OTAVIO);
+  });
 
+  /**
+   * `ionViewWillEnter` e o que o Ionic chama ao entrar na aba; o TestBed nao
+   * chama sozinho. O lider tambem pergunta o que esta oculto, entao a fixture
+   * responde essa segunda chamada — quem nao e lider nao a faz, e o `verify`
+   * do afterEach prova isso.
+   */
   async function abrir(
     responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
+    ocultados: unknown[] = [],
   ): Promise<void> {
     fixture.detectChanges();
-    responder(backend.expectOne(`${environment.apiUrl}/turmas/minha`));
+    fixture.componentInstance.ionViewWillEnter();
+    responder(backend.expectOne(URL_TURMA));
+    await fixture.whenStable();
+    for (const r of backend.match(URL_OCULTADOS)) {
+      r.flush(ocultados);
+    }
     await fixture.whenStable();
     fixture.detectChanges();
+  }
+
+  async function assentar(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function botao(rotulo: string): HTMLButtonElement | undefined {
+    return (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      ) as HTMLButtonElement[]
+    ).find((b) => b.textContent!.trim() === rotulo);
   }
 
   function textos(seletor: string): string[] {
@@ -180,5 +211,257 @@ describe('TurmaPage', () => {
     expect(
       fixture.nativeElement.querySelector('a[href="/tabs/turma/transferir"]'),
     ).toBeNull();
+  });
+
+  describe('ferramentas do lider', () => {
+    const ALUNO = { id: 'u2', nome: 'Ana Beatriz', email: 'ana@exemplo.com' };
+    const URL_REMOVER = `${environment.apiUrl}/turmas/minha/membros/u2`;
+    const URL_CODIGO = `${environment.apiUrl}/turmas/minha/codigo`;
+
+    const OCULTADO_MATERIAL = {
+      registroTipo: 'MATERIAL',
+      registroId: 'mat1',
+      titulo: 'Lista 3 (errada)',
+      autorId: 'u3',
+      autorNome: 'Bruno',
+      ocultadoEm: '2026-09-20T12:00:00Z',
+    };
+
+    it('so o lider ve Remover, Gerar novo codigo e Ocultados', async () => {
+      // O servidor recusaria (403), e oferecer o que vai falhar ensina a
+      // desconfiar da tela. Nem desabilitado: cinza convida a perguntar por que.
+      eu.set(ALUNO);
+      await abrir((r) => r.flush(TURMA));
+
+      expect(botao('Remover')).toBeUndefined();
+      expect(botao('Gerar novo código')).toBeUndefined();
+      expect(textos('.pf-rotulo')).not.toContain('ocultados');
+    });
+
+    it('o lider ve Remover em cada membro, menos nele mesmo', async () => {
+      await abrir((r) => r.flush(TURMA));
+
+      const nomes = Array.from(
+        fixture.nativeElement.querySelectorAll('button.remover[aria-label^="Remover"]'),
+      ).map((b) => (b as HTMLElement).getAttribute('aria-label'));
+      expect(nomes).toEqual(['Remover Ana Beatriz', 'Remover Bruno']);
+    });
+
+    it('pergunta antes de remover e nao chama nada ate confirmar', async () => {
+      await abrir((r) => r.flush(TURMA));
+
+      fixture.nativeElement
+        .querySelector('button[aria-label="Remover Ana Beatriz"]')
+        .click();
+      fixture.detectChanges();
+
+      backend.expectNone(URL_REMOVER);
+      const aviso = fixture.nativeElement.querySelector('.alerta')
+        .textContent as string;
+      expect(aviso).toContain('Ana Beatriz');
+      expect(aviso).toContain('perde o acesso');
+      expect(aviso).toContain('O que ele postou continua');
+
+      botao('Cancelar')!.click();
+      fixture.detectChanges();
+      backend.expectNone(URL_REMOVER);
+      expect(fixture.nativeElement.querySelector('.alerta')).toBeNull();
+    });
+
+    it('confirmar remove pela rota certa e recarrega a turma', async () => {
+      await abrir((r) => r.flush(TURMA));
+      fixture.nativeElement
+        .querySelector('button[aria-label="Remover Ana Beatriz"]')
+        .click();
+      fixture.detectChanges();
+
+      botao('Remover da turma')!.click();
+      const req = backend.expectOne(URL_REMOVER);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+
+      // Depois da acao, a tela relê a turma em vez de confiar no que supoe.
+      backend.expectOne(URL_TURMA).flush({
+        ...TURMA,
+        membros: TURMA.membros.filter((m) => m.usuarioId !== 'u2'),
+      });
+      await assentar();
+
+      expect(textos('.membro .nome')).toEqual(['Otávio', 'Bruno']);
+      expect(fixture.nativeElement.querySelector('.alerta'))
+        .withContext('a pergunta fecha depois de remover')
+        .toBeNull();
+    });
+
+    it('remover que falha mostra o motivo do servidor e a pessoa continua na lista', async () => {
+      await abrir((r) => r.flush(TURMA));
+      fixture.nativeElement
+        .querySelector('button[aria-label="Remover Bruno"]')
+        .click();
+      fixture.detectChanges();
+      botao('Remover da turma')!.click();
+
+      backend.expectOne(`${environment.apiUrl}/turmas/minha/membros/u3`).flush(
+        { detail: 'Transfira a liderança antes de sair' },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await assentar();
+
+      expect(
+        fixture.nativeElement.querySelector('.pf-erro').textContent,
+      ).toContain('Transfira a liderança');
+      expect(textos('.membro .nome'))
+        .withContext('falhou: ninguem saiu, e a tela nao pode sugerir o contrario')
+        .toContain('Bruno');
+    });
+
+    it('gerar novo codigo pergunta, chama a rota e mostra o codigo novo na hora', async () => {
+      const copia = spyOn(navigator.clipboard, 'writeText').and.resolveTo();
+      await abrir((r) => r.flush(TURMA));
+      // "Copiado" do codigo antigo nao pode sobreviver ao codigo novo.
+      botao('Copiar código')!.click();
+      await assentar();
+      expect(copia).toHaveBeenCalledWith('93EB9244');
+      expect(botao('Copiado ✓')).toBeDefined();
+
+      botao('Gerar novo código')!.click();
+      fixture.detectChanges();
+      backend.expectNone(URL_CODIGO);
+      expect(fixture.nativeElement.querySelector('.alerta').textContent)
+        .toContain('O código antigo para de funcionar');
+
+      botao('Gerar novo código')!.click();
+      const req = backend.expectOne(URL_CODIGO);
+      expect(req.request.method).toBe('POST');
+      req.flush({ ...TURMA, codigoConvite: 'NOVO0001' });
+      await assentar();
+
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="codigo-convite"]')
+          .textContent.trim(),
+      ).toBe('NOVO0001');
+      expect(botao('Copiar código'))
+        .withContext('o codigo mudou: ainda nao foi copiado')
+        .toBeDefined();
+      expect(textos('.membro .nome'))
+        .withContext('quem ja entrou continua')
+        .toEqual(['Otávio', 'Ana Beatriz', 'Bruno']);
+    });
+
+    it('gerar codigo que falha mostra o erro e o codigo antigo continua na tela', async () => {
+      await abrir((r) => r.flush(TURMA));
+      botao('Gerar novo código')!.click();
+      fixture.detectChanges();
+      botao('Gerar novo código')!.click();
+
+      backend.expectOne(URL_CODIGO).flush(
+        { detail: 'Só o líder pode.' },
+        { status: 403, statusText: 'Forbidden' },
+      );
+      await assentar();
+
+      expect(
+        fixture.nativeElement.querySelector('.pf-erro').textContent,
+      ).toContain('Só o líder pode');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="codigo-convite"]')
+          .textContent.trim(),
+      ).toBe('93EB9244');
+    });
+
+    it('Ocultados lista o que esta oculto, com tipo, autor e data', async () => {
+      await abrir((r) => r.flush(TURMA), [OCULTADO_MATERIAL]);
+
+      expect(textos('.pf-rotulo')).toContain('ocultados');
+      expect(textos('.membro .nome')).toContain('Lista 3 (errada)');
+      const detalhe = textos('.membro .desde').find((t) => t.includes('material'))!;
+      expect(detalhe).toContain('Bruno');
+      expect(detalhe).toContain('ocultado em');
+      expect(botao('Reexibir')).toBeDefined();
+    });
+
+    it('ocultado sem data mostra "sem data", nunca Invalid Date', async () => {
+      await abrir((r) => r.flush(TURMA), [
+        { ...OCULTADO_MATERIAL, ocultadoEm: null },
+      ]);
+
+      const texto = fixture.nativeElement.textContent as string;
+      expect(texto).toContain('sem data');
+      expect(texto).not.toContain('Invalid Date');
+    });
+
+    it('nada oculto mostra o estado vazio', async () => {
+      await abrir((r) => r.flush(TURMA), []);
+
+      expect(fixture.nativeElement.textContent).toContain('Nada oculto');
+      expect(botao('Reexibir')).toBeUndefined();
+    });
+
+    it('falha ao listar os ocultados NAO vira "Nada oculto"', async () => {
+      fixture.detectChanges();
+      fixture.componentInstance.ionViewWillEnter();
+      backend.expectOne(URL_TURMA).flush(TURMA);
+      await fixture.whenStable();
+      backend
+        .expectOne(URL_OCULTADOS)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await assentar();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Nada oculto');
+      expect(
+        fixture.nativeElement.querySelector('.pf-aviso').textContent,
+      ).toContain('servidor');
+    });
+
+    it('Reexibir chama a rota do tipo certo e recarrega a lista', async () => {
+      await abrir((r) => r.flush(TURMA), [OCULTADO_MATERIAL]);
+
+      botao('Reexibir')!.click();
+      const req = backend.expectOne(
+        `${environment.apiUrl}/moderacao/material/mat1/reexibir`,
+      );
+      expect(req.request.method).toBe('POST');
+      req.flush(null);
+      await fixture.whenStable();
+
+      backend.expectOne(URL_OCULTADOS).flush([]);
+      await assentar();
+
+      expect(textos('.membro .nome')).not.toContain('Lista 3 (errada)');
+      expect(fixture.nativeElement.textContent).toContain('Nada oculto');
+    });
+
+    it('Reexibir que falha mostra o erro e o item continua na lista', async () => {
+      await abrir((r) => r.flush(TURMA), [OCULTADO_MATERIAL]);
+
+      botao('Reexibir')!.click();
+      backend
+        .expectOne(`${environment.apiUrl}/moderacao/material/mat1/reexibir`)
+        .flush(
+          { detail: 'Registro não encontrado' },
+          { status: 404, statusText: 'Not Found' },
+        );
+      await assentar();
+
+      expect(
+        fixture.nativeElement.querySelector('.pf-erro').textContent,
+      ).toContain('não encontrado');
+      expect(textos('.membro .nome')).toContain('Lista 3 (errada)');
+    });
+
+    it('quem foi removido (turma 404) vai para a tela de entrar na turma, nao fica em erro', async () => {
+      await abrir((r) =>
+        r.flush(
+          { detail: 'Registro nao encontrado' },
+          { status: 404, statusText: 'Not Found' },
+        ),
+      );
+
+      expect(registrarTurma)
+        .withContext('a sessao esquece a turma')
+        .toHaveBeenCalledWith(null);
+      expect(irPara).toHaveBeenCalledWith('/entrar-turma');
+    });
   });
 });

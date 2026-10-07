@@ -18,6 +18,7 @@ import {
 } from '@ionic/angular/standalone';
 
 import { ErroApi } from '../../core/http-error.interceptor';
+import { JanelaDesfazer } from '../../core/janela-desfazer';
 import { EventoRepository } from '../../data/evento.repository';
 import { AuthService } from '../../core/auth.service';
 import { ModeracaoRepository } from '../../data/moderacao.repository';
@@ -125,21 +126,28 @@ import type { AlarmePersonalizado } from '../../notifications/reagendador';
           @if (souLider()) {
             <div class="do-lider">
               @if (ocultado()) {
-                <!-- A janela do desfazer. Ao sair desta tela o lider leva 404
-                     neste evento e nao ha mais caminho de volta — por isso o
-                     aviso diz "agora", e nao "depois". -->
-                <p class="alerta" role="status">
-                  Ocultado da turma. Dá para desfazer <b>agora</b>: ao sair
-                  desta tela, o registro some também para você.
-                </p>
-                <button
-                  class="botao"
-                  type="button"
-                  [disabled]="enviandoModeracao()"
-                  (click)="reexibir()"
-                >
-                  {{ enviandoModeracao() ? 'Desfazendo…' : 'Desfazer' }}
-                </button>
+                <!-- A janela do desfazer: alguns segundos. Ao sair desta tela o
+                     lider leva 404 neste evento, mas o caminho de volta existe —
+                     "Ocultados", na tela da turma —, entao passado o tempo o
+                     aviso troca o botao por essa indicacao. -->
+                @if (janela.aberta()) {
+                  <div class="alerta alerta--desfazer" role="status">
+                    <span>Ocultado.</span>
+                    <button
+                      class="botao botao--fio botao--pilula"
+                      type="button"
+                      [disabled]="enviandoModeracao()"
+                      (click)="reexibir()"
+                    >
+                      {{ enviandoModeracao() ? 'Desfazendo…' : 'Desfazer' }}
+                    </button>
+                  </div>
+                } @else {
+                  <p class="alerta" role="status">
+                    Ocultado da turma. Para trazer de volta, abra a turma e use
+                    "Reexibir" em "Ocultados".
+                  </p>
+                }
               } @else if (ocultando()) {
                 <p class="rot-campo">
                   por quê <span class="opcional">— opcional</span>
@@ -665,8 +673,9 @@ export class EventoPage {
   /** O papel é lido da turma, nunca da sessão: a liderança se transfere. */
   protected readonly souLider = this.turmas.souLider;
   protected readonly ocultando = signal(false);
-  /** Ficou oculto NESTA sessao de tela — a unica janela em que desfazer existe. */
+  /** Ficou oculto NESTA sessao de tela. O desfazer rapido vale so enquanto `janela` esta aberta. */
   protected readonly ocultado = signal(false);
+  protected readonly janela = new JanelaDesfazer();
   protected readonly pedindo = signal(false);
   protected readonly pedidoEnviado = signal(false);
   protected readonly enviandoModeracao = signal(false);
@@ -719,12 +728,13 @@ export class EventoPage {
       this.ocultando.set(false);
     }
     // NAO navega. Ocultar tira o evento da vista do proprio lider: ao sair
-    // desta tela ele leva 404 e nao ha caminho de volta. Este instante e a
-    // unica janela em que desfazer e possivel, entao ela fica aberta.
+    // desta tela ele leva 404. Ficar aqui deixa o desfazer a um toque; passada a
+    // janela, o caminho de volta e a secao "Ocultados" da turma.
     this.ocultado.set(true);
+    this.janela.abrir();
   }
 
-  /** Desfaz o ocultar. So funciona enquanto esta tela nao for fechada. */
+  /** Desfaz o ocultar. Aqui, enquanto esta tela estiver aberta; depois, pela turma. */
   protected async reexibir(): Promise<void> {
     if (this.enviandoModeracao()) {
       return;
@@ -733,6 +743,7 @@ export class EventoPage {
     this.erroDaAcao.set(null);
     try {
       await this.moderacao.reexibir('evento', this.id);
+      this.janela.fechar();
       this.ocultado.set(false);
     } catch (e) {
       this.erroDaAcao.set(mensagemDeErro(e));

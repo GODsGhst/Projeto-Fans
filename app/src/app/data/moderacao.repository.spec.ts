@@ -100,3 +100,29 @@ describe('ModeracaoRepository.transferirLideranca', () => {
       .toBeTrue();
   });
 });
+
+describe('ModeracaoRepository.ocultados', () => {
+  it('le GET /moderacao/ocultados e devolve a lista como veio', async () => {
+    const backend = configurarTeste(new StorageFake());
+    TestBed.inject(AuthService).definirSessao('jwt', USUARIO, 't1');
+    const repo = TestBed.inject(ModeracaoRepository);
+    const lista = [
+      {
+        registroTipo: 'NOTA' as const,
+        registroId: 'n1',
+        titulo: 'aula cancelada',
+        autorId: 'u2',
+        autorNome: 'Ana',
+        ocultadoEm: null,
+      },
+    ];
+
+    const pronto = repo.ocultados();
+    const req = backend.expectOne(`${environment.apiUrl}/moderacao/ocultados`);
+    expect(req.request.method).toBe('GET');
+    req.flush(lista);
+
+    expect(await pronto).toEqual(lista);
+    backend.verify();
+  });
+});

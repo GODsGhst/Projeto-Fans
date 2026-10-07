@@ -71,6 +71,14 @@ export const tabsRoutes: Routes = [
             (m) => m.NovoMaterialPage,
           ),
       },
+      // Mesma pagina de cadastrar: o `id` na rota liga o modo de edicao (so o lider).
+      {
+        path: 'materias/:id/editar',
+        loadComponent: () =>
+          import('../features/materias/nova-materia.page').then(
+            (m) => m.NovaMateriaPage,
+          ),
+      },
       {
         path: 'materias/:id',
         loadComponent: () =>

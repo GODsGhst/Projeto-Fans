@@ -13,6 +13,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
+import { JanelaDesfazer } from '../../core/janela-desfazer';
 import { EventoCardComponent } from '../../shared/evento-card.component';
 import { NotaComponent } from '../../shared/nota.component';
 import { EventoRepository } from '../../data/evento.repository';
@@ -201,6 +202,24 @@ import { mensagemDeErro } from '../auth/erro';
 
         @if (erroDaModeracao(); as e) {
           <p class="pf-erro" role="alert">{{ e }}</p>
+        }
+
+        <!-- Ocultar e um toque so; o desfazer dura alguns segundos. Depois, o
+             caminho de volta e "Ocultados", na tela da turma. -->
+        @if (janela.aberta()) {
+          @if (notaOcultada(); as id) {
+            <div class="alerta alerta--desfazer" role="status">
+              <span>Ocultado.</span>
+              <button
+                class="botao botao--fio botao--pilula"
+                type="button"
+                [disabled]="desfazendo()"
+                (click)="desfazerOcultarNota(id)"
+              >
+                {{ desfazendo() ? 'Desfazendo…' : 'Desfazer' }}
+              </button>
+            </div>
+          }
         }
 
         @for (n of notas(); track n.id) {
@@ -445,6 +464,12 @@ export class CalendarioPage {
   protected readonly moderando = signal(false);
   protected readonly erroDaModeracao = signal<string | null>(null);
 
+  /** A ultima anotacao ocultada, enquanto o "Desfazer" esta na tela. */
+  protected readonly janela = new JanelaDesfazer();
+  protected readonly notaOcultada = signal<string | null>(null);
+  /** Separado de `moderando`: este so acende no desfazer, nao na recarga do ocultar. */
+  protected readonly desfazendo = signal(false);
+
   /**
    * A grade, montada a partir do que ja foi carregado — nenhuma requisicao
    * nova. O mes inteiro ja esta na mao; filtrar por dia e trabalho de cliente.
@@ -586,12 +611,35 @@ export class CalendarioPage {
     this.erroDaModeracao.set(null);
     try {
       await this.moderacao.ocultar('nota', id, null);
+      this.notaOcultada.set(id);
+      this.janela.abrir();
       const { de, ate } = this.grade();
       await this.notasRepo.carregar(de, ate);
     } catch (e) {
       this.erroDaModeracao.set(mensagemDeErro(e));
     } finally {
       this.moderando.set(false);
+    }
+  }
+
+  /** Desfaz o ocultar enquanto a janela esta aberta. Depois, e pela tela da turma. */
+  protected async desfazerOcultarNota(id: string): Promise<void> {
+    if (this.desfazendo() || this.moderando()) {
+      return;
+    }
+    this.desfazendo.set(true);
+    this.erroDaModeracao.set(null);
+    try {
+      await this.moderacao.reexibir('nota', id);
+      this.janela.fechar();
+      const { de, ate } = this.grade();
+      await this.notasRepo.carregar(de, ate);
+    } catch (e) {
+      // A janela continua aberta: a anotacao segue oculta, e a pessoa pode
+      // tentar de novo.
+      this.erroDaModeracao.set(mensagemDeErro(e));
+    } finally {
+      this.desfazendo.set(false);
     }
   }
 }

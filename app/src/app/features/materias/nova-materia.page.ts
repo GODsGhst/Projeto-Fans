@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonBackButton,
   IonButtons,
@@ -16,6 +16,7 @@ import {
 } from '@ionic/angular/standalone';
 
 import { MateriaRepository } from '../../data/materia.repository';
+import type { Materia } from '../../data/models';
 import { MateriaChipComponent } from '../../shared/materia-chip.component';
 import { Espera } from '../auth/espera';
 import { mensagemDeErro } from '../auth/erro';
@@ -62,6 +63,11 @@ export const PALETA: readonly {
  * A previa usa `MateriaChipComponent` de proposito. Nao existe outro caminho
  * para exibir materia neste app, e uma previa desenhada a mao aqui seria
  * exatamente o segundo caminho que o nao-negociavel 7 proibe.
+ *
+ * A mesma pagina EDITA a materia (so o lider): o `id` na rota liga o modo. E o
+ * mesmo formulario — mesmos campos, mesma paleta de 12 cores, mesma validacao —,
+ * e uma segunda pagina seria uma quase-copia que diverge: a paleta de um lado
+ * ganharia uma cor e a do outro ficaria para tras.
  */
 @Component({
   selector: 'app-nova-materia',
@@ -81,9 +87,9 @@ export const PALETA: readonly {
     <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/tabs/materias" />
+          <ion-back-button [defaultHref]="voltarPara" />
         </ion-buttons>
-        <ion-title>Nova matéria</ion-title>
+        <ion-title>{{ editando() ? 'Editar matéria' : 'Nova matéria' }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -93,89 +99,100 @@ export const PALETA: readonly {
           <p class="pf-erro" role="alert">{{ e }}</p>
         }
 
-        <p class="rot-campo">nome</p>
-        <input
-          #nome
-          class="campo--linha"
-          type="text"
-          maxlength="80"
-          placeholder="Banco de Dados"
-          aria-label="Nome da matéria"
-        />
+        <!-- Editar: o formulario so aparece depois de ler a materia. Abrir em
+             branco e salvar mandaria campos vazios por cima do que existe, e o
+             PATCH SUBSTITUI tudo. -->
+        @if (pronto()) {
+          <p class="rot-campo">nome</p>
+          <input
+            #nome
+            class="campo--linha"
+            type="text"
+            maxlength="80"
+            placeholder="Banco de Dados"
+            [value]="valorInicial().nome"
+            aria-label="Nome da matéria"
+          />
 
-        <p class="rot-campo">sigla</p>
-        <input
-          #sigla
-          class="campo--linha campo--sigla"
-          type="text"
-          maxlength="12"
-          autocapitalize="characters"
-          placeholder="BD"
-          aria-label="Sigla"
-          (input)="previa.set(sigla.value.trim().toUpperCase() || 'SIGLA')"
-        />
+          <p class="rot-campo">sigla</p>
+          <input
+            #sigla
+            class="campo--linha campo--sigla"
+            type="text"
+            maxlength="12"
+            autocapitalize="characters"
+            placeholder="BD"
+            [value]="valorInicial().sigla"
+            aria-label="Sigla"
+            (input)="previa.set(sigla.value.trim().toUpperCase() || 'SIGLA')"
+          />
 
-        <p class="rot-campo">sala <span class="opcional">— opcional</span></p>
-        <input
-          #sala
-          class="campo--linha"
-          type="text"
-          name="sala"
-          maxlength="40"
-          placeholder="B-204"
-          aria-label="Sala habitual"
-        />
+          <p class="rot-campo">sala <span class="opcional">— opcional</span></p>
+          <input
+            #sala
+            class="campo--linha"
+            type="text"
+            name="sala"
+            maxlength="40"
+            placeholder="B-204"
+            [value]="valorInicial().sala"
+            aria-label="Sala habitual"
+          />
 
-        <p class="rot-campo">
-          professor <span class="opcional">— opcional</span>
-        </p>
-        <input
-          #professor
-          class="campo--linha"
-          type="text"
-          name="professor"
-          maxlength="80"
-          placeholder="prof. Marcos"
-          aria-label="Professor"
-        />
+          <p class="rot-campo">
+            professor <span class="opcional">— opcional</span>
+          </p>
+          <input
+            #professor
+            class="campo--linha"
+            type="text"
+            name="professor"
+            maxlength="80"
+            placeholder="prof. Marcos"
+            [value]="valorInicial().professor"
+            aria-label="Professor"
+          />
 
-        <p class="pf-cache-aviso">
-          A sala aqui é a de sempre. Quando uma prova cair em outra sala, dá
-          para dizer isso na própria prova — sem mexer na matéria.
-        </p>
+          <p class="pf-cache-aviso">
+            A sala aqui é a de sempre. Quando uma prova cair em outra sala, dá
+            para dizer isso na própria prova — sem mexer na matéria.
+          </p>
 
-        <p class="rot-campo">cor</p>
-        <div class="cores-pick" role="group" aria-label="Cor da matéria">
-          @for (c of paleta; track c.hex) {
-            <button
-              type="button"
-              [style.background]="c.hex"
-              [attr.data-cor]="c.hex"
-              [attr.aria-pressed]="cor() === c.hex"
-              [attr.aria-label]="c.nome"
-              (click)="cor.set(c.hex)"
-            ></button>
-          }
-        </div>
+          <p class="rot-campo">cor</p>
+          <div class="cores-pick" role="group" aria-label="Cor da matéria">
+            @for (c of paleta; track c.hex) {
+              <button
+                type="button"
+                [style.background]="c.hex"
+                [attr.data-cor]="c.hex"
+                [attr.aria-pressed]="cor() === c.hex"
+                [attr.aria-label]="c.nome"
+                (click)="cor.set(c.hex)"
+              ></button>
+            }
+          </div>
 
-        <div class="previa-chip">
-          <app-materia-chip [cor]="cor()" [sigla]="previa()" />
-          <span>é assim que ela vai aparecer</span>
-        </div>
+          <div class="previa-chip">
+            <app-materia-chip [cor]="cor()" [sigla]="previa()" />
+            <span>é assim que ela vai aparecer</span>
+          </div>
 
-        <p class="alerta">
-          As 12 cores foram medidas para dar contraste suficiente com o texto
-          branco do chip. Por isso a escolha é entre elas, e não livre.
-        </p>
+          <p class="alerta">
+            As 12 cores foram medidas para dar contraste suficiente com o texto
+            branco do chip. Por isso a escolha é entre elas, e não livre.
+          </p>
 
-        <button
-          class="botao"
-          type="button"
-          [disabled]="enviando()"
-          (click)="criar(nome.value, sigla.value, sala.value, professor.value)"
-        >
-          {{ rotuloDoBotao() }}
-        </button>
+          <button
+            class="botao"
+            type="button"
+            [disabled]="enviando()"
+            (click)="salvar(nome.value, sigla.value, sala.value, professor.value)"
+          >
+            {{ rotuloDoBotao() }}
+          </button>
+        } @else if (erro() === null) {
+          <p class="pf-aviso">Carregando…</p>
+        }
       </div>
     </ion-content>
   `,
@@ -236,6 +253,35 @@ export class NovaMateriaPage {
   private readonly repo = inject(MateriaRepository);
   private readonly router = inject(Router);
 
+  /** Falsy, nao `!== null`: rota sem o parametro devolve `null` (ou `undefined` num Map). */
+  private readonly editandoId =
+    inject(ActivatedRoute).snapshot.paramMap.get('id') || null;
+  protected readonly editando = computed(() => this.editandoId !== null);
+
+  /** A materia sendo editada; `null` no modo de cadastrar, e ate ela chegar. */
+  private readonly original = signal<Materia | null>(null);
+
+  /** Cadastrar ja nasce pronto; editar so depois de ler a materia. */
+  protected readonly pronto = computed(
+    () => this.editandoId === null || this.original() !== null,
+  );
+
+  /** O que os campos mostram ao abrir. Vazio quando e uma materia nova. */
+  protected readonly valorInicial = computed(() => {
+    const o = this.original();
+    return {
+      nome: o?.nome ?? '',
+      sigla: o?.sigla ?? '',
+      // O backend omite nulo do JSON: chega `undefined`, nunca "undefined" no campo.
+      sala: o?.sala ?? '',
+      professor: o?.professor ?? '',
+    };
+  });
+
+  protected readonly voltarPara = this.editandoId
+    ? `/tabs/materias/${this.editandoId}`
+    : '/tabs/materias';
+
   protected readonly paleta = PALETA;
   protected readonly cor = signal(PALETA[0].hex);
   protected readonly enviando = signal(false);
@@ -247,13 +293,35 @@ export class NovaMateriaPage {
 
   /** O servidor gratuito hiberna e leva ate ~45 s para acordar (ver `Espera`). */
   protected readonly rotuloDoBotao = computed(() => {
+    const editando = this.editando();
     if (!this.enviando()) {
-      return 'Criar matéria';
+      return editando ? 'Salvar' : 'Criar matéria';
     }
-    return this.espera.demorando() ? 'Acordando o servidor…' : 'Criando…';
+    if (this.espera.demorando()) {
+      return 'Acordando o servidor…';
+    }
+    return editando ? 'Salvando…' : 'Criando…';
   });
 
-  protected async criar(
+  constructor() {
+    if (this.editandoId) {
+      void this.carregarOriginal(this.editandoId);
+    }
+  }
+
+  private async carregarOriginal(id: string): Promise<void> {
+    try {
+      const { materia } = await this.repo.detalhe(id);
+      this.original.set(materia);
+      this.cor.set(materia.corHex);
+      this.previa.set(materia.sigla);
+    } catch (e) {
+      // Sem o original nao ha o que editar, e o formulario nem aparece.
+      this.erro.set(mensagemDeErro(e));
+    }
+  }
+
+  protected async salvar(
     nome: string,
     sigla: string,
     sala: string,
@@ -275,17 +343,23 @@ export class NovaMateriaPage {
     this.erro.set(null);
     this.espera.comecar();
     try {
-      await this.repo.criar({
+      const corpo = {
         ...limpo,
         corHex: this.cor(),
         // Vazio vira null, nao string vazia: o backend normaliza igual, e mandar
         // "" faria a tela da materia mostrar uma sala em branco como se fosse uma.
         sala: sala.trim() === '' ? null : sala.trim(),
         professor: professor.trim() === '' ? null : professor.trim(),
-      });
+      };
+      if (this.editandoId) {
+        await this.repo.atualizar(this.editandoId, corpo);
+      } else {
+        await this.repo.criar(corpo);
+      }
     } catch (e) {
       // Sigla repetida na turma volta 409 com frase legivel; a paleta violada
-      // volta 400 com outra. As duas chegam prontas do interceptor central.
+      // volta 400 com outra; quem nao e lider volta 403. Todas chegam prontas do
+      // interceptor central.
       this.erro.set(mensagemDeErro(e));
       return;
     } finally {
@@ -294,7 +368,8 @@ export class NovaMateriaPage {
     }
 
     // Recarregar ANTES de voltar. Sem isto a aba Materias ainda diz "nenhuma
-    // materia cadastrada", e quem acabou de cadastrar cadastra de novo.
+    // materia cadastrada", e quem acabou de cadastrar cadastra de novo (e quem
+    // acabou de editar ve o nome velho na lista).
     //
     // Falhar aqui NAO devolve a pessoa para este formulario: a materia ja
     // existe, e repetir o cadastro daria 409. O erro nao some — o repositorio o
@@ -304,6 +379,6 @@ export class NovaMateriaPage {
       .catch((e: unknown) =>
         console.error('[nova-materia] falha ao recarregar as materias', e),
       );
-    await this.router.navigateByUrl('/tabs/materias');
+    await this.router.navigateByUrl(this.voltarPara);
   }
 }

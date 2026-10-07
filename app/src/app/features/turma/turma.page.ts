@@ -14,6 +14,11 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
+import { ModeracaoRepository } from '../../data/moderacao.repository';
+import type {
+  Ocultado,
+  TipoModeravel,
+} from '../../data/moderacao.repository';
 import { TurmaRepository } from '../../data/turma.repository';
 import type { MinhaTurma } from '../../data/turma.repository';
 import { mensagemDeErro } from '../auth/erro';
@@ -34,6 +39,12 @@ import { mensagemDeErro } from '../auth/erro';
  * turma. Falhar ao buscar não pode virar "turma vazia" — e o código, em
  * particular, ou vem do servidor ou não aparece. Código inventado é pior que
  * código nenhum: manda o calouro digitar algo que nunca vai funcionar.
+ *
+ * O líder ganha aqui as ferramentas do cargo: remover alguém, trocar o código e
+ * reexibir o que ocultou. Nenhuma é edição de registro alheio — o líder tira
+ * gente e esconde coisa, nunca reescreve o que a turma postou. Remover e trocar
+ * o código perguntam antes (reexibir não precisa: desfazer não machuca
+ * ninguém), e a pergunta fica na própria linha, sem diálogo por cima da tela.
  */
 @Component({
   selector: 'app-turma',
@@ -83,6 +94,45 @@ import { mensagemDeErro } from '../auth/erro';
             <span class="explica">
               Quem tiver este código entra na turma. Ele não expira.
             </span>
+
+            @if (souLider()) {
+              <!-- Trocar o código é para quando ele vazou: o antigo morre, e
+                   quem já está dentro nem percebe. Por isso pergunta antes. -->
+              @if (confirmandoCodigo()) {
+                <p class="alerta" role="status">
+                  O código antigo para de funcionar. Quem já entrou continua.
+                </p>
+                @if (erroDoCodigo(); as e) {
+                  <p class="pf-erro" role="alert">{{ e }}</p>
+                }
+                <span class="confirmar">
+                  <button
+                    class="botao botao--fio botao--pilula"
+                    type="button"
+                    [disabled]="agindo()"
+                    (click)="gerarCodigo()"
+                  >
+                    {{ agindo() ? 'Gerando…' : 'Gerar novo código' }}
+                  </button>
+                  <button
+                    class="botao botao--fio botao--pilula"
+                    type="button"
+                    [disabled]="agindo()"
+                    (click)="confirmandoCodigo.set(false)"
+                  >
+                    Cancelar
+                  </button>
+                </span>
+              } @else {
+                <button
+                  class="botao-copiar"
+                  type="button"
+                  (click)="pedirNovoCodigo()"
+                >
+                  Gerar novo código
+                </button>
+              }
+            }
           </div>
 
           <p class="pf-rotulo">quem está aqui · {{ t.membros.length }}</p>
@@ -96,8 +146,82 @@ import { mensagemDeErro } from '../auth/erro';
               </span>
               @if (m.ehLider) {
                 <span class="papel">líder</span>
+              } @else if (souLider() && confirmandoRemover() !== m.usuarioId) {
+                <!-- Só em quem não é o líder: o servidor recusa remover o
+                     próprio líder (409), então o botão nem é oferecido. -->
+                <button
+                  class="botao botao--fio botao--pilula remover"
+                  type="button"
+                  [attr.aria-label]="'Remover ' + m.nome"
+                  (click)="pedirRemocao(m.usuarioId)"
+                >
+                  Remover
+                </button>
               }
             </div>
+            @if (confirmandoRemover() === m.usuarioId) {
+              <p class="alerta" role="status">
+                <b>{{ m.nome }}</b> perde o acesso à turma. O que ele postou
+                continua.
+              </p>
+              @if (erroDoMembro(); as e) {
+                <p class="pf-erro" role="alert">{{ e }}</p>
+              }
+              <span class="confirmar">
+                <button
+                  class="botao botao--fio botao--pilula"
+                  type="button"
+                  [disabled]="agindo()"
+                  (click)="remover(m.usuarioId)"
+                >
+                  {{ agindo() ? 'Removendo…' : 'Remover da turma' }}
+                </button>
+                <button
+                  class="botao botao--fio botao--pilula"
+                  type="button"
+                  [disabled]="agindo()"
+                  (click)="confirmandoRemover.set(null)"
+                >
+                  Cancelar
+                </button>
+              </span>
+            }
+          }
+
+          @if (souLider()) {
+            <!-- O desfazer que não expira: o aviso logo depois de ocultar dura
+                 segundos; aqui está tudo que continua oculto, de qualquer tela. -->
+            <p class="pf-rotulo">ocultados</p>
+            @if (erroDosOcultados(); as e) {
+              <p class="pf-aviso" role="alert">{{ e }}</p>
+            }
+            @if (erroDoOcultado(); as e) {
+              <p class="pf-erro" role="alert">{{ e }}</p>
+            }
+            @if (ocultados() !== null) {
+              @for (o of ocultadosVm(); track o.chave) {
+                <div class="membro">
+                  <span class="quem">
+                    <span class="nome">{{ o.titulo }}</span>
+                    <span class="desde">{{ o.detalhe }}</span>
+                  </span>
+                  <button
+                    class="botao botao--fio botao--pilula remover"
+                    type="button"
+                    [disabled]="agindo()"
+                    [attr.aria-label]="'Reexibir ' + o.titulo"
+                    (click)="reexibir(o.original)"
+                  >
+                    Reexibir
+                  </button>
+                </div>
+              } @empty {
+                <div class="pf-vazio">
+                  <b>Nada oculto.</b>
+                  <span>O que você ocultar da turma aparece aqui.</span>
+                </div>
+              }
+            }
           }
 
           <a class="botao botao--fantasma" routerLink="/tabs/ajustes"
@@ -208,6 +332,18 @@ import { mensagemDeErro } from '../auth/erro';
       font-size: 11.5px;
       color: var(--ink-3);
     }
+    /* Ação rara do líder: pequena e no fim da linha, para não disputar o toque
+       com o resto da tela. */
+    .membro .remover {
+      flex: 0 0 auto;
+      font-size: 12px;
+      padding: 5px 10px;
+    }
+    .confirmar {
+      display: flex;
+      gap: 8px;
+    }
+
     /* Líder é papel, não posto: marca discreta, sem coroa e sem destaque de cor
        que sugira hierarquia. */
     .membro .papel {
@@ -242,8 +378,129 @@ export class TurmaPage {
 
   protected readonly souLider = this.repo.souLider;
 
-  constructor() {
-    void this.repo.carregar();
+  private readonly moderacao = inject(ModeracaoRepository);
+
+  /** Um por vez: ação rara, e duas perguntas abertas juntas confundem. */
+  protected readonly confirmandoCodigo = signal(false);
+  protected readonly confirmandoRemover = signal<string | null>(null);
+  protected readonly agindo = signal(false);
+  protected readonly erroDoCodigo = signal<string | null>(null);
+  protected readonly erroDoMembro = signal<string | null>(null);
+  protected readonly erroDoOcultado = signal<string | null>(null);
+
+  /** `null` = ainda não se sabe. Lista vazia é resposta ("Nada oculto"), `null` não. */
+  protected readonly ocultados = signal<Ocultado[] | null>(null);
+  protected readonly erroDosOcultados = signal<string | null>(null);
+
+  protected readonly ocultadosVm = computed(() =>
+    (this.ocultados() ?? []).map((o) => ({
+      chave: `${o.registroTipo}:${o.registroId}`,
+      titulo: o.titulo,
+      detalhe: `${rotuloDoTipo(o.registroTipo)} de ${o.autorNome} · ${ocultadoEm(o.ocultadoEm)}`,
+      original: o,
+    })),
+  );
+
+  /**
+   * Recarrega toda vez que a aba aparece, não só quando o componente nasce.
+   *
+   * Em abas do Ionic o componente é criado uma vez e fica vivo. Com a carga no
+   * `constructor`, "Ocultados" nunca mostraria o que o líder acabou de ocultar em
+   * outra aba, e quem foi removido nunca descobriria — a turma em memória
+   * continuaria valendo. A carga saiu do `constructor` (não ficou nos dois)
+   * porque `ionViewWillEnter` roda também na primeira entrada.
+   */
+  ionViewWillEnter(): void {
+    void this.recarregar();
+  }
+
+  private async recarregar(): Promise<void> {
+    // `carregar` não lança: a falha fica em `erro`. E se a turma sumiu (404), ele
+    // já levou a pessoa embora — `souLider` volta falso e nada abaixo roda.
+    await this.repo.carregar();
+    if (this.souLider()) {
+      await this.carregarOcultados();
+    }
+  }
+
+  private async carregarOcultados(): Promise<void> {
+    this.erroDosOcultados.set(null);
+    try {
+      this.ocultados.set(await this.moderacao.ocultados());
+    } catch (e) {
+      // A lista antiga fica: "não consegui atualizar" não é "nada oculto".
+      this.erroDosOcultados.set(mensagemDeErro(e));
+    }
+  }
+
+  protected pedirRemocao(usuarioId: string): void {
+    this.erroDoMembro.set(null);
+    this.confirmandoRemover.set(usuarioId);
+  }
+
+  protected async remover(usuarioId: string): Promise<void> {
+    if (this.agindo()) {
+      return;
+    }
+    this.agindo.set(true);
+    this.erroDoMembro.set(null);
+    try {
+      await this.repo.removerMembro(usuarioId);
+      this.confirmandoRemover.set(null);
+    } catch (e) {
+      // A pergunta fica aberta com o motivo: a pessoa continua na turma, e a tela
+      // não pode sugerir o contrário.
+      this.erroDoMembro.set(mensagemDeErro(e));
+    } finally {
+      this.agindo.set(false);
+    }
+  }
+
+  protected pedirNovoCodigo(): void {
+    this.erroDoCodigo.set(null);
+    this.confirmandoCodigo.set(true);
+  }
+
+  protected async gerarCodigo(): Promise<void> {
+    if (this.agindo()) {
+      return;
+    }
+    this.agindo.set(true);
+    this.erroDoCodigo.set(null);
+    try {
+      await this.repo.gerarNovoCodigo();
+      this.confirmandoCodigo.set(false);
+      // "Copiado ✓" era do código antigo; deixar aceso diria que o novo já foi.
+      this.copiado.set(false);
+    } catch (e) {
+      this.erroDoCodigo.set(mensagemDeErro(e));
+    } finally {
+      this.agindo.set(false);
+    }
+  }
+
+  protected async reexibir(o: Ocultado): Promise<void> {
+    if (this.agindo()) {
+      return;
+    }
+    this.agindo.set(true);
+    this.erroDoOcultado.set(null);
+    try {
+      await this.moderacao.reexibir(tipoModeravel(o), o.registroId);
+      // Sai da lista já: o POST deu certo, e é isso que a tela tem de mostrar
+      // mesmo que a releitura abaixo falhe.
+      this.ocultados.update((lista) =>
+        (lista ?? []).filter(
+          (x) =>
+            !(x.registroTipo === o.registroTipo && x.registroId === o.registroId),
+        ),
+      );
+      await this.carregarOcultados();
+    } catch (e) {
+      this.erroDoOcultado.set(mensagemDeErro(e));
+    } finally {
+      this.agindo.set(false);
+    }
   }
 
   /**
@@ -297,6 +554,27 @@ export function convite(turma: Pick<MinhaTurma, 'nome' | 'codigoConvite'>): {
       `Entra na turma ${turma.nome} no projetoFans — é onde a gente anota as provas e ` +
       `entregas. O código é ${turma.codigoConvite}.`,
   };
+}
+
+/** A rota de moderação é em minúsculas; a lista de ocultados vem em maiúsculas. */
+function tipoModeravel(o: Ocultado): TipoModeravel {
+  return o.registroTipo.toLowerCase() as TipoModeravel;
+}
+
+function rotuloDoTipo(tipo: Ocultado['registroTipo']): string {
+  return tipo === 'NOTA' ? 'anotação' : tipo.toLowerCase();
+}
+
+/**
+ * "ocultado em 1 set". Sem data (o servidor pode mandar nulo) ou ilegível vira
+ * "sem data": melhor dizer que não se sabe do que inventar um dia.
+ */
+function ocultadoEm(iso: string | null): string {
+  const quando = iso === null ? null : new Date(iso);
+  if (quando === null || Number.isNaN(quando.getTime())) {
+    return 'sem data';
+  }
+  return `ocultado em ${quando.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`;
 }
 
 /** "entrou em 1 set". Data ilegível vira texto vazio, nunca "Invalid Date". */

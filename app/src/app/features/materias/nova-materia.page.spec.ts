@@ -4,7 +4,12 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  Router,
+  convertToParamMap,
+  provideRouter,
+} from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
@@ -206,5 +211,193 @@ describe('NovaMateriaPage', () => {
 
     expect(irPara).toHaveBeenCalledWith('/tabs/materias');
     expect(erroNaTela()).toBe('');
+  });
+});
+
+/**
+ * A mesma pagina edita a materia (so o lider): o `id` na rota liga o modo. Mesmo
+ * formulario, mesma paleta — o que muda e de onde vem o valor inicial e para onde
+ * vai o botao.
+ */
+describe('NovaMateriaPage (editar)', () => {
+  let backend: HttpTestingController;
+  let fixture: ComponentFixture<NovaMateriaPage>;
+  let irPara: jasmine.Spy;
+  const URL_MATERIA = `${environment.apiUrl}/materias/m1`;
+
+  const DETALHE = {
+    materia: {
+      id: 'm1',
+      nome: 'Banco de Dados',
+      sigla: 'BD',
+      corHex: PALETA[3].hex,
+      sala: 'B-204',
+      professor: 'prof. Marcos',
+    },
+    materiaisAula: [],
+    materiaisAdicionais: [],
+    eventos: [],
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideIonicAngular(),
+        provideHttpClient(withInterceptors([erroHttpInterceptor])),
+        provideHttpClientTesting(),
+        { provide: StorageService, useValue: new StorageFake() },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: 'm1' }) } },
+        },
+      ],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    fixture = TestBed.createComponent(NovaMateriaPage);
+  });
+
+  afterEach(() => backend.verify());
+
+  async function assentar(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function abrir(): Promise<void> {
+    fixture.detectChanges();
+    backend.expectOne(URL_MATERIA).flush(DETALHE);
+    await assentar();
+  }
+
+  function campo(rotulo: string): HTMLInputElement {
+    return fixture.nativeElement.querySelector(
+      `input[aria-label="${rotulo}"]`,
+    ) as HTMLInputElement;
+  }
+
+  function salvar(): void {
+    (fixture.nativeElement.querySelector('.botao') as HTMLButtonElement).click();
+  }
+
+  function erroNaTela(): string {
+    const p = fixture.nativeElement.querySelector(
+      '.pf-erro',
+    ) as HTMLElement | null;
+    return p === null ? '' : p.textContent!.trim();
+  }
+
+  it('abre com os valores atuais e a cor atual marcada, como "Editar matéria"', async () => {
+    await abrir();
+
+    expect(campo('Nome da matéria').value).toBe('Banco de Dados');
+    expect(campo('Sigla').value).toBe('BD');
+    expect(campo('Sala habitual').value).toBe('B-204');
+    expect(campo('Professor').value).toBe('prof. Marcos');
+    const marcadas = Array.from(
+      fixture.nativeElement.querySelectorAll('.cores-pick button'),
+    ).filter(
+      (b) => (b as HTMLElement).getAttribute('aria-pressed') === 'true',
+    ) as HTMLElement[];
+    expect(marcadas.map((b) => b.getAttribute('data-cor'))).toEqual([
+      PALETA[3].hex,
+    ]);
+    expect(fixture.nativeElement.textContent).toContain('Editar matéria');
+    expect(fixture.nativeElement.querySelector('.botao').textContent.trim())
+      .toBe('Salvar');
+  });
+
+  it('a paleta e a mesma de cadastrar: 12 cores', async () => {
+    await abrir();
+
+    expect(
+      fixture.nativeElement.querySelectorAll('.cores-pick button').length,
+    ).toBe(PALETA.length);
+  });
+
+  it('nao mostra o formulario antes de ler a materia: salvar em branco apagaria tudo', () => {
+    fixture.detectChanges();
+
+    expect(campo('Nome da matéria')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.botao')).toBeNull();
+    backend.expectOne(URL_MATERIA).flush(DETALHE);
+  });
+
+  it('falha ao ler a materia mostra o erro e nao oferece formulario', async () => {
+    fixture.detectChanges();
+    backend
+      .expectOne(URL_MATERIA)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await assentar();
+
+    expect(erroNaTela()).not.toBe('');
+    expect(campo('Nome da matéria')).toBeNull();
+  });
+
+  it('salvar manda PATCH com os cinco campos, recarrega a lista e volta para a materia', async () => {
+    await abrir();
+    campo('Nome da matéria').value = '  Banco de Dados II ';
+    campo('Sigla').value = 'bd2';
+    campo('Sala habitual').value = '';
+    (
+      fixture.nativeElement.querySelectorAll(
+        '.cores-pick button',
+      )[7] as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    salvar();
+
+    const req = backend.expectOne(URL_MATERIA);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.headers.has('If-Match'))
+      .withContext('materia nao tem version: nada de If-Match')
+      .toBeFalse();
+    expect(req.request.body).toEqual({
+      nome: 'Banco de Dados II',
+      sigla: 'BD2',
+      corHex: PALETA[7].hex,
+      sala: null,
+      professor: 'prof. Marcos',
+    });
+    req.flush({ id: 'm1', nome: 'Banco de Dados II', sigla: 'BD2', corHex: PALETA[7].hex });
+    await assentar();
+
+    backend
+      .expectOne(
+        (r) => r.method === 'GET' && r.url === `${environment.apiUrl}/materias`,
+      )
+      .flush([]);
+    await assentar();
+    await assentar();
+
+    expect(irPara).toHaveBeenCalledWith('/tabs/materias/m1');
+  });
+
+  it('sigla repetida (409) mostra a mensagem do servidor e fica no formulario', async () => {
+    await abrir();
+    salvar();
+
+    backend.expectOne(URL_MATERIA).flush(
+      { detail: 'Ja existe uma materia com a sigla BD nesta turma.' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await assentar();
+
+    expect(erroNaTela()).toContain('sigla BD');
+    expect(irPara).not.toHaveBeenCalled();
+  });
+
+  it('nao-lider que chega pelo link leva 403 e ve o motivo', async () => {
+    await abrir();
+    salvar();
+
+    backend.expectOne(URL_MATERIA).flush(
+      { detail: 'Só o líder pode fazer isso.' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await assentar();
+
+    expect(erroNaTela()).toContain('líder');
   });
 });

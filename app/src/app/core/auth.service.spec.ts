@@ -64,3 +64,63 @@ describe('AuthService e os lembretes', () => {
     expect(console.error).toHaveBeenCalledTimes(2);
   });
 });
+
+/**
+ * O lider removeu a pessoa: a conta segue valida, a turma nao. O que era DA
+ * turma e vive no aparelho (lembretes e snapshot) sai junto.
+ */
+describe('AuthService.registrarTurma(null)', () => {
+  let esquecer: jasmine.Spy<() => Promise<void>>;
+  let limpar: jasmine.Spy<() => Promise<void>>;
+  let gravarSessao: jasmine.Spy;
+  let auth: AuthService;
+
+  beforeEach(() => {
+    esquecer = jasmine.createSpy('esquecer').and.resolveTo();
+    limpar = jasmine.createSpy('limpar').and.resolveTo();
+    gravarSessao = jasmine.createSpy('gravarSessao').and.resolveTo();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ApiService, useValue: {} },
+        {
+          provide: StorageService,
+          useValue: { gravarSessao, limpar, limparSessao: async () => {} },
+        },
+        { provide: NotificacoesService, useValue: { esquecer } },
+      ],
+    });
+    auth = TestBed.inject(AuthService);
+    auth.definirSessao(
+      'jwt',
+      { id: 'u1', nome: 'Otavio', email: 'o@exemplo.com' },
+      't1',
+    );
+  });
+
+  it('tira o vinculo mas mantem a sessao, gravando a ausencia em disco', async () => {
+    await auth.registrarTurma(null);
+
+    expect(auth.temTurma()).toBeFalse();
+    expect(auth.autenticado()).toBeTrue();
+    expect(gravarSessao).toHaveBeenCalledWith(
+      'jwt',
+      { id: 'u1', nome: 'Otavio', email: 'o@exemplo.com' },
+      null,
+    );
+  });
+
+  it('cancela os lembretes e apaga o snapshot da turma que ela perdeu', async () => {
+    await auth.registrarTurma(null);
+
+    expect(esquecer).toHaveBeenCalledTimes(1);
+    expect(limpar).toHaveBeenCalledTimes(1);
+  });
+
+  it('entrar numa turma NAO apaga nada', async () => {
+    await auth.registrarTurma('t2');
+
+    expect(esquecer).not.toHaveBeenCalled();
+    expect(limpar).not.toHaveBeenCalled();
+    expect(auth.turmaId()).toBe('t2');
+  });
+});

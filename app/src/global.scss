@@ -137,6 +137,15 @@
   border-radius: var(--r-sm);
 }
 
+/* "Ocultado. Desfazer": o aviso e o botao na mesma linha, para o polegar nao
+   ter de procurar a saida de um toque errado. */
+.alerta--desfazer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 /* Explicacao da regra: "so o autor edita", "o codigo vale para a turma toda".
    Texto corrido, sem caixa.
 

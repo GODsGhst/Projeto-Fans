@@ -7,6 +7,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ActivatedRoute,
+  Router,
   convertToParamMap,
   provideRouter,
 } from '@angular/router';
@@ -14,6 +15,7 @@ import { provideIonicAngular } from '@ionic/angular/standalone';
 
 import { environment } from '../../../environments/environment';
 import { erroHttpInterceptor } from '../../core/http-error.interceptor';
+import { StorageService } from '../../core/storage.service';
 import type {
   Evento,
   Material,
@@ -87,6 +89,7 @@ describe('MateriaPage', () => {
   let fixture: ComponentFixture<MateriaPage>;
   // O papel vem do repositorio da turma; aqui ele e so um sinal que o teste liga.
   const souLider = signal(false);
+  let irPara: jasmine.Spy;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -95,6 +98,15 @@ describe('MateriaPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
+        // A lista de materias (recarregada ao apagar) grava um snapshot no disco;
+        // aqui ele nao e o assunto, e nao pode vazar de um teste para outro.
+        {
+          provide: StorageService,
+          useValue: {
+            ler: async () => null,
+            mesclar: async () => undefined,
+          },
+        },
         {
           provide: TurmaRepository,
           useValue: { souLider, garantirCarregada: () => Promise.resolve() },
@@ -106,6 +118,7 @@ describe('MateriaPage', () => {
       ],
     });
     backend = TestBed.inject(HttpTestingController);
+    irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
     fixture = TestBed.createComponent(MateriaPage);
   });
 
@@ -118,9 +131,18 @@ describe('MateriaPage', () => {
     responder: (r: ReturnType<HttpTestingController['expectOne']>) => void,
   ) {
     fixture.detectChanges();
+    // O Ionic chama isto ao entrar na tela; o TestBed nao chama sozinho.
+    fixture.componentInstance.ionViewWillEnter();
     responder(backend.expectOne(`${environment.apiUrl}/materias/m1`));
     await fixture.whenStable();
     fixture.detectChanges();
+  }
+
+  /** Deixa as promessas encadeadas andarem sem depender de setTimeout (o relogio pode estar falso). */
+  async function microtarefas(): Promise<void> {
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
   }
 
   function textos(seletor: string): string[] {
@@ -350,6 +372,201 @@ describe('MateriaPage', () => {
         .withContext('falha de moderacao nunca em silencio')
         .not.toBeNull();
       expect(textos('app-material-linha .titulo')).toEqual(['Formas normais']);
+    });
+
+    describe('desfazer', () => {
+      const URL_OCULTAR = `${environment.apiUrl}/moderacao/material/a1/ocultar`;
+      const URL_REEXIBIR = `${environment.apiUrl}/moderacao/material/a1/reexibir`;
+      const URL_MATERIA = `${environment.apiUrl}/materias/m1`;
+
+      /** Abre como lider, oculta o material a1 e deixa a recarga da materia responder. */
+      async function ocultarA1(): Promise<void> {
+        souLider.set(true);
+        await abrir((r) => r.flush(COM_MATERIAL));
+        botao('Ocultar')!.click();
+        fixture.detectChanges();
+        botao('Ocultar da turma')!.click();
+        backend.expectOne(URL_OCULTAR).flush(null);
+        await microtarefas();
+        backend.expectOne(URL_MATERIA).flush(detalhe());
+        await microtarefas();
+        fixture.detectChanges();
+      }
+
+      it('logo depois de ocultar mostra "Ocultado. Desfazer"', async () => {
+        await ocultarA1();
+
+        expect(
+          (fixture.nativeElement.querySelector('.alerta--desfazer')
+            .textContent as string),
+        ).toContain('Ocultado.');
+        expect(botao('Desfazer')).toBeDefined();
+      });
+
+      it('Desfazer chama reexibir e traz o material de volta', async () => {
+        await ocultarA1();
+
+        botao('Desfazer')!.click();
+        const req = backend.expectOne(URL_REEXIBIR);
+        expect(req.request.method).toBe('POST');
+        req.flush(null);
+        await microtarefas();
+        // Recarrega em vez de recolocar na lista por conta propria (R14).
+        backend.expectOne(URL_MATERIA).flush(COM_MATERIAL);
+        await microtarefas();
+        fixture.detectChanges();
+
+        expect(textos('app-material-linha .titulo')).toEqual(['Formas normais']);
+        expect(botao('Desfazer'))
+          .withContext('desfeito: o aviso ja cumpriu o papel')
+          .toBeUndefined();
+      });
+
+      it('o aviso some sozinho depois de ~8 s', async () => {
+        jasmine.clock().install();
+        try {
+          await ocultarA1();
+          expect(botao('Desfazer')).toBeDefined();
+
+          jasmine.clock().tick(7999);
+          fixture.detectChanges();
+          expect(botao('Desfazer'))
+            .withContext('com 1 ms de sobra o desfazer ainda tem de estar la')
+            .toBeDefined();
+
+          jasmine.clock().tick(1);
+          fixture.detectChanges();
+          expect(botao('Desfazer')).toBeUndefined();
+        } finally {
+          jasmine.clock().uninstall();
+        }
+      });
+
+      it('Desfazer que falha mostra o erro, e a janela continua para tentar de novo', async () => {
+        await ocultarA1();
+
+        botao('Desfazer')!.click();
+        backend.expectOne(URL_REEXIBIR).flush(
+          { detail: 'Servidor fora do ar.' },
+          { status: 500, statusText: 'Server Error' },
+        );
+        await microtarefas();
+        fixture.detectChanges();
+
+        expect(
+          fixture.nativeElement.querySelector('.pf-erro'),
+        ).withContext('desfazer que falha nunca em silencio').not.toBeNull();
+        expect(botao('Desfazer')).toBeDefined();
+      });
+    });
+  });
+
+  describe('editar e apagar a materia (lider)', () => {
+    const URL_MATERIA = `${environment.apiUrl}/materias/m1`;
+
+    function botao(rotulo: string): HTMLButtonElement | undefined {
+      return (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.trim() === rotulo);
+    }
+
+    function linkEditar(): HTMLAnchorElement | undefined {
+      return (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('a'),
+        ) as HTMLAnchorElement[]
+      ).find((a) => a.textContent!.trim() === 'Editar matéria');
+    }
+
+    it('so o lider ve Editar e Apagar', async () => {
+      await abrir((r) => r.flush(detalhe()));
+      expect(linkEditar()).toBeUndefined();
+      expect(botao('Apagar matéria')).toBeUndefined();
+
+      souLider.set(true);
+      fixture.detectChanges();
+      expect(linkEditar()).toBeDefined();
+      expect(botao('Apagar matéria')).toBeDefined();
+    });
+
+    it('Editar leva ao formulario da propria materia', async () => {
+      souLider.set(true);
+      await abrir((r) => r.flush(detalhe()));
+
+      expect(linkEditar()!.getAttribute('href')).toBe(
+        '/tabs/materias/m1/editar',
+      );
+    });
+
+    it('matéria que falhou ao carregar nao oferece apagar o que nao se ve', async () => {
+      souLider.set(true);
+      await abrir((r) => r.error(new ProgressEvent('error')));
+
+      expect(linkEditar()).toBeUndefined();
+      expect(botao('Apagar matéria')).toBeUndefined();
+    });
+
+    it('pergunta antes de apagar e nao chama nada ate confirmar', async () => {
+      souLider.set(true);
+      await abrir((r) => r.flush(detalhe()));
+
+      botao('Apagar matéria')!.click();
+      fixture.detectChanges();
+
+      backend.expectNone(URL_MATERIA);
+      expect(fixture.nativeElement.querySelector('.alerta').textContent)
+        .withContext('a pergunta diz qual materia vai embora')
+        .toContain('Banco de Dados');
+
+      botao('Cancelar')!.click();
+      fixture.detectChanges();
+      backend.expectNone(URL_MATERIA);
+      expect(fixture.nativeElement.querySelector('.alerta')).toBeNull();
+    });
+
+    it('confirmar apaga pela rota certa, recarrega a lista e volta para as materias', async () => {
+      souLider.set(true);
+      await abrir((r) => r.flush(detalhe()));
+      botao('Apagar matéria')!.click();
+      fixture.detectChanges();
+
+      botao('Apagar matéria')!.click();
+      const del = backend.expectOne(URL_MATERIA);
+      expect(del.request.method).toBe('DELETE');
+      del.flush(null, { status: 204, statusText: 'No Content' });
+      await microtarefas();
+
+      // Antes de voltar: senao a aba ainda mostra a materia que acabou de sumir.
+      backend
+        .expectOne(
+          (r) => r.method === 'GET' && r.url === `${environment.apiUrl}/materias`,
+        )
+        .flush([]);
+      await microtarefas();
+
+      expect(irPara).toHaveBeenCalledWith('/tabs/materias');
+    });
+
+    it('materia com conteudo (409) mostra a mensagem do servidor e fica na tela', async () => {
+      souLider.set(true);
+      await abrir((r) => r.flush(detalhe()));
+      botao('Apagar matéria')!.click();
+      fixture.detectChanges();
+      botao('Apagar matéria')!.click();
+
+      backend.expectOne(URL_MATERIA).flush(
+        { detail: 'Mova ou apague as provas e materiais antes' },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await microtarefas();
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelector('.pf-erro').textContent,
+      ).toContain('Mova ou apague as provas e materiais antes');
+      expect(irPara).not.toHaveBeenCalled();
     });
   });
 });

@@ -370,12 +370,14 @@ describe('EventoPage', () => {
     fixture.detectChanges();
 
     // NAO navega para fora: ocultar tira o evento da vista do proprio lider, e
-    // ao sair desta tela ele leva 404. Este instante e a unica janela de desfazer.
+    // ao sair desta tela ele leva 404. Ficar aqui deixa o desfazer a um toque.
     // Se tivesse navegado para fora, este aviso nao estaria em tela.
-    expect(fixture.nativeElement.textContent as string).toContain('desfazer');
+    expect(fixture.nativeElement.textContent as string).toContain(
+      'Ocultado. Desfazer',
+    );
   });
 
-  it('desfazer devolve o evento a turma — a unica janela em que isso e possivel', async () => {
+  it('desfazer devolve o evento a turma enquanto a janela esta aberta', async () => {
     liderancaMinha.set(true);
     usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });
     await abrir((r) => r.flush(detalhe([])));
@@ -424,6 +426,52 @@ describe('EventoPage', () => {
         ) as HTMLButtonElement[]
       ).find((b) => b.textContent!.includes('Ocultar')),
     ).toBeDefined();
+  });
+
+  it('o "Desfazer" do ocultar dura ~8 s; depois, o aviso aponta para "Ocultados" na turma', async () => {
+    liderancaMinha.set(true);
+    usuarioAtual.set({ id: 'outro', nome: 'Ana', email: 'ana@exemplo.com' });
+    jasmine.clock().install();
+    try {
+      await abrir((r) => r.flush(detalhe([])));
+      const botoes = () =>
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[];
+      botoes()
+        .find((b) => b.textContent!.includes('Ocultar'))!
+        .click();
+      fixture.detectChanges();
+      botoes()
+        .find((b) => b.textContent!.trim() === 'Ocultar da turma')!
+        .click();
+      backend
+        .expectOne(`${environment.apiUrl}/moderacao/evento/e1/ocultar`)
+        .flush(null);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(
+        botoes().find((b) => b.textContent!.trim() === 'Desfazer'),
+      ).toBeDefined();
+      expect(
+        fixture.nativeElement.querySelector('.alerta--desfazer').textContent,
+      ).toContain('Ocultado.');
+
+      jasmine.clock().tick(8000);
+      fixture.detectChanges();
+
+      expect(botoes().find((b) => b.textContent!.trim() === 'Desfazer'))
+        .withContext('passada a janela o botao some')
+        .toBeUndefined();
+      const aviso = fixture.nativeElement.querySelector('.alerta')
+        .textContent as string;
+      expect(aviso)
+        .withContext('mas o caminho de volta continua dito: nao fica sem saida')
+        .toContain('Ocultados');
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
 
   it('quem nao criou descobre a regra ANTES de procurar o botao', async () => {

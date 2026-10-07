@@ -73,4 +73,19 @@ export class MateriaRepository {
   criar(req: CriarMateriaRequest): Promise<Materia> {
     return this.api.post<Materia>('/materias', req);
   }
+
+  /**
+   * Edita a matéria. Só o líder (403 para os outros, inclusive quem a criou).
+   *
+   * Sem `If-Match`: `materia` não tem coluna `version`. O PATCH substitui tudo,
+   * então vão os cinco campos, inclusive os que não mudaram.
+   */
+  atualizar(id: string, req: CriarMateriaRequest): Promise<Materia> {
+    return this.api.patch<Materia>(`/materias/${id}`, req);
+  }
+
+  /** Só o líder, e só matéria vazia: com prova ou material o servidor responde 409. */
+  apagar(id: string): Promise<void> {
+    return this.api.delete<void>(`/materias/${id}`);
+  }
 }

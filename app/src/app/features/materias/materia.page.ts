@@ -6,9 +6,10 @@ import {
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { JanelaDesfazer } from '../../core/janela-desfazer';
 import {
   IonBackButton,
   IonButtons,
@@ -38,6 +39,10 @@ import { materialVm } from '../material-vm';
  * Renderiza na ordem que veio de `GET /materias/{id}`. Nao ordena, nao filtra e
  * nao corta: quem decide o que e visivel e o servidor, e registro oculto ja nao
  * chega aqui (R14).
+ *
+ * O líder, além de ocultar material, edita e apaga a MATÉRIA. É o único papel
+ * que mexe nela — nem quem a cadastrou —, porque a sigla e a cor aparecem em
+ * toda prova da turma e mudar uma muda a tela de todo mundo.
  */
 @Component({
   selector: 'app-materia',
@@ -71,6 +76,27 @@ import { materialVm } from '../material-vm';
           <p class="pf-aviso">Carregando…</p>
         } @else if (erro(); as e) {
           <p class="pf-aviso">{{ e }}</p>
+        }
+
+        <!-- Ocultar é um toque só; o desfazer dura alguns segundos. Depois,
+             o caminho de volta é "Ocultados", na tela da turma. -->
+        @if (janela.aberta()) {
+          @if (ocultadoAgora(); as o) {
+            <div class="alerta alerta--desfazer" role="status">
+              <span>Ocultado.</span>
+              <button
+                class="botao botao--fio botao--pilula"
+                type="button"
+                [disabled]="desfazendo()"
+                (click)="desfazer(o)"
+              >
+                {{ desfazendo() ? 'Desfazendo…' : 'Desfazer' }}
+              </button>
+            </div>
+            @if (erroDoDesfazer(); as e) {
+              <p class="pf-erro" role="alert">{{ e }}</p>
+            }
+          }
         }
 
         @if (ondeEQuem(); as linha) {
@@ -265,6 +291,52 @@ import { materialVm } from '../material-vm';
             </span>
           </div>
         }
+
+        <!-- Só o líder, e só com a matéria na tela: o convite a apagar nomeia o
+             que vai embora, e matéria que falhou ao carregar não tem nome. -->
+        @if (souLider() && carregada()) {
+          <a
+            class="botao botao--fantasma"
+            [routerLink]="['/tabs/materias', id, 'editar']"
+          >
+            Editar matéria
+          </a>
+          @if (confirmandoApagar()) {
+            <p class="alerta" role="status">
+              Apagar <b>{{ nome() }}</b> da turma? Não tem volta. Só dá para
+              apagar matéria sem provas nem materiais.
+            </p>
+            @if (erroDeApagar(); as e) {
+              <p class="pf-erro" role="alert">{{ e }}</p>
+            }
+            <span class="confirmar">
+              <button
+                class="botao botao--fio botao--pilula"
+                type="button"
+                [disabled]="apagando()"
+                (click)="apagar()"
+              >
+                {{ apagando() ? 'Apagando…' : 'Apagar matéria' }}
+              </button>
+              <button
+                class="botao botao--fio botao--pilula"
+                type="button"
+                [disabled]="apagando()"
+                (click)="confirmandoApagar.set(false)"
+              >
+                Cancelar
+              </button>
+            </span>
+          } @else {
+            <button
+              class="botao botao--fantasma"
+              type="button"
+              (click)="pedirApagar()"
+            >
+              Apagar matéria
+            </button>
+          }
+        }
       </div>
     </ion-content>
   `,
@@ -354,6 +426,7 @@ export class MateriaPage {
   private readonly detalhe = signal<MateriaDetalhe | null>(null);
   protected readonly carregando = signal(true);
   protected readonly erro = signal<string | null>(null);
+  protected readonly carregada = computed(() => this.detalhe() !== null);
 
   protected readonly nome = computed(
     () => this.detalhe()?.materia.nome ?? 'Matéria',
@@ -398,11 +471,35 @@ export class MateriaPage {
   protected readonly moderando = signal(false);
   protected readonly erroDaModeracao = signal<string | null>(null);
 
+  private readonly router = inject(Router);
+  protected readonly confirmandoApagar = signal(false);
+  protected readonly apagando = signal(false);
+  protected readonly erroDeApagar = signal<string | null>(null);
+
+  /** O último material ocultado, enquanto o "Desfazer" está na tela. */
+  protected readonly janela = new JanelaDesfazer();
+  protected readonly ocultadoAgora = signal<string | null>(null);
+  protected readonly erroDoDesfazer = signal<string | null>(null);
+  /** Separado de `moderando`: este so acende no desfazer, nao na recarga do ocultar. */
+  protected readonly desfazendo = signal(false);
+
   constructor() {
     const id = inject(ActivatedRoute).snapshot.paramMap.get('id');
     this.id = id ?? '';
-    void this.carregar(id ?? '');
     void this.turmas.garantirCarregada();
+  }
+
+  /**
+   * Busca o detalhe a cada entrada, não só quando o componente nasce.
+   *
+   * O Ionic reaproveita a tela que já está na pilha quando se navega para a
+   * mesma URL — e é exatamente o que "Editar matéria" faz ao salvar e voltar.
+   * Com a carga no `constructor`, a pessoa salvaria o novo nome e veria o antigo,
+   * e concluiria que não salvou. A carga saiu do `constructor` (não ficou nos
+   * dois) porque `ionViewWillEnter` roda também na primeira entrada.
+   */
+  ionViewWillEnter(): void {
+    void this.carregar(this.id);
   }
 
   protected pedirConfirmacao(id: string): void {
@@ -426,6 +523,9 @@ export class MateriaPage {
     try {
       await this.moderacao.ocultar('material', materialId, null);
       this.confirmandoOcultar.set(null);
+      this.ocultadoAgora.set(materialId);
+      this.erroDoDesfazer.set(null);
+      this.janela.abrir();
       // Recarrega em vez de filtrar aqui: quem decide o que é visível é o
       // servidor (R14), e a tela não replica essa regra.
       await this.carregar(this.id);
@@ -438,9 +538,66 @@ export class MateriaPage {
     }
   }
 
+  /** Desfaz o ocultar enquanto a janela está aberta. Depois, é pela tela da turma. */
+  protected async desfazer(materialId: string): Promise<void> {
+    if (this.desfazendo() || this.moderando()) {
+      return;
+    }
+    this.desfazendo.set(true);
+    this.erroDoDesfazer.set(null);
+    try {
+      await this.moderacao.reexibir('material', materialId);
+      this.janela.fechar();
+      await this.carregar(this.id);
+    } catch (e) {
+      // A janela continua aberta: o material segue oculto, e a pessoa pode tentar
+      // de novo. O erro aparece junto do aviso, onde a pessoa está olhando.
+      this.erroDoDesfazer.set(mensagemDeErro(e));
+    } finally {
+      this.desfazendo.set(false);
+    }
+  }
+
+  protected pedirApagar(): void {
+    this.erroDeApagar.set(null);
+    this.confirmandoApagar.set(true);
+  }
+
+  /**
+   * Apaga a matéria. O servidor só deixa se ela estiver vazia: com prova ou
+   * material ele responde 409 com a frase pronta, e é ela que aparece.
+   */
+  protected async apagar(): Promise<void> {
+    if (this.apagando()) {
+      return;
+    }
+    this.apagando.set(true);
+    this.erroDeApagar.set(null);
+    try {
+      await this.repo.apagar(this.id);
+    } catch (e) {
+      // A pergunta fica aberta com o motivo: a matéria continua existindo, e a
+      // tela não pode sugerir o contrário.
+      this.erroDeApagar.set(mensagemDeErro(e));
+      return;
+    } finally {
+      this.apagando.set(false);
+    }
+    // Recarrega a lista ANTES de voltar: sem isto a aba Materias ainda mostra a
+    // que acabou de sumir. Falhar aqui não traz a pessoa de volta (a matéria já
+    // foi): o repositório guarda o erro e a aba o mostra.
+    await this.repo
+      .carregar()
+      .catch((e: unknown) =>
+        console.error('[materia] falha ao recarregar as matérias', e),
+      );
+    await this.router.navigateByUrl('/tabs/materias');
+  }
+
   private async carregar(id: string): Promise<void> {
     try {
       this.detalhe.set(await this.repo.detalhe(id));
+      this.erro.set(null);
     } catch (e) {
       // Nunca virar "esta materia nao tem nada": falhar ao buscar e outra tela.
       this.erro.set(

@@ -266,6 +266,100 @@ describe('CalendarioPage', () => {
     ).toBeDefined();
   });
 
+  describe('desfazer ocultar a anotacao', () => {
+    const NOTA_DA_TURMA = {
+      id: 'n-turma',
+      alcance: 'TURMA',
+      data: '2026-08-12',
+      texto: 'aula cancelada quinta',
+      autorId: 'u2',
+      autorNome: 'Ana',
+      criadoEm: '2026-08-01T12:00:00Z',
+      atualizadoEm: '2026-08-01T12:00:00Z',
+      version: 0,
+      visivelTurma: true,
+    };
+
+    function botao(rotulo: string): HTMLButtonElement | undefined {
+      return (
+        Array.from(
+          fixture.nativeElement.querySelectorAll('button'),
+        ) as HTMLButtonElement[]
+      ).find((b) => b.textContent!.trim() === rotulo);
+    }
+
+    async function ocultar(): Promise<void> {
+      await abrir((r) => r.flush([]), [NOTA_DA_TURMA], 'LIDER');
+      botao('Ocultar da turma')!.click();
+      backend
+        .expectOne((r) => r.url.endsWith('/moderacao/nota/n-turma/ocultar'))
+        .flush(null);
+      await fixture.whenStable();
+      // O servidor ja nao manda a oculta: a tela recarrega em vez de filtrar.
+      backend.expectOne((r) => r.url.endsWith('/notas')).flush([]);
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('logo depois de ocultar mostra "Ocultado. Desfazer"', async () => {
+      await ocultar();
+
+      expect(
+        fixture.nativeElement.querySelector('.alerta--desfazer').textContent,
+      ).toContain('Ocultado.');
+      expect(botao('Desfazer')).toBeDefined();
+    });
+
+    it('Desfazer chama reexibir da nota e recarrega as anotacoes', async () => {
+      await ocultar();
+
+      botao('Desfazer')!.click();
+      const req = backend.expectOne((r) =>
+        r.url.endsWith('/moderacao/nota/n-turma/reexibir'),
+      );
+      expect(req.request.method).toBe('POST');
+      req.flush(null);
+      await fixture.whenStable();
+      backend.expectOne((r) => r.url.endsWith('/notas')).flush([NOTA_DA_TURMA]);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('aula cancelada quinta');
+      expect(botao('Desfazer')).toBeUndefined();
+    });
+
+    it('Desfazer que falha mostra o erro e a janela continua', async () => {
+      await ocultar();
+
+      botao('Desfazer')!.click();
+      backend
+        .expectOne((r) => r.url.endsWith('/moderacao/nota/n-turma/reexibir'))
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.pf-erro'))
+        .withContext('desfazer que falha nunca em silencio')
+        .not.toBeNull();
+      expect(botao('Desfazer')).toBeDefined();
+    });
+
+    it('o aviso some sozinho depois de ~8 s', async () => {
+      jasmine.clock().install();
+      try {
+        await ocultar();
+        expect(botao('Desfazer')).toBeDefined();
+
+        jasmine.clock().tick(8000);
+        fixture.detectChanges();
+
+        expect(botao('Desfazer')).toBeUndefined();
+      } finally {
+        jasmine.clock().uninstall();
+      }
+    });
+  });
+
   it('aluno comum nao ve o botao de ocultar', async () => {
     await abrir(
       (r) => r.flush([]),

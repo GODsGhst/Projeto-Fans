@@ -129,13 +129,22 @@ export class AuthService {
   /**
    * Chamado tambem por quem CRIA a turma — criar tambem vincula, e esquecer isso
    * deixaria o proprio lider preso na tela de entrar na turma.
+   *
+   * `null` e a pessoa que o lider removeu: a conta continua valida, a turma nao.
+   * Alem do vinculo, sai o que era DA turma e vive no aparelho — o snapshot
+   * offline e os lembretes agendados. Sem isto ela continuaria recebendo aviso de
+   * prova de uma turma em que nao esta mais (e o alarme nao sabe disso).
    */
-  async registrarTurma(turmaId: string): Promise<void> {
+  async registrarTurma(turmaId: string | null): Promise<void> {
     this._turmaId.set(turmaId);
     const usuario = this._usuario();
     const jwt = this._token();
     if (jwt !== null && usuario !== null) {
       await this.storage.gravarSessao(jwt, usuario, turmaId);
+    }
+    if (turmaId === null) {
+      this.esquecerLembretes();
+      await this.storage.limpar();
     }
   }
 
