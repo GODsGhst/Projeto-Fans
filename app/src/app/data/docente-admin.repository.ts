@@ -12,6 +12,12 @@ export interface DocenteAdmin {
   docenteStatus: DocenteStatus;
   /** Quando a conta foi criada — o servidor nao devolve a data da decisao. */
   criadoEm: string;
+  /**
+   * Hoje o servidor devolve sempre `false`: o cadastro nao verifica o e-mail, e
+   * qualquer pessoa pode se cadastrar com o endereco de outra. A tela avisa o admin
+   * antes de aprovar (A27); quando houver verificacao, o valor passa a vir verdadeiro.
+   */
+  emailVerificado: boolean;
 }
 
 /**

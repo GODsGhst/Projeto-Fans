@@ -72,7 +72,7 @@ public class MateriaService {
                 MateriaResponse.de(materia),
                 materiaisPorTipo(materia, TipoMaterial.AULA, autoria),
                 materiaisPorTipo(materia, TipoMaterial.ADICIONAL, autoria),
-                eventos.visiveisDaMateria(materia.getId()).stream()
+                eventos.visiveisDaMateria(materia.getTurmaId(), materia.getId()).stream()
                         .map(e -> EventoResponse.de(e, materia, autoria.de(e)))
                         .toList());
     }
@@ -172,7 +172,7 @@ public class MateriaService {
 
     private List<MaterialResponse> materiaisPorTipo(Materia materia, TipoMaterial tipo,
                                                     Autorias.Listagem autoria) {
-        return materiais.visiveisDaMateriaPorTipo(materia.getId(), tipo).stream()
+        return materiais.visiveisDaMateriaPorTipo(materia.getTurmaId(), materia.getId(), tipo).stream()
                 .map(m -> MaterialResponse.de(m, autoria.de(m)))
                 .toList();
     }

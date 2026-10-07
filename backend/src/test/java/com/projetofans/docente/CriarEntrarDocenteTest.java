@@ -89,7 +89,7 @@ class CriarEntrarDocenteTest extends TesteDeApi {
     }
 
     @Test
-    @DisplayName("P14 — docente cria quantas turmas quiser: a guarda de vinculo unico e so de ALUNO")
+    @DisplayName("P14 — docente cria mais de uma turma: a guarda de vinculo unico e so de ALUNO (o teto de 3 sem aprovacao esta em LimitesDoCadastroDocenteTest)")
     void docenteCriaMaisDeUmaTurma() throws Exception {
         Usuario docente = docente(TipoConta.PROFESSOR);
 

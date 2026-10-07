@@ -143,6 +143,15 @@ import { mensagemDeErro } from '../auth/erro';
           </span>
         </div>
 
+        <!-- O cadastro docente nao verifica o e-mail: quem se cadastra pode usar o
+             endereco de outra pessoa, e o admin decide olhando para ele. Texto,
+             nao so cor, e so na fila: e antes de APROVAR que importa. -->
+        @if (d.docenteStatus === 'PENDENTE' && !d.emailVerificado) {
+          <p class="alerta aviso-email" role="note">
+            <b>E-mail não verificado:</b> confirme com a pessoa antes de aprovar
+          </p>
+        }
+
         @if (revogando() === d.usuarioId) {
           <div
             class="confirma"
@@ -277,6 +286,12 @@ import { mensagemDeErro } from '../auth/erro';
       margin-top: 2px;
       font-size: 11.5px;
       color: var(--ink-3);
+    }
+    .aviso-email {
+      margin: 0;
+    }
+    .aviso-email b {
+      color: var(--ink);
     }
     .acoes {
       display: flex;

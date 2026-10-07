@@ -75,10 +75,13 @@ public class MaterialService {
     public MaterialResponse atualizar(UsuarioAtual usuario, UUID materialId,
                                       int versionEsperada, AtualizarMaterialRequest req) {
         Material material = daTurmaDoUsuario(usuario, materialId);
+        // A materia de destino e escopo, e escopo vem antes de poder: materia de
+        // OUTRA turma (inclusive uma em que a pessoa tambem e membro) e 404 para
+        // autor, professor e coordenador por igual. Ver materiaDaTurmaDoMaterial.
+        Materia materia = materiaDaTurmaDoMaterial(material, req.materiaId());
         // Autor OU docente com alcance na materia de origem E destino.
-        exigirAutorOuAlcance(usuario, material, req.materiaId());
+        exigirAutorOuAlcance(usuario, material, materia.getId());
         exigirVersao(material, versionEsperada);
-        Materia materia = materiaDaTurmaDoUsuario(usuario, req.materiaId());
 
         revisoes.registrar(RegistroTipo.MATERIAL, material.getId(), usuario.usuarioId(),
                 AcaoRevisao.EDITAR, material);
@@ -126,9 +129,27 @@ public class MaterialService {
         return material;
     }
 
+    /**
+     * Criar: a turma do material nasce da materia, entao so a pertenca a turma
+     * da materia importa (o docente cria em qualquer turma dele sem trocar a ativa).
+     */
     private Materia materiaDaTurmaDoUsuario(UsuarioAtual usuario, UUID materiaId) {
         Materia materia = materias.findById(materiaId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), materia.getTurmaId());
+        return materia;
+    }
+
+    /**
+     * Editar: a materia nova tem de ser da turma do MATERIAL. Antes bastava ser
+     * membro da turma da materia, e o PATCH levava o material da turma A para uma
+     * materia da B — conteudo de A aparecendo na tela de materia de B. Como a
+     * pessoa ja e membro da turma do material, a igualdade de turma cobre a pertenca.
+     */
+    private Materia materiaDaTurmaDoMaterial(Material material, UUID materiaId) {
+        Materia materia = materias.findById(materiaId).orElseThrow(AcessoNegadoException::new);
+        if (!materia.getTurmaId().equals(material.getTurmaId())) {
+            throw new AcessoNegadoException();
+        }
         return materia;
     }
 

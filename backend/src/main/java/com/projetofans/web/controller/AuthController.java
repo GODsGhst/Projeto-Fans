@@ -35,6 +35,8 @@ public class AuthController {
 
     @PostMapping("/registrar")
     public AuthResponse registrar(@Valid @RequestBody RegistrarRequest pedido) {
+        // Antes de qualquer consulta: o teto nao pode depender de a conta existir.
+        limite.registrar(pedido.email());
         return auth.registrar(pedido.nome(), pedido.email(), pedido.senha(), pedido.tipoConta());
     }
 

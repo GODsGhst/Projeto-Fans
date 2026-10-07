@@ -20,6 +20,8 @@ function docente(
     tipoConta,
     docenteStatus: status,
     criadoEm: '2026-10-05T14:00:00Z',
+    // O servidor devolve sempre false enquanto nao houver verificacao de e-mail.
+    emailVerificado: false,
   };
 }
 
@@ -109,6 +111,22 @@ describe('AdminPage', () => {
     expect(cartao('Renata').textContent).toContain('renata@exemplo.edu.br');
     // Recusados ficam recolhidos: aparecem a um toque, nao poluem a fila.
     expect(el().querySelector('details')!.open).toBeFalse();
+  });
+
+  it('cada pendente traz o aviso de e-mail nao verificado; aprovado e recusado nao', async () => {
+    await listas([RENATA, PAULO], [MARCOS], [DIEGO]);
+
+    const aviso = 'E-mail não verificado: confirme com a pessoa antes de aprovar';
+    expect(cartao('Renata').textContent).toContain(aviso);
+    expect(cartao('Paulo').textContent).toContain(aviso);
+    expect(cartao('Marcos').textContent).not.toContain('E-mail não verificado');
+    expect(cartao('Diego').textContent).not.toContain('E-mail não verificado');
+  });
+
+  it('pendente com e-mail verificado (quando o servidor passar a dizer) nao leva o aviso', async () => {
+    await listas([{ ...RENATA, emailVerificado: true }], [], []);
+
+    expect(cartao('Renata').textContent).not.toContain('E-mail não verificado');
   });
 
   it('fila vazia diz "Ninguém na fila", e so depois de carregar', async () => {

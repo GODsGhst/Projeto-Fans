@@ -183,17 +183,17 @@ class ModeracaoTest extends TesteDeApi {
     void registroOcultoNaoApareceNaTelaDeMateria() throws Exception {
         Evento prova = evento(autor, "P2", 6);
         Material aula = material(autor, "slides-aula-3");
-        assertThat(eventos.visiveisDaMateria(materia.getId()))
+        assertThat(eventos.visiveisDaMateria(turma.getId(), materia.getId()))
                 .extracting(Evento::getId).contains(prova.getId());
-        assertThat(materiais.visiveisDaMateriaPorTipo(materia.getId(), TipoMaterial.AULA))
+        assertThat(materiais.visiveisDaMateriaPorTipo(turma.getId(), materia.getId(), TipoMaterial.AULA))
                 .extracting(Material::getId).contains(aula.getId());
 
         ocultar(lider, "evento", prova.getId(), 200);
         ocultar(lider, "material", aula.getId(), 200);
 
-        assertThat(eventos.visiveisDaMateria(materia.getId()))
+        assertThat(eventos.visiveisDaMateria(turma.getId(), materia.getId()))
                 .extracting(Evento::getId).doesNotContain(prova.getId());
-        assertThat(materiais.visiveisDaMateriaPorTipo(materia.getId(), TipoMaterial.AULA))
+        assertThat(materiais.visiveisDaMateriaPorTipo(turma.getId(), materia.getId(), TipoMaterial.AULA))
                 .extracting(Material::getId).doesNotContain(aula.getId());
     }
 

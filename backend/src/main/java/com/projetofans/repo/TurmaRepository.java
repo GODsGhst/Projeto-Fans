@@ -11,4 +11,7 @@ public interface TurmaRepository extends JpaRepository<Turma, UUID> {
     Optional<Turma> findByCodigoConvite(String codigoConvite);
 
     boolean existsByCodigoConvite(String codigoConvite);
+
+    /** Quantas turmas esta conta criou (V10); o teto do docente nao aprovado le daqui. */
+    long countByCriadaPor(UUID usuarioId);
 }

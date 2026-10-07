@@ -115,6 +115,20 @@ class AdminDocentesTest extends TesteDeApi {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @DisplayName("a fila diz emailVerificado=false em toda conta: nao ha verificacao de e-mail ainda")
+    void filaDizQueOEmailNaoFoiVerificado() throws Exception {
+        novoDocente("Prof", TipoConta.PROFESSOR);
+
+        JsonNode fila = json.readTree(lista(admin, "").andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        assertThat(fila).isNotEmpty();
+        fila.forEach(item -> assertThat(item.get("emailVerificado").asBoolean())
+                .as("campo presente e falso").isFalse());
+        assertThat(fila.get(0).has("emailVerificado")).isTrue();
+    }
+
     // ---- aprovar / recusar -----------------------------------------------------
 
     @Test
@@ -248,7 +262,8 @@ class AdminDocentesTest extends TesteDeApi {
         assertThat(linha.get("criadoEm").asText()).isNotBlank();
         assertThat(linha.has("senhaHash")).isFalse();
         assertThat(linha.has("googleSub")).isFalse();
-        assertThat(linha.size()).isEqualTo(6);
+        assertThat(linha.get("emailVerificado").asBoolean()).isFalse();
+        assertThat(linha.size()).isEqualTo(7);
     }
 
     @Test

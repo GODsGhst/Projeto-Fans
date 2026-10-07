@@ -3,8 +3,10 @@ package com.projetofans.turma;
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
 import com.projetofans.domain.Turma;
+import com.projetofans.repo.ContestacaoDocenteRepository;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MembroRepository;
+import com.projetofans.repo.ProfessorMateriaRepository;
 import com.projetofans.repo.TurmaRepository;
 import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.PoderNaTurma;
@@ -58,7 +60,8 @@ class CodigoDeConviteUnicoTest {
         // trocarCodigo devolve a turma montada (minha), que agora consulta os docentes.
         when(poder.daTurma(turmaId)).thenReturn(PoderNaTurma.Docentes.vazio());
 
-        new TurmaService(turmas, membros, usuarios, escopo, materias, poder)
+        new TurmaService(turmas, membros, usuarios, escopo, materias, poder,
+                mock(ContestacaoDocenteRepository.class), mock(ProfessorMateriaRepository.class))
                 .trocarCodigo(new UsuarioAtual(liderId, "Lia"));
 
         // Dois sorteios recusados, o terceiro aceito.

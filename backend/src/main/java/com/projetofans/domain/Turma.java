@@ -36,6 +36,14 @@ public class Turma {
     @Column(name = "criado_em", nullable = false, insertable = false, updatable = false)
     private Instant criadoEm;
 
+    /**
+     * Quem criou a turma; nulo em turma anterior a V10. Base do teto de criacao da
+     * conta docente nao aprovada: vinculo nao serve para contar, porque entrar por
+     * codigo tambem gera vinculo docente.
+     */
+    @Column(name = "criada_por", updatable = false)
+    private UUID criadaPor;
+
     protected Turma() {
     }
 
@@ -48,6 +56,11 @@ public class Turma {
         this.semestre = emBrancoViraNulo(semestre);
         this.atualizadoEm = Instant.now();
         this.codigoConvite = codigoConvite;
+    }
+
+    public Turma(UUID id, String nome, String semestre, String codigoConvite, UUID criadaPor) {
+        this(id, nome, semestre, codigoConvite);
+        this.criadaPor = criadaPor;
     }
 
     public UUID getId() {

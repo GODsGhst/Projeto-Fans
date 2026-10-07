@@ -101,10 +101,13 @@ public class EventoService {
     public EventoResponse atualizar(UsuarioAtual usuario, UUID eventoId,
                                     int versionEsperada, AtualizarEventoRequest req) {
         Evento evento = daTurmaDoUsuario(usuario, eventoId);
+        // A materia de destino e escopo, e escopo vem antes de poder: materia de
+        // OUTRA turma (inclusive uma em que a pessoa tambem e membro) e 404 para
+        // autor, professor e coordenador por igual. Ver materiaDaTurmaDoEvento.
+        Materia materia = materiaDaTurmaDoEvento(evento, req.materiaId());
         // Autor OU docente com alcance na materia de origem E destino.
-        exigirAutorOuAlcance(usuario, evento, req.materiaId());
+        exigirAutorOuAlcance(usuario, evento, materia.getId());
         exigirVersao(evento, versionEsperada);
-        Materia materia = materiaDaTurmaDoUsuario(usuario, req.materiaId());
 
         // Antes de aplicar: o snapshot precisa ser o estado ANTERIOR.
         revisoes.registrar(RegistroTipo.EVENTO, evento.getId(), usuario.usuarioId(),
@@ -159,7 +162,7 @@ public class EventoService {
         Evento evento = daTurmaDoUsuario(usuario, eventoId);
         // Evento e materiais vinculados sao da mesma turma: uma leitura de docentes so.
         Autorias.Listagem autoria = autorias.daListagem();
-        List<MaterialResponse> vinculados = materiais.vinculadosAoEvento(eventoId).stream()
+        List<MaterialResponse> vinculados = materiais.vinculadosAoEvento(eventoId, evento.getTurmaId()).stream()
                 .map(m -> MaterialResponse.de(m, autoria.de(m)))
                 .toList();
         return new EventoDetalheResponse(resposta(evento, autoria), vinculados);
@@ -183,7 +186,7 @@ public class EventoService {
     @Transactional
     public void vincularMaterial(UsuarioAtual usuario, UUID eventoId, UUID materialId) {
         Evento evento = daTurmaDoUsuario(usuario, eventoId);
-        Material material = materialDaTurmaDoUsuario(usuario, materialId);
+        Material material = materialDaTurmaDoEvento(usuario, evento, materialId);
         if (vinculos.existsByChaveEventoIdAndChaveMaterialId(evento.getId(), material.getId())) {
             return;
         }
@@ -208,7 +211,7 @@ public class EventoService {
         Evento evento = daTurmaDoUsuario(usuario, eventoId);
         // Autor OU docente com alcance na materia do evento.
         exigirAutorOuAlcance(usuario, evento, evento.getMateriaId());
-        Material material = materialDaTurmaDoUsuario(usuario, materialId);
+        Material material = materialDaTurmaDoEvento(usuario, evento, materialId);
         vinculos.deleteByChaveEventoIdAndChaveMaterialId(evento.getId(), material.getId());
     }
 
@@ -231,18 +234,48 @@ public class EventoService {
         return evento;
     }
 
-    private Material materialDaTurmaDoUsuario(UsuarioAtual usuario, UUID materialId) {
+    /**
+     * O material precisa ser da MESMA turma do evento — nao basta a pessoa ser
+     * membro da turma do material. Docente de duas turmas passa por
+     * exigirMesmaTurma nas duas, e vincular material da turma B numa prova da A
+     * faria a tela da prova de A (e o /materias/{id} de B) mostrar conteudo
+     * trocado entre turmas. 404, como todo registro fora do escopo.
+     *
+     * Ser da turma do evento ja implica ser membro dela (daTurmaDoUsuario conferiu),
+     * entao esta igualdade substitui o exigirMesmaTurma.
+     */
+    private Material materialDaTurmaDoEvento(UsuarioAtual usuario, Evento evento, UUID materialId) {
         Material material = materiais.findById(materialId).orElseThrow(AcessoNegadoException::new);
-        escopo.exigirMesmaTurma(usuario.usuarioId(), material.getTurmaId());
-        if (!material.visivelPara(usuario.usuarioId())) {
+        if (!material.getTurmaId().equals(evento.getTurmaId())
+                || !material.visivelPara(usuario.usuarioId())) {
             throw new AcessoNegadoException();
         }
         return material;
     }
 
+    /**
+     * Criar: a turma do registro nasce da materia, entao so a pertenca a turma
+     * da materia importa (e o docente cria em qualquer turma dele sem trocar a ativa).
+     */
     private Materia materiaDaTurmaDoUsuario(UsuarioAtual usuario, UUID materiaId) {
         Materia materia = materias.findById(materiaId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), materia.getTurmaId());
+        return materia;
+    }
+
+    /**
+     * Editar: a materia nova tem de ser da turma do EVENTO. Antes bastava ser
+     * membro da turma da materia ("sou membro da turma do registro"), e o PATCH
+     * levava o evento da turma A para uma materia da B. Dai o /sync de A passava
+     * a 404 para a turma inteira (materia fora do mapa da turma) e o conteudo
+     * vazava entre turmas. Como o dono do evento ja e membro da turma dele, a
+     * igualdade de turma cobre tambem a pertenca.
+     */
+    private Materia materiaDaTurmaDoEvento(Evento evento, UUID materiaId) {
+        Materia materia = materias.findById(materiaId).orElseThrow(AcessoNegadoException::new);
+        if (!materia.getTurmaId().equals(evento.getTurmaId())) {
+            throw new AcessoNegadoException();
+        }
         return materia;
     }
 

@@ -12,15 +12,22 @@ import java.util.UUID;
 
 public interface MaterialRepository extends JpaRepository<Material, UUID> {
 
+    /**
+     * `turmaId` e a turma da MATERIA e existe de proposito: o material da turma B
+     * apontando para uma materia da A (registro antigo de antes da guarda de
+     * turma no PATCH) nao pode aparecer na tela da materia de A.
+     */
     @Query("""
         select m from Material m
-        where m.materiaId = :materiaId
+        where m.turmaId = :turmaId
+          and m.materiaId = :materiaId
           and m.tipo = :tipo
           and m.visivelTurma = true
           and m.excluidoEm is null
         order by m.criadoEm desc
         """)
-    List<Material> visiveisDaMateriaPorTipo(@Param("materiaId") UUID materiaId,
+    List<Material> visiveisDaMateriaPorTipo(@Param("turmaId") UUID turmaId,
+                                            @Param("materiaId") UUID materiaId,
                                             @Param("tipo") TipoMaterial tipo);
 
     @Query("""
@@ -41,16 +48,19 @@ public interface MaterialRepository extends JpaRepository<Material, UUID> {
     /**
      * SOMENTE os materiais vinculados ao evento. A tela de prova nunca despeja a
      * materia inteira — e desta consulta que sai "o que estudar pra essa prova".
+     * `turmaId` e a do evento: vinculo antigo com material de outra turma nao vaza.
      */
     @Query("""
         select m from Material m
         join EventoMaterial em on em.chave.materialId = m.id
         where em.chave.eventoId = :eventoId
+          and m.turmaId = :turmaId
           and m.visivelTurma = true
           and m.excluidoEm is null
         order by m.tipo asc, m.criadoEm desc
         """)
-    List<Material> vinculadosAoEvento(@Param("eventoId") UUID eventoId);
+    List<Material> vinculadosAoEvento(@Param("eventoId") UUID eventoId,
+                                      @Param("turmaId") UUID turmaId);
 
     Optional<Material> findByIdAndTurmaId(UUID id, UUID turmaId);
 

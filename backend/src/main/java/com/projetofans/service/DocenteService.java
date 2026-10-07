@@ -1,5 +1,6 @@
 package com.projetofans.service;
 
+import com.projetofans.domain.ContestacaoDocente;
 import com.projetofans.domain.Materia;
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
@@ -7,6 +8,7 @@ import com.projetofans.domain.ProfessorMateria;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ErroDeNegocio;
 import com.projetofans.erro.NaoLiderException;
+import com.projetofans.repo.ContestacaoDocenteRepository;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.ProfessorMateriaRepository;
@@ -37,8 +39,10 @@ import java.util.stream.Collectors;
  *
  * A contestacao mora no vinculo (`membro.docente_contestado_*`) e nao no
  * diario de moderacao: `acao_moderacao` tem CHECK de tipos de acao e registrar
- * contestacao ali pediria migration (esta onda nao cria). O rastro e o proprio
- * vinculo — quem contestou e quando.
+ * contestacao ali pediria migration. O rastro e o proprio vinculo — quem contestou
+ * e quando. Como remover o docente apaga o vinculo, a contestacao tambem e copiada
+ * para `contestacao_docente` (V10), que sobrevive a remocao e faz o vinculo novo
+ * nascer contestado.
  *
  * Cada metodo devolve a turma montada ({@link TurmaService#minha}) porque as tres
  * telas que os chamam precisam do estado novo na mesma hora; uma segunda ida ao
@@ -50,15 +54,18 @@ public class DocenteService {
     private final MembroRepository membros;
     private final MateriaRepository materias;
     private final ProfessorMateriaRepository lecionadas;
+    private final ContestacaoDocenteRepository contestacoes;
     private final TurmaScopeResolver escopo;
     private final TurmaService turmas;
 
     public DocenteService(MembroRepository membros, MateriaRepository materias,
-                          ProfessorMateriaRepository lecionadas, TurmaScopeResolver escopo,
+                          ProfessorMateriaRepository lecionadas,
+                          ContestacaoDocenteRepository contestacoes, TurmaScopeResolver escopo,
                           TurmaService turmas) {
         this.membros = membros;
         this.materias = materias;
         this.lecionadas = lecionadas;
+        this.contestacoes = contestacoes;
         this.escopo = escopo;
         this.turmas = turmas;
     }
@@ -134,6 +141,13 @@ public class DocenteService {
             alvo.contestar(lider.usuarioId(), Instant.now());
             membros.saveAndFlush(alvo);
         }
+        // Espelha na tabela duravel SEMPRE, e com o rastro que o vinculo guarda (a
+        // PRIMEIRA contestacao): removerMembro apaga o vinculo, e e aqui que a
+        // contestacao sobrevive para o docente nao voltar limpo pelo codigo. Gravar
+        // tambem quando o vinculo ja estava contestado cobre a contestacao feita
+        // antes da tabela existir sem copia dela.
+        contestacoes.saveAndFlush(new ContestacaoDocente(alvo.getTurmaId(), alvo.getUsuarioId(),
+                alvo.getDocenteContestadoEm(), alvo.getDocenteContestadoPor()));
         return turmas.minha(lider);
     }
 
@@ -143,6 +157,10 @@ public class DocenteService {
         Membro alvo = alvoDocenteDoLider(lider, docenteId);
         alvo.restaurar();
         membros.saveAndFlush(alvo);
+        // Restaurar e a UNICA forma de apagar a memoria duravel; sem isto o proximo
+        // vinculo do docente nasceria contestado de novo.
+        contestacoes.deleteById(new ContestacaoDocente.Chave(alvo.getTurmaId(), alvo.getUsuarioId()));
+        contestacoes.flush();
         return turmas.minha(lider);
     }
 

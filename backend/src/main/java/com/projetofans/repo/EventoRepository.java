@@ -56,14 +56,21 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
             """)
     List<Evento> vivosDoAutor(@Param("autorId") UUID autorId);
 
+    /**
+     * `turmaId` e a turma da MATERIA e existe de proposito: evento da turma B
+     * apontando para uma materia da A (registro antigo de antes da guarda de
+     * turma no PATCH) nao pode aparecer na tela da materia de A.
+     */
     @Query("""
         select e from Evento e
-        where e.materiaId = :materiaId
+        where e.turmaId = :turmaId
+          and e.materiaId = :materiaId
           and e.visivelTurma = true
           and e.excluidoEm is null
         order by e.dataEvento asc
         """)
-    List<Evento> visiveisDaMateria(@Param("materiaId") UUID materiaId);
+    List<Evento> visiveisDaMateria(@Param("turmaId") UUID turmaId,
+                                   @Param("materiaId") UUID materiaId);
 
     /**
      * Delta para o reagendador local do app. Inclui ocultos e excluidos de proposito:

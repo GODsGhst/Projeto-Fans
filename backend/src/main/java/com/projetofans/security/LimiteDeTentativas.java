@@ -69,6 +69,19 @@ public class LimiteDeTentativas {
         janelas.remove(chaveDoLogin(email));
     }
 
+    /**
+     * Cadastro: cinco por hora por e-mail. Conta ANTES de olhar se a conta existe,
+     * entao o 429 sai igual com e sem conta e nao abre a enumeracao que o 409 do
+     * cadastro ja da. Erro de validacao (400) nao chega aqui e nao gasta ficha.
+     *
+     * ponytail: sem teto por IP (ver acima), entao varrer e-mails DIFERENTES passa;
+     * este teto segura quem repete o mesmo e-mail, que e o que o cadastro docente
+     * (pre-sequestro de e-mail alheio, A27) faz.
+     */
+    public void registrar(String email) {
+        contar("registrar:" + normalizado(email), 5, Duration.ofHours(1));
+    }
+
     /** Tambem impede usar o app para encher a caixa de alguem de e-mail de reset. */
     public void esqueciSenha(String email) {
         contar("esqueci:" + normalizado(email), 5, Duration.ofHours(1));

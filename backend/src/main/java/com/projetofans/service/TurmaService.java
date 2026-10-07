@@ -1,5 +1,7 @@
 package com.projetofans.service;
 
+import com.projetofans.domain.ContestacaoDocente;
+import com.projetofans.domain.DocenteStatus;
 import com.projetofans.domain.Materia;
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
@@ -9,8 +11,10 @@ import com.projetofans.domain.Usuario;
 import com.projetofans.erro.NaoLiderException;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ErroDeNegocio;
+import com.projetofans.repo.ContestacaoDocenteRepository;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MembroRepository;
+import com.projetofans.repo.ProfessorMateriaRepository;
 import com.projetofans.repo.TurmaRepository;
 import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.PoderNaTurma;
@@ -48,16 +52,30 @@ public class TurmaService {
     private final TurmaScopeResolver escopo;
     private final MateriaRepository materias;
     private final PoderNaTurma poder;
+    private final ContestacaoDocenteRepository contestacoes;
+    private final ProfessorMateriaRepository lecionadas;
+
+    /**
+     * Conta docente que ainda nao foi aprovada cria no maximo isto: aprovacao e o que
+     * libera mais. O codigo de convite e a unica barreira de uma turma, e um cadastro
+     * docente aberto a qualquer um (e-mail nao verificado) poderia encher o banco de
+     * turmas vazias.
+     */
+    static final int TETO_DE_TURMAS_ATE_APROVAR = 3;
 
     public TurmaService(TurmaRepository turmas, MembroRepository membros,
                         UsuarioRepository usuarios, TurmaScopeResolver escopo,
-                        MateriaRepository materias, PoderNaTurma poder) {
+                        MateriaRepository materias, PoderNaTurma poder,
+                        ContestacaoDocenteRepository contestacoes,
+                        ProfessorMateriaRepository lecionadas) {
         this.turmas = turmas;
         this.membros = membros;
         this.usuarios = usuarios;
         this.escopo = escopo;
         this.materias = materias;
         this.poder = poder;
+        this.contestacoes = contestacoes;
+        this.lecionadas = lecionadas;
     }
 
     /**
@@ -148,6 +166,12 @@ public class TurmaService {
             throw new ErroDeNegocio(HttpStatus.CONFLICT, "Transfira a lideranca antes de sair");
         }
         membros.delete(alvo);
+        // As declaracoes de materia dele NESTA turma vao junto. Sem isto, quem volta
+        // pelo codigo reencontraria as declaracoes antigas ainda valendo e ganharia
+        // alcance de volta sem declarar nada de novo (e sem passar pelo lider). A
+        // CONTESTACAO e o contrario: fica, em contestacao_docente (V10), para o
+        // vinculo novo nascer contestado.
+        lecionadas.apagarDaTurma(usuarioId, turmaId);
     }
 
     /** Papel de quem pede, lido do vinculo dele nesta turma. */
@@ -231,10 +255,13 @@ public class TurmaService {
     @Transactional
     public Turma criar(UUID criadorId, String nome, String semestre) {
         TipoConta tipo = tipoDaConta(criadorId);
-        if (!tipo.ehDocente()) {
+        if (tipo.ehDocente()) {
+            exigirDentroDoTetoDeCriacao(criadorId);
+        } else {
             exigirSemTurma(criadorId);
         }
-        Turma turma = turmas.save(new Turma(UUID.randomUUID(), nome, semestre, novoCodigoConvite()));
+        Turma turma = turmas.save(
+                new Turma(UUID.randomUUID(), nome, semestre, novoCodigoConvite(), criadorId));
         PapelMembro papel = tipo.ehDocente() ? papelDoDocente(tipo) : PapelMembro.LIDER;
         membros.save(new Membro(UUID.randomUUID(), criadorId, turma.getId(), papel));
         return turma;
@@ -265,8 +292,14 @@ public class TurmaService {
                 .orElseGet(() -> {
                     TipoConta tipo = tipoDaConta(usuarioId);
                     if (tipo.ehDocente()) {
-                        return membros.save(new Membro(
-                                UUID.randomUUID(), usuarioId, turma.getId(), papelDoDocente(tipo)));
+                        Membro novo = new Membro(
+                                UUID.randomUUID(), usuarioId, turma.getId(), papelDoDocente(tipo));
+                        // O lider contestou e removeu; voltar pelo codigo nao desfaz isso.
+                        // A contestacao vive em contestacao_docente (chave turma+usuario),
+                        // que sobrevive ao vinculo apagado: o vinculo novo ja nasce contestado.
+                        contestacoes.findById(new ContestacaoDocente.Chave(turma.getId(), usuarioId))
+                                .ifPresent(c -> novo.contestar(c.getContestadoPor(), c.getContestadoEm()));
+                        return membros.save(novo);
                     }
                     exigirSemTurma(usuarioId);
                     return entrarComoAluno(usuarioId, turma.getId());
@@ -284,6 +317,22 @@ public class TurmaService {
             return membros.findByUsuarioIdAndTurmaId(usuarioId, turmaId).orElseThrow();
         }
         return membros.save(new Membro(UUID.randomUUID(), usuarioId, turmaId, PapelMembro.ALUNO));
+    }
+
+    /**
+     * Teto de criacao da conta docente PENDENTE: 409 com mensagem que o app mostra.
+     *
+     * Trava a linha da conta antes de contar: sem a trava, varias criacoes em
+     * paralelo leem a mesma contagem e todas passam. A conta aprovada nao e
+     * limitada; entrar em turma por codigo tambem nao (nao e criar).
+     */
+    private void exigirDentroDoTetoDeCriacao(UUID criadorId) {
+        Usuario conta = usuarios.travarPorId(criadorId).orElseThrow(AcessoNegadoException::new);
+        if (conta.getDocenteStatus() == DocenteStatus.PENDENTE
+                && turmas.countByCriadaPor(criadorId) >= TETO_DE_TURMAS_ATE_APROVAR) {
+            throw new ErroDeNegocio(HttpStatus.CONFLICT,
+                    "Aguarde a aprovacao para criar mais turmas");
+        }
     }
 
     /** O tipo e gravado so na criacao da conta; o papel do vinculo docente e o mesmo nome. */

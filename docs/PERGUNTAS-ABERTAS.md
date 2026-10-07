@@ -573,6 +573,40 @@ rota e a tela de perfil. Sugiro a **1**.
 
 **Levantada em 2026-10-05**, na revisão do perfil (`/api/v1/eu`).
 
+### A27. Verificar e-mail de conta docente antes da fila do admin
+
+> A numeração segue a spec de professor/coordenador, que já usa A24–A26 na seção 15 (ainda não
+> copiadas para este arquivo).
+
+O cadastro (`POST /auth/registrar`) **não verifica o e-mail**: qualquer pessoa cria conta com o
+endereço de outra. Para conta de aluno isso já era assim (o código de convite é a barreira). Para
+conta **docente** pesa mais, por dois caminhos:
+
+1. **Fila do admin.** O admin aprova olhando nome e e-mail. Quem se cadastra como professor com o
+   e-mail institucional de um professor de verdade aparece na fila com cara de legítimo, e a
+   aprovação dá selo e poder de corrigir provas da turma.
+2. **Pré-sequestro de conta.** O atacante cadastra o e-mail da vítima com uma senha dele. Quando a
+   vítima entrar com o Google (ainda desligado), `AuthService.entrarComGoogle` encontra a conta pelo
+   e-mail e só **liga** o Google a ela: o `senha_hash` do atacante continua valendo, e ele segue com
+   acesso à conta da vítima.
+
+**Default aplicado (mitigação, sem verificação):** `GET /admin/docentes` devolve
+`emailVerificado: false` fixo e a tela do admin mostra, em cada pendente, "E-mail não verificado:
+confirme com a pessoa antes de aprovar". Junto vieram `POST /auth/registrar` com teto de cinco por
+hora por e-mail e teto de 3 turmas criadas por conta docente pendente. Nada disso prova o e-mail:
+só avisa o admin e encarece o abuso.
+
+**Correção futura, uma das duas (ou as duas):**
+
+- **Link por e-mail**, como o do reset de senha: o cadastro docente grava um token, manda o link, e
+  a conta só entra na fila do admin (e `emailVerificado` só vira `true`) depois do clique. Reusa o
+  `EmailSender` e a tabela de tokens; pede uma coluna `email_verificado_em` em `usuario` (migration).
+- **Descartar o `senha_hash` no vínculo do Google**, quando o login Google for ligado: ao ligar o
+  Google a uma conta que já existia por senha, zerar a senha (a pessoa define outra por "esqueci a
+  senha"). Fecha o pré-sequestro sem e-mail novo, mas não ajuda a fila do admin.
+
+**Levantada em 2026-10-07**, na revisão de segurança de professor/coordenador (achado MEDIUM).
+
 
 
 ---

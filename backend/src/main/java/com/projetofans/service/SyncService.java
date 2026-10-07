@@ -2,7 +2,6 @@ package com.projetofans.service;
 
 import com.projetofans.domain.Evento;
 import com.projetofans.domain.Materia;
-import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.repo.EventoRepository;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.security.TurmaScopeResolver;
@@ -10,10 +9,13 @@ import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.EventoResponse;
 import com.projetofans.web.dto.MateriaResponse;
 import com.projetofans.web.dto.SyncResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,6 +39,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class SyncService {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
     private final EventoRepository eventos;
     private final MateriaRepository materias;
@@ -76,11 +80,25 @@ public class SyncService {
                 .toList());
 
         // Lapide continua SEM autoria: quem sumiu nao diz quem era.
-        List<EventoResponse> resposta = alterados.stream()
-                .map(e -> visivelPara(e, usuario)
-                        ? EventoResponse.de(e, materiaDe(porId, e), autoria.de(e))
-                        : EventoResponse.lapide(e))
-                .toList();
+        List<EventoResponse> resposta = new ArrayList<>();
+        for (Evento e : alterados) {
+            if (!visivelPara(e, usuario)) {
+                resposta.add(EventoResponse.lapide(e));
+                continue;
+            }
+            Materia materia = porId.get(e.getMateriaId());
+            if (materia == null) {
+                // Registro antigo apontando para materia de OUTRA turma (de antes da
+                // guarda de turma no PATCH). Lancar 404 aqui derrubava o /sync da turma
+                // INTEIRA por causa de um item so; pular o item deixa o resto chegar,
+                // e nao entrega sigla/cor da materia de outra turma. A lapide acima nao
+                // precisa de materia, entao continua saindo.
+                log.warn("sync: evento {} da turma {} aponta para materia {} fora da turma; "
+                        + "item pulado", e.getId(), turmaId, e.getMateriaId());
+                continue;
+            }
+            resposta.add(EventoResponse.de(e, materia, autoria.de(e)));
+        }
 
         return new SyncResponse(resposta, daTurma.stream().map(MateriaResponse::de).toList(),
                 servidorEm);
@@ -98,16 +116,5 @@ public class SyncService {
             return true;
         }
         return evento.getAutorId().equals(usuario.usuarioId());
-    }
-
-    private static Materia materiaDe(Map<UUID, Materia> porId, Evento evento) {
-        Materia materia = porId.get(evento.getMateriaId());
-        if (materia == null) {
-            // Evento da turma apontando para materia de outra turma nao existe hoje
-            // (FK + escopo na criacao). Se um dia existir, e melhor 404 do que um
-            // NullPointerException disfarçado de 500.
-            throw new AcessoNegadoException();
-        }
-        return materia;
     }
 }
