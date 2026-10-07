@@ -117,4 +117,74 @@ describe('CadastroPage', () => {
     expect(erroNaTela()).toContain('Ja existe conta com este e-mail');
     expect(irPara).not.toHaveBeenCalled();
   });
+  function escolher(tipo: string): void {
+    (
+      fixture.nativeElement.querySelector(
+        `.seg button[data-tipo="${tipo}"]`,
+      ) as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+  }
+
+  function avisoDeAprovacao(): string | null {
+    const avisos = Array.from(
+      fixture.nativeElement.querySelectorAll('.alerta'),
+    ) as HTMLElement[];
+    return (
+      avisos.find((a) => a.textContent!.includes('passa por aprovação'))
+        ?.textContent ?? null
+    );
+  }
+
+  it('aluno e o padrao: sem aviso de aprovacao e Aluno marcado', () => {
+    // Quem ja usa o app nao pode ver nada novo no cadastro alem do "eu sou".
+    expect(avisoDeAprovacao()).toBeNull();
+    const marcado = fixture.nativeElement.querySelector(
+      '.seg button[aria-pressed="true"]',
+    ) as HTMLElement;
+    expect(marcado.textContent!.trim()).toBe('Aluno');
+  });
+
+  it('professor: avisa da aprovacao ANTES de criar e manda tipoConta PROFESSOR', async () => {
+    escolher('PROFESSOR');
+
+    expect(avisoDeAprovacao())
+      .withContext('o aviso tem de vir antes do botao, nao depois da conta criada')
+      .toContain('Até lá, você monta seu painel');
+
+    const req = enviar();
+    expect(req.request.body).toEqual({
+      nome: 'Otavio',
+      email: 'voce@exemplo.com',
+      senha: 'senha-de-oito',
+      tipoConta: 'PROFESSOR',
+    });
+    req.flush({
+      jwt: 'jwt-123',
+      usuario: { ...USUARIO, tipoConta: 'PROFESSOR', docenteStatus: 'PENDENTE' },
+    });
+    await assentar();
+
+    // Docente tambem entra pelo codigo, como todo mundo.
+    expect(irPara).toHaveBeenCalledWith('/entrar-turma');
+  });
+
+  it('coordenacao manda tipoConta COORDENADOR (o valor do servidor, nao o rotulo)', () => {
+    escolher('COORDENADOR');
+
+    expect(avisoDeAprovacao()).not.toBeNull();
+    const req = enviar();
+    expect(req.request.body.tipoConta).toBe('COORDENADOR');
+    req.flush({ jwt: 'j', usuario: USUARIO });
+  });
+
+  it('voltar para Aluno some com o aviso e tira o tipoConta do corpo', () => {
+    escolher('PROFESSOR');
+    escolher('ALUNO');
+
+    expect(avisoDeAprovacao()).toBeNull();
+    const req = enviar();
+    expect('tipoConta' in req.request.body).toBeFalse();
+    req.flush({ jwt: 'j', usuario: USUARIO });
+  });
 });

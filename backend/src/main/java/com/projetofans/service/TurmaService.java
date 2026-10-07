@@ -2,6 +2,7 @@ package com.projetofans.service;
 
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
+import com.projetofans.domain.TipoConta;
 import com.projetofans.domain.Turma;
 import com.projetofans.domain.Usuario;
 import com.projetofans.erro.NaoLiderException;
@@ -190,11 +191,26 @@ public class TurmaService {
                 membro.getUsuarioId(), nome, membro.getPapel(), membro.getEntrouEm());
     }
 
+    /**
+     * Aluno que cria vira LIDER, como sempre. Docente cria a turma e entra nela
+     * com o proprio papel (PROFESSOR/COORDENADOR), SEM lider: o primeiro aluno que
+     * entrar herda a lideranca (ver {@link #entrar}). Docente nunca vira lider
+     * porque `membro.papel` e um valor so por vinculo — a lideranca apagaria o
+     * PROFESSOR (spec 2.7).
+     *
+     * Criar turma nao e poder sobre ninguem, entao nao olha o status docente: conta
+     * PENDENTE tambem cria. O poder e que espera a aprovacao, e so existe depois
+     * que ha aluno para exerce-lo.
+     */
     @Transactional
     public Turma criar(UUID criadorId, String nome, String semestre) {
-        exigirSemTurma(criadorId);
+        TipoConta tipo = tipoDaConta(criadorId);
+        if (!tipo.ehDocente()) {
+            exigirSemTurma(criadorId);
+        }
         Turma turma = turmas.save(new Turma(UUID.randomUUID(), nome, semestre, novoCodigoConvite()));
-        membros.save(new Membro(UUID.randomUUID(), criadorId, turma.getId(), PapelMembro.LIDER));
+        PapelMembro papel = tipo.ehDocente() ? papelDoDocente(tipo) : PapelMembro.LIDER;
+        membros.save(new Membro(UUID.randomUUID(), criadorId, turma.getId(), papel));
         return turma;
     }
 
@@ -204,7 +220,16 @@ public class TurmaService {
      *
      * Idempotente de proposito — tocar duas vezes no botao nao pode estourar o
      * UNIQUE (usuario_id, turma_id) na cara do aluno. Por isso a mesma turma
-     * devolve o vinculo que ja existe, e so OUTRA turma leva o 409.
+     * devolve o vinculo que ja existe, e so OUTRA turma leva o 409 (para conta
+     * ALUNO; docente entra em quantas turmas quiser).
+     *
+     * O papel do vinculo sai do TIPO da conta, qualquer que seja o status docente:
+     * quem espera aprovacao ja entra na turma (o codigo de convite e o controle de
+     * entrada), so nao tem poder ainda.
+     *
+     * Aluno que entra numa turma SEM lider vira LIDER (spec 2.7): a turma criada
+     * por docente nasce sem lider e alguem precisa ser o dono do codigo e da
+     * moderacao. Depois do primeiro, os demais entram como ALUNO.
      */
     @Transactional
     public Membro entrar(UUID usuarioId, String codigoConvite) {
@@ -212,10 +237,42 @@ public class TurmaService {
                 .orElseThrow(AcessoNegadoException::new);
         return membros.findByUsuarioIdAndTurmaId(usuarioId, turma.getId())
                 .orElseGet(() -> {
+                    TipoConta tipo = tipoDaConta(usuarioId);
+                    if (tipo.ehDocente()) {
+                        return membros.save(new Membro(
+                                UUID.randomUUID(), usuarioId, turma.getId(), papelDoDocente(tipo)));
+                    }
                     exigirSemTurma(usuarioId);
-                    return membros.save(
-                            new Membro(UUID.randomUUID(), usuarioId, turma.getId(), PapelMembro.ALUNO));
+                    return entrarComoAluno(usuarioId, turma.getId());
                 });
+    }
+
+    /**
+     * Tenta a lideranca primeiro: o INSERT ... ON CONFLICT do repositorio so grava
+     * se a turma ainda nao tem LIDER, e e o indice parcial do banco quem decide
+     * sob concorrencia — dois alunos entrando juntos nunca dao dois lideres, e o
+     * perdedor da corrida cai no ALUNO logo abaixo, na mesma transacao.
+     */
+    private Membro entrarComoAluno(UUID usuarioId, UUID turmaId) {
+        if (membros.entrarComoLiderSeVago(UUID.randomUUID(), usuarioId, turmaId) == 1) {
+            return membros.findByUsuarioIdAndTurmaId(usuarioId, turmaId).orElseThrow();
+        }
+        return membros.save(new Membro(UUID.randomUUID(), usuarioId, turmaId, PapelMembro.ALUNO));
+    }
+
+    /** O tipo e gravado so na criacao da conta; o papel do vinculo docente e o mesmo nome. */
+    private static PapelMembro papelDoDocente(TipoConta tipo) {
+        return PapelMembro.valueOf(tipo.name());
+    }
+
+    /**
+     * Usuario inexistente e 404 (a FK estouraria em 500 mais adiante). Na pratica
+     * nao acontece: o id vem do JWT, assinado por nos.
+     */
+    private TipoConta tipoDaConta(UUID usuarioId) {
+        return usuarios.findById(usuarioId)
+                .orElseThrow(AcessoNegadoException::new)
+                .getTipoConta();
     }
 
     /**
@@ -223,13 +280,14 @@ public class TurmaService {
      * certo, e o TurmaScopeResolver passava a resolver pelo vinculo mais recente:
      * a turma original sumia do app sem aviso, com tudo que a pessoa postou nela.
      *
-     * Regra de ALUNO e LIDER. Professor e coordenador vao precisar de varias
-     * turmas; quando esse papel ganhar o seu fluxo, esta guarda e o resolver sao
-     * revistos juntos.
+     * Regra de conta ALUNO (e por consequencia LIDER). Conta docente nao passa
+     * por aqui: professor e coordenador entram em quantas turmas tiverem codigo,
+     * e o app diz qual esta ativa com o cabecalho X-Turma-Id (spec 2.8).
      *
-     * ponytail: dois pedidos simultaneos para turmas diferentes passam os dois.
-     * Um indice unico em membro.usuario_id fecharia, mas travaria o professor de
-     * varias turmas; o resolver loga aviso se acontecer.
+     * ponytail: dois pedidos simultaneos de ALUNO para turmas diferentes passam os
+     * dois. O indice unico em membro.usuario_id que fecharia isso continua
+     * descartado, agora com motivo concreto: travaria o docente de varias turmas.
+     * O resolver loga aviso se acontecer.
      */
     private void exigirSemTurma(UUID usuarioId) {
         if (!membros.findByUsuarioIdOrderByEntrouEmDesc(usuarioId).isEmpty()) {

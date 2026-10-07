@@ -15,7 +15,7 @@ import {
 
 import pacote from '../../../../package.json';
 import { AuthService, ROTA_LOGIN } from '../../core/auth.service';
-import type { Perfil } from '../../data/models';
+import type { DocenteStatus, Perfil } from '../../data/models';
 import { mensagemDeErro } from '../auth/erro';
 
 /**
@@ -27,6 +27,14 @@ import { mensagemDeErro } from '../auth/erro';
  *
  * Falhar ao carregar NAO esconde "Sair da conta" nem os links: perfil que nao
  * carrega nao pode trancar a pessoa dentro de uma sessao que ela quer encerrar.
+ *
+ * Conta docente ve aqui em que pe esta o cadastro (em analise / nao aprovado) —
+ * e o unico lugar onde um professor recusado fica sabendo, ja que o servidor
+ * simplesmente passa a tratar o poder dele como o de um aluno. O status vem do
+ * `GET /eu` desta tela, e nao da sessao gravada, que pode estar velha.
+ *
+ * O link "Aprovar professores" aparece so para o admin; quem nao e leva 404 da
+ * API de qualquer jeito, entao ele e comodidade e nao seguranca.
  */
 @Component({
   selector: 'app-perfil',
@@ -65,6 +73,42 @@ import { mensagemDeErro } from '../auth/erro';
               <span class="selo">Admin da plataforma</span>
             }
           </div>
+
+          @if (docente(); as d) {
+            @if (d.docenteStatus === 'PENDENTE') {
+              <div class="faixa faixa--espera" role="status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 3h12M6 21h12" />
+                  <path d="M7 3c0 5 5 6 5 9s-5 4-5 9" />
+                  <path d="M17 3c0 5-5 6-5 9s5 4 5 9" />
+                </svg>
+                <p><b>Cadastro em análise.</b> Você ainda não corrige nem oculta nada.</p>
+              </div>
+            } @else if (d.docenteStatus === 'RECUSADO') {
+              <div class="faixa faixa--recusado" role="status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M9 9l6 6M15 9l-6 6" />
+                </svg>
+                <p><b>Seu cadastro de professor não foi aprovado.</b></p>
+              </div>
+            }
+
+            <p class="pf-rotulo">cadastro</p>
+            <div class="linha-campo">
+              <b>Tipo de conta</b>
+              <span>{{ d.tipoConta === 'COORDENADOR' ? 'Coordenação' : 'Professor' }}</span>
+            </div>
+            <div class="linha-campo">
+              <b>Situação</b>
+              <span>{{ situacao(d.docenteStatus) }}</span>
+            </div>
+          }
+
+          @if (p.adminPlataforma) {
+            <p class="pf-rotulo">plataforma</p>
+            <a class="botao" routerLink="/tabs/admin">Aprovar professores</a>
+          }
 
           <!-- Form, e nao campo solto: Enter no campo salva, como em qualquer
                formulario. Sem FormsModule, entao o preventDefault e nosso. -->
@@ -203,6 +247,55 @@ import { mensagemDeErro } from '../auth/erro';
       font-size: 11px;
       color: var(--ink-3);
     }
+    /* Estado do cadastro docente. Tracejado = espera (passa); solido = decidido
+       (nao passa sozinho) — a mesma regra de .pf-aviso x .pf-erro. O icone
+       acompanha o texto: o estado nunca depende so do tracejado. */
+    .faixa {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 11px 13px;
+      border-radius: var(--r-md);
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink);
+      background: var(--rule-soft);
+    }
+    .faixa p {
+      margin: 0;
+    }
+    .faixa svg {
+      flex: 0 0 auto;
+      width: 18px;
+      height: 18px;
+      margin-top: 1px;
+      color: var(--ink-2);
+    }
+    .faixa--espera {
+      border: 1px dashed var(--ink-3);
+    }
+    .faixa--recusado {
+      border: 1px solid var(--ink-3);
+    }
+    .linha-campo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 48px;
+      padding: 11px 13px;
+      border-radius: var(--r-md);
+      font-size: 13.5px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+    }
+    .linha-campo b {
+      font-weight: 600;
+    }
+    .linha-campo span {
+      font-size: 12px;
+      color: var(--ink-3);
+    }
     /* Papel, nao posto: mesma marca discreta do "lider" na tela da turma. */
     .topo .selo {
       margin-top: 4px;
@@ -225,6 +318,17 @@ export class PerfilPage {
   protected readonly perfil = signal<Perfil | null>(null);
   protected readonly carregando = signal(true);
   protected readonly erroCarga = signal<string | null>(null);
+
+  /**
+   * O perfil, so se a conta e docente — pelo `GET /eu` desta tela. `null` para
+   * aluno (inclusive o de sessao antiga, sem `tipoConta`): nada novo na tela dele.
+   */
+  protected readonly docente = computed(() => {
+    const p = this.perfil();
+    return p !== null && p.tipoConta !== undefined && p.tipoConta !== 'ALUNO'
+      ? p
+      : null;
+  });
 
   // Espalhar quebra por code point: `trim()[0]` pegava meia surrogate de um
   // emoji e o avatar mostrava lixo.
@@ -334,6 +438,16 @@ export class PerfilPage {
     } finally {
       this.trocandoSenha.set(false);
     }
+  }
+
+  protected situacao(status: DocenteStatus | null | undefined): string {
+    return status === 'PENDENTE'
+      ? 'em análise'
+      : status === 'RECUSADO'
+        ? 'não aprovada'
+        : status === 'APROVADO'
+          ? 'aprovada'
+          : '';
   }
 
   protected async sair(): Promise<void> {

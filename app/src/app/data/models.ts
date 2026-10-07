@@ -10,7 +10,13 @@ import type { TipoEvento } from '../shared/tipos';
 export type { TipoEvento };
 
 export type TipoMaterial = 'AULA' | 'ADICIONAL';
-export type PapelMembro = 'ALUNO' | 'LIDER' | 'PROFESSOR';
+export type PapelMembro = 'ALUNO' | 'LIDER' | 'PROFESSOR' | 'COORDENADOR';
+
+/** Espelho dos enums do backend. O que a conta E (tipo) nao muda; o status muda. */
+export type TipoConta = 'ALUNO' | 'PROFESSOR' | 'COORDENADOR';
+export type DocenteStatus = 'PENDENTE' | 'APROVADO' | 'RECUSADO';
+/** "Esta pessoa tem poder aqui" (spec 2.6). Note: COORDENACAO, nao COORDENADOR. */
+export type Selo = 'PROFESSOR' | 'COORDENACAO';
 
 /**
  * Autoria visivel em tudo. Nao existe registro anonimo neste app — autoria e o
@@ -21,12 +27,26 @@ export interface Autoria {
   autorNome: string;
   criadoEm: string;
   atualizadoEm: string;
+  /**
+   * Selo de quem postou, e "editado por" quando um docente corrigiu o registro
+   * (spec 6). Opcionais porque o backend OMITE campo nulo do JSON — e porque o
+   * snapshot gravado no aparelho e anterior a eles.
+   */
+  autorSelo?: Selo | null;
+  editadoPorNome?: string | null;
+  editadoPorSelo?: Selo | null;
 }
 
 export interface Usuario {
   id: string;
   nome: string;
   email: string;
+  /**
+   * Opcionais para nao quebrar a sessao gravada no aparelho antes de existirem
+   * docentes: ausente = ALUNO. O status so importa para docente (aluno nao tem).
+   */
+  tipoConta?: TipoConta;
+  docenteStatus?: DocenteStatus | null;
 }
 
 /** `GET /eu` — a conta de quem esta logado, com o que so a tela de perfil precisa. */

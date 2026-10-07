@@ -1,6 +1,7 @@
 package com.projetofans.service;
 
 import com.projetofans.domain.Membro;
+import com.projetofans.domain.TipoConta;
 import com.projetofans.domain.TokenResetSenha;
 import com.projetofans.domain.Usuario;
 import com.projetofans.erro.ErroDeNegocio;
@@ -64,14 +65,21 @@ public class AuthService {
         this.email = email;
     }
 
-    public AuthResponse registrar(String nome, String endereco, String senha) {
+    /**
+     * {@code tipoConta} nulo = ALUNO (o app de aluno nao manda o campo). Este e o UNICO
+     * caminho que cria conta docente: o Google sempre cria ALUNO (spec 8), porque o
+     * token do Google prova o e-mail, nao o que a pessoa leciona. Docente nasce
+     * PENDENTE (Usuario.comSenha) e so ganha poder quando o admin aprova.
+     */
+    public AuthResponse registrar(String nome, String endereco, String senha, TipoConta tipoConta) {
         String nomeLimpo = nomeValido(nome);
         if (usuarios.existsByEmail(endereco)) {
             // 409, e nao 400: o pedido esta bem formado, o estado do servidor e que conflita.
             throw new ErroDeNegocio(HttpStatus.CONFLICT, "Ja existe conta com este e-mail");
         }
         Usuario novo = usuarios.save(Usuario.comSenha(
-                UUID.randomUUID(), nomeLimpo, endereco, hashDaSenha(senha)));
+                UUID.randomUUID(), nomeLimpo, endereco, hashDaSenha(senha),
+                tipoConta == null ? TipoConta.ALUNO : tipoConta));
         return resposta(novo);
     }
 

@@ -80,6 +80,73 @@ describe('PerfilPage', () => {
     expect(campo('nome').value).toBe('Otavio');
   });
 
+  function faixa(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('.faixa');
+  }
+
+  it('professor pendente ve o aviso de analise e a situacao, sem o link de admin', async () => {
+    // E o unico lugar onde o docente fica sabendo em que pe esta o cadastro.
+    await abrir({
+      ...PERFIL,
+      tipoConta: 'PROFESSOR',
+      docenteStatus: 'PENDENTE',
+    });
+
+    expect(faixa()!.textContent).toContain('Cadastro em análise');
+    expect(faixa()!.textContent).toContain('ainda não corrige nem oculta');
+    expect(texto()).toContain('Situação');
+    expect(texto()).toContain('em análise');
+    expect(texto()).not.toContain('Aprovar professores');
+  });
+
+  it('cadastro recusado diz que nao foi aprovado', async () => {
+    await abrir({
+      ...PERFIL,
+      tipoConta: 'PROFESSOR',
+      docenteStatus: 'RECUSADO',
+    });
+
+    expect(faixa()!.textContent).toContain(
+      'Seu cadastro de professor não foi aprovado',
+    );
+  });
+
+  it('docente aprovado ve tipo e situacao, mas nenhum aviso', async () => {
+    await abrir({
+      ...PERFIL,
+      tipoConta: 'COORDENADOR',
+      docenteStatus: 'APROVADO',
+    });
+
+    expect(faixa()).toBeNull();
+    expect(texto()).toContain('Coordenação');
+    expect(texto()).toContain('aprovada');
+  });
+
+  it('aluno nao ve nada de docente, nem sessao antiga sem tipoConta', async () => {
+    await abrir(PERFIL);
+    expect(faixa()).toBeNull();
+    expect(texto()).not.toContain('Tipo de conta');
+
+    fixture.componentInstance.ionViewWillEnter();
+    await abrir({ ...PERFIL, tipoConta: 'ALUNO' });
+    expect(faixa()).toBeNull();
+    expect(texto()).not.toContain('Tipo de conta');
+  });
+
+  it('so o admin ve "Aprovar professores", e ele leva para /tabs/admin', async () => {
+    await abrir();
+    expect(texto()).not.toContain('Aprovar professores');
+
+    fixture.componentInstance.ionViewWillEnter();
+    await abrir({ ...PERFIL, adminPlataforma: true });
+
+    const link = (
+      Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[]
+    ).find((a) => a.textContent!.trim() === 'Aprovar professores')!;
+    expect(link.getAttribute('href')).toBe('/tabs/admin');
+  });
+
   it('falha ao carregar aparece na tela, e sair continua ao alcance', async () => {
     // Perfil que nao carrega nao pode trancar ninguem numa sessao: o botao de
     // sair nao depende do GET /eu.

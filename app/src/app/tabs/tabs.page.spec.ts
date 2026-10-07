@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthService } from '../core/auth.service';
+import type { Usuario } from '../data/models';
 import {
   StorageFake,
   USUARIO,
@@ -47,5 +48,46 @@ describe('TabsPage', () => {
     fixture.detectChanges();
 
     expect(noPerfil('.pf-avatar')).toBe('🎓');
+  });
+});
+
+describe('TabsPage: abas por tipo de conta', () => {
+  function abas(conta: object): string[] {
+    configurarTeste(new StorageFake());
+    TestBed.inject(AuthService).definirSessao(
+      'jwt',
+      { ...USUARIO, ...conta } as Usuario,
+      't1',
+    );
+    const fixture = TestBed.createComponent(TabsPage);
+    fixture.detectChanges();
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('ion-tab-button'),
+    ).map((b) => b.getAttribute('tab')!);
+  }
+
+  it('aluno continua com as abas de sempre', () => {
+    expect(abas({ tipoConta: 'ALUNO' })).toEqual([
+      'home',
+      'calendario',
+      'materias',
+      'quadro',
+      'perfil',
+    ]);
+  });
+
+  it('sessao gravada antes da onda docente (sem tipoConta) e aluno', () => {
+    expect(abas({})).toEqual(['home', 'calendario', 'materias', 'quadro', 'perfil']);
+  });
+
+  it('docente troca Home e Meu quadro por Painel e Turma, em qualquer status', () => {
+    const esperado = ['painel', 'calendario', 'materias', 'turma', 'perfil'];
+
+    expect(abas({ tipoConta: 'PROFESSOR', docenteStatus: 'APROVADO' })).toEqual(esperado);
+    TestBed.resetTestingModule();
+    // O pendente tambem: a interface sai do tipo da conta, o poder sai do status.
+    expect(abas({ tipoConta: 'PROFESSOR', docenteStatus: 'PENDENTE' })).toEqual(esperado);
+    TestBed.resetTestingModule();
+    expect(abas({ tipoConta: 'COORDENADOR', docenteStatus: 'RECUSADO' })).toEqual(esperado);
   });
 });

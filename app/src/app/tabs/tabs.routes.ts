@@ -1,17 +1,34 @@
 import { Routes } from '@angular/router';
+
+import { rotaInicial, soAluno, soDocente } from '../core/docente.guard';
 import { TabsPage } from './tabs.page';
 
 /**
- * Home e a entrada do app, entao ela e o redirect padrao — nao o calendario.
- * Quem so quer saber "o que tem essa semana" resolve sem tocar em mais nada.
+ * Home e a entrada do app do aluno, entao ela e o redirect padrao — nao o
+ * calendario. Quem so quer saber "o que tem essa semana" resolve sem tocar em
+ * mais nada. O docente entra pelo painel (`rotaInicial`).
  */
 export const tabsRoutes: Routes = [
   {
     path: 'tabs',
     component: TabsPage,
     children: [
+      // Painel e Home nao coexistem: cada uma e so de um tipo de conta (spec 2.9).
+      {
+        path: 'painel',
+        canActivate: [soDocente],
+        loadComponent: () =>
+          import('../features/painel/painel.page').then((m) => m.PainelPage),
+      },
+      {
+        path: 'admin',
+        // Sem guarda de proposito: quem nao e admin cai pela 404 da API (spec 8).
+        loadComponent: () =>
+          import('../features/admin/admin.page').then((m) => m.AdminPage),
+      },
       {
         path: 'home',
+        canActivate: [soAluno],
         loadComponent: () =>
           import('../features/home/home.page').then((m) => m.HomePage),
       },
@@ -135,6 +152,7 @@ export const tabsRoutes: Routes = [
       },
       {
         path: 'quadro',
+        canActivate: [soAluno],
         loadComponent: () =>
           import('../features/quadro/quadro.page').then((m) => m.QuadroPage),
       },
@@ -157,8 +175,8 @@ export const tabsRoutes: Routes = [
         loadComponent: () =>
           import('../features/turma/turma.page').then((m) => m.TurmaPage),
       },
-      { path: '', redirectTo: '/tabs/home', pathMatch: 'full' },
+      { path: '', redirectTo: rotaInicial, pathMatch: 'full' },
     ],
   },
-  { path: '', redirectTo: '/tabs/home', pathMatch: 'full' },
+  { path: '', redirectTo: rotaInicial, pathMatch: 'full' },
 ];

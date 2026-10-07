@@ -1,6 +1,7 @@
 import { authInterceptor } from './auth.interceptor';
 import { erroHttpInterceptor } from './http-error.interceptor';
 import { timeoutInterceptor } from './timeout.interceptor';
+import { turmaAtivaInterceptor } from './turma-ativa.interceptor';
 
 /**
  * A ordem e comportamento, e o Angular a le ao contrario do que parece: o
@@ -14,4 +15,9 @@ import { timeoutInterceptor } from './timeout.interceptor';
  *
  * Mora num arquivo proprio para o teste usar ESTA lista, e nao uma copia.
  */
-export const INTERCEPTORES = [authInterceptor, erroHttpInterceptor, timeoutInterceptor];
+export const INTERCEPTORES = [
+  authInterceptor,
+  turmaAtivaInterceptor,
+  erroHttpInterceptor,
+  timeoutInterceptor,
+];

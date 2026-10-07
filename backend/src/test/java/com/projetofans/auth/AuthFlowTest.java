@@ -265,6 +265,11 @@ class AuthFlowTest extends TesteComPostgres {
     void entrarNaTurmaComCodigoValidoCriaMembroAluno() throws Exception {
         String codigo = "CONV-" + UUID.randomUUID();
         Turma turma = turmas.saveAndFlush(new Turma(UUID.randomUUID(), "Turma", "2026.2", codigo));
+        // Turma normal tem lider. Sem ele o primeiro aluno herda a lideranca (spec 2.7,
+        // turma criada por docente) — caso coberto em CriarEntrarDocenteTest.
+        Usuario lider = usuarios.saveAndFlush(Usuario.comSenha(
+                UUID.randomUUID(), "Lider", "lider-" + UUID.randomUUID() + "@ex.dev", "hash"));
+        membros.saveAndFlush(new Membro(UUID.randomUUID(), lider.getId(), turma.getId(), PapelMembro.LIDER));
         String jwt = registra(email(), "senha-boa-123");
 
         http.perform(post("/api/v1/turmas/entrar")
@@ -276,6 +281,7 @@ class AuthFlowTest extends TesteComPostgres {
                 .andExpect(jsonPath("$.papel").value("ALUNO"));
 
         assertThat(membros.findByTurmaId(turma.getId()))
+                .filteredOn(m -> !m.getUsuarioId().equals(lider.getId()))
                 .singleElement()
                 .extracting(Membro::getPapel)
                 .isEqualTo(PapelMembro.ALUNO);

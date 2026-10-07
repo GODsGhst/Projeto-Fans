@@ -35,7 +35,7 @@ public class AuthController {
 
     @PostMapping("/registrar")
     public AuthResponse registrar(@Valid @RequestBody RegistrarRequest pedido) {
-        return auth.registrar(pedido.nome(), pedido.email(), pedido.senha());
+        return auth.registrar(pedido.nome(), pedido.email(), pedido.senha(), pedido.tipoConta());
     }
 
     @PostMapping("/login")

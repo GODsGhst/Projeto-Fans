@@ -12,11 +12,14 @@ import {
   checkboxOutline,
   chevronBackOutline,
   chevronForwardOutline,
+  gridOutline,
   libraryOutline,
   listOutline,
+  peopleOutline,
 } from 'ionicons/icons';
 
 import { AuthService } from '../core/auth.service';
+import { ehContaDocente } from '../data/docente.models';
 
 /** Preferencia de quem esta neste navegador, nao dado da turma. */
 const CHAVE_RECOLHIDO = 'pf.menuRecolhido';
@@ -44,10 +47,20 @@ const CHAVE_RECOLHIDO = 'pf.menuRecolhido';
           ></ion-icon>
         </button>
 
-        <ion-tab-button tab="home" href="/tabs/home" title="Home">
-          <ion-icon aria-hidden="true" name="list-outline"></ion-icon>
-          <ion-label>Home</ion-label>
-        </ion-tab-button>
+        <!-- A interface sai do TIPO da conta, nao do status (spec 2.9): o docente
+             pendente tambem ve estas abas. So a primeira e a penultima mudam;
+             Calendario e Materias sao as mesmas telas para os dois. -->
+        @if (ehDocente()) {
+          <ion-tab-button tab="painel" href="/tabs/painel" title="Painel">
+            <ion-icon aria-hidden="true" name="grid-outline"></ion-icon>
+            <ion-label>Painel</ion-label>
+          </ion-tab-button>
+        } @else {
+          <ion-tab-button tab="home" href="/tabs/home" title="Home">
+            <ion-icon aria-hidden="true" name="list-outline"></ion-icon>
+            <ion-label>Home</ion-label>
+          </ion-tab-button>
+        }
 
         <ion-tab-button tab="calendario" href="/tabs/calendario" title="Calendário">
           <ion-icon aria-hidden="true" name="calendar-outline"></ion-icon>
@@ -59,10 +72,19 @@ const CHAVE_RECOLHIDO = 'pf.menuRecolhido';
           <ion-label>Matérias</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="quadro" href="/tabs/quadro" title="Meu quadro">
-          <ion-icon aria-hidden="true" name="checkbox-outline"></ion-icon>
-          <ion-label>Meu quadro</ion-label>
-        </ion-tab-button>
+        <!-- Sem Meu quadro para o docente: kanban de "feito" e coisa de quem tem
+             prova para fazer. No lugar, a turma (membros, matérias declaradas). -->
+        @if (ehDocente()) {
+          <ion-tab-button tab="turma" href="/tabs/turma" title="Turma">
+            <ion-icon aria-hidden="true" name="people-outline"></ion-icon>
+            <ion-label>Turma</ion-label>
+          </ion-tab-button>
+        } @else {
+          <ion-tab-button tab="quadro" href="/tabs/quadro" title="Meu quadro">
+            <ion-icon aria-hidden="true" name="checkbox-outline"></ion-icon>
+            <ion-label>Meu quadro</ion-label>
+          </ion-tab-button>
+        }
 
         <!-- Por ultimo de proposito: no PC o global.scss o empurra para o rodape
              do menu, como a conta no Google e no Claude. No celular e a quinta
@@ -89,6 +111,8 @@ export class TabsPage {
 
   /** Da sessao, e nao de `GET /eu`: renomear troca a sessao e o menu acompanha. */
   protected readonly usuario = inject(AuthService).usuario;
+  // ponytail: trocar por `auth.ehDocente()` quando o AuthService o expuser.
+  protected readonly ehDocente = computed(() => ehContaDocente(this.usuario()));
   // Espalhar quebra por code point, nao por unidade UTF-16: `trim()[0]` de um
   // nome que comeca com emoji pegava meia surrogate e o avatar mostrava lixo.
   protected readonly inicial = computed(() =>
@@ -103,6 +127,8 @@ export class TabsPage {
       checkboxOutline,
       chevronBackOutline,
       chevronForwardOutline,
+      gridOutline,
+      peopleOutline,
     });
   }
 

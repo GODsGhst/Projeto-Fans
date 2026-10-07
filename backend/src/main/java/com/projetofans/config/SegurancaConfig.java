@@ -74,8 +74,11 @@ public class SegurancaConfig {
         // If-Match nao e header simples: sem ele aqui, todo PATCH e DELETE do app
         // morre no preflight, e so eles — um bug que aparece semanas depois,
         // quando alguem tenta editar. X-IA-Key idem: sem ele o resumo por IA
-        // morria no preflight e o app dizia "Sem conexao".
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "If-Match", "X-IA-Key"));
+        // morria no preflight e o app dizia "Sem conexao". X-Turma-Id idem: e a turma
+        // ativa do docente (spec 2.8); sem ele toda requisicao do docente no site
+        // morre no preflight, e so as dele — o app do aluno nunca manda.
+        config.setAllowedHeaders(List.of(
+                "Authorization", "Content-Type", "If-Match", "X-IA-Key", "X-Turma-Id"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource fonte = new UrlBasedCorsConfigurationSource();

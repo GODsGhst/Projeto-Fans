@@ -5,6 +5,7 @@ import type {
   Membro,
   Perfil,
   SessaoResponse,
+  TipoConta,
   Usuario,
 } from '../data/models';
 import { NotificacoesService } from '../notifications/notificacoes.service';
@@ -38,6 +39,19 @@ export class AuthService {
    */
   readonly temTurma = computed(() => this._turmaId() !== null);
 
+  /**
+   * Pelo TIPO da conta, nao pelo status (spec 2.9): o professor pendente tambem
+   * usa a interface de docente — painel e varias turmas —, e cair no app de aluno
+   * (uma turma so) faria ele "perder" as outras ate ser aprovado. O status so
+   * muda o aviso; o poder o servidor confere a cada requisicao.
+   *
+   * Sessao gravada antes dos docentes nao tem `tipoConta`: ausente e aluno.
+   */
+  readonly ehDocente = computed(() => {
+    const tipo = this._usuario()?.tipoConta;
+    return tipo !== undefined && tipo !== 'ALUNO';
+  });
+
   /** Chamada no bootstrap: sessao gravada sobrevive a fechar o app. */
   async restaurar(): Promise<void> {
     const sessao = await this.storage.lerSessao();
@@ -45,15 +59,64 @@ export class AuthService {
       this._token.set(sessao.jwt);
       this._usuario.set(sessao.usuario);
       this._turmaId.set(sessao.turmaId ?? null);
+      // Sem `await`: o app abre com o ultimo status conhecido e a atualizacao
+      // chega depois. Esperar prenderia a abertura numa rede lenta por um dado
+      // que so troca um aviso.
+      void this.atualizarTipoDaSessao();
     }
   }
 
-  async registrar(nome: string, email: string, senha: string): Promise<void> {
+  /**
+   * O admin aprova e recusa com o app fechado, entao o status gravado no
+   * aparelho envelhece. Esta leitura o poe em dia — e so isso: o servidor decide
+   * o poder pelo banco a cada requisicao, nao por aqui.
+   *
+   * Falha (sem rede, servidor dormindo) NAO desloga: vale o ultimo conhecido. O
+   * 401 de token vencido ja e tratado pelo interceptor, como em qualquer rota.
+   */
+  private async atualizarTipoDaSessao(): Promise<void> {
+    const jwt = this._token();
+    try {
+      const eu = await this.api.get<Perfil>('/eu');
+      const atual = this._usuario();
+      // Mesma guarda do atualizarNome: se a pessoa saiu (ou outra entrou) durante
+      // a ida, gravar isto ressuscitaria a sessao encerrada.
+      if (jwt === null || atual === null || this._token() !== jwt) {
+        return;
+      }
+      if (
+        atual.tipoConta !== eu.tipoConta ||
+        atual.docenteStatus !== eu.docenteStatus
+      ) {
+        await this.renovarSessao(jwt, {
+          ...atual,
+          tipoConta: eu.tipoConta,
+          docenteStatus: eu.docenteStatus,
+        });
+      }
+    } catch (e) {
+      console.warn('[auth] nao atualizei o tipo da conta; fica o gravado', e);
+    }
+  }
+
+  /**
+   * `tipoConta` so vai no corpo quando NAO e aluno: o aluno continua mandando
+   * exatamente o que mandava (o servidor assume ALUNO sem o campo), e nada muda
+   * para quem ja usa o app. Docente nasce PENDENTE no servidor — o app nao
+   * escolhe isso.
+   */
+  async registrar(
+    nome: string,
+    email: string,
+    senha: string,
+    tipoConta: TipoConta = 'ALUNO',
+  ): Promise<void> {
     await this.aplicar(
       await this.api.post<SessaoResponse>('/auth/registrar', {
         nome,
         email,
         senha,
+        ...(tipoConta === 'ALUNO' ? {} : { tipoConta }),
       }),
     );
   }
@@ -94,8 +157,11 @@ export class AuthService {
     const antes = this._token();
     const r = await this.api.patch<AtualizarNomeResponse>('/eu', { nome });
     if (this._token() === antes) {
-      const { id, email } = r.perfil;
-      await this.renovarSessao(r.jwt, { id, nome: r.perfil.nome, email });
+      // So o que e de `Usuario`: o resto do perfil (admin, temSenha) nao mora na
+      // sessao. Montar {id, nome, email} a mao perderia tipoConta e docenteStatus
+      // a cada renomeacao, e o docente cairia na interface de aluno.
+      const { adminPlataforma: _a, temSenha: _t, ...usuario } = r.perfil;
+      await this.renovarSessao(r.jwt, usuario);
     }
     return r.perfil;
   }
