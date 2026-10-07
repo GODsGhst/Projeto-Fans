@@ -224,3 +224,21 @@ cleartext ligado aceita qualquer intermediário na rede da faculdade. Ver A19 em
 - **Não está assinado** para distribuição em loja. Para teste direto, não precisa.
 - **Push não funciona** — é a Task 8, e ela vai precisar de um `google-services.json` dentro de
   `android/app/`, que hoje seria perdido na regeneração. Ver A18.
+
+---
+
+## Mudar o `build.gradle` quebra o build com Java 25 — 2026-10-07
+
+Subir `versionCode`/`versionName` em `app/android/app/build.gradle` fez o `assembleDebug`
+falhar com **"Unsupported class file major version 69"**. Não é o app: é o Groovy do Gradle
+8.14.3 recompilando o *script* `build.gradle`, e ele não lê bytecode do Java 25. Enquanto o
+script não muda, o Gradle reaproveita a versão compilada em cache e o Java 25 "funciona" — foi
+por isso que a seção acima registrou o 25 como verificado.
+
+Consequência prática: **qualquer edição no `build.gradle` quebra o build nesta máquina** até
+existir um JDK 21 (ou 24) para o Gradle rodar. O APK 1.2.0 saiu com `versionCode 1` /
+`versionName "1.0"` de propósito, o conteúdo de antes, para reaproveitar o cache. A versão que a
+pessoa vê no Perfil vem do `package.json` (1.2.0), não do Android, e um APK com `versionCode`
+**igual** instala por cima do anterior (só menor é recusado).
+
+Para voltar a subir o `versionCode`: instalar um JDK 21 e usar esse `JAVA_HOME` no `gradlew`.
