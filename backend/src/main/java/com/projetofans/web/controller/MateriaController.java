@@ -8,7 +8,9 @@ import com.projetofans.web.dto.MateriaResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,6 +47,24 @@ public class MateriaController {
     public MateriaDetalheResponse detalhe(@AuthenticationPrincipal UsuarioAtual usuario,
                                           @PathVariable UUID id) {
         return materias.detalhe(usuario, id);
+    }
+
+    /**
+     * Corrige a materia. O corpo e o do cadastro e o PATCH substitui tudo. Sem
+     * If-Match: `materia` nao tem coluna `version`.
+     */
+    @PatchMapping("/{id}")
+    public MateriaResponse atualizar(@AuthenticationPrincipal UsuarioAtual usuario,
+                                     @PathVariable UUID id,
+                                     @Valid @RequestBody CriarMateriaRequest req) {
+        return materias.atualizar(usuario, id, req);
+    }
+
+    /** So materia vazia. Com prova ou material, 409. */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluir(@AuthenticationPrincipal UsuarioAtual usuario, @PathVariable UUID id) {
+        materias.excluir(usuario, id);
     }
 
     @PostMapping

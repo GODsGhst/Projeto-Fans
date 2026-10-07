@@ -19,12 +19,17 @@ import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.UsuarioRepository;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
+import com.projetofans.domain.Usuario;
+import com.projetofans.web.dto.OcultadoResponse;
 import com.projetofans.web.dto.PedidoDeExclusaoResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -154,6 +159,86 @@ public class ModeracaoService {
     /** O nome de quem pediu. Ausente vira texto neutro: pedido sem dono ainda e um pedido. */
     private String nomeDeQuemPediu(UUID liderId) {
         return usuarios.findById(liderId).map(u -> u.getNome()).orElse("o líder");
+    }
+
+    /**
+     * O que o lider ocultou e continua oculto na turma dele: eventos, materiais e
+     * anotacoes da TURMA, com quem postou e quando foi ocultado.
+     *
+     * Existe porque ocultar tira o registro da vista do proprio lider — nem a Home
+     * nem a tela do registro o mostram mais — e sem esta lista o `reexibir` so
+     * servia para quem ainda estava na tela logo apos ocultar.
+     *
+     * Escopo (404) antes de poder (403), como o resto: quem nao tem turma leva 404,
+     * e so depois o aluno leva 403. A turma sai do vinculo do lider — nao ha
+     * parametro para trocar, entao nao ha como pedir os ocultos de outra turma.
+     * Excluido pelo autor nao entra (nao ha o que reexibir) e anotacao PESSOAL
+     * tambem nao: o lider so lida com o que consegue ler.
+     */
+    @Transactional(readOnly = true)
+    public List<OcultadoResponse> ocultados(UsuarioAtual lider) {
+        UUID turmaId = escopo.turmaDoUsuario(lider.usuarioId());
+        exigirLider(lider);
+
+        List<Evento> osEventos = eventos.ocultosDaTurma(turmaId);
+        List<Material> osMateriais = materiais.ocultosDaTurma(turmaId);
+        List<Nota> asNotas = notas.ocultasDaTurma(turmaId);
+
+        Map<UUID, Instant> eventosEm = ocultadosEm(RegistroTipo.EVENTO,
+                osEventos.stream().map(Evento::getId).toList());
+        Map<UUID, Instant> materiaisEm = ocultadosEm(RegistroTipo.MATERIAL,
+                osMateriais.stream().map(Material::getId).toList());
+        Map<UUID, Instant> notasEm = ocultadosEm(RegistroTipo.NOTA,
+                asNotas.stream().map(Nota::getId).toList());
+
+        List<UUID> autores = new ArrayList<>();
+        osEventos.forEach(e -> autores.add(e.getAutorId()));
+        osMateriais.forEach(m -> autores.add(m.getAutorId()));
+        asNotas.forEach(n -> autores.add(n.getAutorId()));
+        Map<UUID, String> nomes = usuarios.findAllById(autores).stream()
+                .collect(Collectors.toMap(Usuario::getId, Usuario::getNome));
+
+        List<OcultadoResponse> saida = new ArrayList<>();
+        for (Evento e : osEventos) {
+            saida.add(new OcultadoResponse(RegistroTipo.EVENTO, e.getId(), e.getTitulo(),
+                    e.getAutorId(), nomes.get(e.getAutorId()), eventosEm.get(e.getId())));
+        }
+        for (Material m : osMateriais) {
+            saida.add(new OcultadoResponse(RegistroTipo.MATERIAL, m.getId(), m.getTitulo(),
+                    m.getAutorId(), nomes.get(m.getAutorId()), materiaisEm.get(m.getId())));
+        }
+        for (Nota n : asNotas) {
+            saida.add(new OcultadoResponse(RegistroTipo.NOTA, n.getId(), comecoDoTexto(n.getTexto()),
+                    n.getAutorId(), nomes.get(n.getAutorId()), notasEm.get(n.getId())));
+        }
+        // Mais recente primeiro; sem data vai para o fim, e nao para o topo — "sem
+        // registro" nao e "agora".
+        saida.sort(Comparator.comparing(OcultadoResponse::ocultadoEm,
+                Comparator.nullsLast(Comparator.<Instant>reverseOrder())));
+        return saida;
+    }
+
+    /**
+     * Quando cada registro foi ocultado pela ultima vez. A consulta vem do mais
+     * recente para o mais antigo, entao o primeiro de cada id e o que o escondeu
+     * agora — se foi reexibido e ocultado de novo, vale a segunda vez.
+     */
+    private Map<UUID, Instant> ocultadosEm(RegistroTipo tipo, Collection<UUID> ids) {
+        Map<UUID, Instant> em = new HashMap<>();
+        if (ids.isEmpty()) {
+            // `IN ()` com lista vazia e erro de sintaxe em Postgres.
+            return em;
+        }
+        for (AcaoModeracao a : acoes.doTipoSobre(AcaoModeracaoTipo.OCULTAR, tipo, ids)) {
+            em.putIfAbsent(a.getRegistroId(), a.getEm());
+        }
+        return em;
+    }
+
+    /** Anotacao nao tem titulo: o comeco do texto, numa linha so, e o que a identifica. */
+    private static String comecoDoTexto(String texto) {
+        String linha = texto.strip().replaceAll("\\s+", " ");
+        return linha.length() <= 80 ? linha : linha.substring(0, 79) + "\u2026";
     }
 
     @Transactional

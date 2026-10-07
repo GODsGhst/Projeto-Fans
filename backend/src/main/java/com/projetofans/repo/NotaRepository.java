@@ -12,6 +12,21 @@ import java.util.UUID;
 public interface NotaRepository extends JpaRepository<Nota, UUID> {
 
     /**
+     * As notas da TURMA que o lider ocultou. O filtro de alcance nao e enfeite: a
+     * nota pode ter sido ocultada e depois o autor a trocou para PESSOAL, e rascunho
+     * pessoal nunca sai do autor — nem para o lider, nem nesta lista.
+     */
+    @Query("""
+        select n from Nota n
+        where n.turmaId = :turmaId
+          and n.alcance = com.projetofans.domain.AlcanceNota.TURMA
+          and n.visivelTurma = false
+          and n.excluidoEm is null
+        order by n.data desc, n.criadoEm desc
+        """)
+    List<Nota> ocultasDaTurma(@Param("turmaId") UUID turmaId);
+
+    /**
      * As notas que EU posso ler no periodo: as da turma, e as minhas pessoais.
      *
      * A clausula do alcance NAO e opcional nem enfeite de query. E aqui que a

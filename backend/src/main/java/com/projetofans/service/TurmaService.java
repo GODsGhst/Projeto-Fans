@@ -74,15 +74,77 @@ public class TurmaService {
     @Transactional
     public MinhaTurmaResponse atualizar(UsuarioAtual usuario, AtualizarTurmaRequest req) {
         UUID turmaId = escopo.turmaDoUsuario(usuario.usuarioId());
+        exigirLider(usuario, turmaId);
+        Turma turma = turmas.findById(turmaId).orElseThrow(AcessoNegadoException::new);
+        turma.renomear(req.nome(), req.semestre(), Instant.now());
+        turmas.saveAndFlush(turma);
+        return minha(usuario);
+    }
+
+    /**
+     * Gera um codigo de convite novo. So o lider.
+     *
+     * Existe para o dia em que o codigo vazou ou alguem que ja saiu da turma ainda
+     * o tem anotado: o antigo deixa de valer na hora (`entrar` busca pelo codigo
+     * atual), e quem ja esta na turma nao sente nada — o vinculo e a linha em
+     * `membro`, nao o codigo. Devolve a turma inteira porque o app precisa do
+     * codigo novo na tela no mesmo instante, e uma segunda ida ao servidor so
+     * para le-lo deixaria uma janela com o codigo velho exibido.
+     */
+    @Transactional
+    public MinhaTurmaResponse trocarCodigo(UsuarioAtual usuario) {
+        UUID turmaId = escopo.turmaDoUsuario(usuario.usuarioId());
+        exigirLider(usuario, turmaId);
+        Turma turma = turmas.findById(turmaId).orElseThrow(AcessoNegadoException::new);
+        turma.trocarCodigo(novoCodigoConvite(), Instant.now());
+        turmas.saveAndFlush(turma);
+        return minha(usuario);
+    }
+
+    /**
+     * Tira alguem da turma. So o lider.
+     *
+     * Apaga a linha de `membro` e mais nada: o que a pessoa postou fica, com a
+     * autoria dela — `evento.autor_id` e `material.autor_id` apontam para
+     * `usuario`, nao para `membro`, e autoria visivel e nao-negociavel. Por isso
+     * tambem nao ha como "remover e limpar": o conteudo e da turma, o rastro e de
+     * quem escreveu.
+     *
+     * Ordem das checagens e a do projeto: escopo (404) -> poder (403) -> estado
+     * (409). Quem nao e da turma do lider leva 404 como se o usuario nao existisse;
+     * so depois o 403 do aluno, que ja esta vendo a lista de membros e nao ganha
+     * nada com o disfarce; e por ultimo o 409 de remover a si mesmo.
+     *
+     * O lider nao se remove: a turma ficaria sem lider (o indice parcial garante no
+     * maximo um, nao pelo menos um). O caminho e transferir antes.
+     *
+     * O removido perde o acesso na hora: toda rota resolve a turma pelo vinculo, e
+     * sem vinculo o TurmaScopeResolver responde 404. Nao ha token a revogar — o JWT
+     * nao carrega turma. Os avisos tambem param, porque saem de uma consulta aos
+     * membros da turma.
+     *
+     * ponytail: nao grava em acao_moderacao. A tabela tem CHECK que exige tipo de
+     * acao conhecido e alvo registro; registrar remocao pede migration nova.
+     */
+    @Transactional
+    public void removerMembro(UsuarioAtual lider, UUID usuarioId) {
+        UUID turmaId = escopo.turmaDoUsuario(lider.usuarioId());
+        Membro alvo = membros.findByUsuarioIdAndTurmaId(usuarioId, turmaId)
+                .orElseThrow(AcessoNegadoException::new);
+        exigirLider(lider, turmaId);
+        if (alvo.getUsuarioId().equals(lider.usuarioId())) {
+            throw new ErroDeNegocio(HttpStatus.CONFLICT, "Transfira a lideranca antes de sair");
+        }
+        membros.delete(alvo);
+    }
+
+    /** Papel de quem pede, lido do vinculo dele nesta turma. */
+    private void exigirLider(UsuarioAtual usuario, UUID turmaId) {
         Membro eu = membros.findByUsuarioIdAndTurmaId(usuario.usuarioId(), turmaId)
                 .orElseThrow(AcessoNegadoException::new);
         if (eu.getPapel() != PapelMembro.LIDER) {
             throw new NaoLiderException();
         }
-        Turma turma = turmas.findById(turmaId).orElseThrow(AcessoNegadoException::new);
-        turma.renomear(req.nome(), req.semestre(), Instant.now());
-        turmas.saveAndFlush(turma);
-        return minha(usuario);
     }
 
     @Transactional(readOnly = true)
@@ -175,10 +237,19 @@ public class TurmaService {
 
     /**
      * 8 caracteres de UUID em caixa alta, para caber num quadro branco.
-     * ponytail: colisao e improvavel e o UNIQUE do banco a recusa; se um dia isso
-     * incomodar, o conserto e um retry aqui, nao um gerador mais esperto.
+     *
+     * Sorteia de novo enquanto o codigo ja existir. Antes era so o UNIQUE do banco
+     * a recusar, o que bastava para criar turma (nasce uma por vez, sem codigo
+     * anterior); trocar o codigo de uma turma que ja tem gente nao pode terminar em
+     * 500 por azar de sorteio — e a checagem tambem impede de re-sortear o proprio
+     * codigo atual. O UNIQUE continua sendo a garantia contra duas trocas
+     * simultaneas.
      */
     private String novoCodigoConvite() {
-        return UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
+        String codigo;
+        do {
+            codigo = UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
+        } while (turmas.existsByCodigoConvite(codigo));
+        return codigo;
     }
 }

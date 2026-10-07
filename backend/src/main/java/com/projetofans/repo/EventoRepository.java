@@ -131,4 +131,25 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     List<Object[]> home(@Param("turmaId") UUID turmaId, @Param("usuarioId") UUID usuarioId);
 
     Optional<Evento> findByIdAndTurmaId(UUID id, UUID turmaId);
+
+    /**
+     * Existe QUALQUER evento da materia — oculto e excluido logicamente incluidos.
+     * Derivada de proposito, sem os predicados de visibilidade: serve para saber se
+     * a linha da materia ainda e referenciada (FK), e linha oculta ou com
+     * `excluido_em` continua sendo linha.
+     */
+    boolean existsByMateriaId(UUID materiaId);
+
+    /**
+     * O que o lider ocultou e continua oculto na turma dele. Excluido nao entra:
+     * quem apagou foi o autor, e nao ha o que reexibir de algo que ele apagou.
+     */
+    @Query("""
+        select e from Evento e
+        where e.turmaId = :turmaId
+          and e.visivelTurma = false
+          and e.excluidoEm is null
+        order by e.dataEvento desc
+        """)
+    List<Evento> ocultosDaTurma(@Param("turmaId") UUID turmaId);
 }

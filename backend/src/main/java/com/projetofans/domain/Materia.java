@@ -76,6 +76,17 @@ public class Materia {
         return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
+    /**
+     * Corrige a materia inteira: o PATCH substitui, como o da anotacao e o da turma.
+     * `criado_em` e a turma ficam como estao — uma materia nao muda de turma.
+     */
+    public void editar(String nome, String sigla, String corHex, String sala, String professor) {
+        this.nome = nome;
+        this.sigla = sigla;
+        this.corHex = corHex;
+        anotarOndeEQuem(sala, professor);
+    }
+
     /** Atualiza sala e professor. Nulo e valor valido: significa "nao informado". */
     public void anotarOndeEQuem(String sala, String professor) {
         this.sala = emBrancoViraNulo(sala);

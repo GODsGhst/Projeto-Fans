@@ -66,6 +66,19 @@ public class Turma {
         this.atualizadoEm = agora;
     }
 
+    /**
+     * Troca o codigo de convite. Ato deliberado do lider, nunca efeito colateral.
+     *
+     * O codigo antigo para de valer na hora, porque a busca em `entrar` e pelo
+     * codigo atual. Quem ja esta na turma nao e tocado: o vinculo e a linha em
+     * `membro`, nao o codigo. E por isso que `renomear` nao chama isto — trocar
+     * o codigo na virada de semestre expulsaria o grupo do proprio grupo.
+     */
+    public void trocarCodigo(String novoCodigo, Instant agora) {
+        this.codigoConvite = novoCodigo;
+        this.atualizadoEm = agora;
+    }
+
     /** Vazio e ausencia sao a mesma coisa; o banco so entende uma. */
     private static String emBrancoViraNulo(String valor) {
         return valor == null || valor.isBlank() ? null : valor.trim();

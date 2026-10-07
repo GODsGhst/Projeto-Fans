@@ -5,6 +5,7 @@ import com.projetofans.erro.ErroDeNegocio;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.service.ModeracaoService;
 import com.projetofans.web.dto.MotivoRequest;
+import com.projetofans.web.dto.OcultadoResponse;
 import com.projetofans.web.dto.PedidoDeExclusaoResponse;
 import com.projetofans.web.dto.TransferirLiderancaRequest;
 import jakarta.validation.Valid;
@@ -76,6 +77,15 @@ public class ModeracaoController {
     @GetMapping("/moderacao/pedidos")
     public List<PedidoDeExclusaoResponse> meusPedidos(@AuthenticationPrincipal UsuarioAtual eu) {
         return moderacao.meusPedidosDeExclusao(eu);
+    }
+
+    /**
+     * O que EU ocultei e ainda esta oculto — so o lider. E por aqui que ele acha de
+     * volta o que escondeu, depois que o registro sumiu da vista dele.
+     */
+    @GetMapping("/moderacao/ocultados")
+    public List<OcultadoResponse> ocultados(@AuthenticationPrincipal UsuarioAtual eu) {
+        return moderacao.ocultados(eu);
     }
 
     @PostMapping("/turmas/lideranca/transferir")

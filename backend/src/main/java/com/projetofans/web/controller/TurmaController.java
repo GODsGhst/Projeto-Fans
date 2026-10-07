@@ -10,13 +10,19 @@ import com.projetofans.web.dto.MembroDto;
 import com.projetofans.web.dto.MinhaTurmaResponse;
 import com.projetofans.web.dto.TurmaDto;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/turmas")
@@ -41,6 +47,27 @@ public class TurmaController {
     public MinhaTurmaResponse atualizar(@AuthenticationPrincipal UsuarioAtual eu,
                                         @Valid @RequestBody AtualizarTurmaRequest pedido) {
         return turmas.atualizar(eu, pedido);
+    }
+
+    /**
+     * So o lider. O codigo antigo para de valer na hora; quem ja esta na turma nao
+     * e afetado. Devolve a turma com o codigo novo.
+     */
+    @PostMapping("/minha/codigo")
+    public MinhaTurmaResponse trocarCodigo(@AuthenticationPrincipal UsuarioAtual eu) {
+        return turmas.trocarCodigo(eu);
+    }
+
+    /**
+     * So o lider tira alguem da turma. O que a pessoa postou continua, com a
+     * autoria dela. Fica aqui e nao no ModeracaoController porque a rota e do
+     * recurso turma e a remocao nao e moderacao de registro — nao ha registro.
+     */
+    @DeleteMapping("/minha/membros/{usuarioId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removerMembro(@AuthenticationPrincipal UsuarioAtual eu,
+                              @PathVariable UUID usuarioId) {
+        turmas.removerMembro(eu, usuarioId);
     }
 
     @GetMapping("/minha")

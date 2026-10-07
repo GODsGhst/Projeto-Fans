@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface TurmaRepository extends JpaRepository<Turma, UUID> {
 
     Optional<Turma> findByCodigoConvite(String codigoConvite);
+
+    boolean existsByCodigoConvite(String codigoConvite);
 }

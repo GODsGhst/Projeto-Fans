@@ -53,4 +53,17 @@ public interface MaterialRepository extends JpaRepository<Material, UUID> {
     List<Material> vinculadosAoEvento(@Param("eventoId") UUID eventoId);
 
     Optional<Material> findByIdAndTurmaId(UUID id, UUID turmaId);
+
+    /** Existe QUALQUER material da materia, oculto ou excluido logicamente incluidos. */
+    boolean existsByMateriaId(UUID materiaId);
+
+    /** O que o lider ocultou e continua oculto na turma. Excluido nao entra. */
+    @Query("""
+        select m from Material m
+        where m.turmaId = :turmaId
+          and m.visivelTurma = false
+          and m.excluidoEm is null
+        order by m.criadoEm desc
+        """)
+    List<Material> ocultosDaTurma(@Param("turmaId") UUID turmaId);
 }
