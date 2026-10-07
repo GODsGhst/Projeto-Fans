@@ -10,6 +10,7 @@ import com.projetofans.domain.PapelMembro;
 import com.projetofans.domain.AlcanceNota;
 import com.projetofans.domain.RegistroTipo;
 import com.projetofans.erro.AcessoNegadoException;
+import com.projetofans.erro.ErroDeNegocio;
 import com.projetofans.erro.NaoLiderException;
 import com.projetofans.repo.AcaoModeracaoRepository;
 import com.projetofans.repo.EventoRepository;
@@ -17,11 +18,13 @@ import com.projetofans.repo.MaterialRepository;
 import com.projetofans.repo.NotaRepository;
 import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.UsuarioRepository;
+import com.projetofans.security.PoderNaTurma;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.domain.Usuario;
 import com.projetofans.web.dto.OcultadoResponse;
 import com.projetofans.web.dto.PedidoDeExclusaoResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +39,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Moderacao do lider: ocultar, reexibir, pedir exclusao e transferir lideranca.
+ * Moderacao: ocultar, reexibir e pedir exclusao (lider OU docente com alcance) e
+ * transferir lideranca (so o lider).
+ *
+ * Quem pode moderar um registro: o LIDER da turma do registro, ou o docente cujo
+ * alcance cobre a MATERIA do registro ({@link PoderNaTurma}). Nota nao tem materia,
+ * entao so a coordenacao a alcanca. O docente continua so mudando visibilidade —
+ * o limite do metodo `definirVisibilidade` vale para ele tambem.
  *
  * O limite do papel esta escrito no unico metodo que toca no registro:
  * {@link #definirVisibilidade}. Ele chama `definirVisibilidadeTurma` e mais nada.
@@ -47,7 +56,7 @@ import java.util.stream.Collectors;
  * A ordem das checagens e a mesma do EventoService, e pelo mesmo motivo:
  *
  *   1. registro existe e e da minha turma -> 404
- *   2. sou o LIDER                        -> 403
+ *   2. sou o LIDER, ou docente com alcance -> 403
  *
  * Inverter as duas faria um ALUNO descobrir, pelo status, que um registro de outra
  * turma existe.
@@ -66,12 +75,13 @@ public class ModeracaoService {
     private final AcaoModeracaoRepository acoes;
     private final UsuarioRepository usuarios;
     private final TurmaScopeResolver escopo;
+    private final PoderNaTurma poder;
 
     public ModeracaoService(EventoRepository eventos, MaterialRepository materiais,
                             NotaRepository notas,
                             MembroRepository membros, AcaoModeracaoRepository acoes,
                             UsuarioRepository usuarios,
-                            TurmaScopeResolver escopo) {
+                            TurmaScopeResolver escopo, PoderNaTurma poder) {
         this.eventos = eventos;
         this.materiais = materiais;
         this.notas = notas;
@@ -79,6 +89,7 @@ public class ModeracaoService {
         this.acoes = acoes;
         this.usuarios = usuarios;
         this.escopo = escopo;
+        this.poder = poder;
     }
 
     @Transactional
@@ -103,7 +114,7 @@ public class ModeracaoService {
     @Transactional
     public void pedirExclusao(UsuarioAtual lider, RegistroTipo registroTipo, UUID registroId,
                               String motivo) {
-        exigirLiderDoRegistro(lider, registroTipo, registroId);
+        exigirModeradorDoRegistro(lider, registroTipo, registroId);
         registrar(registroTipo, registroId, AcaoModeracaoTipo.PEDIR_EXCLUSAO, lider, motivo);
     }
 
@@ -178,7 +189,7 @@ public class ModeracaoService {
     @Transactional(readOnly = true)
     public List<OcultadoResponse> ocultados(UsuarioAtual lider) {
         UUID turmaId = escopo.turmaDoUsuario(lider.usuarioId());
-        exigirLider(lider);
+        exigirLider(lider, turmaId);
 
         List<Evento> osEventos = eventos.ocultosDaTurma(turmaId);
         List<Material> osMateriais = materiais.ocultosDaTurma(turmaId);
@@ -247,7 +258,7 @@ public class ModeracaoService {
         // transferir competem pelo mesmo vinculo do lider.
         membros.travarDoUsuario(lider.usuarioId());
         UUID turmaId = escopo.turmaDoUsuario(lider.usuarioId());
-        exigirLider(lider);
+        exigirLider(lider, turmaId);
 
         Membro novo = membros.findByUsuarioIdAndTurmaId(novoLiderUsuarioId, turmaId)
                 .orElseThrow(AcessoNegadoException::new);
@@ -272,33 +283,36 @@ public class ModeracaoService {
                                      UUID registroId, boolean visivel) {
         if (registroTipo == RegistroTipo.EVENTO) {
             Evento evento = eventos.findById(registroId).orElseThrow(AcessoNegadoException::new);
-            exigirTurmaELider(lider, evento.getTurmaId());
+            exigirModerador(lider, evento.getTurmaId(), evento.getMateriaId());
             evento.definirVisibilidadeTurma(visivel);
             eventos.saveAndFlush(evento);
         } else if (registroTipo == RegistroTipo.NOTA) {
             Nota nota = notaDaTurma(registroId);
-            exigirTurmaELider(lider, nota.getTurmaId());
+            exigirModerador(lider, nota.getTurmaId(), null);
             nota.definirVisibilidadeTurma(visivel);
             notas.saveAndFlush(nota);
         } else {
             Material material = materiais.findById(registroId)
                     .orElseThrow(AcessoNegadoException::new);
-            exigirTurmaELider(lider, material.getTurmaId());
+            exigirModerador(lider, material.getTurmaId(), material.getMateriaId());
             material.definirVisibilidadeTurma(visivel);
             materiais.saveAndFlush(material);
         }
     }
 
-    private void exigirLiderDoRegistro(UsuarioAtual lider, RegistroTipo registroTipo,
-                                       UUID registroId) {
-        UUID turmaDoRegistro = switch (registroTipo) {
-            case EVENTO -> eventos.findById(registroId)
-                    .orElseThrow(AcessoNegadoException::new).getTurmaId();
-            case NOTA -> notaDaTurma(registroId).getTurmaId();
-            case MATERIAL -> materiais.findById(registroId)
-                    .orElseThrow(AcessoNegadoException::new).getTurmaId();
-        };
-        exigirTurmaELider(lider, turmaDoRegistro);
+    private void exigirModeradorDoRegistro(UsuarioAtual quem, RegistroTipo registroTipo,
+                                           UUID registroId) {
+        switch (registroTipo) {
+            case EVENTO -> {
+                Evento e = eventos.findById(registroId).orElseThrow(AcessoNegadoException::new);
+                exigirModerador(quem, e.getTurmaId(), e.getMateriaId());
+            }
+            case NOTA -> exigirModerador(quem, notaDaTurma(registroId).getTurmaId(), null);
+            case MATERIAL -> {
+                Material m = materiais.findById(registroId).orElseThrow(AcessoNegadoException::new);
+                exigirModerador(quem, m.getTurmaId(), m.getMateriaId());
+            }
+        }
     }
 
     /**
@@ -314,14 +328,37 @@ public class ModeracaoService {
                 .orElseThrow(AcessoNegadoException::new);
     }
 
-    /** 404 se o registro nao e da sua turma; so depois 403 se voce nao e o lider. */
-    private void exigirTurmaELider(UsuarioAtual lider, UUID turmaDoRegistro) {
-        escopo.exigirMesmaTurma(lider.usuarioId(), turmaDoRegistro);
-        exigirLider(lider);
+    /**
+     * 404 se o registro nao e da sua turma; so depois 403 se voce nao modera NELE.
+     *
+     * Modera quem e LIDER da turma do registro, ou docente cujo alcance cobre a
+     * materia do registro (`materiaIdOuNull` nulo = nota da turma). O papel e lido
+     * na turma do REGISTRO, nao na turma ativa: um docente de duas turmas tem papeis
+     * diferentes em cada uma.
+     *
+     * O 403 do docente tem texto proprio: "Somente o lider modera" seria mentira
+     * para quem tem poder em outra materia. Pendente, recusado e contestado levam o
+     * mesmo 403 — o servidor nao diz por que o poder nao vale.
+     */
+    private void exigirModerador(UsuarioAtual usuario, UUID turmaDoRegistro,
+                                 UUID materiaIdOuNull) {
+        // papelNaTurma e o escopo: 404 se nao for membro da turma do registro.
+        PapelMembro papel = escopo.papelNaTurma(usuario.usuarioId(), turmaDoRegistro);
+        if (papel == PapelMembro.LIDER) {
+            return;
+        }
+        if (poder.daTurma(turmaDoRegistro).alcanca(usuario.usuarioId(), materiaIdOuNull)) {
+            return;
+        }
+        if (papel == PapelMembro.PROFESSOR || papel == PapelMembro.COORDENADOR) {
+            throw new ErroDeNegocio(HttpStatus.FORBIDDEN, "Sem permissao nesta materia");
+        }
+        throw new NaoLiderException();
     }
 
-    private void exigirLider(UsuarioAtual usuario) {
-        if (escopo.papelDoUsuario(usuario.usuarioId()) != PapelMembro.LIDER) {
+    /** So o lider (transferir lideranca e listar o que ele ocultou): docente nao entra. */
+    private void exigirLider(UsuarioAtual usuario, UUID turmaId) {
+        if (escopo.papelNaTurma(usuario.usuarioId(), turmaId) != PapelMembro.LIDER) {
             throw new NaoLiderException();
         }
     }

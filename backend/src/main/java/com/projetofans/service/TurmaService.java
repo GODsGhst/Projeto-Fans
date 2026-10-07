@@ -1,5 +1,6 @@
 package com.projetofans.service;
 
+import com.projetofans.domain.Materia;
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
 import com.projetofans.domain.TipoConta;
@@ -8,9 +9,11 @@ import com.projetofans.domain.Usuario;
 import com.projetofans.erro.NaoLiderException;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ErroDeNegocio;
+import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.TurmaRepository;
 import com.projetofans.repo.UsuarioRepository;
+import com.projetofans.security.PoderNaTurma;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.MembroDaTurmaResponse;
@@ -25,6 +28,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -42,13 +46,18 @@ public class TurmaService {
     private final MembroRepository membros;
     private final UsuarioRepository usuarios;
     private final TurmaScopeResolver escopo;
+    private final MateriaRepository materias;
+    private final PoderNaTurma poder;
 
     public TurmaService(TurmaRepository turmas, MembroRepository membros,
-                        UsuarioRepository usuarios, TurmaScopeResolver escopo) {
+                        UsuarioRepository usuarios, TurmaScopeResolver escopo,
+                        MateriaRepository materias, PoderNaTurma poder) {
         this.turmas = turmas;
         this.membros = membros;
         this.usuarios = usuarios;
         this.escopo = escopo;
+        this.materias = materias;
+        this.poder = poder;
     }
 
     /**
@@ -160,9 +169,17 @@ public class TurmaService {
                 .findAllById(daTurma.stream().map(Membro::getUsuarioId).toList()).stream()
                 .collect(Collectors.toMap(Usuario::getId, Usuario::getNome));
 
+        // Duas leituras para a turma toda, e nao uma por membro: os docentes (com o
+        // que declararam) numa query so, e as materias para trocar id por sigla.
+        PoderNaTurma.Docentes docentes = poder.daTurma(turmaId);
+        Map<UUID, String> siglas = materias.findByTurmaIdOrderBySiglaAsc(turmaId).stream()
+                .collect(Collectors.toMap(Materia::getId, Materia::getSigla));
+
         return new MinhaTurmaResponse(turma.getId(), turma.getNome(), turma.getSemestre(),
                 turma.getCodigoConvite(),
-                daTurma.stream().map(m -> resumo(m, nomes)).sorted(POR_CHEGADA).toList());
+                daTurma.stream().map(m -> resumo(m, nomes, docentes, siglas))
+                        .sorted(POR_CHEGADA).toList(),
+                docentes.alcance(usuario.usuarioId()));
     }
 
     /**
@@ -179,7 +196,8 @@ public class TurmaService {
                     .thenComparing(MembroDaTurmaResponse::nome)
                     .thenComparing(MembroDaTurmaResponse::usuarioId);
 
-    private MembroDaTurmaResponse resumo(Membro membro, Map<UUID, String> nomes) {
+    private MembroDaTurmaResponse resumo(Membro membro, Map<UUID, String> nomes,
+                                         PoderNaTurma.Docentes docentes, Map<UUID, String> siglas) {
         String nome = nomes.get(membro.getUsuarioId());
         if (nome == null) {
             // A FK membro.usuario_id -> usuario(id) torna isto impossivel. Se
@@ -187,8 +205,16 @@ public class TurmaService {
             // pessoa sem nome como se a turma tivesse um membro fantasma.
             throw new IllegalStateException("membro sem usuario: " + membro.getUsuarioId());
         }
+        // `lecionadas` mostra a declaracao mesmo sem poder (pendente, contestado): e o
+        // que o lider confere antes de contestar. O selo, ao contrario, segue o poder.
+        List<String> lecionadas = docentes.lecionadas(membro.getUsuarioId()).stream()
+                .map(siglas::get)
+                .filter(Objects::nonNull)
+                .sorted()
+                .toList();
         return new MembroDaTurmaResponse(
-                membro.getUsuarioId(), nome, membro.getPapel(), membro.getEntrouEm());
+                membro.getUsuarioId(), nome, membro.getPapel(), membro.getEntrouEm(),
+                docentes.seloGeral(membro.getUsuarioId()), membro.isContestado(), lecionadas);
     }
 
     /**

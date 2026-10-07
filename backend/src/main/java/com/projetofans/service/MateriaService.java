@@ -115,7 +115,7 @@ public class MateriaService {
     public MateriaResponse atualizar(UsuarioAtual usuario, UUID materiaId,
                                      CriarMateriaRequest req) {
         Materia materia = daTurmaDoUsuario(usuario, materiaId);
-        exigirLider(usuario);
+        exigirLider(usuario, materia.getTurmaId());
 
         if (!Paleta.contem(req.corHex())) {
             throw new CorForaDaPaletaException(req.corHex());
@@ -145,7 +145,7 @@ public class MateriaService {
     @Transactional
     public void excluir(UsuarioAtual usuario, UUID materiaId) {
         Materia materia = daTurmaDoUsuario(usuario, materiaId);
-        exigirLider(usuario);
+        exigirLider(usuario, materia.getTurmaId());
 
         if (eventos.existsByMateriaId(materia.getId())
                 || materiais.existsByMateriaId(materia.getId())) {
@@ -160,8 +160,12 @@ public class MateriaService {
         materias.flush();
     }
 
-    private void exigirLider(UsuarioAtual usuario) {
-        if (escopo.papelDoUsuario(usuario.usuarioId()) != PapelMembro.LIDER) {
+    /**
+     * O papel e o da turma da MATERIA, nao o da turma ativa: um docente de duas
+     * turmas tem um papel em cada, e a materia pode nao ser da que o app deixou ativa.
+     */
+    private void exigirLider(UsuarioAtual usuario, UUID turmaDaMateria) {
+        if (escopo.papelNaTurma(usuario.usuarioId(), turmaDaMateria) != PapelMembro.LIDER) {
             throw new NaoLiderException();
         }
     }

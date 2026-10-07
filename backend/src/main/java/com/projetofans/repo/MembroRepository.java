@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -65,4 +66,27 @@ public interface MembroRepository extends JpaRepository<Membro, UUID> {
             + "on conflict (turma_id) where papel = 'LIDER' do nothing", nativeQuery = true)
     int entrarComoLiderSeVago(@Param("id") UUID id, @Param("usuarioId") UUID usuarioId,
                               @Param("turmaId") UUID turmaId);
+
+    /**
+     * Docentes da turma numa query so: vinculo + conta (status) + materias que cada um
+     * declarou NESTA turma. Uma linha por materia declarada; docente sem nenhuma
+     * declaracao sai numa linha com a ultima coluna nula (LEFT JOIN).
+     *
+     * Colunas: usuarioId, papel, docenteStatus, contestadoEm, materiaId.
+     *
+     * A subquery em `materia` e o que impede uma declaracao de outra turma de contar
+     * aqui: `professor_materia` nao tem turma_id (a turma sai de materia.turma_id),
+     * entao sem este filtro o poder de A vazaria para B. O status vem da linha do
+     * banco, e nao do JWT: recusar um aprovado corta o poder na proxima requisicao.
+     */
+    @Query("""
+            select m.usuarioId, m.papel, u.docenteStatus, m.docenteContestadoEm, pm.chave.materiaId
+            from Membro m
+            join Usuario u on u.id = m.usuarioId
+            left join ProfessorMateria pm on pm.chave.usuarioId = m.usuarioId
+                 and pm.chave.materiaId in (select ma.id from Materia ma where ma.turmaId = :turmaId)
+            where m.turmaId = :turmaId and m.papel in :papeis
+            """)
+    List<Object[]> docentesDaTurma(@Param("turmaId") UUID turmaId,
+                                   @Param("papeis") Collection<PapelMembro> papeis);
 }

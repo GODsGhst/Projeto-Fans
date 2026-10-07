@@ -3,9 +3,11 @@ package com.projetofans.turma;
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
 import com.projetofans.domain.Turma;
+import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MembroRepository;
 import com.projetofans.repo.TurmaRepository;
 import com.projetofans.repo.UsuarioRepository;
+import com.projetofans.security.PoderNaTurma;
 import com.projetofans.security.TurmaScopeResolver;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.service.TurmaService;
@@ -42,6 +44,8 @@ class CodigoDeConviteUnicoTest {
         MembroRepository membros = mock(MembroRepository.class);
         UsuarioRepository usuarios = mock(UsuarioRepository.class);
         TurmaScopeResolver escopo = mock(TurmaScopeResolver.class);
+        MateriaRepository materias = mock(MateriaRepository.class);
+        PoderNaTurma poder = mock(PoderNaTurma.class);
 
         UUID turmaId = UUID.randomUUID();
         UUID liderId = UUID.randomUUID();
@@ -51,8 +55,10 @@ class CodigoDeConviteUnicoTest {
                 Optional.of(new Membro(UUID.randomUUID(), liderId, turmaId, PapelMembro.LIDER)));
         when(turmas.findById(turmaId)).thenReturn(Optional.of(turma));
         when(turmas.existsByCodigoConvite(anyString())).thenReturn(true, true, false);
+        // trocarCodigo devolve a turma montada (minha), que agora consulta os docentes.
+        when(poder.daTurma(turmaId)).thenReturn(PoderNaTurma.Docentes.vazio());
 
-        new TurmaService(turmas, membros, usuarios, escopo)
+        new TurmaService(turmas, membros, usuarios, escopo, materias, poder)
                 .trocarCodigo(new UsuarioAtual(liderId, "Lia"));
 
         // Dois sorteios recusados, o terceiro aceito.
