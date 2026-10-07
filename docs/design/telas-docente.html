@@ -1,0 +1,2329 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telas do docente — projetoFans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+
+<style>
+  /* ============================================================
+     TOKENS — copiados do telas-v3.html (e do variables.scss do app).
+     Nada de cor nova no cromo. Os unicos tokens novos sao dois,
+     --selo-coord-prova, porque o selo "Coordenacao" (accent) precisa de
+     uma versao clara dentro do bloco escuro da prova, e uma escura quando
+     o bloco da prova inverte no tema escuro. Ambos medidos (AA).
+     ============================================================ */
+  :root {
+    --paper:      #E7EAE5;
+    --surface:    #F7F9F6;
+    --surface-2:  #FDFEFC;
+    --panel:      #F7F9F6;
+
+    --ink:        #14181A;
+    --ink-2:      #464E50;
+    --ink-3:      #626A6C;
+    --rule:       rgba(20, 24, 26, .10);
+    --rule-soft:  rgba(20, 24, 26, .05);
+
+    --accent:     #0F766E;
+    --accent-ink: #FFFFFF;
+    --accent-soft: rgba(15, 118, 110, .12);
+    --accent-line: rgba(15, 118, 110, .28);
+
+    --prova-bg:   #14181A;
+    --prova-fg:   #EEF0EC;
+    --prova-fg-2: rgba(238, 240, 236, .64);
+    --selo-coord-prova: #5FD3C7;   /* 9,9:1 sobre --prova-bg */
+    --grid:       rgba(20, 24, 26, .03);
+
+    --e1: 0 1px 1.5px rgba(16,20,22,.055), 0 2px 6px -2px rgba(16,20,22,.07);
+    --e2: 0 1px 2px rgba(16,20,22,.06), 0 8px 20px -8px rgba(16,20,22,.16);
+    --e3: 0 2px 4px rgba(16,20,22,.07), 0 16px 34px -12px rgba(16,20,22,.24);
+    --e-fone: 0 2px 6px rgba(0,0,0,.06), 0 40px 80px -40px rgba(0,0,0,.45);
+    --pressao: inset 0 1px 2px rgba(16,20,22,.10);
+
+    --r-sm: 8px;
+    --r-md: 14px;
+    --r-lg: 22px;
+    --r-fone: 34px;
+    --r-pill: 999px;
+
+    --ui: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Roboto Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+
+    --mola: cubic-bezier(.22, 1, .36, 1);
+
+    --m-calc:  #1D4ED8;
+    --m-bd:    #0369A1;
+    --m-esoft: #0F766E;
+    --m-so:    #4D7C0F;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-tema="claro"]) {
+      --paper: #0C0F11; --surface: #171B1D; --surface-2: #202527; --panel: #171B1D;
+      --ink: #E8EBE6; --ink-2: #AEB6B7; --ink-3: #878F91;
+      --rule: rgba(232, 235, 230, .12); --rule-soft: rgba(232, 235, 230, .06);
+      --accent: #4DBFB3; --accent-ink: #06201D;
+      --accent-soft: rgba(77, 191, 179, .16); --accent-line: rgba(77, 191, 179, .34);
+      --prova-bg: #E8EBE6; --prova-fg: #14181A; --prova-fg-2: rgba(20, 24, 26, .62);
+      --selo-coord-prova: #0B5F58;   /* 6,3:1 sobre o bloco claro da prova */
+      --grid: rgba(232, 235, 230, .035);
+      --e1: 0 1px 1.5px rgba(0,0,0,.4), 0 2px 6px -2px rgba(0,0,0,.5);
+      --e2: 0 1px 2px rgba(0,0,0,.45), 0 8px 20px -8px rgba(0,0,0,.7);
+      --e3: 0 2px 4px rgba(0,0,0,.5), 0 16px 34px -12px rgba(0,0,0,.8);
+      --e-fone: 0 2px 6px rgba(0,0,0,.5), 0 40px 80px -40px rgba(0,0,0,1);
+      --pressao: inset 0 1px 2px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-tema="escuro"] {
+    --paper: #0C0F11; --surface: #171B1D; --surface-2: #202527; --panel: #171B1D;
+    --ink: #E8EBE6; --ink-2: #AEB6B7; --ink-3: #878F91;
+    --rule: rgba(232, 235, 230, .12); --rule-soft: rgba(232, 235, 230, .06);
+    --accent: #4DBFB3; --accent-ink: #06201D;
+    --accent-soft: rgba(77, 191, 179, .16); --accent-line: rgba(77, 191, 179, .34);
+    --prova-bg: #E8EBE6; --prova-fg: #14181A; --prova-fg-2: rgba(20, 24, 26, .62);
+    --selo-coord-prova: #0B5F58;
+    --grid: rgba(232, 235, 230, .035);
+    --e1: 0 1px 1.5px rgba(0,0,0,.4), 0 2px 6px -2px rgba(0,0,0,.5);
+    --e2: 0 1px 2px rgba(0,0,0,.45), 0 8px 20px -8px rgba(0,0,0,.7);
+    --e3: 0 2px 4px rgba(0,0,0,.5), 0 16px 34px -12px rgba(0,0,0,.8);
+    --e-fone: 0 2px 6px rgba(0,0,0,.5), 0 40px 80px -40px rgba(0,0,0,1);
+    --pressao: inset 0 1px 2px rgba(0,0,0,.5);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 4rem;
+    -webkit-font-smoothing: antialiased;
+    transition: filter .3s ease;
+  }
+  body.is-gray { filter: grayscale(1); }
+
+  .wrap { max-width: 1100px; margin-inline: auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  h1, h2 { margin: 0; line-height: 1.12; letter-spacing: -.022em; text-wrap: balance; }
+  h1 { font-size: clamp(1.9rem, 1.4rem + 2vw, 2.9rem); font-weight: 700; }
+  h2 { font-size: clamp(1.35rem, 1.1rem + 1vw, 1.8rem); font-weight: 600; }
+  p { margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: .75rem; text-transform: uppercase;
+    letter-spacing: .11em; color: var(--ink-3);
+  }
+  .lede { font-size: 1.1rem; color: var(--ink-2); max-width: 64ch; line-height: 1.55; }
+  .prose { max-width: 66ch; color: var(--ink-2); line-height: 1.6; }
+  .prose strong { color: var(--ink); font-weight: 600; }
+  code {
+    font-family: var(--mono); font-size: .875em; color: var(--ink-2);
+    background: var(--rule-soft); padding: .12em .4em; border-radius: var(--r-sm);
+  }
+  .sr {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+
+  header.top { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* ---------- controles da PAGINA (nao do app) ---------- */
+  .barra-ctl {
+    display: flex; flex-wrap: wrap; gap: .55rem; align-items: center;
+    padding: .8rem .95rem; background: var(--surface);
+    border-radius: var(--r-md); box-shadow: var(--e1);
+  }
+  .barra-ctl p { font-size: .8125rem; color: var(--ink-2); margin-inline-end: auto; max-width: 62ch; }
+  button.sw {
+    font: inherit; font-size: .8125rem; font-weight: 600;
+    display: inline-flex; align-items: center; gap: .5rem; min-height: 44px;
+    padding: .5rem .95rem; border-radius: var(--r-pill); cursor: pointer;
+    background: var(--surface-2); color: var(--ink); border: 1px solid var(--rule);
+    box-shadow: var(--e1);
+    transition: transform .14s var(--mola), box-shadow .14s var(--mola), background .16s ease, color .16s ease;
+  }
+  button.sw:hover { transform: translateY(-1px); box-shadow: var(--e2); }
+  button.sw:active { transform: translateY(0) scale(.97); box-shadow: var(--pressao); }
+  button.sw[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  button.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ponto { width: .55rem; height: .55rem; border-radius: 50%; border: 1px solid currentColor; }
+  button.sw[aria-pressed="true"] .ponto { background: currentColor; }
+
+  .estado-sel {
+    display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; width: 100%;
+  }
+  .estado-sel .rot { font-size: .8125rem; font-weight: 600; color: var(--ink-2); margin-inline-end: .2rem; }
+
+  /* ---------- nota para o dono + indice ---------- */
+  .decisao {
+    background: var(--surface); border: 1px solid var(--rule); box-shadow: var(--e1);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-md); padding: 1rem 1.15rem;
+    display: flex; flex-direction: column; gap: .6rem;
+  }
+  .decisao ol { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: .45rem; color: var(--ink-2); font-size: .9375rem; line-height: 1.5; }
+  .decisao ol b { color: var(--ink); font-weight: 600; }
+
+  .indice { display: flex; flex-direction: column; gap: 1rem; }
+  .indice-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: .9rem; }
+  .indice-grupo {
+    background: var(--surface); border: 1px solid var(--rule); box-shadow: var(--e1);
+    border-radius: var(--r-md); padding: .85rem .9rem .6rem;
+    display: flex; flex-direction: column; gap: .15rem;
+  }
+  .indice-grupo > b { font-size: .9375rem; font-weight: 700; letter-spacing: -.01em; padding-bottom: .25rem; }
+  .indice-grupo > b i {
+    font-style: normal; font-family: var(--mono); font-size: .75rem; font-weight: 500;
+    color: var(--ink-3); margin-right: .45rem;
+  }
+  .idx {
+    font: inherit; font-size: .875rem; text-align: left; text-decoration: none;
+    display: flex; align-items: center; min-height: 44px; padding: .35rem .5rem;
+    margin-inline: -.5rem; border: 0; background: none; color: var(--accent);
+    border-radius: var(--r-sm); cursor: pointer; font-weight: 500;
+  }
+  .idx:hover { background: var(--rule-soft); }
+  .idx:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+  .idx small { color: var(--ink-3); font-weight: 400; margin-left: .4rem; }
+
+  /* ============================================================
+     APARELHO — celular 390x844 e janela de PC
+     ============================================================ */
+  .palco { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+  .col-fone { display: flex; flex-direction: column; gap: .8rem; flex: 0 0 auto; max-width: 100%; }
+  .col-fone .estado-sel { max-width: 390px; }
+
+  .fone {
+    flex: 0 0 auto;
+    width: 390px; height: 844px;
+    background: var(--paper);
+    border-radius: var(--r-fone);
+    box-shadow: var(--e-fone);
+    display: flex; flex-direction: column; overflow: hidden;
+    position: relative; isolation: isolate;
+  }
+  @media (max-width: 460px) {
+    .fone { width: 100%; height: 760px; }
+  }
+
+  .area { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .tela { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .tela[data-ativa] { display: flex; animation: entra .34s var(--mola) both; }
+  @keyframes entra {
+    from { opacity: 0; transform: translateY(10px) scale(.995); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .t-barra {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: 20px 18px 14px; flex: 0 0 auto;
+    background: var(--surface);
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    box-shadow: 0 1px 0 var(--rule-soft), var(--e1);
+    position: relative; z-index: 3;
+  }
+  .t-barra h3 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1.2; }
+  .t-barra > span {
+    font-size: 12.5px; color: var(--ink-3); white-space: nowrap; letter-spacing: -.005em;
+  }
+  .t-barra .esq { display: flex; align-items: center; min-width: 0; }
+  .t-corpo {
+    flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin;
+    padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 10px;
+    position: relative; z-index: 1;
+  }
+  .t-corpo > * { flex-shrink: 0; }
+
+  /* ---------- barra de abas (celular): 5 itens, perfil e o quinto ---------- */
+  .abas {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    padding: 7px 6px 12px; flex: 0 0 auto;
+    background: var(--surface);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    box-shadow: 0 -1px 0 var(--rule-soft), 0 -10px 24px -16px rgba(16,20,22,.3);
+    position: relative; z-index: 3;
+  }
+  .abas button {
+    font: inherit; background: none; border: 0; cursor: pointer; min-width: 0; min-height: 48px;
+    font-size: 11px; font-weight: 600; letter-spacing: -.004em;
+    color: var(--ink-3); display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 0; border-radius: var(--r-sm);
+    transition: color .18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .abas button i {
+    font-style: normal; display: grid; place-items: center;
+    width: 46px; height: 28px; border-radius: var(--r-pill);
+    transition: background .2s var(--mola), transform .2s var(--mola);
+  }
+  .abas button i svg { width: 19px; height: 19px; display: block; }
+  .abas button:active i { transform: scale(.9); }
+  .abas button[aria-current="page"] { color: var(--accent); }
+  .abas button[aria-current="page"] i { background: var(--accent-soft); }
+  .abas button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .abas .pf-avatar { width: 24px; height: 24px; }
+
+  .pf-avatar {
+    display: inline-grid; flex: 0 0 auto; place-items: center;
+    width: 24px; height: 24px; font-size: 12px; font-weight: 700; line-height: 1;
+    color: var(--accent-ink); background: var(--accent); border-radius: var(--r-pill);
+  }
+
+  /* ---------- JANELA DE PC: menu lateral como no global.scss ---------- */
+  .pc-moldura { overflow-x: auto; padding: 4px 4px 28px; margin: -4px; }
+  .pc {
+    min-width: 820px; width: 100%; height: 740px; display: flex;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-lg);
+    box-shadow: var(--e-fone); overflow: hidden; isolation: isolate;
+  }
+  .pc-menu {
+    flex: 0 0 auto; width: 204px; display: flex; flex-direction: column; gap: 4px;
+    padding: 20px 12px; border-right: 1px solid var(--rule); background: var(--paper);
+  }
+  .pc-menu::before {
+    content: "projetoFans"; align-self: flex-start; padding: 4px 12px 18px;
+    font-size: 18px; font-weight: 700; letter-spacing: -.03em; white-space: nowrap; color: var(--ink);
+  }
+  .pc-menu button {
+    font: inherit; display: flex; align-items: center; gap: 12px; width: 100%;
+    height: 44px; padding: 0 12px; border: 0; border-radius: var(--r-sm); cursor: pointer;
+    background: none; color: var(--ink-3); font-size: 14px; font-weight: 600; text-align: left;
+  }
+  .pc-menu button i { font-style: normal; display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 auto; }
+  .pc-menu button i svg { width: 20px; height: 20px; display: block; }
+  .pc-menu button:hover:not([aria-current]) { background: var(--surface); }
+  .pc-menu button[aria-current="page"] { background: var(--surface-2); color: var(--accent); }
+  .pc-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pc-fio { margin: auto 0 4px; border-top: 1px solid var(--rule); }
+  .pc-menu button.pc-perfil { height: 56px; color: var(--ink); }
+  .pc-perfil .pf-avatar { width: 30px; height: 30px; font-size: 13px; }
+  .pc-perfil .pc-quem { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .pc-perfil .pc-quem b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pc-perfil .pc-quem small { font-size: 12px; font-weight: 400; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pc-conteudo { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .pc-col { width: min(100%, 660px); margin-inline: auto; }
+
+  /* ============================================================
+     VISIBILIDADE POR ESTADO — o coracao do mockup.
+     Todo elemento com data-e="a b c" so aparece quando o aparelho
+     esta em um desses estados da conta; data-t="3a" so quando a turma
+     ativa e essa. Na versao de verdade quem decide e o servidor
+     (papel, tipoConta, docenteStatus); aqui e so o seletor "Ver como".
+     ============================================================ */
+  [data-estado="prof"]       [data-e]:not([data-e~="prof"]),
+  [data-estado="coord"]      [data-e]:not([data-e~="coord"]),
+  [data-estado="pendente"]   [data-e]:not([data-e~="pendente"]),
+  [data-estado="contestado"] [data-e]:not([data-e~="contestado"]),
+  [data-estado="recusado"]   [data-e]:not([data-e~="recusado"]),
+  [data-turma="3a"] [data-t]:not([data-t~="3a"]),
+  [data-turma="3b"] [data-t]:not([data-t~="3b"]) { display: none !important; }
+
+  /* ---------- rotulo, chip, glifo ---------- */
+  .rotulo {
+    font-size: 12.5px; font-weight: 600; letter-spacing: -.005em;
+    color: var(--ink-3); display: flex; align-items: center; gap: 7px;
+    padding: 6px 2px 0;
+  }
+  .rotulo .link-txt { margin: -12px 0 -12px auto; padding-block: 0; }
+
+  .chip {
+    display: inline-flex; align-items: center; background: var(--c); color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: .05em;
+    padding: 3px 8px; border-radius: var(--r-pill); white-space: nowrap; text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(16,20,22,.16);
+  }
+  .chips-linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  .glyph { width: 8px; height: 8px; border: 1.5px solid currentColor; display: inline-block; flex: 0 0 auto; }
+  .glyph--prova { background: currentColor; border-radius: 1px; }
+  .glyph--entrega { border-radius: 50%; }
+
+  /* ---------- superficie base de cartao ---------- */
+  .ev--entrega, .campo, .linha-campo, .dia-aberto, .tcard, .pessoa, .membro, .bloco-codigo {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    box-shadow: var(--e1);
+  }
+
+  /* ============================================================
+     SELO — "esta pessoa tem poder aqui" (spec 2.6 e 8)
+     Texto + forma + contorno de 1px. Nunca so cor, e nao parece chip:
+     o chip e PILULA CHEIA com cor de materia; o selo e retangulo VAZADO.
+       Professor    = contorno em tinta,  icone de capelo (vazado)
+       Coordenacao  = contorno no accent, icone de escudo (cheio)
+     Em escala de cinza o texto, o comprimento e o icone continuam
+     separando os dois — a cor e o terceiro canal, nao o primeiro.
+     ============================================================ */
+  .selo {
+    display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
+    padding: 1px 7px 1px 4px; border: 1px solid currentColor; border-radius: var(--r-sm);
+    font-size: 11px; font-weight: 600; line-height: 1.5; letter-spacing: -.004em;
+    white-space: nowrap; background: transparent;
+  }
+  .selo svg { width: 12px; height: 12px; flex: 0 0 auto; display: block; }
+  .selo.selo--prof  { color: var(--ink); }
+  .selo.selo--coord { color: var(--accent); }
+  /* sobre accent-soft o accent so da 3,9:1; o selo ganha fundo proprio e volta para 5,2:1 */
+  .alerta .selo, .tcard .selo { background: var(--surface-2); }
+  .ev--prova .selo.selo--prof  { color: var(--prova-fg); }
+  .ev--prova .selo.selo--coord { color: var(--selo-coord-prova); }
+
+  /* tracejado = ausencia/estado (mesma regra do .pf-aviso); solido = poder */
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
+    padding: 1px 7px 1px 4px; border: 1px dashed var(--ink-3); border-radius: var(--r-sm);
+    font-size: 11px; font-weight: 600; line-height: 1.5; color: var(--ink-2); white-space: nowrap;
+  }
+  .tag svg { width: 12px; height: 12px; flex: 0 0 auto; display: block; }
+
+  /* ---------- CARD DE EVENTO ---------- */
+  .ev {
+    display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 14px;
+    padding: 13px 14px; border-radius: var(--r-md); align-items: start;
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola);
+  }
+  @media (hover: hover) { .ev[role="button"]:hover { transform: translateY(-1px); box-shadow: var(--e2); } }
+  .ev[role="button"] { cursor: pointer; }
+  .ev[role="button"]:active { transform: scale(.985); }
+  .ev[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ev--entrega { color: var(--ink); }
+  .ev--prova {
+    background: var(--prova-bg); border: 1px solid var(--prova-bg); color: var(--prova-fg);
+    box-shadow: var(--e2);
+  }
+  .ev-data { text-align: center; font-variant-numeric: tabular-nums; }
+  .ev-dia { display: block; font-size: 21px; font-weight: 700; line-height: 1; letter-spacing: -.035em; }
+  .ev-mes {
+    display: block; font-family: var(--mono); font-size: 10px;
+    text-transform: uppercase; letter-spacing: .1em; opacity: .62; margin-top: 3px;
+  }
+  .ev-corpo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .ev-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ev-tipo {
+    font-size: 11.5px; font-weight: 600; letter-spacing: -.004em;
+    display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums;
+  }
+  .ev--entrega .ev-tipo { color: var(--ink-3); }
+  .ev--prova .ev-tipo { color: var(--prova-fg-2); }
+  .ev-titulo { font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.014em; }
+  .ev--prova .ev-titulo { font-weight: 700; }
+  .ev-rodape, .ev-editado { font-size: 12.5px; line-height: 1.55; }
+  .ev--entrega .ev-rodape, .ev--entrega .ev-editado { color: var(--ink-3); }
+  .ev--prova .ev-rodape, .ev--prova .ev-editado { color: var(--prova-fg-2); }
+  /* "editado por": segunda linha, com lapis — nao troca a autoria, acrescenta */
+  .ev-editado { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .ev-editado > svg { width: 12px; height: 12px; flex: 0 0 auto; }
+
+  /* ---------- calendario ---------- */
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-hd { font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-align: center; padding-bottom: 4px; }
+  .cal button {
+    font: inherit; background: none; border: 0; cursor: pointer;
+    aspect-ratio: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink-2);
+    border-radius: var(--r-sm); padding: 0;
+    transition: background .16s ease, transform .16s var(--mola);
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .cal button:not(:disabled):hover { background: var(--rule-soft); } }
+  .cal button:not(:disabled):active { transform: scale(.88); }
+  .cal button:disabled { opacity: 0; cursor: default; }
+  .cal button.tem-prova { background: var(--prova-bg); color: var(--prova-fg); font-weight: 700; box-shadow: var(--e1); }
+  .cal button.tem-entrega { box-shadow: inset 0 0 0 1px var(--rule); }
+  .cal button[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cal button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cal .marcas { display: flex; gap: 2px; }
+  .cal .marcas u { width: 4px; height: 4px; border-radius: 50%; background: var(--c); display: block; }
+  .dia-aberto {
+    display: flex; flex-direction: column; gap: 9px;
+    padding: 13px 14px; border-radius: var(--r-md);
+    animation: entra .3s var(--mola) both;
+  }
+
+  /* ---------- formularios ---------- */
+  .rot-campo { font-size: 12.5px; font-weight: 600; color: var(--ink-3); padding: 2px 2px 0; display: block; }
+  .grupo { display: flex; flex-direction: column; gap: 4px; }
+  .campo--linha {
+    min-height: 48px; padding: 12px 13px; font-size: 15px;
+    font-family: inherit; width: 100%; display: block;
+    border: 1px solid var(--rule); border-radius: var(--r-md);
+    background: var(--surface); color: var(--ink); box-shadow: var(--pressao);
+  }
+  .campo--linha::placeholder { color: var(--ink-3); }
+  .campo--linha:focus {
+    outline: 0; border-color: var(--accent-line);
+    box-shadow: var(--pressao), 0 0 0 3px var(--accent-soft);
+  }
+  .campo--codigo {
+    text-align: center; font-family: var(--mono); font-size: 22px;
+    letter-spacing: .28em; text-transform: uppercase; padding: 16px 13px;
+  }
+
+  .seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    background: var(--rule-soft); padding: 4px; border-radius: var(--r-pill);
+  }
+  .seg--3 { grid-template-columns: repeat(3, 1fr); }
+  .seg button {
+    font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; min-height: 44px;
+    padding: 9px 6px; border-radius: var(--r-pill); border: 0;
+    background: transparent; color: var(--ink-2); text-align: center;
+    transition: background .2s var(--mola), color .2s ease, box-shadow .2s var(--mola), transform .14s var(--mola);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .seg button:active { transform: scale(.96); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: var(--e1); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .linha-campo {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    padding: 11px 13px; border-radius: var(--r-md); font-size: 13.5px; min-height: 48px;
+  }
+  .linha-campo b { font-weight: 600; }
+  .linha-campo > span { font-size: 12px; color: var(--ink-3); }
+
+  .alerta {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 10px 12px; border-radius: var(--r-sm); font-size: 12.5px; line-height: 1.5;
+    border: 1px dashed var(--rule); color: var(--ink-2); background: var(--rule-soft);
+  }
+  .alerta[data-tom="turma"] {
+    border-style: solid; border-color: var(--accent-line);
+    background: var(--accent-soft); color: var(--ink-2);
+  }
+  .alerta b { color: var(--ink); }
+  .alerta .selo { margin-inline: 1px; }
+
+  .cache-aviso {
+    border: 1px dashed var(--rule); border-radius: var(--r-sm);
+    padding: 10px 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.45;
+    background: var(--rule-soft);
+  }
+  /* explicacao de regra, sem caixa (o .pf-cache-aviso do app) */
+  .nota-regra { font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+  .pf-aviso {
+    padding: 10px 12px; border: 1px dashed var(--rule); border-radius: var(--r-sm);
+    background: var(--rule-soft); color: var(--ink-2); font-size: 12.5px; line-height: 1.4;
+  }
+
+  .botao {
+    font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; display: block; text-align: center;
+    padding: 14px; min-height: 48px; border-radius: var(--r-md); border: 0;
+    background: var(--accent); color: var(--accent-ink); width: 100%;
+    box-shadow: var(--e2);
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola), filter .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .botao:hover { transform: translateY(-1px); box-shadow: var(--e3); filter: brightness(1.06); } }
+  .botao:active { transform: translateY(0) scale(.975); box-shadow: var(--e1); }
+  .botao:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .botao--fantasma {
+    background: transparent; color: var(--ink); border: 1px solid var(--rule);
+    box-shadow: var(--e1);
+  }
+  @media (hover: hover) { .botao--fantasma:hover { filter: none; background: var(--rule-soft); } }
+  .botao--sm { width: auto; font-size: 13.5px; padding: 10px 16px; min-height: 44px; box-shadow: var(--e1); }
+  .botao[disabled] { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+  .link-txt {
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--accent);
+    background: none; border: 0; padding: 8px 6px; min-height: 44px; cursor: pointer; align-self: center;
+    border-radius: var(--r-sm); -webkit-tap-highlight-color: transparent;
+  }
+  .link-txt:active { transform: scale(.96); }
+  .link-txt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .voltar {
+    border: 0; background: var(--rule-soft); padding: 0; margin: 0 10px 0 0;
+    width: 32px; height: 32px; border-radius: var(--r-pill); position: relative;
+    display: grid; place-items: center;
+    color: var(--ink); cursor: pointer; font-size: 17px; line-height: 1;
+    transition: transform .16s var(--mola), background .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* o circulo continua 32px; o alvo de toque cresce para 44px */
+  .voltar::after { content: ""; position: absolute; inset: -6px; }
+  @media (hover: hover) { .voltar:hover { background: var(--rule); } }
+  .voltar:active { transform: scale(.9); }
+  .voltar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .divisor { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .divisor::before, .divisor::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .divisor span { font-size: 12px; color: var(--ink-3); }
+
+  .marca { display: flex; flex-direction: column; gap: 4px; padding: 14px 2px 6px; }
+  .marca b { font-size: 26px; font-weight: 700; letter-spacing: -.03em; }
+  .marca span { font-size: 14px; color: var(--ink-3); line-height: 1.4; }
+
+  .pf-vazio { display: flex; flex-direction: column; gap: 8px; padding: 18px 4px; }
+  .pf-vazio b { font-size: 16px; font-weight: 600; color: var(--ink); }
+  .pf-vazio span { font-size: 15px; line-height: 1.5; color: var(--ink-3); }
+
+  .add-linha {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 12px; min-height: 48px; border: 1px dashed var(--accent-line); border-radius: var(--r-md);
+    background: var(--accent-soft); color: var(--ink); font: inherit; font-size: 13.5px;
+    font-weight: 700; cursor: pointer; width: 100%;
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola), background .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .add-linha:active { transform: scale(.98); }
+  .add-linha:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .origem { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .origem button {
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    padding: 14px 6px; min-height: 76px; border: 1px solid var(--rule); border-radius: var(--r-md);
+    background: var(--surface); color: var(--ink-2); font: inherit; font-size: 11.5px;
+    font-weight: 600; cursor: pointer; text-align: center; line-height: 1.25;
+    box-shadow: var(--e1);
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola), border-color .16s ease, background .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .origem button svg { width: 22px; height: 22px; }
+  @media (hover: hover) { .origem button:hover { transform: translateY(-1px); box-shadow: var(--e2); } }
+  .origem button:active { transform: scale(.96); box-shadow: var(--pressao); }
+  .origem button[aria-pressed="true"] {
+    border-color: var(--accent-line); color: var(--ink); background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px var(--accent-line);
+  }
+  .origem button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .chips-pick { display: flex; flex-wrap: wrap; gap: 2px 6px; }
+  .chips-pick button {
+    border: 0; padding: 0 4px; min-height: 44px; min-width: 44px; display: inline-flex;
+    align-items: center; justify-content: center;
+    background: none; cursor: pointer;
+    transition: transform .16s var(--mola);
+  }
+  .chips-pick button[aria-pressed="true"] { transform: scale(1.04); }
+  /* a escolhida ganha anel, nao so brilho: em cinza o anel sobrevive */
+  .chips-pick button[aria-pressed="true"] .chip { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+  .chips-pick button:active { transform: scale(.94); }
+  .chips-pick button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-pill); }
+
+  .vinc { display: flex; flex-direction: column; gap: 6px; }
+  .vinc label {
+    display: flex; gap: 12px; align-items: center; padding: 8px 12px; min-height: 52px;
+    border: 1px solid var(--rule); border-radius: var(--r-sm); cursor: pointer; font-size: 13.5px;
+    background: var(--surface); box-shadow: var(--e1);
+  }
+  .vinc input { margin: 0; accent-color: var(--accent); width: 22px; height: 22px; flex: 0 0 auto; }
+  .vinc .vt { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
+  .vinc .vs { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+
+  /* ---------- membros ---------- */
+  .inicial {
+    flex: 0 0 auto; width: 34px; height: 34px; border-radius: var(--r-pill);
+    display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--ink);
+    font-size: 14px; font-weight: 700;
+  }
+  .membro {
+    display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+    padding: 11px 13px; border-radius: var(--r-md);
+  }
+  .membro .quem { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+  .membro .nome { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .membro .desde { font-size: 11.5px; color: var(--ink-3); line-height: 1.4; }
+  .membro .leciona { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .membro .papel {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--ink); background: var(--accent-soft);
+    padding: 3px 8px; border-radius: var(--r-pill);
+  }
+  .membro .base {
+    flex-basis: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 8px 10px; flex-wrap: wrap; padding-left: 45px; margin-top: -2px;
+  }
+  .membro .base .leciona { margin-top: 0; }
+  .membro .acoes-linha { display: flex; gap: 8px; margin-left: auto; }
+  /* contestado: tracejado e sem sombra, como o .arquivo--erro do v3 */
+  .membro--contestado { background: transparent; border-style: dashed; box-shadow: none; }
+
+  .bloco-codigo {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 15px; border-radius: var(--r-md);
+    background: var(--surface-2); border: 1px solid var(--accent-line);
+  }
+  .bloco-codigo .valor {
+    font-family: var(--mono); font-size: 26px; font-weight: 700;
+    letter-spacing: .2em; text-align: center; color: var(--ink); user-select: all;
+  }
+
+  /* ---------- PAINEL ---------- */
+  .faixa {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 11px 13px; border-radius: var(--r-md); font-size: 13px; line-height: 1.45;
+    color: var(--ink); background: var(--rule-soft);
+  }
+  .faixa svg { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 1px; color: var(--ink-2); }
+  .faixa b { font-weight: 700; }
+  /* espera e contestacao: tracejado (estado, passa). recusa: solido (decidido) */
+  .faixa--espera, .faixa--contestado { border: 1px dashed var(--ink-3); }
+  .faixa--recusado { border: 1px solid var(--ink-3); }
+
+  .turmas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tcard {
+    font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+    display: flex; flex-direction: column; gap: 7px; min-height: 96px;
+    padding: 12px; border-radius: var(--r-md);
+    transition: transform .16s var(--mola), box-shadow .16s var(--mola), background .16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: hover) { .tcard:hover { transform: translateY(-1px); box-shadow: var(--e2); } }
+  .tcard:active { transform: scale(.98); }
+  .tcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tcard[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .tcard .tc-topo { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .tcard .nome { font-size: 15.5px; font-weight: 700; letter-spacing: -.012em; }
+  .tcard .ativa { display: none; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--ink); }
+  .tcard .ativa svg { width: 12px; height: 12px; }
+  .tcard[aria-pressed="true"] .ativa { display: inline-flex; }
+  .tcard .sub { font-size: 12px; color: var(--ink-3); }
+  .tcard[aria-pressed="true"] .sub { color: var(--ink-2); }
+  .tcard .tc-linha { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 20px; }
+
+  .bloco-turma { display: flex; flex-direction: column; gap: 10px; }
+  .lista-ev { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ---------- ADMIN ---------- */
+  .selo-admin {
+    margin-top: 4px; padding: 3px 9px; font-size: 11px; font-weight: 700;
+    color: var(--ink); background: var(--accent-soft); border-radius: var(--r-pill);
+  }
+  .topo-perfil { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0 6px; text-align: center; }
+  .topo-perfil .pf-avatar { width: 72px; height: 72px; font-size: 30px; }
+  .topo-perfil b { margin-top: 8px; font-size: 22px; letter-spacing: -.02em; }
+  .topo-perfil .email { font-size: 14px; color: var(--ink-3); overflow-wrap: anywhere; }
+
+  .pessoa { display: flex; flex-direction: column; gap: 10px; padding: 12px 13px; border-radius: var(--r-md); }
+  .pessoa-topo { display: flex; gap: 11px; align-items: center; }
+  .pessoa .quem { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .pessoa .nome { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+  .pessoa .email { font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
+  .pessoa .meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .pessoa .meta svg { width: 13px; height: 13px; flex: 0 0 auto; }
+  .pessoa .acoes { display: flex; gap: 8px; }
+  .pessoa .acoes .botao { flex: 1; padding: 10px 14px; min-height: 44px; font-size: 13.5px; box-shadow: var(--e1); }
+  .pessoa[data-situacao="pendente"]  [data-sit]:not([data-sit~="pendente"]),
+  .pessoa[data-situacao="aprovado"]  [data-sit]:not([data-sit~="aprovado"]),
+  .pessoa[data-situacao="recusado"]  [data-sit]:not([data-sit~="recusado"]) { display: none !important; }
+  .pessoa:not(.confirmando) .confirma { display: none; }
+  .pessoa.confirmando .acoes--normal { display: none; }
+  .pessoa .confirma { display: flex; flex-direction: column; gap: 8px; }
+  .pessoa .confirma p { font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+  .pessoa .confirma p b { color: var(--ink); }
+  .lista-pessoas { display: flex; flex-direction: column; gap: 8px; }
+  details.recolhido > summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 7px; min-height: 44px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink-3); padding: 6px 2px 0;
+  }
+  details.recolhido > summary::-webkit-details-marker { display: none; }
+  details.recolhido > summary::before { content: "\25B8"; font-size: 11px; }
+  details.recolhido[open] > summary::before { content: "\25BE"; }
+  details.recolhido > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+  details.recolhido[open] > .lista-pessoas { margin-top: 4px; }
+
+
+  /* ---------- material de aula (linha) ---------- */
+  .aula-min {
+    display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: baseline;
+    padding: 8px 2px; border-bottom: 1px solid var(--rule-soft);
+  }
+  .aula-min .h {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+    letter-spacing: .04em; font-variant-numeric: tabular-nums;
+  }
+  .aula-min .c { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .aula-min .l1 { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 14px; font-weight: 600; }
+  .aula-min .s { font-size: 12px; color: var(--ink-3); }
+
+  /* ---------- cadastro: o que so existe para docente ---------- */
+  .so-docente { display: none; }
+  .tela[data-tipo="professor"] .alerta.so-docente,
+  .tela[data-tipo="coordenacao"] .alerta.so-docente { display: flex; }
+  .tela[data-tipo="professor"] .nota-regra.so-docente,
+  .tela[data-tipo="coordenacao"] .nota-regra.so-docente { display: block; }
+
+  /* ---------- lider: estado da contestacao (por aparelho, em .tela[data-contestado]) ---------- */
+  .tela:not([data-contestado="1"]) .so-contestado { display: none !important; }
+  .tela[data-contestado="1"] .so-normal { display: none !important; }
+  .tela[data-contestado="1"] .membro--marcos { background: transparent; border-style: dashed; box-shadow: none; }
+
+  /* ---------- secoes de apoio fora do aparelho ---------- */
+  .bloco { display: flex; flex-direction: column; gap: 1.1rem; }
+  .estados { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .estado-cel { display: flex; flex-direction: column; gap: .7rem; flex: 0 1 380px; }
+  .estado-cel > p { font-size: .875rem; color: var(--ink-2); line-height: 1.5; max-width: 52ch; }
+  .estado-cel > p b { color: var(--ink); font-weight: 600; }
+  .fone--mini { width: 100%; height: auto; border-radius: var(--r-lg); }
+  .fone--mini .tela { display: flex; animation: none; }
+  .fone--mini .t-corpo { overflow: visible; min-height: 150px; }
+  .fone--mini.corte { max-height: 600px; overflow: hidden; }
+  .fone--mini.corte::after {
+    content: ""; position: absolute; inset: auto 0 0 0; height: 90px; pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--paper));
+  }
+  .cinza { filter: grayscale(1); }
+
+  .notas { flex: 1 1 280px; min-width: 260px; display: flex; flex-direction: column; gap: 1.5rem; max-width: 440px; }
+  .nota-lateral { display: flex; flex-direction: column; gap: .5rem; border-left: 2px solid var(--accent); padding-left: .9rem; }
+  .nota-lateral h3 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -.01em; }
+  .nota-lateral p { font-size: .9375rem; color: var(--ink-2); line-height: 1.5; }
+
+  .abas-demo { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .abas-demo figure { margin: 0; flex: 0 1 390px; display: flex; flex-direction: column; gap: .5rem; }
+  .abas-demo figcaption { font-size: .875rem; color: var(--ink-2); line-height: 1.5; }
+  .abas-demo figcaption b { color: var(--ink); font-weight: 600; }
+  .abas-demo .abas { border-radius: var(--r-lg); box-shadow: var(--e2); border: 1px solid var(--rule); }
+
+  .regras { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem 1.5rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">projetoFans · telas do docente · PC8</p>
+    <h1>O painel do professor e da coordenação, e o selo que diz quem tem poder.</h1>
+    <p class="lede">
+      Mockup navegável do spec <code>2026-10-06-professor-coordenador</code>. Mesma casca, mesmos
+      tokens e mesmos componentes do <code>telas-v3.html</code> — o app do docente tem que parecer
+      o <strong>mesmo app</strong>. Use o seletor <strong>Ver como</strong> para trocar o estado da
+      conta (aprovado, pendente, contestado, coordenação, recusado): o app não muda de interface,
+      só o aviso e o que o servidor deixa fazer.
+    </p>
+
+    <div class="decisao">
+      <p class="eyebrow">precisa de decisão do dono</p>
+      <ol>
+        <li><b>Docente cria turma?</b> A Seção 8 do spec diz que “Entrar em outra turma” não tem o botão de criar turma; a 2.7 diz que docente cria turma, sem virar líder. Desenhei <b>com</b> o botão, e a turma nasce sem líder (primeiro aluno que entrar assume). Confirma?</li>
+        <li><b>“Editado por” mostra só quem corrigiu</b> — nem a hora, nem o valor antigo (a tela do registro mostra “ontem”). A revisão guarda a data anterior. Quer “era 8 out” no card?</li>
+        <li><b>Painel mostra os próximos só da turma ativa</b>; as outras turmas viram uma contagem no cartão. A Seção 8 fala em “agrupado por turma”. Qual vale?</li>
+        <li><b>O líder vê docente pendente ou recusado só como “sem selo”</b>, sem o motivo — a API não manda o status. Pode ser assim?</li>
+        <li><b>Admin: acrescentei “Recusados” recolhido</b>, para dar para desfazer uma recusa. O spec tem só Pendentes e Aprovados.</li>
+      </ol>
+    </div>
+
+    <div class="barra-ctl">
+      <p>Escala de cinza continua sendo o teste de aceite: Professor e Coordenação, e prova e entrega, precisam se distinguir sem cor nenhuma.</p>
+      <button class="sw" id="btn-cinza" type="button" aria-pressed="false"><span class="ponto"></span>Escala de cinza</button>
+      <button class="sw" id="btn-tema" type="button" aria-pressed="false"><span class="ponto"></span>Tema escuro</button>
+    </div>
+  </header>
+
+  <!-- ====================== ÍNDICE ====================== -->
+  <nav class="indice" aria-label="Índice das telas">
+    <p class="eyebrow">índice das telas · toque para abrir no celular</p>
+    <div class="indice-grade">
+
+      <div class="indice-grupo">
+        <b><i>1</i>Cadastro com tipo de conta</b>
+        <button class="idx" type="button" data-ir="cadastro">Aluno · Professor · Coordenação</button>
+        <button class="idx" type="button" data-ir="entrar-turma-docente">Entrar numa turma (docente)</button>
+        <button class="idx" type="button" data-ir="turma-sem-lider">Criar turma: nasce sem líder</button>
+      </div>
+
+      <div class="indice-grupo">
+        <b><i>2</i>Painel do docente</b>
+        <button class="idx" type="button" data-ir="painel" data-set-estado="prof">Professor aprovado</button>
+        <button class="idx" type="button" data-ir="painel" data-set-estado="pendente">Pendente · faixa no topo</button>
+        <button class="idx" type="button" data-ir="painel" data-set-estado="contestado">Contestado em ADS 3A</button>
+        <button class="idx" type="button" data-ir="painel" data-set-estado="coord">Coordenação · turma inteira</button>
+        <button class="idx" type="button" data-ir="painel" data-set-estado="recusado">Cadastro recusado</button>
+        <a class="idx" href="#pc">Versão PC, menu lateral</a>
+        <a class="idx" href="#estados">Estados lado a lado</a>
+        <button class="idx" type="button" data-ir="novo-evento-docente" data-tipo-evento="prova">Atalho: nova prova</button>
+        <button class="idx" type="button" data-ir="novo-material-docente">Atalho: novo material</button>
+      </div>
+
+      <div class="indice-grupo">
+        <b><i>3</i>Abas do docente</b>
+        <button class="idx" type="button" data-ir="painel">Painel</button>
+        <button class="idx" type="button" data-ir="cal">Calendário</button>
+        <button class="idx" type="button" data-ir="materias">Matérias</button>
+        <button class="idx" type="button" data-ir="turma-docente">Turma</button>
+        <button class="idx" type="button" data-ir="perfil">Perfil <small>5ª aba · rodapé no PC</small></button>
+        <a class="idx" href="#abas">Aluno × docente, lado a lado</a>
+      </div>
+
+      <div class="indice-grupo">
+        <b><i>4</i>Selos na autoria</b>
+        <a class="idx" href="#selos">Professor e Coordenação, cor e cinza</a>
+        <button class="idx" type="button" data-ir="cal">Cards no calendário <small>“editado por”</small></button>
+        <button class="idx" type="button" data-ir="materias">Selo em material</button>
+      </div>
+
+      <div class="indice-grupo">
+        <b><i>5</i>Turma</b>
+        <button class="idx" type="button" data-ir="turma-docente">Docente: matérias que eu leciono</button>
+        <button class="idx" type="button" data-ir="turma-lider">Líder: docentes e “Contestar”</button>
+        <button class="idx" type="button" data-ir="contestar-confirma">Contestar? · confirmação</button>
+        <button class="idx" type="button" data-ir="turma-lider" data-set-contestado="1">Docente contestado · “Restaurar”</button>
+      </div>
+
+      <div class="indice-grupo">
+        <b><i>6</i>Evento na matéria do professor</b>
+        <button class="idx" type="button" data-ir="evento-bd" data-set-estado="prof">Minha matéria: Editar e Ocultar</button>
+        <button class="idx" type="button" data-ir="evento-calc" data-set-estado="prof">Fora da minha matéria: só leitura</button>
+        <button class="idx" type="button" data-ir="evento-calc" data-set-estado="coord">Coordenação: qualquer matéria</button>
+        <button class="idx" type="button" data-ir="evento-bd" data-set-estado="pendente">Pendente: sem os botões</button>
+        <button class="idx" type="button" data-ir="editar-evento-docente">Corrigir a data</button>
+        <button class="idx" type="button" data-ir="ocultar-confirma">Ocultar? · confirmação</button>
+      </div>
+
+      <div class="indice-grupo">
+        <b><i>7</i>Admin (o dono)</b>
+        <button class="idx" type="button" data-ir="perfil-admin">Perfil com “Aprovar professores”</button>
+        <button class="idx" type="button" data-ir="admin">Fila: pendentes e aprovados</button>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- ====================== CELULAR ====================== -->
+  <div class="palco">
+
+    <div class="col-fone">
+      <div class="estado-sel" role="group" aria-label="Ver como (celular)">
+        <span class="rot">Ver como</span>
+        <button class="sw" type="button" data-set-estado="prof" aria-pressed="true">Professor</button>
+        <button class="sw" type="button" data-set-estado="pendente" aria-pressed="false">Pendente</button>
+        <button class="sw" type="button" data-set-estado="contestado" aria-pressed="false">Contestado</button>
+        <button class="sw" type="button" data-set-estado="coord" aria-pressed="false">Coordenação</button>
+        <button class="sw" type="button" data-set-estado="recusado" aria-pressed="false">Recusado</button>
+      </div>
+
+      <div class="fone aparelho" id="fone" role="region" aria-label="Celular, 390 por 844">
+        <div class="area" data-area></div>
+        <nav class="abas" data-barra aria-label="Abas"></nav>
+      </div>
+    </div>
+
+    <div class="notas">
+      <div class="nota-lateral">
+        <h3>Selo é “tem poder aqui”, não “é professor”</h3>
+        <p>
+          O selo segue o poder, e o poder segue a matéria. Em <strong>BD</strong>, Marcos assina
+          com selo; numa matéria que ele não declarou, assina como aluno. Conta pendente,
+          recusada ou contestada: sem selo — inclusive nos registros antigos. Troque o estado
+          em <em>Ver como</em> e olhe o card “Prova 1 — modelagem e SQL”.
+        </p>
+      </div>
+      <div class="nota-lateral">
+        <h3>O selo não é um chip</h3>
+        <p>
+          Chip é pílula cheia, na cor da matéria. Selo é retângulo vazado de 1px, com ícone
+          (capelo vazado para Professor, escudo cheio para Coordenação) e a palavra por
+          extenso. Dentro do bloco escuro da prova ele inverte junto.
+        </p>
+      </div>
+      <div class="nota-lateral">
+        <h3>Pendente também tem painel</h3>
+        <p>
+          Ler não é poder. Quem espera aprovação já vê as turmas e monta as matérias; só não
+          corrige nem oculta. As telas de evento mostram isso antes do toque, e o formulário de
+          criar avisa se o card vai sair com ou sem selo.
+        </p>
+      </div>
+      <div class="nota-lateral">
+        <h3>Sem “Excluir” para registro alheio</h3>
+        <p>
+          Professor e coordenação corrigem e ocultam. Nunca excluem. A tela de evento diz isso
+          em uma linha, e ocultar tem confirmação — mas a saída segura é o botão de peso
+          maior, como no “Apagar?” do v3.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ====================== PC ====================== -->
+  <div class="bloco" id="pc">
+    <p class="eyebrow">painel no PC</p>
+    <h2>Mesmas telas, menu lateral, perfil no rodapé.</h2>
+    <p class="prose">
+      No notebook a barra de abas vira menu à esquerda (<code>global.scss</code>) e o conteúdo
+      fica numa coluna centralizada. Nenhuma tela é redesenhada: o painel, o calendário e as
+      outras abas são as mesmas do celular. Navegue pelo menu.
+    </p>
+    <div class="estado-sel" role="group" aria-label="Ver como (PC)">
+      <span class="rot">Ver como</span>
+      <button class="sw" type="button" data-set-estado="prof" aria-pressed="true">Professor</button>
+      <button class="sw" type="button" data-set-estado="pendente" aria-pressed="false">Pendente</button>
+      <button class="sw" type="button" data-set-estado="contestado" aria-pressed="false">Contestado</button>
+      <button class="sw" type="button" data-set-estado="coord" aria-pressed="false">Coordenação</button>
+      <button class="sw" type="button" data-set-estado="recusado" aria-pressed="false">Recusado</button>
+    </div>
+    <div class="pc-moldura">
+      <div class="pc aparelho" id="pc-janela" role="region" aria-label="Janela de computador">
+        <nav class="pc-menu" data-barra aria-label="Menu"></nav>
+        <div class="pc-conteudo"><div class="pc-col area" data-area></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================== ESTADOS LADO A LADO ====================== -->
+  <div class="bloco" id="estados">
+    <p class="eyebrow">estados do painel</p>
+    <h2>Aprovado, pendente, contestado e coordenação, lado a lado.</h2>
+    <p class="prose">
+      A <strong>faixa</strong> é o único lugar que fala do estado; o resto do painel é o mesmo.
+      Repare em três coisas: o selo some do cartão e do card do Marcos quando não há poder; a
+      coordenação vê a turma inteira (e o teto de 6 corta o sétimo item); e a contestação é só
+      de <strong>ADS 3A</strong> — em ADS 3B o poder continua.
+    </p>
+    <div class="estados" id="minis-estados"></div>
+  </div>
+
+  <!-- ====================== SELOS ====================== -->
+  <div class="bloco" id="selos">
+    <p class="eyebrow">selos na autoria</p>
+    <h2>Professor e Coordenação se distinguem sem cor.</h2>
+    <p class="prose">
+      À esquerda, em cor. À direita, o mesmo conteúdo forçado em escala de cinza. O que separa
+      os dois selos é a <strong>palavra</strong>, o <strong>ícone</strong> (capelo vazado contra
+      escudo cheio) e o comprimento — a cor (tinta contra acento) é só o terceiro canal. Os dois
+      cards <strong>“editado por”</strong> mostram que a autoria continua sendo de quem postou.
+    </p>
+    <div class="estados" id="minis-selos"></div>
+    <div class="regras">
+      <div class="nota-lateral"><h3>Onde aparece</h3><p>Professor: só em registro da matéria que declarou. Coordenação: em qualquer registro da turma.</p></div>
+      <div class="nota-lateral"><h3>Onde some</h3><p>Conta pendente, recusada ou contestada na turma: sem selo, também no que já estava postado.</p></div>
+      <div class="nota-lateral"><h3>Dentro da prova</h3><p>O bloco escuro inverte o selo: Professor em <code>--prova-fg</code>, Coordenação em <code>--selo-coord-prova</code>. Os dois passam AA.</p></div>
+      <div class="nota-lateral"><h3>“Prof.” e “Coord.”</h3><p>O prefixo antes do nome nasce do selo e some com ele. Sem selo, é só o nome que a pessoa cadastrou.</p></div>
+    </div>
+  </div>
+
+  <!-- ====================== ABAS ====================== -->
+  <div class="bloco" id="abas">
+    <p class="eyebrow">abas</p>
+    <h2>O docente troca Home e Meu quadro por Painel e Turma.</h2>
+    <div class="abas-demo" id="abas-demo"></div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     FONTE DAS TELAS. Nada aqui aparece direto: o script copia cada
+     tela para o celular e para o PC na primeira visita, e depois
+     remove este bloco. Cada aparelho guarda a sua copia, entao o
+     estado de um (aprovar, contestar, escolher) nao vaza para o outro.
+     ============================================================ -->
+<div id="fonte" hidden>
+
+  <!-- ==================== 1. CADASTRO ==================== -->
+  <section class="tela" data-tela="cadastro" data-sem-abas data-tipo="aluno">
+    <div class="t-barra"><div class="esq"><h3>Criar conta</h3></div></div>
+    <div class="t-corpo">
+      <label class="grupo"><span class="rot-campo">seu nome</span>
+        <input class="campo--linha" type="text" autocomplete="name" placeholder="como a turma vai te ver"></label>
+      <label class="grupo"><span class="rot-campo">e-mail</span>
+        <input class="campo--linha" type="email" inputmode="email" autocomplete="email" placeholder="voce@exemplo.com"></label>
+      <label class="grupo"><span class="rot-campo">senha</span>
+        <input class="campo--linha" type="password" autocomplete="new-password" placeholder="mínimo 8 caracteres"></label>
+
+      <p class="rot-campo" style="margin-top:4px">eu sou</p>
+      <div class="seg seg--3" role="group" aria-label="Tipo de conta" data-unico="tipo-conta">
+        <button type="button" data-tipo="aluno" aria-pressed="true">Aluno</button>
+        <button type="button" data-tipo="professor" aria-pressed="false">Professor</button>
+        <button type="button" data-tipo="coordenacao" aria-pressed="false">Coordenação</button>
+      </div>
+
+      <div class="alerta so-docente" data-tom="turma" role="status">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto;margin-top:1px"><path d="M6 3h12M6 21h12"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9"/><path d="M17 3c0 5-5 6-5 9s5 4 5 9"/></svg>
+        <span><b>Seu cadastro passa por aprovação.</b> Até lá você monta seu painel e posta como qualquer membro — mas ainda não corrige nem oculta nada.</span>
+      </div>
+
+      <div class="alerta" data-tom="turma">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span>Seu nome aparece em tudo que você postar. É assim que a turma sabe de quem veio a informação — não existe registro anônimo aqui.</span>
+      </div>
+
+      <button class="botao" type="button" data-ir="entrar-turma-aluno" data-cadastro-ir>Criar conta</button>
+      <p class="nota-regra so-docente">O tipo de conta só se escolhe aqui, no cadastro por e-mail. Conta criada direto pelo Google é de aluno.</p>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="entrar-turma-aluno" data-sem-abas>
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Entrar na turma</h3></div></div>
+    <div class="t-corpo">
+      <div class="marca"><span>Peça o código para alguém que já está na turma. Ele tem 6 caracteres e não expira.</span></div>
+      <label class="grupo"><span class="rot-campo">código da turma</span>
+        <input class="campo--linha campo--codigo" type="text" maxlength="6" placeholder="ABC123"></label>
+      <button class="botao" type="button" data-ir="aluno-igual">Entrar na turma</button>
+      <div class="divisor"><span>ou</span></div>
+      <button class="botao botao--fantasma" type="button" data-ir="aluno-igual">Criar uma turma nova</button>
+      <p class="nota-regra">Quem cria a turma vira o líder dela. É igual ao app do aluno em <code>telas-v3.html</code> — nada muda aqui.</p>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="entrar-turma-docente" data-sem-abas>
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Entrar na turma</h3></div></div>
+    <div class="t-corpo">
+      <div class="marca"><span>Peça o código para alguém que já está na turma. Docente pode entrar em quantas turmas der aula — uma de cada vez.</span></div>
+      <label class="grupo"><span class="rot-campo">código da turma</span>
+        <input class="campo--linha campo--codigo" type="text" maxlength="6" placeholder="ABC123"></label>
+      <button class="botao" type="button" data-ir="painel" data-set-estado="pendente">Entrar na turma</button>
+      <div class="divisor"><span>ou</span></div>
+      <button class="botao botao--fantasma" type="button" data-ir="turma-sem-lider">Criar uma turma nova</button>
+      <div class="alerta" data-tom="turma">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span>Quem cria a turma <b>não vira líder</b>. A turma nasce sem líder e o primeiro aluno que entrar com o código assume. O líder é sempre um aluno.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="turma-sem-lider" data-aba="turma">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>ADS 3C</h3></div><span>2026.2 · 1 pessoa</span></div>
+    <div class="t-corpo">
+      <div class="alerta" data-tom="turma" role="status">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto;margin-top:1px"><circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6c.4-3.2 2.8-5 5.8-5s5.4 1.8 5.8 5"/><path d="M17 8v6M14 11h6"/></svg>
+        <span><b>Esta turma ainda não tem líder.</b> O primeiro aluno que entrar com o código vira líder. A liderança é sempre de aluno, nunca de professor.</span>
+      </div>
+      <p class="rotulo">código de convite</p>
+      <div class="bloco-codigo">
+        <span class="valor">K7Q4M2</span>
+        <button class="botao botao--fantasma" type="button" data-copiar>Copiar código</button>
+        <span style="font-size:12px;color:var(--ink-3);text-align:center">Passe para os alunos. Ele não expira.</span>
+      </div>
+      <p class="rotulo">quem está aqui</p>
+      <div data-gera="membros" data-modo="sem-lider"></div>
+      <p class="nota-regra">Enquanto nenhum aluno entrar, quem modera é você — se a sua conta já estiver aprovada e a matéria declarada. Criar turma vale mesmo com a conta em análise.</p>
+      <button class="botao" type="button" data-ir="painel">Ir para o painel</button>
+    </div>
+  </section>
+
+  <!-- ==================== 2. PAINEL ==================== -->
+  <section class="tela" data-tela="painel" data-aba="painel">
+    <div class="t-barra"><h3>Painel</h3><span>ter, 6 out</span></div>
+    <div class="t-corpo">
+
+      <div class="faixa faixa--espera" data-e="pendente" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9"/><path d="M17 3c0 5-5 6-5 9s5 4 5 9"/></svg>
+        <p><b>Em análise.</b> Sua conta de professor espera aprovação — até lá você posta como aluno, sem selo.</p>
+      </div>
+      <div class="faixa faixa--contestado" data-e="contestado" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 5h11l-2 4 2 4H5"/></svg>
+        <p><b>Contestado em ADS 3A.</b> O líder contestou sua declaração. Lá você está como aluno, sem selo, até ele restaurar. Nas outras turmas nada muda.</p>
+      </div>
+      <div class="faixa faixa--recusado" data-e="recusado" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+        <p><b>Não aprovado.</b> Seu cadastro de professor não foi aprovado. Você continua nas turmas como aluno, sem selo.</p>
+      </div>
+
+      <p class="rotulo">minhas turmas <span style="font-weight:400">· toque para trocar</span></p>
+      <div class="turmas" role="group" aria-label="Turma ativa">
+        <button class="tcard" type="button" data-turma-ativa="3a" aria-pressed="true">
+          <span class="tc-topo"><span class="nome">ADS 3A</span>
+            <span class="ativa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ativa</span></span>
+          <span class="sub">2026.2 · <span data-conta="3a-P" data-e="prof pendente contestado recusado"></span><span data-conta="3a-C" data-e="coord"></span></span>
+          <span class="tc-linha">
+            <span data-e="prof" data-selo="PROFESSOR"></span>
+            <span data-e="coord" data-selo="COORDENACAO"></span>
+            <span class="tag" data-e="contestado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 5h11l-2 4 2 4H5"/></svg>contestado</span>
+            <span class="chips-linha" data-e="prof pendente contestado recusado"><span class="chip" style="--c:var(--m-bd)">BD</span><span class="chip" style="--c:var(--m-esoft)">ENG SW</span></span>
+            <span class="sub" data-e="coord">turma inteira</span>
+          </span>
+        </button>
+        <button class="tcard" type="button" data-turma-ativa="3b" aria-pressed="false">
+          <span class="tc-topo"><span class="nome">ADS 3B</span>
+            <span class="ativa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ativa</span></span>
+          <span class="sub">2026.2 · <span data-conta="3b-P" data-e="prof pendente contestado recusado"></span><span data-conta="3b-C" data-e="coord"></span></span>
+          <span class="tc-linha">
+            <span data-e="prof contestado" data-selo="PROFESSOR"></span>
+            <span data-e="coord" data-selo="COORDENACAO"></span>
+            <span class="chips-linha" data-e="prof pendente contestado recusado"><span class="chip" style="--c:var(--m-bd)">BD</span></span>
+            <span class="sub" data-e="coord">turma inteira</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- ------ turma ativa: ADS 3A ------ -->
+      <div class="bloco-turma" data-t="3a">
+        <p class="rotulo">
+          <span data-e="coord">turma inteira em ADS 3A</span>
+          <span data-e="prof pendente contestado recusado">minhas matérias em ADS 3A</span>
+          <button class="link-txt" type="button" data-ir="turma-docente" data-e="prof pendente contestado recusado">mudar</button>
+        </p>
+        <div class="chips-linha" data-e="prof pendente contestado recusado">
+          <span class="chip" style="--c:var(--m-bd)">BD</span><span class="chip" style="--c:var(--m-esoft)">ENG SW</span>
+        </div>
+        <div class="chips-linha" data-e="coord">
+          <span class="chip" style="--c:var(--m-calc)">CALC</span><span class="chip" style="--c:var(--m-bd)">BD</span><span class="chip" style="--c:var(--m-esoft)">ENG SW</span><span class="chip" style="--c:var(--m-so)">SO</span>
+        </div>
+        <p class="nota-regra" data-e="pendente">Declaradas, mas ainda sem efeito: passam a valer quando sua conta for aprovada.</p>
+        <p class="nota-regra" data-e="contestado">Sem efeito em ADS 3A até o líder restaurar.</p>
+        <p class="nota-regra" data-e="coord">A coordenação vale para todas as matérias da turma. Não precisa declarar.</p>
+
+        <p class="rotulo">
+          <span data-e="coord">próximos da turma inteira</span>
+          <span data-e="prof pendente contestado recusado">próximos das minhas matérias</span>
+        </p>
+        <div class="lista-ev" data-gera="proximos" data-turma="3a"></div>
+        <button class="link-txt" type="button" data-ir="cal">Ver tudo no calendário &rarr;</button>
+      </div>
+
+      <!-- ------ turma ativa: ADS 3B ------ -->
+      <div class="bloco-turma" data-t="3b">
+        <p class="rotulo">
+          <span data-e="coord">turma inteira em ADS 3B</span>
+          <span data-e="prof pendente contestado recusado">minhas matérias em ADS 3B</span>
+          <button class="link-txt" type="button" data-ir="turma-docente" data-e="prof pendente contestado recusado">mudar</button>
+        </p>
+        <div class="chips-linha" data-e="prof pendente contestado recusado">
+          <span class="chip" style="--c:var(--m-bd)">BD</span>
+        </div>
+        <div class="chips-linha" data-e="coord">
+          <span class="chip" style="--c:var(--m-calc)">CALC</span><span class="chip" style="--c:var(--m-bd)">BD</span><span class="chip" style="--c:var(--m-esoft)">ENG SW</span>
+        </div>
+        <p class="nota-regra" data-e="pendente">Declaradas, mas ainda sem efeito: passam a valer quando sua conta for aprovada.</p>
+        <p class="nota-regra" data-e="coord">A coordenação vale para todas as matérias da turma. Não precisa declarar.</p>
+
+        <p class="rotulo">
+          <span data-e="coord">próximos da turma inteira</span>
+          <span data-e="prof pendente contestado recusado">próximos das minhas matérias</span>
+        </p>
+        <div class="lista-ev" data-gera="proximos" data-turma="3b"></div>
+        <button class="link-txt" type="button" data-ir="cal">Ver tudo no calendário &rarr;</button>
+      </div>
+
+      <p class="rotulo">criar em <span data-t="3a">ADS 3A</span><span data-t="3b">ADS 3B</span></p>
+      <div class="origem" role="group" aria-label="Atalhos">
+        <button type="button" data-ir="novo-evento-docente" data-tipo-evento="prova">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg>Nova prova</button>
+        <button type="button" data-ir="novo-evento-docente" data-tipo-evento="entrega">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="6.6"/></svg>Nova entrega</button>
+        <button type="button" data-ir="novo-material-docente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/><path d="M13.5 3v5.5H19"/></svg>Novo material</button>
+      </div>
+      <button class="botao botao--fantasma" type="button" data-ir="entrar-turma-docente">Entrar em outra turma</button>
+    </div>
+  </section>
+
+  <!-- ---- criar prova / entrega ---- -->
+  <section class="tela" data-tela="novo-evento-docente" data-aba="painel">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>O que vai cair</h3></div><span>ADS 3A</span></div>
+    <div class="t-corpo">
+      <p class="rot-campo">tipo</p>
+      <div class="seg" role="group" aria-label="Tipo" data-unico="tipo-evento">
+        <button type="button" data-tipo="prova" aria-pressed="true">Prova</button>
+        <button type="button" data-tipo="entrega" aria-pressed="false">Entrega</button>
+      </div>
+
+      <p class="rot-campo">matéria</p>
+      <div class="chips-pick" role="group" aria-label="Matéria" data-unico="materia">
+        <button type="button" data-mat="BD" aria-pressed="true" aria-label="BD"><span class="chip" style="--c:var(--m-bd)">BD</span></button>
+        <button type="button" data-mat="ENG SW" aria-pressed="false" aria-label="ENG SW"><span class="chip" style="--c:var(--m-esoft)">ENG SW</span></button>
+        <button type="button" data-mat="CALC" aria-pressed="false" aria-label="CALC"><span class="chip" style="--c:var(--m-calc)">CALC</span></button>
+        <button type="button" data-mat="SO" aria-pressed="false" aria-label="SO"><span class="chip" style="--c:var(--m-so)">SO</span></button>
+      </div>
+
+      <label class="grupo"><span class="rot-campo">o que é</span>
+        <input class="campo--linha" type="text" placeholder="Prova 2 — normalização" value="Prova 2 — álgebra relacional"></label>
+      <label class="grupo"><span class="rot-campo">quando</span>
+        <input class="campo--linha" type="date" value="2026-10-27"></label>
+      <label class="grupo"><span class="rot-campo">hora <span style="font-weight:400">— opcional</span></span>
+        <input class="campo--linha" type="time"></label>
+
+      <div class="alerta" data-tom="turma" role="status">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span class="alerta-selo"></span>
+      </div>
+
+      <button class="botao" type="button" data-ir="painel">Adicionar</button>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="novo-material-docente" data-aba="painel">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Adicionar material</h3></div><span>ADS 3A</span></div>
+    <div class="t-corpo">
+      <p class="rotulo">de onde vem</p>
+      <div class="origem" role="group" aria-label="Origem" data-unico="origem">
+        <button type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg>Foto do quadro</button>
+        <button type="button" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/><path d="M13.5 3v5.5H19"/></svg>Arquivo</button>
+        <button type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.54 3.54 0 0 0-5-5l-1.6 1.6"/><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.54 3.54 0 0 0 5 5l1.6-1.6"/></svg>Link</button>
+      </div>
+      <div class="linha-campo"><b>formas-normais-1fn-3fn.pdf</b><span>6,4 MB · 18 páginas</span></div>
+      <label class="grupo"><span class="rot-campo">título</span>
+        <input class="campo--linha" type="text" value="Lista de exercícios — junção"></label>
+      <p class="rot-campo">matéria</p>
+      <div class="chips-pick" role="group" aria-label="Matéria" data-unico="materia">
+        <button type="button" data-mat="BD" aria-pressed="true" aria-label="BD"><span class="chip" style="--c:var(--m-bd)">BD</span></button>
+        <button type="button" data-mat="ENG SW" aria-pressed="false" aria-label="ENG SW"><span class="chip" style="--c:var(--m-esoft)">ENG SW</span></button>
+        <button type="button" data-mat="CALC" aria-pressed="false" aria-label="CALC"><span class="chip" style="--c:var(--m-calc)">CALC</span></button>
+        <button type="button" data-mat="SO" aria-pressed="false" aria-label="SO"><span class="chip" style="--c:var(--m-so)">SO</span></button>
+      </div>
+      <div class="alerta" data-tom="turma" role="status">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span class="alerta-selo"></span>
+      </div>
+      <button class="botao" type="button" data-ir="materias">Adicionar material</button>
+    </div>
+  </section>
+
+  <!-- ==================== 3. CALENDÁRIO ==================== -->
+  <section class="tela" data-tela="cal" data-aba="cal">
+    <div class="t-barra"><h3>Outubro</h3><span data-cal-legenda>ADS 3A</span></div>
+    <div class="t-corpo">
+      <p class="pf-aviso" data-t="3b">Só para o protótipo: esta tela foi desenhada em ADS 3A.</p>
+      <div class="cal" data-gera="cal"></div>
+      <div class="dia-aberto"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 6. EVENTO NA MATÉRIA ==================== -->
+  <section class="tela" data-tela="evento-bd" data-aba="cal">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Entrega</h3></div><span>BD · 8 out</span></div>
+    <div class="t-corpo">
+      <div class="linha-campo">
+        <b><span class="glyph glyph--entrega"></span>&nbsp; Lista 5 — junção</b>
+        <span>BD · 8 out · 23:59 · entrega</span>
+      </div>
+      <p class="rotulo">quem cadastrou</p>
+      <div class="linha-campo"><b>Ana Beatriz</b><span>há 1 dia</span></div>
+
+      <!-- com poder: professor na matéria dele, ou coordenação -->
+      <div data-e="prof coord" style="display:flex;flex-direction:column;gap:10px">
+        <div class="alerta" data-tom="turma">
+          <span class="glyph glyph--entrega" style="margin-top:4px"></span>
+          <span>BD é matéria <b>sua</b> em ADS 3A, então você pode corrigir esta entrega ou ocultá-la da turma. A Ana continua como autora: o card passa a mostrar <b>“editado por <span data-e="prof">Prof. Marcos</span><span data-e="coord">Coord. Helena</span>”</b>.</span>
+        </div>
+        <button class="botao" type="button" data-ir="editar-evento-docente">Editar</button>
+        <button class="botao botao--fantasma" type="button" data-ir="ocultar-confirma">Ocultar da turma</button>
+        <p class="nota-regra">Não existe “Excluir” para registro de outra pessoa: só ocultar, e dá para reexibir. Apagar é só de quem cadastrou.</p>
+      </div>
+
+      <!-- sem poder: a restricao e dita ANTES de tentar -->
+      <div data-e="pendente contestado recusado" style="display:flex;flex-direction:column;gap:10px">
+        <div class="alerta" data-tom="turma">
+          <span class="glyph glyph--entrega" style="margin-top:4px"></span>
+          <span>
+            Só a <b>Ana</b> edita ou apaga este registro, porque foi ela que cadastrou.
+            <span data-e="pendente">Sua conta de professor espera aprovação: quando ela sair, você poderá corrigir e ocultar o que é de BD.</span>
+            <span data-e="contestado">O líder contestou sua declaração em ADS 3A: aqui você está como aluno até ele restaurar.</span>
+            <span data-e="recusado">Seu cadastro de professor não foi aprovado.</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="evento-calc" data-aba="cal">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Prova</h3></div><span>CALC · 14 out</span></div>
+    <div class="t-corpo">
+      <div class="linha-campo">
+        <b><span class="glyph glyph--prova"></span>&nbsp; Prova 1 — limites e derivadas</b>
+        <span>CALC · 14 out · 19:00 · prova</span>
+      </div>
+      <p class="rotulo">quem cadastrou</p>
+      <div class="linha-campo"><b>Bruno</b><span>há 4 dias</span></div>
+      <p class="rotulo">última correção</p>
+      <div class="linha-campo">
+        <b>Coord. Helena <span class="selo selo--coord"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 6v5.5c0 4.4-3.2 7.8-8 9.5-4.8-1.7-8-5.1-8-9.5V6z"/></svg>Coordenação</span></b>
+        <span>corrigiu a data · ontem</span>
+      </div>
+
+      <div data-e="coord" style="display:flex;flex-direction:column;gap:10px">
+        <div class="alerta" data-tom="turma">
+          <span class="glyph glyph--prova" style="margin-top:4px"></span>
+          <span>Como <b>coordenação</b>, você corrige e oculta em qualquer matéria de ADS 3A. O Bruno continua como autor.</span>
+        </div>
+        <button class="botao" type="button" data-ir="editar-evento-docente">Editar</button>
+        <button class="botao botao--fantasma" type="button" data-ir="ocultar-confirma">Ocultar da turma</button>
+        <p class="nota-regra">Sem “Excluir” para registro de outra pessoa.</p>
+      </div>
+
+      <div data-e="prof pendente contestado recusado" style="display:flex;flex-direction:column;gap:10px">
+        <div class="alerta" data-tom="turma">
+          <span class="glyph glyph--prova" style="margin-top:4px"></span>
+          <span>Só o <b>Bruno</b> edita ou apaga este registro. Você não leciona CALC em ADS 3A: <b>aqui você é aluno</b>, sem selo. O poder de professor vale só nas matérias que você declarou.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="editar-evento-docente" data-aba="cal">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Corrigir</h3></div><span>registro da Ana</span></div>
+    <div class="t-corpo">
+      <p class="rot-campo">tipo</p>
+      <div class="seg" role="group" aria-label="Tipo" data-unico="tipo-evento">
+        <button type="button" data-tipo="prova" aria-pressed="false">Prova</button>
+        <button type="button" data-tipo="entrega" aria-pressed="true">Entrega</button>
+      </div>
+      <p class="rot-campo">matéria</p>
+      <div class="chips-pick" role="group" aria-label="Matéria" data-unico="materia-edicao">
+        <button type="button" aria-pressed="true" aria-label="BD"><span class="chip" style="--c:var(--m-bd)">BD</span></button>
+        <button type="button" aria-pressed="false" aria-label="ENG SW"><span class="chip" style="--c:var(--m-esoft)">ENG SW</span></button>
+        <span data-e="coord" style="display:contents">
+          <button type="button" aria-pressed="false" aria-label="CALC"><span class="chip" style="--c:var(--m-calc)">CALC</span></button>
+          <button type="button" aria-pressed="false" aria-label="SO"><span class="chip" style="--c:var(--m-so)">SO</span></button>
+        </span>
+      </div>
+      <p class="nota-regra" data-e="prof">Só aparecem as suas matérias: você corrige a data e o texto, mas não leva o registro para a matéria de outro professor.</p>
+      <label class="grupo"><span class="rot-campo">o que é</span>
+        <input class="campo--linha" type="text" value="Lista 5 — junção"></label>
+      <label class="grupo"><span class="rot-campo">quando</span>
+        <input class="campo--linha" type="date" value="2026-10-08"></label>
+      <label class="grupo"><span class="rot-campo">hora <span style="font-weight:400">— opcional</span></span>
+        <input class="campo--linha" type="time" value="23:59"></label>
+
+      <div class="alerta" data-tom="turma">
+        <span class="glyph glyph--entrega" style="margin-top:4px"></span>
+        <span>Você está corrigindo um registro da <b>Ana Beatriz</b>. Ela continua como autora e o card passa a mostrar <b>“editado por <span data-e="prof pendente contestado recusado">Prof. Marcos</span><span data-e="coord">Coord. Helena</span>”</b>. A versão de agora fica guardada no histórico.</span>
+      </div>
+      <button class="botao" type="button" data-ir="cal">Salvar correção</button>
+      <button class="botao botao--fantasma" type="button" data-voltar>Cancelar</button>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="ocultar-confirma" data-aba="cal">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Ocultar?</h3></div></div>
+    <div class="t-corpo">
+      <p class="rotulo">o que sai da lista</p>
+      <div class="linha-campo">
+        <b><span class="glyph glyph--entrega"></span>&nbsp; Lista 5 — junção</b>
+        <span>BD · 8 out · 23:59</span>
+      </div>
+      <div class="alerta" data-tom="turma">
+        <span class="glyph glyph--entrega" style="margin-top:4px"></span>
+        <span>Some da lista e do calendário da turma, mas <b>continua guardado</b>. Você, o líder ou a coordenação podem reexibir. A Ana continua vendo em “Não listados”, com o aviso de quem ocultou.</span>
+      </div>
+      <p class="nota-regra">Ocultar não é apagar: nada se perde. Apagar é só de quem cadastrou.</p>
+      <!-- O que tira algo do ar e o botao LEVE; o de maior peso e o caminho seguro. -->
+      <button class="botao botao--fantasma" type="button" data-ir="evento-oculto">Sim, ocultar</button>
+      <button class="botao" type="button" data-voltar>Cancelar</button>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="evento-oculto" data-aba="cal">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-ir="cal" aria-label="Voltar para o calendário">&larr;</button><h3>Ocultado</h3></div></div>
+    <div class="t-corpo">
+      <div class="pf-vazio">
+        <b>Lista 5 — junção saiu da lista da turma.</b>
+        <span>Foi ocultada por você agora. Ninguém perdeu nada: dá para reexibir quando quiser.</span>
+      </div>
+      <p class="nota-regra">A ação fica registrada com data e com quem ocultou. É o contrapeso de poder ocultar.</p>
+      <button class="botao" type="button" data-ir="evento-bd">Reexibir</button>
+      <button class="botao botao--fantasma" type="button" data-ir="cal">Voltar ao calendário</button>
+    </div>
+  </section>
+
+  <!-- ==================== MATÉRIAS ==================== -->
+  <section class="tela" data-tela="materias" data-aba="materias">
+    <div class="t-barra"><h3>Banco de Dados</h3><span>BD · ADS 3A</span></div>
+    <div class="t-corpo">
+      <p class="pf-aviso" data-t="3b">Só para o protótipo: esta tela foi desenhada em ADS 3A.</p>
+      <div class="alerta" data-tom="turma" role="status">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span>
+          <span data-e="prof">Você leciona BD nesta turma: o selo <span data-selo="PROFESSOR"></span> aparece nos seus registros daqui.</span>
+          <span data-e="coord">Como coordenação, o selo <span data-selo="COORDENACAO"></span> aparece em todos os registros da turma.</span>
+          <span data-e="pendente">Você declarou BD, mas a conta espera aprovação: ainda sem selo.</span>
+          <span data-e="contestado">O líder contestou sua declaração em ADS 3A: sem selo aqui, por enquanto.</span>
+          <span data-e="recusado">Cadastro não aprovado: sem selo.</span>
+        </span>
+      </div>
+
+      <p class="rotulo">material de aula</p>
+      <div data-gera="materiais"></div>
+      <button class="add-linha" type="button" data-ir="novo-material-docente">+&nbsp;&nbsp;Adicionar material</button>
+
+      <p class="rotulo">eventos</p>
+      <div class="lista-ev" data-gera="eventos-bd"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 5. TURMA ==================== -->
+  <section class="tela" data-tela="turma-docente" data-aba="turma">
+    <div class="t-barra"><h3><span data-t="3a">ADS 3A</span><span data-t="3b">ADS 3B</span></h3><span>2026.2 · 9 pessoas</span></div>
+    <div class="t-corpo">
+      <p class="pf-aviso" data-t="3b">Só para o protótipo: esta tela foi desenhada em ADS 3A.</p>
+
+      <!-- professor declara as materias; coordenacao nao precisa -->
+      <div data-e="prof pendente contestado recusado" style="display:flex;flex-direction:column;gap:10px">
+        <p class="rotulo">matérias que eu leciono</p>
+        <div class="vinc" role="group" aria-label="Matérias que eu leciono">
+          <label><input type="checkbox"><span class="vt"><span class="chip" style="--c:var(--m-calc)">CALC</span><span>Cálculo</span></span></label>
+          <label><input type="checkbox" checked><span class="vt"><span class="chip" style="--c:var(--m-bd)">BD</span><span>Banco de Dados</span></span></label>
+          <label><input type="checkbox" checked><span class="vt"><span class="chip" style="--c:var(--m-esoft)">ENG SW</span><span>Engenharia de Software</span></span></label>
+          <label><input type="checkbox"><span class="vt"><span class="chip" style="--c:var(--m-so)">SO</span><span>Sistemas Operacionais</span></span></label>
+        </div>
+        <button class="botao" type="button" data-ir="painel">Salvar matérias</button>
+        <p class="nota-regra" data-e="prof">Vale na hora, sem fila. Se você marcar uma matéria que não leciona, o líder pode contestar — e você perde o selo desta turma até ele restaurar.</p>
+        <p class="nota-regra" data-e="pendente">A declaração fica guardada e passa a valer quando sua conta for aprovada.</p>
+        <p class="nota-regra" data-e="contestado">O líder contestou sua declaração. Você pode ajustar as matérias, mas elas não valem até ele restaurar.</p>
+        <p class="nota-regra" data-e="recusado">Seu cadastro não foi aprovado: as matérias ficam guardadas, sem efeito.</p>
+        <p class="nota-regra">Não achou a matéria? Qualquer membro cria na aba Matérias.</p>
+      </div>
+      <div data-e="coord" style="display:flex;flex-direction:column;gap:10px">
+        <p class="rotulo">minha função</p>
+        <div class="alerta" data-tom="turma">
+          <span class="glyph glyph--prova" style="margin-top:4px"></span>
+          <span>A <b>coordenação</b> vale para a turma inteira: você não declara matéria. O selo <span data-selo="COORDENACAO"></span> aparece em tudo que você postar ou corrigir aqui.</span>
+        </div>
+      </div>
+
+      <p class="rotulo">código de convite</p>
+      <div class="bloco-codigo">
+        <span class="valor">93EB92</span>
+        <button class="botao botao--fantasma" type="button" data-copiar>Copiar código</button>
+        <span style="font-size:12px;color:var(--ink-3);text-align:center">Quem tiver este código entra na turma. Ele não expira.</span>
+      </div>
+
+      <p class="rotulo">quem está aqui · 9</p>
+      <div data-gera="membros" data-modo="docente"></div>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="turma-lider" data-bar="aluno" data-aba="quadro">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-ir="aluno-igual" aria-label="Voltar">&larr;</button><h3>ADS 3A</h3></div><span>2026.2 · 9 pessoas</span></div>
+    <div class="t-corpo">
+      <div class="alerta" data-tom="turma">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span>Você é o <b>líder</b>: vê quem tem selo e quais matérias cada docente declarou. Se alguma declaração for falsa, toque em <b>Contestar</b> — a pessoa perde o poder e o selo <b>só nesta turma</b>, até você restaurar.</span>
+      </div>
+      <p class="rotulo">docentes · 5</p>
+      <div data-gera="membros" data-modo="lider-docentes"></div>
+      <p class="rotulo">alunos · 4</p>
+      <div data-gera="membros" data-modo="lider-alunos"></div>
+      <p class="nota-regra">Contestar não tira ninguém da turma nem apaga o que a pessoa postou. Para fraude de verdade, quem decide é o admin da plataforma, que pode recusar a conta e tirar o poder em todas as turmas.</p>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="contestar-confirma" data-bar="aluno" data-aba="quadro">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-voltar aria-label="Voltar">&larr;</button><h3>Contestar?</h3></div></div>
+    <div class="t-corpo">
+      <p class="rotulo">quem</p>
+      <div class="linha-campo"><b>Marcos Teixeira</b><span>Professor · BD, ENG SW</span></div>
+      <div class="alerta" data-tom="turma">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span>Ele perde o <b>poder e o selo em ADS 3A, na hora</b> — inclusive nos registros antigos. Nas outras turmas dele nada muda. Entrar de novo com o código não desfaz; só você, tocando em <b>Restaurar</b>.</span>
+      </div>
+      <p class="nota-regra">Use quando a pessoa declarou uma matéria que não leciona. Para conta falsa, peça ao admin para recusar a conta.</p>
+      <button class="botao botao--fantasma" type="button" data-ir="turma-lider" data-set-contestado="1">Sim, contestar</button>
+      <button class="botao" type="button" data-voltar>Cancelar</button>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="aluno-igual" data-bar="aluno" data-aba="quadro">
+    <div class="t-barra"><h3>Telas do aluno</h3><span>sem mudança</span></div>
+    <div class="t-corpo">
+      <div class="pf-vazio">
+        <b>Esta aba é a mesma do app do aluno.</b>
+        <span>Nada muda para quem é aluno: mesmas abas, mesma Home, mesmas rotas. A diferença é só ver o selo em registro de docente e o “editado por” quando um docente corrigiu algo. As telas estão em <code>telas-v3.html</code>.</span>
+      </div>
+      <button class="botao" type="button" data-ir="turma-lider">Abrir a turma · visão do líder</button>
+    </div>
+  </section>
+
+  <!-- ==================== PERFIL ==================== -->
+  <section class="tela" data-tela="perfil" data-aba="perfil">
+    <div class="t-barra"><h3>Perfil</h3></div>
+    <div class="t-corpo">
+      <div class="topo-perfil">
+        <span class="pf-avatar" aria-hidden="true"><span data-e="prof pendente contestado recusado">M</span><span data-e="coord">H</span></span>
+        <b><span data-e="prof pendente contestado recusado">Marcos Teixeira</span><span data-e="coord">Helena Castro</span></b>
+        <span class="email"><span data-e="prof pendente contestado recusado">marcos.teixeira@exemplo.edu.br</span><span data-e="coord">helena.castro@exemplo.edu.br</span></span>
+      </div>
+
+      <div class="faixa faixa--espera" data-e="pendente" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9"/><path d="M17 3c0 5-5 6-5 9s5 4 5 9"/></svg>
+        <p><b>Cadastro em análise.</b> Você ainda não corrige nem oculta nada.</p>
+      </div>
+      <div class="faixa faixa--recusado" data-e="recusado" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+        <p><b>Seu cadastro de professor não foi aprovado.</b></p>
+      </div>
+
+      <p class="rotulo">conta</p>
+      <div class="linha-campo"><b>Tipo de conta</b><span><span data-e="coord">Coordenação</span><span data-e="prof pendente contestado recusado">Professor</span></span></div>
+      <div class="linha-campo"><b>Situação</b><span>
+        <span data-e="prof contestado coord">aprovada</span><span data-e="pendente">em análise</span><span data-e="recusado">não aprovada</span></span></div>
+      <button class="botao botao--fantasma" type="button" data-ir="painel">Minhas turmas</button>
+      <button class="botao botao--fantasma" type="button" data-ir="cadastro">Sair da conta</button>
+    </div>
+  </section>
+
+  <section class="tela" data-tela="perfil-admin" data-bar="aluno" data-aba="perfil">
+    <div class="t-barra"><h3>Perfil</h3></div>
+    <div class="t-corpo">
+      <div class="topo-perfil">
+        <span class="pf-avatar" aria-hidden="true">O</span>
+        <b>Otávio Lima</b>
+        <span class="email">otavio.lima@exemplo.com</span>
+        <span class="selo-admin">Admin da plataforma</span>
+      </div>
+      <p class="rotulo">plataforma</p>
+      <button class="botao" type="button" data-ir="admin">Aprovar professores <span style="font-weight:500;opacity:.9">· 3 na fila</span></button>
+      <p class="rotulo">conta</p>
+      <button class="botao botao--fantasma" type="button" data-ir="turma-lider">Minha turma</button>
+      <button class="botao botao--fantasma" type="button" data-ir="cadastro">Sair da conta</button>
+    </div>
+  </section>
+
+  <!-- ==================== 7. ADMIN ==================== -->
+  <section class="tela" data-tela="admin" data-bar="aluno" data-aba="perfil">
+    <div class="t-barra"><div class="esq">
+      <button class="voltar" type="button" data-ir="perfil-admin" aria-label="Voltar para o perfil">&larr;</button><h3>Aprovar professores</h3></div></div>
+    <div class="t-corpo">
+      <div class="alerta" data-tom="turma">
+        <span class="glyph glyph--prova" style="margin-top:4px"></span>
+        <span>Você decide <b>quem a pessoa é</b>, não onde ela manda: aqui não aparece turma nem conteúdo. Aprovar vale para todas as turmas; recusar ou revogar tira o poder de todas, na hora.</span>
+      </div>
+
+      <p class="rotulo">pendentes · <span data-conta-adm="pendente">3</span></p>
+      <div class="lista-pessoas" data-lista="pendente"></div>
+      <div class="pf-vazio" data-vazio-adm hidden>
+        <b>Ninguém na fila.</b><span>Quando alguém se cadastrar como professor ou coordenação, aparece aqui.</span>
+      </div>
+
+      <p class="rotulo">aprovados · <span data-conta-adm="aprovado">4</span></p>
+      <div class="lista-pessoas" data-lista="aprovado"></div>
+
+      <details class="recolhido">
+        <summary>recusados · <span data-conta-adm="recusado">1</span></summary>
+        <div class="lista-pessoas" data-lista="recusado"></div>
+      </details>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ============================================================
+  // utilitarios
+  // ============================================================
+  const $  = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const SVG = (inner, extra = '') =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ' + extra + '>' + inner + '</svg>';
+
+  // ---- estado global: quem esta olhando, e qual turma esta ativa ----
+  const G = { estado: 'prof', turma: '3a' };
+  const ESTADOS = ['prof', 'coord', 'pendente', 'contestado', 'recusado'];
+  const SEM_PODER = ['pendente', 'contestado', 'recusado'];
+
+  // ============================================================
+  // dados de exemplo (fictícios) — a forma segue AutoriaResponse do spec 6:
+  // autor{nome, selo}, editadoPor{nome, selo}, criadoEm/atualizadoEm
+  // ============================================================
+  const MAT = {
+    'CALC':   { cor: '--m-calc',  nome: 'Cálculo' },
+    'BD':     { cor: '--m-bd',    nome: 'Banco de Dados' },
+    'ENG SW': { cor: '--m-esoft', nome: 'Engenharia de Software' },
+    'SO':     { cor: '--m-so',    nome: 'Sistemas Operacionais' }
+  };
+  // matérias que o Marcos declarou em cada turma
+  const MINHAS = { '3a': ['BD', 'ENG SW'], '3b': ['BD'] };
+
+  // hoje = terça, 6 de outubro de 2026. Janela de 14 dias: até 20 out. Teto: 6.
+  // persona:true = e o docente que "esta olhando" (o selo dele segue o estado).
+  const EV = [
+    { t: '3a', dia: 8,  tipo: 'entrega', mat: 'BD',     hora: '23:59', titulo: 'Lista 5 — junção',
+      autor: { n: 'Ana Beatriz' }, quando: 'há 1 dia', ir: 'evento-bd' },
+    { t: '3a', dia: 9,  tipo: 'entrega', mat: 'CALC',   hora: '23:59', titulo: 'Lista 4 — integrais',
+      autor: { n: 'Bruno' }, quando: 'há 2 dias' },
+    { t: '3a', dia: 13, tipo: 'prova',   mat: 'BD',     hora: '19:00', titulo: 'Prova 1 — modelagem e SQL',
+      autor: { n: 'Marcos', selo: 'PROFESSOR', persona: true }, quando: 'há 6 dias' },
+    { t: '3a', dia: 14, tipo: 'prova',   mat: 'CALC',   hora: '19:00', titulo: 'Prova 1 — limites e derivadas',
+      autor: { n: 'Bruno' }, quando: 'há 4 dias',
+      editor: { n: 'Helena', selo: 'COORDENACAO', quando: 'ontem' }, ir: 'evento-calc' },
+    { t: '3a', dia: 15, tipo: 'entrega', mat: 'ENG SW', hora: '23:59', titulo: 'Diagrama de classes',
+      autor: { n: 'Marina' }, quando: 'há 3 dias',
+      editor: { n: 'Lúcia', selo: 'PROFESSOR', quando: 'hoje' } },
+    { t: '3a', dia: 19, tipo: 'entrega', mat: 'ENG SW', hora: '23:59', titulo: 'Projeto integrador — versão 1',
+      autor: { n: 'Helena', selo: 'COORDENACAO' }, quando: 'há 2 dias' },
+    { t: '3a', dia: 20, tipo: 'prova',   mat: 'ENG SW', hora: '19:00', titulo: 'Prova 1 — requisitos e UML',
+      autor: { n: 'Marina' }, quando: 'há 1 dia' },
+
+    { t: '3b', dia: 9,  tipo: 'entrega', mat: 'BD',     hora: '23:59', titulo: 'Lista 5 — junção',
+      autor: { n: 'Carla' }, quando: 'há 1 dia' },
+    { t: '3b', dia: 15, tipo: 'prova',   mat: 'BD',     hora: '19:00', titulo: 'Prova 1 — modelagem e SQL',
+      autor: { n: 'Marcos', selo: 'PROFESSOR', persona: true }, quando: 'há 5 dias' },
+    { t: '3b', dia: 16, tipo: 'prova',   mat: 'CALC',   hora: '19:00', titulo: 'Prova 1 — limites e derivadas',
+      autor: { n: 'Diego' }, quando: 'há 3 dias' },
+    { t: '3b', dia: 19, tipo: 'entrega', mat: 'ENG SW', hora: '23:59', titulo: 'Diagrama de classes',
+      autor: { n: 'Paula' }, quando: 'há 2 dias' }
+  ];
+
+  const MEMBROS = [
+    { id: 'otavio',  n: 'Otávio Lima',      ini: 'O', lider: true, desde: '1 set' },
+    { id: 'ana',     n: 'Ana Beatriz Souza', ini: 'A', desde: '1 set' },
+    { id: 'bruno',   n: 'Bruno Martins',    ini: 'B', desde: '1 set' },
+    { id: 'marina',  n: 'Marina Duarte',    ini: 'M', desde: '2 set' },
+    { id: 'marcos',  n: 'Marcos Teixeira',  ini: 'M', doc: 'PROFESSOR',   mats: ['BD', 'ENG SW'], desde: '28 ago', persona: 'prof' },
+    { id: 'lucia',   n: 'Lúcia Prado',      ini: 'L', doc: 'PROFESSOR',   mats: ['ENG SW'],       desde: '30 ago' },
+    { id: 'renato',  n: 'Renato Alves',     ini: 'R', doc: 'PROFESSOR',   mats: ['CALC'],         desde: '30 ago' },
+    { id: 'helena',  n: 'Helena Castro',    ini: 'H', doc: 'COORDENACAO', todas: true,            desde: '28 ago', persona: 'coord' },
+    { id: 'diego',   n: 'Diego Faria',      ini: 'D', doc: 'PROFESSOR',   mats: ['SO'],           desde: '3 out', semSelo: true }
+  ];
+
+  const ADMIN = {
+    pendente: [
+      { n: 'Renata Figueiredo', e: 'renata.figueiredo@exemplo.edu.br', tipo: 'Professor',    quando: 'pediu em 5 out' },
+      { n: 'Diego Faria',       e: 'diego.faria@exemplo.edu.br',       tipo: 'Professor',    quando: 'pediu em 3 out' },
+      { n: 'Paulo Henrique Lins', e: 'paulo.lins@exemplo.edu.br',      tipo: 'Coordenação',  quando: 'pediu em 2 out' }
+    ],
+    aprovado: [
+      { n: 'Marcos Teixeira', e: 'marcos.teixeira@exemplo.edu.br', tipo: 'Professor',   quando: 'aprovado em 20 ago' },
+      { n: 'Lúcia Prado',     e: 'lucia.prado@exemplo.edu.br',     tipo: 'Professor',   quando: 'aprovado em 22 ago' },
+      { n: 'Renato Alves',    e: 'renato.alves@exemplo.edu.br',    tipo: 'Professor',   quando: 'aprovado em 22 ago' },
+      { n: 'Helena Castro',   e: 'helena.castro@exemplo.edu.br',   tipo: 'Coordenação', quando: 'aprovada em 18 ago' }
+    ],
+    recusado: [
+      { n: 'Gabriel Rocha', e: 'gabriel.rocha@exemplo.edu.br', tipo: 'Professor', quando: 'recusado em 1 out' }
+    ]
+  };
+
+  // ============================================================
+  // selo, pessoa, card de evento
+  // ============================================================
+  const SELO = {
+    PROFESSOR: {
+      cls: 'selo--prof', txt: 'Professor', pref: 'Prof. ',
+      // capelo, so contorno
+      ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.8V16c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-4.2"/></svg>'
+    },
+    COORDENACAO: {
+      cls: 'selo--coord', txt: 'Coordenação', pref: 'Coord. ',
+      // escudo, cheio
+      ic: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 6v5.5c0 4.4-3.2 7.8-8 9.5-4.8-1.7-8-5.1-8-9.5V6z"/></svg>'
+    }
+  };
+  const seloHTML = (s, vis) =>
+    '<span class="selo ' + SELO[s].cls + '"' + (vis ? ' data-e="' + vis + '"' : '') + '>' + SELO[s].ic + SELO[s].txt + '</span>';
+
+  // O selo do PROPRIO docente segue o poder dele naquela turma. Em ADS 3A so
+  // existe poder em prof e coord; em ADS 3B (onde nao ha contestacao) tambem em contestado.
+  const PODER = { '3a': 'prof coord', '3b': 'prof coord contestado' };
+
+  // "Prof. Marcos [Professor]" — o prefixo nasce do selo e some com ele.
+  function pessoaHTML(p, turma) {
+    if (!p.selo) return esc(p.n);
+    const vis = p.persona ? PODER[turma] : null;
+    const v = vis ? ' data-e="' + vis + '"' : '';
+    return '<span' + v + '>' + SELO[p.selo].pref + '</span>' + esc(p.n) + ' ' + seloHTML(p.selo, vis);
+  }
+
+  const ICO_LAPIS = SVG('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>');
+
+  function cardEvento(e, o = {}) {
+    const m = MAT[e.mat];
+    const prova = e.tipo === 'prova';
+    const nav = e.ir && !o.semNav ? ' data-ir="' + e.ir + '" role="button" tabindex="0"' : '';
+    const vis = o.vis ? ' data-e="' + o.vis + '"' : '';
+    return '<div class="ev ev--' + e.tipo + '"' + vis + nav + '>' +
+      '<div class="ev-data"><span class="ev-dia">' + e.dia + '</span><span class="ev-mes">out</span></div>' +
+      '<div class="ev-corpo">' +
+        '<div class="ev-topo">' +
+          '<span class="chip" style="--c: var(' + m.cor + ')">' + esc(e.mat) + '</span>' +
+          '<span class="ev-tipo"><span class="glyph glyph--' + e.tipo + '"></span>' +
+            '<span class="sr">' + (prova ? 'Prova' : 'Entrega') + ' — </span>' + e.hora + '</span>' +
+        '</div>' +
+        '<p class="ev-titulo">' + esc(e.titulo) + '</p>' +
+        '<p class="ev-rodape">' + pessoaHTML(e.autor, e.t) + ' · ' + e.quando + '</p>' +
+        (e.editor
+          ? '<p class="ev-editado">' + ICO_LAPIS + 'editado por ' + pessoaHTML(e.editor, e.t) + '</p>'
+          : '') +
+      '</div></div>';
+  }
+
+  // ---- painel: quais cards cada grupo de estados ve (teto 6, so no "servidor") ----
+  // Professor (qualquer status) so ve as materias declaradas; coordenacao ve a turma toda.
+  function visibilidadeProximos(turma) {
+    const evs = EV.filter((e) => e.t === turma).sort((a, b) => a.dia - b.dia);
+    const prof  = evs.filter((e) => MINHAS[turma].includes(e.mat)).slice(0, 6);
+    const coord = evs.slice(0, 6);
+    return {
+      evs,
+      prof, coord,
+      deQuem: (e) => {
+        const g = [];
+        if (prof.includes(e))  g.push('prof', 'pendente', 'contestado', 'recusado');
+        if (coord.includes(e)) g.push('coord');
+        return g;
+      }
+    };
+  }
+
+  // ============================================================
+  // geracao do conteudo dinamico (roda UMA vez, na fonte)
+  // ============================================================
+  function gerarFonte(fonte) {
+    // ---- proximos do painel ----
+    for (const alvo of $$('[data-gera="proximos"]', fonte)) {
+      const v = visibilidadeProximos(alvo.dataset.turma);
+      alvo.innerHTML = v.evs.map((e) => {
+        const g = v.deQuem(e);
+        if (!g.length) return '';
+        const todos = g.length === ESTADOS.length;
+        return cardEvento(e, { vis: todos ? null : g.join(' ') });
+      }).join('');
+    }
+    // contagens nos cartoes de turma
+    for (const t of ['3a', '3b']) {
+      const v = visibilidadeProximos(t);
+      const p = $('[data-conta="' + t + '-P"]', fonte), c = $('[data-conta="' + t + '-C"]', fonte);
+      if (p) p.textContent = v.prof.length + (v.prof.length === 1 ? ' próximo' : ' próximos');
+      if (c) c.textContent = v.coord.length + (v.coord.length === 1 ? ' próximo' : ' próximos');
+    }
+    // selos preenchidos por atributo (data-selo)
+    for (const el of $$('[data-selo]', fonte)) el.outerHTML = seloHTML(el.dataset.selo, el.dataset.e);
+
+    // ---- eventos de BD na tela de materia ----
+    const bd = $('[data-gera="eventos-bd"]', fonte);
+    if (bd) bd.innerHTML = EV.filter((e) => e.t === '3a' && e.mat === 'BD').map((e) => cardEvento(e)).join('');
+
+    // ---- material de aula, com selo de autoria ----
+    const mat = $('[data-gera="materiais"]', fonte);
+    if (mat) {
+      const L = [
+        { tipo: 'PDF',   t: 'Formas normais 1FN–3FN',     a: { n: 'Ana Beatriz' }, q: '22 set', acoes: true },
+        { tipo: 'SLIDE', t: 'Álgebra relacional',         a: { n: 'Marcos', selo: 'PROFESSOR', persona: true }, q: '18 set' },
+        { tipo: 'FOTO',  t: 'Quadro da aula de junção',   a: { n: 'Otávio' }, q: '15 set' }
+      ];
+      mat.innerHTML = L.map((m) =>
+        '<div class="aula-min">' +
+          '<span class="h">' + m.tipo + '</span>' +
+          '<span class="c"><span class="l1">' + esc(m.t) + '</span>' +
+          '<span class="s">' + pessoaHTML(m.a, '3a') + ' · ' + m.q + '</span>' +
+          (m.acoes
+            ? '<span class="s" data-e="prof coord" style="display:flex;gap:2px;margin-top:2px">' +
+                '<button class="link-txt" type="button" style="padding-inline:0 14px">Editar</button>' +
+                '<button class="link-txt" type="button" style="padding-inline:0 14px">Ocultar</button></span>'
+            : '') +
+          '</span></div>'
+      ).join('');
+    }
+
+    // ---- calendario ----
+    const cal = $('[data-gera="cal"]', fonte);
+    if (cal) montarCalendario($('.tela[data-tela="cal"]', fonte) || cal.closest('.tela'));
+
+    // ---- membros ----
+    for (const alvo of $$('[data-gera="membros"]', fonte)) alvo.outerHTML = membrosHTML(alvo.dataset.modo);
+
+    // ---- admin ----
+    const adm = $('.tela[data-tela="admin"]', fonte);
+    if (adm) {
+      for (const sit of Object.keys(ADMIN)) {
+        $('[data-lista="' + sit + '"]', adm).innerHTML = ADMIN[sit].map((p) => pessoaAdminHTML(p, sit)).join('');
+      }
+    }
+  }
+
+  // ---- membros ----
+  const ICO_BANDEIRA = SVG('<path d="M5 21V4"/><path d="M5 5h11l-2 4 2 4H5"/>', 'stroke-width="2"');
+  function chipsMats(mats) {
+    return mats.map((m) => '<span class="chip" style="--c: var(' + MAT[m].cor + ')">' + esc(m) + '</span>').join('');
+  }
+  // ctx: 'docente' (como o docente ve a lista) ou 'lider' (com Contestar/Restaurar)
+  function linhaMembro(m, ctx, opc = {}) {
+    const lider = ctx === 'lider';
+    const ehMarcosNaTelaDoLider = lider && m.id === 'marcos';
+    // O selo do PROPRIO docente segue o estado (so na visao do docente). Em ADS 3A:
+    // pendente, contestado e recusado nao tem selo.
+    const visSelo = !lider && m.persona === 'prof' ? 'prof coord' : null;
+    const mostraSelo = m.doc && !m.semSelo;
+
+    let selo = '';
+    if (mostraSelo) {
+      selo = ehMarcosNaTelaDoLider
+        ? '<span class="so-normal">' + seloHTML(m.doc) + '</span><span class="so-contestado tag">' + ICO_BANDEIRA + 'contestado</span>'
+        : seloHTML(m.doc, visSelo);
+      if (!lider && m.persona === 'prof') {
+        selo += '<span class="tag" data-e="contestado">' + ICO_BANDEIRA + 'contestado</span>';
+      }
+    }
+    const voce =
+      (!lider && m.persona === 'prof'  ? ' <span class="desde" data-e="prof pendente contestado recusado">(você)</span>' : '') +
+      (!lider && m.persona === 'coord' ? ' <span class="desde" data-e="coord">(você)</span>' : '') +
+      (lider && m.id === 'otavio' ? ' <span class="desde">(você)</span>' : '');
+    const nome = esc(m.n) + voce + (m.lider ? ' <span class="papel">líder</span>' : '') + selo;
+
+    let leciona = '';
+    if (m.doc && !opc.semLeciona) {
+      leciona = '<span class="leciona">' +
+        (m.todas ? 'turma inteira' : 'leciona ' + chipsMats(m.mats)) +
+        (ehMarcosNaTelaDoLider ? '<span class="so-contestado">· sem efeito até restaurar</span>' : '') +
+        '</span>';
+    }
+    const desde = '<span class="desde">' + (opc.desde || 'entrou em ' + m.desde) + (m.semSelo ? ' · sem selo ainda' : '') + '</span>';
+
+    let acoes = '';
+    if (lider && m.doc) {
+      const contestar = '<button class="botao botao--fantasma botao--sm' + (ehMarcosNaTelaDoLider ? ' so-normal' : '') +
+        '" type="button" data-ir="contestar-confirma" aria-label="Contestar ' + esc(m.n) + '">Contestar</button>';
+      const restaurar = ehMarcosNaTelaDoLider
+        ? '<button class="botao botao--sm so-contestado" type="button" data-set-contestado="0" data-ir="turma-lider" aria-label="Restaurar ' + esc(m.n) + '">Restaurar</button>'
+        : '';
+      acoes = '<div class="acoes-linha">' + contestar + restaurar + '</div>';
+    }
+    // na visao do lider, "leciona ..." e o botao dividem a ultima linha
+    const base = lider && m.doc ? '<div class="base">' + leciona + acoes + '</div>' : '';
+    return '<div class="membro' + (ehMarcosNaTelaDoLider ? ' membro--marcos' : '') + '">' +
+      '<span class="inicial" aria-hidden="true">' + m.ini + '</span>' +
+      '<span class="quem"><span class="nome">' + nome + '</span>' + desde + (lider ? '' : leciona) + '</span>' +
+      base + '</div>';
+  }
+  function membrosHTML(modo) {
+    const por = (id) => MEMBROS.find((m) => m.id === id);
+    if (modo === 'sem-lider') {
+      // quem criou a turma: o docente da conta que esta olhando
+      const novo = { semLeciona: true, desde: 'criou a turma hoje' };
+      return linhaMembro(por('marcos'), 'docente', novo).replace('class="membro"', 'class="membro" data-e="prof pendente contestado recusado"') +
+             linhaMembro(por('helena'), 'docente', novo).replace('class="membro"', 'class="membro" data-e="coord"');
+    }
+    const ctx = modo.startsWith('lider') ? 'lider' : 'docente';
+    const lista = modo === 'lider-docentes' ? MEMBROS.filter((m) => m.doc)
+                : modo === 'lider-alunos'   ? MEMBROS.filter((m) => !m.doc)
+                : MEMBROS;
+    return '<div class="lista-pessoas">' + lista.map((m) => linhaMembro(m, ctx)).join('') + '</div>';
+  }
+
+  // ---- admin ----
+  const ICO_TIPO = {
+    'Professor':   SVG('<path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.8V16c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-4.2"/>', 'stroke-width="1.9"'),
+    'Coordenação': '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 6v5.5c0 4.4-3.2 7.8-8 9.5-4.8-1.7-8-5.1-8-9.5V6z"/></svg>'
+  };
+  function pessoaAdminHTML(p, sit) {
+    const ini = p.n.trim()[0].toUpperCase();
+    return '<div class="pessoa" data-situacao="' + sit + '" data-nome="' + esc(p.n) + '">' +
+      '<div class="pessoa-topo"><span class="inicial" aria-hidden="true">' + ini + '</span>' +
+        '<span class="quem"><span class="nome">' + esc(p.n) + '</span><span class="email">' + esc(p.e) + '</span>' +
+        '<span class="meta">' + ICO_TIPO[p.tipo] + p.tipo + ' · ' +
+          '<span data-sit="pendente">' + esc(p.quando) + '</span>' +
+          '<span data-sit="aprovado">' + (sit === 'aprovado' ? esc(p.quando) : 'aprovado agora') + '</span>' +
+          '<span data-sit="recusado">' + (sit === 'recusado' ? esc(p.quando) : 'recusado agora') + '</span></span></span></div>' +
+      // pendente: Aprovar (peso maior) e Recusar (leve). Recusado: Aprovar. Aprovado: Revogar.
+      '<div class="acoes acoes--normal" data-sit="pendente">' +
+        '<button class="botao" type="button" data-adm="aprovar" aria-label="Aprovar ' + esc(p.n) + '">Aprovar</button>' +
+        '<button class="botao botao--fantasma" type="button" data-adm="recusar" aria-label="Recusar ' + esc(p.n) + '">Recusar</button></div>' +
+      '<div class="acoes acoes--normal" data-sit="recusado">' +
+        '<button class="botao" type="button" data-adm="aprovar" aria-label="Aprovar ' + esc(p.n) + ' de novo">Aprovar</button></div>' +
+      '<div class="acoes acoes--normal" data-sit="aprovado">' +
+        '<button class="botao botao--fantasma" type="button" data-adm="revogar" aria-label="Revogar ' + esc(p.n) + '">Revogar</button></div>' +
+      '<div class="confirma" data-sit="aprovado">' +
+        '<p><b>Revogar ' + esc(p.n) + '?</b> Ela perde o poder e o selo em <b>todas as turmas, na hora</b>. Nada do que postou é apagado.</p>' +
+        '<div class="acoes">' +
+          '<button class="botao botao--fantasma" type="button" data-adm="revogar-sim">Sim, revogar</button>' +
+          '<button class="botao" type="button" data-adm="cancelar">Cancelar</button></div></div>' +
+    '</div>';
+  }
+  function contagensAdmin(tela) {
+    for (const s of ['pendente', 'aprovado', 'recusado']) {
+      const n = $$('[data-lista="' + s + '"] > .pessoa', tela).length;
+      $$('[data-conta-adm="' + s + '"]', tela).forEach((el) => (el.textContent = n));
+    }
+    const vazio = $('[data-vazio-adm]', tela);
+    if (vazio) vazio.hidden = $$('[data-lista="pendente"] > .pessoa', tela).length > 0;
+  }
+  function moverPessoa(card, para) {
+    const tela = card.closest('.tela');
+    card.dataset.situacao = para;
+    card.classList.remove('confirmando');
+    $('[data-lista="' + para + '"]', tela).append(card);
+    contagensAdmin(tela);
+  }
+
+  // ---- calendario (Outubro de 2026 comeca numa quinta) ----
+  const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  function montarCalendario(tela) {
+    const cal = $('.cal', tela);
+    const primeiro = new Date(2026, 9, 1).getDay();
+    let h = '';
+    for (const d of ['d', 's', 't', 'q', 'q', 's', 's']) h += '<div class="cal-hd" aria-hidden="true">' + d + '</div>';
+    for (let i = 0; i < primeiro; i++) h += '<button type="button" disabled tabindex="-1" aria-hidden="true"></button>';
+    for (let dia = 1; dia <= 31; dia++) {
+      const evs = EV.filter((e) => e.t === '3a' && e.dia === dia);
+      const prova = evs.some((e) => e.tipo === 'prova');
+      const cls = evs.length ? (prova ? 'tem-prova' : 'tem-entrega') : '';
+      const marcas = evs.length
+        ? '<span class="marcas">' + evs.map((e) => '<u style="--c: var(' + MAT[e.mat].cor + ')"></u>').join('') + '</span>' : '';
+      const nome = dia + ' de outubro' + (evs.length ? ', ' + evs.map((e) => (e.tipo === 'prova' ? 'prova' : 'entrega') + ' de ' + e.mat).join(', ') : '');
+      h += '<button type="button" class="' + cls + '" data-dia="' + dia + '" aria-pressed="false" aria-label="' + esc(nome) + '">' + dia + marcas + '</button>';
+    }
+    cal.innerHTML = h;
+    abrirDia(tela, 15);
+  }
+  function abrirDia(tela, dia) {
+    for (const b of $$('.cal button', tela)) b.setAttribute('aria-pressed', String(b.dataset.dia === String(dia)));
+    const sem = DIAS[new Date(2026, 9, dia).getDay()];
+    const evs = EV.filter((e) => e.t === '3a' && e.dia === dia);
+    let h = '<p class="rotulo">' + sem + ', ' + dia + ' de outubro</p>';
+    h += evs.length
+      ? evs.map((e) => cardEvento(e)).join('')
+      : '<div class="pf-vazio" style="padding:10px 2px"><b>Nada marcado neste dia.</b><span>Sem prova nem entrega cadastrada. Qualquer pessoa da turma pode cadastrar.</span></div>';
+    $('.dia-aberto', tela).innerHTML = h;
+    const leg = $('[data-cal-legenda]', tela);
+    if (leg) leg.textContent = 'dia ' + dia;
+  }
+
+  // ---- aviso "vai sair com ou sem selo" nos formularios de criar ----
+  function atualizarAlerta(tela) {
+    const alvo = $('.alerta-selo', tela);
+    if (!alvo) return;
+    const raiz = tela.closest('[data-estado]');
+    const estado = raiz ? raiz.dataset.estado : G.estado;
+    const sel = $('[data-unico="materia"] [aria-pressed="true"]', tela);
+    const mat = sel ? sel.dataset.mat : 'BD';
+    let h;
+    if (estado === 'coord') {
+      h = 'Vai aparecer para a turma toda com o seu nome e o selo ' + seloHTML('COORDENACAO') + '. Só você pode apagar depois.';
+    } else if (estado === 'prof') {
+      h = MINHAS['3a'].includes(mat)
+        ? 'Vai aparecer para a turma toda com o seu nome e o selo ' + seloHTML('PROFESSOR') + '. Só você pode apagar depois.'
+        : 'Vai aparecer com o seu nome, <b>sem selo</b>: você não leciona ' + esc(mat) + ' nesta turma, então aqui você é aluno.';
+    } else if (estado === 'pendente') {
+      h = 'Vai aparecer com o seu nome, <b>sem selo</b>: sua conta de professor espera aprovação.';
+    } else if (estado === 'contestado') {
+      h = 'Vai aparecer com o seu nome, <b>sem selo</b>: o líder contestou sua declaração em ADS 3A.';
+    } else {
+      h = 'Vai aparecer com o seu nome, <b>sem selo</b>: seu cadastro de professor não foi aprovado.';
+    }
+    alvo.innerHTML = h;
+  }
+
+  // ============================================================
+  // barras de navegacao: a mesma lista vira barra de baixo (celular)
+  // e menu lateral (PC)
+  // ============================================================
+  const IC = {
+    painel:   '<rect x="3.6" y="3.6" width="7.2" height="7.6" rx="1.8"/><rect x="13.2" y="3.6" width="7.2" height="4.4" rx="1.8"/><rect x="13.2" y="11" width="7.2" height="9.4" rx="1.8"/><rect x="3.6" y="14.2" width="7.2" height="6.2" rx="1.8"/>',
+    cal:      '<rect x="3.4" y="5.2" width="17.2" height="15" rx="2.4"/><path d="M3.4 10h17.2M8.2 3.4v3.6M15.8 3.4v3.6"/>',
+    materias: '<path d="M4.6 5.4a2.2 2.2 0 0 1 2.2-2.2H19v13.6H6.8a2.2 2.2 0 0 0-2.2 2.2z"/><path d="M4.6 19a2.2 2.2 0 0 1 2.2-2.2H19v4H6.8A2.2 2.2 0 0 1 4.6 19z"/>',
+    turma:    '<circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6c.4-3.2 2.8-5 5.8-5s5.4 1.8 5.8 5"/><circle cx="17.2" cy="9.6" r="2.4"/><path d="M16.6 14.8c2.4-.2 4.2 1.2 4.6 3.8"/>',
+    home:     '<path d="M3.8 10.4 12 3.8l8.2 6.6"/><path d="M6.3 9.2V20h11.4V9.2"/><path d="M10 20v-4.6h4V20"/>',
+    quadro:   '<rect x="3.6" y="4.2" width="6.6" height="15.6" rx="1.8"/><rect x="13.8" y="4.2" width="6.6" height="9.4" rx="1.8"/>'
+  };
+  // [id da aba, rotulo, tela de destino]
+  const BARRAS = {
+    docente: [['painel', 'Painel', 'painel'], ['cal', 'Calendário', 'cal'], ['materias', 'Matérias', 'materias'], ['turma', 'Turma', 'turma-docente'], ['perfil', 'Perfil', 'perfil']],
+    aluno:   [['home', 'Home', 'aluno-igual'], ['cal', 'Calendário', 'aluno-igual'], ['materias', 'Matérias', 'aluno-igual'], ['quadro', 'Quadro', 'aluno-igual'], ['perfil', 'Perfil', 'perfil-admin']]
+  };
+  const avatarBarra = (tipo) => tipo === 'docente'
+    ? '<span class="pf-avatar" aria-hidden="true"><span data-e="prof pendente contestado recusado">M</span><span data-e="coord">H</span></span>'
+    : '<span class="pf-avatar" aria-hidden="true">O</span>';
+  const quemBarra = (tipo) => tipo === 'docente'
+    ? ['<span data-e="prof pendente contestado recusado">Marcos Teixeira</span><span data-e="coord">Helena Castro</span>',
+       '<span data-e="prof pendente contestado recusado">marcos.teixeira@exemplo.edu.br</span><span data-e="coord">helena.castro@exemplo.edu.br</span>']
+    : ['Otávio Lima', 'otavio.lima@exemplo.com'];
+
+  function htmlBarra(tipo, pc, ativa) {
+    const itens = BARRAS[tipo];
+    const cur = (id) => (id === ativa ? ' aria-current="page"' : '');
+    if (!pc) {
+      return itens.map(([id, rot, dest]) =>
+        '<button type="button" data-aba-id="' + id + '" data-ir="' + dest + '" data-raiz' + cur(id) + '>' +
+          '<i>' + (id === 'perfil' ? avatarBarra(tipo) : SVG(IC[id])) + '</i>' + rot + '</button>').join('');
+    }
+    const [nome, email] = quemBarra(tipo);
+    return itens.filter(([id]) => id !== 'perfil').map(([id, rot, dest]) =>
+        '<button type="button" data-aba-id="' + id + '" data-ir="' + dest + '" data-raiz' + cur(id) + '><i>' + SVG(IC[id]) + '</i>' + rot + '</button>').join('') +
+      '<div class="pc-fio" role="presentation"></div>' +
+      '<button type="button" class="pc-perfil" data-aba-id="perfil" data-ir="' + itens.find(([id]) => id === 'perfil')[2] + '" data-raiz' + cur('perfil') + '>' +
+        avatarBarra(tipo) + '<span class="pc-quem"><b>' + nome + '</b><small>' + email + '</small></span></button>';
+  }
+
+  // ============================================================
+  // aparelho: celular ou janela de PC. Guarda as proprias copias das telas.
+  // ============================================================
+  const FONTE = new Map();   // nome -> .tela intocada
+  const APS = [];
+
+  class Aparelho {
+    constructor(raiz, nome) {
+      this.raiz = raiz; this.nome = nome;
+      this.pc = raiz.classList.contains('pc');
+      this.area = $('[data-area]', raiz);
+      this.barra = $('[data-barra]', raiz);
+      this.hist = []; this.atual = null; this.tipoBarra = null;
+      raiz._ap = this;
+      APS.push(this);
+    }
+    obter(nome) {
+      let t = $$(':scope > .tela', this.area).find((x) => x.dataset.tela === nome);
+      if (t) return t;
+      const src = FONTE.get(nome);
+      if (!src) return null;
+      t = src.cloneNode(true);
+      this.area.append(t);
+      sincronizar(t);
+      return t;
+    }
+    ir(nome, opc = {}) {
+      const alvo = this.obter(nome);
+      if (!alvo) { console.error('tela inexistente: ' + nome); return null; }
+      if (opc.raiz) this.hist = [];
+      else if (this.atual && this.atual !== nome && !opc.voltando) this.hist.push(this.atual);
+      for (const t of $$(':scope > .tela', this.area)) t.removeAttribute('data-ativa');
+      alvo.setAttribute('data-ativa', '');
+      this.atual = nome;
+      this.pintarBarra(alvo);
+      const corpo = $('.t-corpo', alvo);
+      if (corpo) corpo.scrollTop = 0;
+      return alvo;
+    }
+    voltar() {
+      const ant = this.hist.pop();
+      this.ir(ant || 'painel', { voltando: true });
+    }
+    pintarBarra(tela) {
+      const tipo = tela.dataset.bar || 'docente';
+      const ativa = tela.dataset.aba || '';
+      this.barra.innerHTML = htmlBarra(tipo, this.pc, ativa);
+      this.tipoBarra = tipo;
+      this.barra.hidden = tela.hasAttribute('data-sem-abas');
+    }
+  }
+
+  // tela recem-copiada: poe o que e de estado global no lugar
+  function sincronizar(t) {
+    for (const c of $$('.tcard', t)) c.setAttribute('aria-pressed', String(c.dataset.turmaAtiva === G.turma));
+    atualizarAlerta(t);
+  }
+
+  function aplicar() {
+    for (const ap of APS) { ap.raiz.dataset.estado = G.estado; ap.raiz.dataset.turma = G.turma; }
+    for (const b of $$('[data-set-estado][aria-pressed]')) b.setAttribute('aria-pressed', String(b.dataset.setEstado === G.estado));
+    for (const c of $$('.aparelho .tcard')) c.setAttribute('aria-pressed', String(c.dataset.turmaAtiva === G.turma));
+    for (const t of $$('.aparelho .tela')) atualizarAlerta(t);
+  }
+
+  // ============================================================
+  // montagem
+  // ============================================================
+  const fonte = $('#fonte');
+  gerarFonte(fonte);
+  for (const t of $$(':scope > .tela', fonte)) FONTE.set(t.dataset.tela, t);
+  fonte.remove();
+
+  const PHONE = new Aparelho($('#fone'), 'celular');
+  const PC = new Aparelho($('#pc-janela'), 'pc');
+
+  // mini-aparelho: copia de uma tela com estado fixo
+  function mini(telaNome, estado, turma, { corte = false, cinza = false, legenda = '' } = {}) {
+    const el = document.createElement('div');
+    el.className = 'fone fone--mini' + (corte ? ' corte' : '') + (cinza ? ' cinza' : '');
+    el.dataset.estado = estado; el.dataset.turma = turma;
+    const t = (typeof telaNome === 'string' ? FONTE.get(telaNome) : telaNome).cloneNode(true);
+    t.setAttribute('data-ativa', '');
+    el.append(t);
+    return el;
+  }
+  function celulaMini(el, legendaHTML) {
+    const c = document.createElement('div');
+    c.className = 'estado-cel';
+    c.append(el);
+    const p = document.createElement('p'); p.innerHTML = legendaHTML; c.append(p);
+    return c;
+  }
+
+  // ---- estados lado a lado ----
+  const minisEstados = $('#minis-estados');
+  [
+    ['prof', '<b>Professor aprovado.</b> Selo nos cartões de turma e nos cards dele. “Próximos das minhas matérias”: BD e ENG SW.'],
+    ['pendente', '<b>Pendente.</b> Faixa tracejada no topo, nenhum selo. O painel e as matérias declaradas já aparecem — ler não é poder.'],
+    ['contestado', '<b>Contestado em ADS 3A.</b> O cartão troca o selo por “contestado”, e o selo some dos registros dele. Em ADS 3B o poder continua.'],
+    ['coord', '<b>Coordenação.</b> “Turma inteira”, selo próprio, todas as matérias. O teto de 6 corta o sétimo item.']
+  ].forEach(([estado, txt]) => minisEstados.append(celulaMini(mini('painel', estado, '3a', { corte: true }), txt)));
+
+  // ---- selos em cor e em cinza ----
+  function telaSelos() {
+    const t = document.createElement('section');
+    t.className = 'tela'; t.dataset.tela = 'selos-demo';
+    const amostras = [
+      ['autoria · Professor', { t: '3a', dia: 15, tipo: 'entrega', mat: 'ENG SW', hora: '23:59', titulo: 'Diagrama de classes', autor: { n: 'Lúcia', selo: 'PROFESSOR' }, quando: 'há 2 dias' }],
+      ['autoria · Professor, prova', { t: '3a', dia: 13, tipo: 'prova', mat: 'BD', hora: '19:00', titulo: 'Prova 1 — modelagem e SQL', autor: { n: 'Marcos', selo: 'PROFESSOR' }, quando: 'há 6 dias' }],
+      ['autoria · Coordenação', { t: '3a', dia: 19, tipo: 'entrega', mat: 'ENG SW', hora: '23:59', titulo: 'Projeto integrador — versão 1', autor: { n: 'Helena', selo: 'COORDENACAO' }, quando: 'há 2 dias' }],
+      ['autoria · Coordenação, prova', { t: '3a', dia: 22, tipo: 'prova', mat: 'CALC', hora: '19:00', titulo: 'Prova substitutiva', autor: { n: 'Helena', selo: 'COORDENACAO' }, quando: 'ontem' }],
+      ['editado por um professor', { t: '3a', dia: 15, tipo: 'entrega', mat: 'ENG SW', hora: '23:59', titulo: 'Diagrama de classes', autor: { n: 'Marina' }, quando: 'há 3 dias', editor: { n: 'Lúcia', selo: 'PROFESSOR', quando: 'hoje' } }],
+      ['editado pela coordenação', { t: '3a', dia: 14, tipo: 'prova', mat: 'CALC', hora: '19:00', titulo: 'Prova 1 — limites e derivadas', autor: { n: 'Bruno' }, quando: 'há 4 dias', editor: { n: 'Helena', selo: 'COORDENACAO', quando: 'ontem' } }],
+      ['aluno comum, para comparar', { t: '3a', dia: 8, tipo: 'entrega', mat: 'BD', hora: '23:59', titulo: 'Lista 5 — junção', autor: { n: 'Ana Beatriz' }, quando: 'há 1 dia' }]
+    ];
+    t.innerHTML = '<div class="t-barra"><h3>Registros da turma</h3><span>ADS 3A</span></div><div class="t-corpo">' +
+      amostras.map(([rot, e]) => '<p class="rotulo">' + rot + '</p>' + cardEvento(e, { semNav: true })).join('') + '</div>';
+    return t;
+  }
+  const SELOS_DEMO = telaSelos();
+  const minisSelos = $('#minis-selos');
+  minisSelos.append(
+    celulaMini(mini(SELOS_DEMO, 'prof', '3a'), '<b>Em cor.</b> Professor em tinta, Coordenação no acento. No bloco escuro da prova os dois invertem.'),
+    celulaMini(mini(SELOS_DEMO, 'prof', '3a', { cinza: true }), '<b>Em escala de cinza.</b> Capelo vazado e “Professor” contra escudo cheio e “Coordenação”: continuam distintos, e nenhum parece chip.')
+  );
+
+  // ---- abas, aluno x docente ----
+  const abasDemo = $('#abas-demo');
+  [['aluno', 'home', '<b>Aluno.</b> Home · Calendário · Matérias · Quadro, e Perfil. Nada muda.'],
+   ['docente', 'painel', '<b>Docente.</b> Painel · Calendário · Matérias · Turma, e Perfil. Sem Meu quadro: kanban de “feito” é coisa de quem tem prova para fazer. No PC o perfil vai para o rodapé do menu.']
+  ].forEach(([tipo, ativa, txt]) => {
+    const fig = document.createElement('figure');
+    fig.innerHTML = '<nav class="abas" aria-label="Abas do ' + tipo + ' (exemplo)" data-estado="prof">' + htmlBarra(tipo, false, ativa).replace(/ data-ir="[^"]*"/g, '').replace(/ data-raiz/g, '') + '</nav><figcaption>' + txt + '</figcaption>';
+    abasDemo.append(fig);
+  });
+  // as barras de exemplo precisam de data-estado no proprio nav para os spans de avatar
+  for (const n of $$('#abas-demo .abas')) n.dataset.estado = 'prof';
+
+  // ============================================================
+  // eventos
+  // ============================================================
+  function alvoDe(el) {
+    const raiz = el.closest('.aparelho');
+    if (raiz) return { ap: raiz._ap, de_dentro: true };
+    return { ap: el.dataset.alvo === 'pc' ? PC : PHONE, de_dentro: false };
+  }
+
+  document.addEventListener('click', (ev) => {
+    const alvo = ev.target;
+    if (alvo.closest('.fone--mini')) return;   // comparacoes sao so para olhar
+
+    // trocar o estado da conta
+    const est = alvo.closest('[data-set-estado]');
+    if (est) { G.estado = est.dataset.setEstado; aplicar(); }
+
+    // trocar a turma ativa (so no painel)
+    const tc = alvo.closest('[data-turma-ativa]');
+    if (tc) { G.turma = tc.dataset.turmaAtiva; aplicar(); return; }
+
+    // selecao unica (seg, chips, origem)
+    const grupo = alvo.closest('[data-unico]');
+    const btnGrupo = grupo && alvo.closest('[data-unico] button');
+    if (btnGrupo && grupo.contains(btnGrupo)) {
+      for (const b of $$('button', grupo)) b.setAttribute('aria-pressed', String(b === btnGrupo));
+      const tela = grupo.closest('.tela');
+      if (grupo.dataset.unico === 'tipo-conta' && tela) {
+        tela.dataset.tipo = btnGrupo.dataset.tipo;
+        const go = $('[data-cadastro-ir]', tela);
+        if (go) go.dataset.ir = btnGrupo.dataset.tipo === 'aluno' ? 'entrar-turma-aluno' : 'entrar-turma-docente';
+      }
+      if (tela) atualizarAlerta(tela);
+      return;
+    }
+
+    // copiar codigo
+    const cp = alvo.closest('[data-copiar]');
+    if (cp) {
+      const orig = cp.textContent;
+      cp.textContent = 'Código copiado';
+      setTimeout(() => { cp.textContent = orig; }, 1600);
+      return;
+    }
+
+    // admin: aprovar / recusar / revogar
+    const adm = alvo.closest('[data-adm]');
+    if (adm) {
+      const card = adm.closest('.pessoa');
+      const a = adm.dataset.adm;
+      if (a === 'aprovar') moverPessoa(card, 'aprovado');
+      else if (a === 'recusar') moverPessoa(card, 'recusado');
+      else if (a === 'revogar') card.classList.add('confirmando');
+      else if (a === 'cancelar') card.classList.remove('confirmando');
+      else if (a === 'revogar-sim') moverPessoa(card, 'recusado');
+      return;
+    }
+
+    // calendario
+    const dia = alvo.closest('.cal button[data-dia]');
+    if (dia) { abrirDia(dia.closest('.tela'), Number(dia.dataset.dia)); return; }
+
+    // contestar / restaurar: o estado mora na copia da tela do lider, em cada aparelho
+    const ct = alvo.closest('[data-set-contestado]');
+    if (ct) alvoDe(ct).ap.obter('turma-lider').dataset.contestado = ct.dataset.setContestado;
+
+    // voltar
+    const vt = alvo.closest('[data-voltar]');
+    if (vt) { const { ap } = alvoDe(vt); ap.voltar(); return; }
+
+    // navegar
+    const go = alvo.closest('[data-ir]');
+    if (go) {
+      const { ap, de_dentro } = alvoDe(go);
+      const tela = ap.ir(go.dataset.ir, { raiz: go.hasAttribute('data-raiz') });
+      if (tela && go.dataset.tipoEvento) {
+        const seg = $('[data-unico="tipo-evento"]', tela);
+        if (seg) for (const b of $$('button', seg)) b.setAttribute('aria-pressed', String(b.dataset.tipo === go.dataset.tipoEvento));
+      }
+      if (!de_dentro) ap.raiz.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
+  });
+
+  // teclado: card-botao (role=button) responde a Enter e Espaco
+  document.addEventListener('keydown', (ev) => {
+    if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[role="button"][data-ir]')) {
+      ev.preventDefault();
+      ev.target.click();
+    }
+  });
+
+  // controles da pagina
+  const btnCinza = $('#btn-cinza');
+  btnCinza.addEventListener('click', () => {
+    const ligado = btnCinza.getAttribute('aria-pressed') === 'true';
+    btnCinza.setAttribute('aria-pressed', String(!ligado));
+    document.body.classList.toggle('is-gray', !ligado);
+  });
+  const btnTema = $('#btn-tema');
+  btnTema.addEventListener('click', () => {
+    const escuro = btnTema.getAttribute('aria-pressed') === 'true';
+    btnTema.setAttribute('aria-pressed', String(!escuro));
+    document.documentElement.setAttribute('data-tema', !escuro ? 'escuro' : 'claro');
+  });
+
+  // estado inicial
+  aplicar();
+  PHONE.ir('painel', { raiz: true });
+  PC.ir('painel', { raiz: true });
+
+  // ganchos para teste automatizado
+  window.__mock = {
+    telas: () => Array.from(FONTE.keys()),
+    ir: (ap, nome) => (ap === 'pc' ? PC : PHONE).ir(nome),
+    estado: (e) => { G.estado = e; aplicar(); },
+    turma: (t) => { G.turma = t; aplicar(); },
+    G
+  };
+})();
+</script>
+</body>
+</html>
