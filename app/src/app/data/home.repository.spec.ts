@@ -4,7 +4,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
 import { erroHttpInterceptor } from '../core/http-error.interceptor';
 import { StorageService } from '../core/storage.service';
@@ -172,6 +172,70 @@ describe('HomeRepository', () => {
     expect(repo.offline()).toBeTrue();
     expect(repo.ultimoSync()).toBe('2026-08-30T09:15:00Z');
     expect(repo.erro()).not.toBeNull();
+  });
+});
+
+describe('HomeRepository: quem o lider removeu', () => {
+  let backend: HttpTestingController;
+  let repo: HomeRepository;
+  let storage: StorageFake;
+  let irPara: jasmine.Spy;
+  const URL_HOME = `${environment.apiUrl}/home`;
+
+  beforeEach(() => {
+    storage = new StorageFake();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([erroHttpInterceptor])),
+        provideHttpClientTesting(),
+        { provide: StorageService, useValue: storage },
+      ],
+    });
+    backend = TestBed.inject(HttpTestingController);
+    irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    repo = TestBed.inject(HomeRepository);
+    // A turma antiga: na tela e no disco.
+    repo.itens.set([item('velho', '2026-09-01', 'PROVA')]);
+    storage.snapshot = {
+      eventos: [item('velho', '2026-09-01', 'PROVA')],
+      materias: [],
+      ultimoSync: '2026-08-30T09:15:00Z',
+    };
+  });
+
+  afterEach(() => backend.verify());
+
+  it('/home 404 SEM_TURMA: esquece a turma antiga (tela e disco) e leva para entrar-turma', async () => {
+    // Antes degradava em silencio: o removido que so abria a Home seguia vendo e
+    // recebendo aviso das provas de uma turma em que nao esta mais.
+    const pronto = repo.carregar();
+    backend.expectOne(URL_HOME).flush(
+      { detail: 'Registro nao encontrado', codigo: 'SEM_TURMA' },
+      { status: 404, statusText: 'Not Found' },
+    );
+    await pronto;
+
+    expect(repo.itens()).toEqual([]);
+    expect(storage.snapshot).withContext('snapshot offline da turma antiga').toBeNull();
+    expect(repo.erro())
+      .withContext('"Registro nao encontrado" num aviso so confunde quem esta saindo')
+      .toBeNull();
+    expect(repo.offline()).toBeFalse();
+    expect(irPara).toHaveBeenCalledWith('/entrar-turma');
+  });
+
+  it('/home 404 SEM o codigo (proxy) e aviso comum: nada e apagado', async () => {
+    const pronto = repo.carregar();
+    backend
+      .expectOne(URL_HOME)
+      .flush('<html>Not Found</html>', { status: 404, statusText: 'Not Found' });
+    await pronto;
+
+    expect(repo.erro()).not.toBeNull();
+    expect(repo.itens().map((i) => i.eventoId)).toEqual(['velho']);
+    expect(storage.snapshot).not.toBeNull();
+    expect(irPara).not.toHaveBeenCalled();
   });
 });
 

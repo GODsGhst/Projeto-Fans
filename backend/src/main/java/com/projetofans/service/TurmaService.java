@@ -128,6 +128,8 @@ public class TurmaService {
      */
     @Transactional
     public void removerMembro(UsuarioAtual lider, UUID usuarioId) {
+        // Primeiro de tudo: ver MembroRepository#travarDoUsuario.
+        membros.travarDoUsuario(lider.usuarioId());
         UUID turmaId = escopo.turmaDoUsuario(lider.usuarioId());
         Membro alvo = membros.findByUsuarioIdAndTurmaId(usuarioId, turmaId)
                 .orElseThrow(AcessoNegadoException::new);

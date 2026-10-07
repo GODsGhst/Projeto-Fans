@@ -194,8 +194,9 @@ describe('TurmaRepository: ferramentas do lider', () => {
   describe('quem o lider removeu (GET /turmas/minha vira 404)', () => {
     async function removido(): Promise<void> {
       const pronto = repo.carregar();
+      // O codigo e o que distingue "voce saiu da turma" de um 404 qualquer.
       backend.expectOne(URL_TURMA).flush(
-        { detail: 'Registro nao encontrado' },
+        { detail: 'Registro nao encontrado', codigo: 'SEM_TURMA' },
         { status: 404, statusText: 'Not Found' },
       );
       await pronto;
@@ -237,6 +238,33 @@ describe('TurmaRepository: ferramentas do lider', () => {
 
       expect(console.error).toHaveBeenCalled();
       expect(irPara).toHaveBeenCalledWith('/entrar-turma');
+    });
+
+    it('404 SEM codigo (proxy, portal cativo) NAO derruba o vinculo: vira aviso comum', async () => {
+      const pronto = repo.carregar();
+      backend
+        .expectOne(URL_TURMA)
+        .flush('<html>Not Found</html>', { status: 404, statusText: 'Not Found' });
+      await pronto;
+
+      expect(auth.temTurma()).toBeTrue();
+      expect(irPara).not.toHaveBeenCalled();
+      expect(repo.erro()).not.toBeNull();
+      expect(repo.turma())
+        .withContext('a turma que ja estava em tela continua valendo')
+        .not.toBeNull();
+    });
+
+    it('perder o vinculo por OUTRA rota tambem esquece a turma em memoria', async () => {
+      // O removido que so abriu a Home: o interceptor chama registrarTurma(null)
+      // e a turma antiga nao pode ficar para o papel de lider da proxima.
+      expect(repo.souLider()).toBeTrue();
+
+      await auth.registrarTurma(null);
+      TestBed.tick();
+
+      expect(repo.turma()).toBeNull();
+      expect(repo.souLider()).toBeFalse();
     });
 
     it('outros erros NAO derrubam o vinculo', async () => {

@@ -75,7 +75,7 @@ describe('TurmaPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { usuario: eu, registrarTurma } },
+        { provide: AuthService, useValue: { usuario: eu, turmaId: () => 't1', registrarTurma } },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
@@ -120,6 +120,13 @@ describe('TurmaPage', () => {
         fixture.nativeElement.querySelectorAll('button'),
       ) as HTMLButtonElement[]
     ).find((b) => b.textContent!.trim() === rotulo);
+  }
+
+  /** Os botoes da pergunta de remocao, pelo testid: "Remover" tambem e o rotulo da linha. */
+  function confirmar(testid: string): HTMLButtonElement {
+    return fixture.nativeElement.querySelector(
+      `[data-testid="${testid}"]`,
+    ) as HTMLButtonElement;
   }
 
   function textos(seletor: string): string[] {
@@ -261,6 +268,13 @@ describe('TurmaPage', () => {
       expect(aviso).toContain('Ana Beatriz');
       expect(aviso).toContain('perde o acesso');
       expect(aviso).toContain('O que ele postou continua');
+      expect(aviso)
+        .withContext('remover nao bane: a pessoa pode voltar com o codigo atual')
+        .toContain('pode voltar com o código atual');
+      expect(confirmar('remover-confirmar').textContent!.trim()).toBe('Remover');
+      expect(confirmar('remover-e-trocar-codigo').textContent!.trim()).toBe(
+        'Remover e gerar novo código',
+      );
 
       botao('Cancelar')!.click();
       fixture.detectChanges();
@@ -275,7 +289,7 @@ describe('TurmaPage', () => {
         .click();
       fixture.detectChanges();
 
-      botao('Remover da turma')!.click();
+      confirmar('remover-confirmar').click();
       const req = backend.expectOne(URL_REMOVER);
       expect(req.request.method).toBe('DELETE');
       req.flush(null, { status: 204, statusText: 'No Content' });
@@ -300,7 +314,7 @@ describe('TurmaPage', () => {
         .querySelector('button[aria-label="Remover Bruno"]')
         .click();
       fixture.detectChanges();
-      botao('Remover da turma')!.click();
+      confirmar('remover-confirmar').click();
 
       backend.expectOne(`${environment.apiUrl}/turmas/minha/membros/u3`).flush(
         { detail: 'Transfira a liderança antes de sair' },
@@ -314,6 +328,97 @@ describe('TurmaPage', () => {
       expect(textos('.membro .nome'))
         .withContext('falhou: ninguem saiu, e a tela nao pode sugerir o contrario')
         .toContain('Bruno');
+    });
+
+    it('"Remover e gerar novo codigo": DELETE, releitura e POST do codigo, nessa ordem', async () => {
+      // Remover nao bane: o removido ainda tem o codigo anotado. Sem esta saida o
+      // lider tinha de lembrar de ir gerar o codigo depois.
+      await abrir((r) => r.flush(TURMA));
+      fixture.nativeElement
+        .querySelector('button[aria-label="Remover Ana Beatriz"]')
+        .click();
+      fixture.detectChanges();
+
+      confirmar('remover-e-trocar-codigo').click();
+      const del = backend.expectOne(URL_REMOVER);
+      expect(del.request.method).toBe('DELETE');
+      backend.expectNone(URL_CODIGO);
+      del.flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+
+      const SEM_ANA = TURMA.membros.filter((m) => m.usuarioId !== 'u2');
+      backend.expectOne(URL_TURMA).flush({ ...TURMA, membros: SEM_ANA });
+      await fixture.whenStable();
+      await assentar();
+
+      const troca = backend.expectOne(URL_CODIGO);
+      expect(troca.request.method).toBe('POST');
+      troca.flush({ ...TURMA, membros: SEM_ANA, codigoConvite: 'NOVO0001' });
+      await assentar();
+
+      expect(textos('.membro .nome')).toEqual(['Otávio', 'Bruno']);
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="codigo-convite"]')
+          .textContent.trim(),
+      ).toBe('NOVO0001');
+      expect(fixture.nativeElement.querySelector('.pf-erro')).toBeNull();
+    });
+
+    it('"Remover" sozinho NAO troca o codigo', async () => {
+      await abrir((r) => r.flush(TURMA));
+      fixture.nativeElement
+        .querySelector('button[aria-label="Remover Ana Beatriz"]')
+        .click();
+      fixture.detectChanges();
+
+      confirmar('remover-confirmar').click();
+      backend
+        .expectOne(URL_REMOVER)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      backend
+        .expectOne(URL_TURMA)
+        .flush({ ...TURMA, membros: TURMA.membros.filter((m) => m.usuarioId !== 'u2') });
+      await assentar();
+
+      backend.expectNone(URL_CODIGO);
+      expect(textos('.membro .nome')).toEqual(['Otávio', 'Bruno']);
+    });
+
+    it('removeu mas o codigo novo falhou: avisa que a pessoa saiu e que o codigo antigo vale', async () => {
+      await abrir((r) => r.flush(TURMA));
+      fixture.nativeElement
+        .querySelector('button[aria-label="Remover Ana Beatriz"]')
+        .click();
+      fixture.detectChanges();
+
+      confirmar('remover-e-trocar-codigo').click();
+      backend
+        .expectOne(URL_REMOVER)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      const SEM_ANA = TURMA.membros.filter((m) => m.usuarioId !== 'u2');
+      backend.expectOne(URL_TURMA).flush({ ...TURMA, membros: SEM_ANA });
+      await fixture.whenStable();
+      await assentar();
+      backend
+        .expectOne(URL_CODIGO)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      // Uma volta de macrotarefa: o erro atravessa interceptor, repositorio e
+      // pagina em varias passagens de microtarefa, e o whenStable sozinho nao as espera.
+      await new Promise((r) => setTimeout(r));
+      await assentar();
+
+      // A linha da Ana (e a pergunta com ela) ja sumiu: o aviso mora fora dela.
+      expect(textos('.membro .nome')).toEqual(['Otávio', 'Bruno']);
+      const aviso = fixture.nativeElement.querySelector('.pf-erro')
+        .textContent as string;
+      expect(aviso).toContain('saiu da turma');
+      expect(aviso).toContain('código novo não foi gerado');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="codigo-convite"]')
+          .textContent.trim(),
+      ).toBe('93EB9244');
     });
 
     it('gerar novo codigo pergunta, chama a rota e mostra o codigo novo na hora', async () => {
@@ -432,28 +537,50 @@ describe('TurmaPage', () => {
       expect(fixture.nativeElement.textContent).toContain('Nada oculto');
     });
 
-    it('Reexibir que falha mostra o erro e o item continua na lista', async () => {
+    it('Reexibir que falha (500) mostra o erro, o item continua e a lista NAO e relida', async () => {
+      await abrir((r) => r.flush(TURMA), [OCULTADO_MATERIAL]);
+
+      botao('Reexibir')!.click();
+      backend
+        .expectOne(`${environment.apiUrl}/moderacao/material/mat1/reexibir`)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await assentar();
+
+      expect(
+        fixture.nativeElement.querySelector('.pf-erro').textContent,
+      ).toContain('servidor');
+      expect(textos('.membro .nome')).toContain('Lista 3 (errada)');
+      backend.expectNone(URL_OCULTADOS);
+    });
+
+    it('Reexibir 404 (a anotacao virou pessoal): mostra o erro E relê a lista de ocultados', async () => {
+      // O item que a pessoa tocou nao e mais da turma. Deixar a linha ali so
+      // convidava a tentar de novo o que vai dar 404 para sempre.
       await abrir((r) => r.flush(TURMA), [OCULTADO_MATERIAL]);
 
       botao('Reexibir')!.click();
       backend
         .expectOne(`${environment.apiUrl}/moderacao/material/mat1/reexibir`)
         .flush(
-          { detail: 'Registro não encontrado' },
+          { detail: 'Registro nao encontrado' },
           { status: 404, statusText: 'Not Found' },
         );
+      await fixture.whenStable();
+
+      backend.expectOne(URL_OCULTADOS).flush([]);
       await assentar();
 
       expect(
         fixture.nativeElement.querySelector('.pf-erro').textContent,
-      ).toContain('não encontrado');
-      expect(textos('.membro .nome')).toContain('Lista 3 (errada)');
+      ).toContain('nao encontrado');
+      expect(textos('.membro .nome')).not.toContain('Lista 3 (errada)');
+      expect(fixture.nativeElement.textContent).toContain('Nada oculto');
     });
 
-    it('quem foi removido (turma 404) vai para a tela de entrar na turma, nao fica em erro', async () => {
+    it('quem foi removido (404 SEM_TURMA) vai para a tela de entrar na turma, nao fica em erro', async () => {
       await abrir((r) =>
         r.flush(
-          { detail: 'Registro nao encontrado' },
+          { detail: 'Registro nao encontrado', codigo: 'SEM_TURMA' },
           { status: 404, statusText: 'Not Found' },
         ),
       );
@@ -462,6 +589,22 @@ describe('TurmaPage', () => {
         .withContext('a sessao esquece a turma')
         .toHaveBeenCalledWith(null);
       expect(irPara).toHaveBeenCalledWith('/entrar-turma');
+      expect(fixture.nativeElement.querySelector('.pf-aviso'))
+        .withContext('aviso de erro numa tela de que ele esta saindo e o beco sem saida')
+        .toBeNull();
+    });
+
+    it('404 sem o codigo (proxy, portal cativo) NAO tira ninguem da turma', async () => {
+      await abrir((r) =>
+        r.flush('<html>Not Found</html>', {
+          status: 404,
+          statusText: 'Not Found',
+        }),
+      );
+
+      expect(registrarTurma).not.toHaveBeenCalled();
+      expect(irPara).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.pf-aviso')).not.toBeNull();
     });
   });
 });

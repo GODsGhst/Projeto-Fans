@@ -4,7 +4,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
 import { environment } from '../../environments/environment';
 import { erroHttpInterceptor } from '../core/http-error.interceptor';
@@ -44,10 +44,14 @@ describe('SyncRepository', () => {
 
   function montar(suportado: boolean): SyncRepository {
     avisos = Object.assign(
-      jasmine.createSpyObj<NotificacoesService>('avisos', ['sincronizar']),
+      jasmine.createSpyObj<NotificacoesService>('avisos', [
+        'sincronizar',
+        'esquecer',
+      ]),
       { suportado, epoca: 0 },
     );
     avisos.sincronizar.and.resolveTo();
+    avisos.esquecer.and.resolveTo();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -61,6 +65,40 @@ describe('SyncRepository', () => {
   }
 
   afterEach(() => backend.verify());
+
+  it('404 SEM_TURMA: esquece os lembretes da turma antiga e leva para entrar-turma', async () => {
+    // O removido que so abre a Home tem o /sync como unica pista: os avisos
+    // agendados no aparelho seguiam tocando as provas de uma turma que nao e mais dele.
+    spyOn(console, 'error');
+    const repo = montar(true);
+    const irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+
+    const pronto = repo.reagendarAvisos();
+    backend.expectOne(`${environment.apiUrl}/sync`).flush(
+      { detail: 'Registro nao encontrado', codigo: 'SEM_TURMA' },
+      { status: 404, statusText: 'Not Found' },
+    );
+    await pronto;
+
+    expect(avisos.esquecer).toHaveBeenCalled();
+    expect(irPara).toHaveBeenCalledWith('/entrar-turma');
+    expect(avisos.sincronizar).not.toHaveBeenCalled();
+  });
+
+  it('404 do /sync SEM o codigo nao esquece nada: os avisos de antes continuam', async () => {
+    spyOn(console, 'error');
+    const repo = montar(true);
+    const irPara = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+
+    const pronto = repo.reagendarAvisos();
+    backend
+      .expectOne(`${environment.apiUrl}/sync`)
+      .flush('<html>Not Found</html>', { status: 404, statusText: 'Not Found' });
+    await pronto;
+
+    expect(avisos.esquecer).not.toHaveBeenCalled();
+    expect(irPara).not.toHaveBeenCalled();
+  });
 
   it('pede a turma INTEIRA (sem `desde`) e entrega aos lembretes', async () => {
     // A 7a prova da semana: a Home corta em 6, o /sync nao corta.

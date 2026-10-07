@@ -1,10 +1,8 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 
 import { ApiService } from '../core/api.service';
-import { ROTA_ENTRAR_TURMA } from '../core/auth.guard';
 import { AuthService } from '../core/auth.service';
-import { ErroApi } from '../core/http-error.interceptor';
+import { CODIGO_SEM_TURMA, ErroApi } from '../core/http-error.interceptor';
 import type { PapelMembro } from './models';
 
 export interface MembroDaTurma {
@@ -41,7 +39,6 @@ export interface MinhaTurma {
 export class TurmaRepository {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
 
   readonly turma = signal<MinhaTurma | null>(null);
   readonly carregando = signal(false);
@@ -55,8 +52,13 @@ export class TurmaRepository {
     // e não em `auth.service.ts`, mantém a regra ao lado do dado que ela limpa.
     // Lê `usuario()` e não `autenticado()` porque o AuthService apaga os dois
     // juntos (sair, 401) e `usuario` é o sinal que `souLider` já lê.
+    //
+    // `turmaId()` também: quem o líder removeu perde o vínculo com a conta
+    // intacta (o interceptor de erro chama `registrarTurma(null)` diante de
+    // SEM_TURMA, de qualquer rota). Sem isto, a turma antiga ficava em memória e
+    // `souLider` seguia respondendo pelo papel dela quando a pessoa entrasse noutra.
     effect(() => {
-      if (this.auth.usuario() === null) {
+      if (this.auth.usuario() === null || this.auth.turmaId() === null) {
         this.limpar();
       }
     });
@@ -118,12 +120,13 @@ export class TurmaRepository {
     try {
       this.turma.set(await this.api.get<MinhaTurma>('/turmas/minha'));
     } catch (e) {
-      // 404 aqui nao e "nao achei": e "voce nao esta em turma nenhuma" — o
-      // servidor responde assim a quem o lider removeu. Deixar como erro comum
-      // prendia a pessoa numa tela de aviso, com o app inteiro respondendo 404 e
-      // nenhum caminho para entrar noutra turma.
-      if (e instanceof ErroApi && e.status === 404) {
-        await this.ficouSemTurma();
+      // SEM_TURMA: o servidor responde assim a quem o lider removeu. O interceptor
+      // ja esqueceu o vinculo e esta levando a pessoa para entrar noutra turma;
+      // aqui so falta nao deixar um aviso de erro numa tela de que ela esta saindo.
+      // Um 404 SEM o codigo (proxy, portal cativo, servidor acordando) NAO e isso:
+      // cai no aviso comum, e ninguem perde a turma por um tropeco de rede.
+      if (e instanceof ErroApi && e.codigo === CODIGO_SEM_TURMA) {
+        this.limpar();
         return;
       }
       // A turma NÃO é limpa: se já havia dado, ele continua valendo enquanto o
@@ -135,28 +138,6 @@ export class TurmaRepository {
     } finally {
       this.carregando.set(false);
     }
-  }
-
-  /**
-   * Esquece o vinculo e leva a pessoa para onde se entra numa turma.
-   *
-   * A navegacao e explicita porque a guarda so roda quando a rota ativa: quem ja
-   * esta dentro das abas nao passa por ela, e ficaria olhando uma tela de erro.
-   */
-  private async ficouSemTurma(): Promise<void> {
-    this.limpar();
-    // Falha ao gravar em disco nao pode impedir a saida: em memoria a sessao ja
-    // esta sem turma, e preso aqui a pessoa nao sai.
-    await this.auth
-      .registrarTurma(null)
-      .catch((e: unknown) =>
-        console.error('[turma] falha ao gravar a sessao sem turma', e),
-      );
-    await this.router
-      .navigateByUrl(ROTA_ENTRAR_TURMA)
-      .catch((e: unknown) =>
-        console.error('[turma] falha ao ir para a tela de entrar na turma', e),
-      );
   }
 
   /** Esquece a turma e o aviso de erro: a próxima tela que precisar busca de novo. */

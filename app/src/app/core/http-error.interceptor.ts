@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { TimeoutError, catchError, throwError } from 'rxjs';
 
+import { ROTA_ENTRAR_TURMA } from './auth.guard';
 import { ROTA_LOGIN, AuthService } from './auth.service';
 
 export type ClasseErro =
@@ -17,6 +18,12 @@ export type ClasseErro =
   | 'DESCONHECIDO';
 
 /**
+ * O 404 de quem nao tem vinculo com turma nenhuma (o lider o removeu). E o unico
+ * 404 que o servidor marca com `codigo`; ver `SemTurmaException` no backend.
+ */
+export const CODIGO_SEM_TURMA = 'SEM_TURMA';
+
+/**
  * Erro de dominio do app. Toda falha de HTTP vira um destes, com uma mensagem
  * ja pronta para a tela — nenhuma tela le `status` cru.
  */
@@ -29,6 +36,13 @@ export class ErroApi extends Error {
     readonly podeTentarNovamente = false,
     /** 409: alguem editou; a tela tem de reler o registro antes de insistir. */
     readonly recarregarRegistro = false,
+    /**
+     * Codigo estavel que o servidor manda em `ProblemDetail.codigo`, para os casos
+     * em que o status sozinho e ambiguo. Quem decide algo destrutivo olha ESTE
+     * campo, nunca `status === 404`: um 404 de proxy, do Render acordando ou de
+     * portal cativo tem o mesmo status e nao quer dizer "voce saiu da turma".
+     */
+    readonly codigo: string | null = null,
   ) {
     super(mensagem);
     this.name = 'ErroApi';
@@ -73,10 +87,43 @@ export const erroHttpInterceptor: HttpInterceptorFn = (req, next) => {
             console.error('[http] falha ao voltar para o login', e),
           );
       }
-      return throwError(() => traduzir(resposta));
+      const erro = traduzir(resposta);
+      if (erro.codigo === CODIGO_SEM_TURMA) {
+        ficouSemTurma(auth, router);
+      }
+      return throwError(() => erro);
     }),
   );
 };
+
+/**
+ * Esquece a turma e leva a pessoa para onde se entra numa; vale para QUALQUER
+ * rota que responda SEM_TURMA, e e por isso que mora aqui e nao em cada
+ * repositorio. Antes so `GET /turmas/minha` fazia isto, e quem foi removido e
+ * abria so a Home seguia com os lembretes e o snapshot da turma antiga.
+ *
+ * Sem `await`, como o 401: o erro sobe agora, o disco vai atras. `registrarTurma`
+ * zera o vinculo em memoria ANTES do primeiro await, entao a guarda ja enxerga a
+ * pessoa sem turma quando a navegacao comeca. O repositorio da turma se limpa
+ * sozinho quando o vinculo some (ver o `effect` dele).
+ *
+ * A navegacao e explicita porque a guarda so roda quando a rota ativa: quem ja
+ * esta dentro das abas nao passa por ela, e ficaria olhando uma tela de erro.
+ * Falhar ao gravar em disco nao pode impedir a saida: em memoria a sessao ja esta
+ * sem turma, e preso aqui a pessoa nao sai.
+ */
+function ficouSemTurma(auth: AuthService, router: Router): void {
+  auth
+    .registrarTurma(null)
+    .catch((e: unknown) =>
+      console.error('[http] falha ao gravar a sessao sem turma', e),
+    );
+  router
+    .navigateByUrl(ROTA_ENTRAR_TURMA)
+    .catch((e: unknown) =>
+      console.error('[http] falha ao ir para a tela de entrar na turma', e),
+    );
+}
 
 function traduzir(r: HttpErrorResponse): ErroApi {
   const doServidor = detalhe(r);
@@ -104,6 +151,9 @@ function traduzir(r: HttpErrorResponse): ErroApi {
       'NAO_ENCONTRADO',
       404,
       doServidor ?? 'Isso não existe mais.',
+      false,
+      false,
+      codigoDoServidor(r),
     );
   }
   if (r.status === 409) {
@@ -135,6 +185,12 @@ function traduzir(r: HttpErrorResponse): ErroApi {
     r.status,
     doServidor ?? 'Não deu para completar a ação.',
   );
+}
+
+/** `ProblemDetail.codigo`, quando o servidor o manda. Corpo que nao e JSON (HTML de proxy) nao tem. */
+function codigoDoServidor(r: HttpErrorResponse): string | null {
+  const corpo = r.error as { codigo?: unknown } | null;
+  return typeof corpo?.codigo === 'string' ? corpo.codigo : null;
 }
 
 /** O backend responde `ProblemDetail` (RFC 7807): `detail` primeiro, `title` depois. */

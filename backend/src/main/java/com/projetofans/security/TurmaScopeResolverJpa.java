@@ -3,6 +3,7 @@ package com.projetofans.security;
 import com.projetofans.domain.Membro;
 import com.projetofans.domain.PapelMembro;
 import com.projetofans.erro.AcessoNegadoException;
+import com.projetofans.erro.SemTurmaException;
 import com.projetofans.repo.MembroRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,11 +44,14 @@ public class TurmaScopeResolverJpa implements TurmaScopeResolver {
      * Usuario sem vinculo nenhum tambem cai em 404: ele nao esta em turma alguma,
      * entao nenhum registro de turma existe para ele. Devolver null aqui so
      * empurraria um NullPointerException para o proximo metodo.
+     *
+     * E o UNICO 404 com codigo SEM_TURMA: e o sinal que o app usa para esquecer a
+     * turma local. Os outros 404 (registro de outra turma) seguem sem codigo.
      */
     private Membro vinculoAtual(UUID usuarioId) {
         List<Membro> vinculos = membros.findByUsuarioIdOrderByEntrouEmDesc(usuarioId);
         if (vinculos.isEmpty()) {
-            throw new AcessoNegadoException();
+            throw new SemTurmaException();
         }
         if (vinculos.size() > 1) {
             // Multiplas turmas esta FORA DE ESCOPO (spec Secao 13). Se este aviso

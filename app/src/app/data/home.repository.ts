@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 
 import { ApiService } from '../core/api.service';
-import { ErroApi } from '../core/http-error.interceptor';
+import { CODIGO_SEM_TURMA, ErroApi } from '../core/http-error.interceptor';
 import { StorageService } from '../core/storage.service';
 import type { ItemHome } from './models';
 import { SyncRepository } from './sync.repository';
@@ -100,6 +100,21 @@ export class HomeRepository {
    */
   private async degradar(e: unknown): Promise<void> {
     const erro = e instanceof ErroApi ? e : null;
+
+    if (erro?.codigo === CODIGO_SEM_TURMA) {
+      // Quem o lider removeu e abriu so a Home. O interceptor ja apagou o vinculo,
+      // o snapshot do disco e os lembretes; aqui sobra a memoria. "Nao ha provas"
+      // e verdade para quem nao tem turma, e dizer "Registro nao encontrado" num
+      // aviso so confundiria quem esta sendo levado para entrar noutra turma.
+      // `servidorRespondeu` fecha a corrida com `aquecerDoDisco`, que pode estar
+      // lendo o snapshot velho neste exato momento.
+      this.servidorRespondeu = true;
+      this.itens.set([]);
+      this.offline.set(false);
+      this.ultimoSync.set(null);
+      return;
+    }
+
     this.erro.set(erro?.message ?? 'Não deu para carregar.');
 
     if (erro?.classe !== 'OFFLINE') {

@@ -92,7 +92,7 @@ describe('EventoPage', () => {
         // A tela precisa saber QUEM está olhando para decidir se oferece editar
         // e apagar. `u1` é o mesmo id de AUTORIA, então por padrão quem abre é o
         // autor; o teste do não-autor troca isso.
-        { provide: AuthService, useValue: { usuario: usuarioAtual } },
+        { provide: AuthService, useValue: { usuario: usuarioAtual, turmaId: () => 't1' } },
         {
           provide: TurmaRepository,
           useValue: {
@@ -637,7 +637,7 @@ describe('EventoPage — lembrete personalizado', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { usuario: usuarioAtual } },
+        { provide: AuthService, useValue: { usuario: usuarioAtual, turmaId: () => 't1' } },
         {
           provide: TurmaRepository,
           useValue: {

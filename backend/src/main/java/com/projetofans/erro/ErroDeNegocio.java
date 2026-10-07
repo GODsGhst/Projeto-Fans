@@ -31,4 +31,14 @@ public class ErroDeNegocio extends RuntimeException {
     public HttpStatus getStatus() {
         return status;
     }
+
+    /**
+     * Codigo estavel para o app decidir o que fazer, quando o status sozinho nao
+     * basta. Quase nenhum erro tem um: o status e o texto ja dizem tudo. Existe
+     * porque 404 e ambiguo — "nao achei esse registro" e "voce nao esta em turma
+     * nenhuma" pedem reacoes opostas, e um 404 de proxy tambem chega como 404.
+     */
+    public String getCodigo() {
+        return null;
+    }
 }

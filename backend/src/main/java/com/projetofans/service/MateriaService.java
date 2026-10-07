@@ -153,6 +153,11 @@ public class MateriaService {
                     "Mova ou apague as provas e materiais antes");
         }
         materias.delete(materia);
+        // Grava ja: se alguem criou evento ou material entre a checagem acima e aqui,
+        // a FK estoura DENTRO deste metodo, onde o ProblemDetailHandler a traduz em
+        // 409. Deixar para o commit empurraria o erro para fora do que o handler
+        // reconhece com seguranca.
+        materias.flush();
     }
 
     private void exigirLider(UsuarioAtual usuario) {

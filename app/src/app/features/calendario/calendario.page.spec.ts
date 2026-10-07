@@ -53,6 +53,7 @@ describe('CalendarioPage', () => {
           provide: AuthService,
           useValue: {
             usuario: signal({ id: 'u1', nome: 'Eu', email: 'eu@exemplo.com' }),
+            turmaId: () => 't1',
           },
         },
       ],

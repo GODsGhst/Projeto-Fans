@@ -14,6 +14,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 
+import { CODIGO_SEM_TURMA, ErroApi } from '../../core/http-error.interceptor';
 import { ModeracaoRepository } from '../../data/moderacao.repository';
 import type {
   Ocultado,
@@ -137,6 +138,12 @@ import { mensagemDeErro } from '../auth/erro';
 
           <p class="pf-rotulo">quem está aqui · {{ t.membros.length }}</p>
 
+          @if (erroDaTroca(); as e) {
+            <!-- Fora da pergunta de remoção: a pergunta mora na linha da pessoa,
+                 e a linha some quando ela sai. -->
+            <p class="pf-erro" role="alert">{{ e }}</p>
+          }
+
           @for (m of membros(); track m.usuarioId) {
             <div class="membro">
               <span class="inicial">{{ m.inicial }}</span>
@@ -162,7 +169,8 @@ import { mensagemDeErro } from '../auth/erro';
             @if (confirmandoRemover() === m.usuarioId) {
               <p class="alerta" role="status">
                 <b>{{ m.nome }}</b> perde o acesso à turma. O que ele postou
-                continua.
+                continua. Remover não bane: sem um código novo, a pessoa pode
+                voltar com o código atual.
               </p>
               @if (erroDoMembro(); as e) {
                 <p class="pf-erro" role="alert">{{ e }}</p>
@@ -171,10 +179,20 @@ import { mensagemDeErro } from '../auth/erro';
                 <button
                   class="botao botao--fio botao--pilula"
                   type="button"
+                  data-testid="remover-confirmar"
                   [disabled]="agindo()"
                   (click)="remover(m.usuarioId)"
                 >
-                  {{ agindo() ? 'Removendo…' : 'Remover da turma' }}
+                  {{ agindo() ? 'Removendo…' : 'Remover' }}
+                </button>
+                <button
+                  class="botao botao--fio botao--pilula"
+                  type="button"
+                  data-testid="remover-e-trocar-codigo"
+                  [disabled]="agindo()"
+                  (click)="remover(m.usuarioId, true)"
+                >
+                  Remover e gerar novo código
                 </button>
                 <button
                   class="botao botao--fio botao--pilula"
@@ -341,6 +359,7 @@ import { mensagemDeErro } from '../auth/erro';
     }
     .confirmar {
       display: flex;
+      flex-wrap: wrap; /* "Remover e gerar novo código" não cabe ao lado dos outros no celular */
       gap: 8px;
     }
 
@@ -386,6 +405,8 @@ export class TurmaPage {
   protected readonly agindo = signal(false);
   protected readonly erroDoCodigo = signal<string | null>(null);
   protected readonly erroDoMembro = signal<string | null>(null);
+  /** A pessoa já saiu, mas o código novo não saiu: o aviso não pode morar na linha dela. */
+  protected readonly erroDaTroca = signal<string | null>(null);
   protected readonly erroDoOcultado = signal<string | null>(null);
 
   /** `null` = ainda não se sabe. Lista vazia é resposta ("Nada oculto"), `null` não. */
@@ -438,19 +459,44 @@ export class TurmaPage {
     this.confirmandoRemover.set(usuarioId);
   }
 
-  protected async remover(usuarioId: string): Promise<void> {
+  /**
+   * `comNovoCodigo`: remover não impede a volta — quem sai ainda tem o código
+   * anotado. Gerar o código novo logo depois (a segunda chamada, de propósito, e
+   * não uma rota só: são duas ações que o servidor já tem) fecha a porta.
+   */
+  protected async remover(
+    usuarioId: string,
+    comNovoCodigo = false,
+  ): Promise<void> {
     if (this.agindo()) {
       return;
     }
     this.agindo.set(true);
     this.erroDoMembro.set(null);
+    this.erroDaTroca.set(null);
+    let saiu = false;
     try {
       await this.repo.removerMembro(usuarioId);
+      saiu = true;
       this.confirmandoRemover.set(null);
+      if (comNovoCodigo) {
+        await this.repo.gerarNovoCodigo();
+        // "Copiado ✓" era do código antigo; deixar aceso diria que o novo já foi.
+        this.copiado.set(false);
+      }
     } catch (e) {
-      // A pergunta fica aberta com o motivo: a pessoa continua na turma, e a tela
-      // não pode sugerir o contrário.
-      this.erroDoMembro.set(mensagemDeErro(e));
+      if (saiu) {
+        // A pessoa JÁ saiu e a pergunta fechou junto com a linha dela: dizer só
+        // "falhou" sugeriria que ela continua aqui. O código antigo segue valendo.
+        this.erroDaTroca.set(
+          `A pessoa saiu da turma, mas o código novo não foi gerado (${mensagemDeErro(e)}) ` +
+            'Gere um novo código para ela não voltar com o atual.',
+        );
+      } else {
+        // A pergunta fica aberta com o motivo: a pessoa continua na turma, e a
+        // tela não pode sugerir o contrário.
+        this.erroDoMembro.set(mensagemDeErro(e));
+      }
     } finally {
       this.agindo.set(false);
     }
@@ -498,6 +544,18 @@ export class TurmaPage {
       await this.carregarOcultados();
     } catch (e) {
       this.erroDoOcultado.set(mensagemDeErro(e));
+      // 404: o registro deixou de ser da turma desde que a lista foi lida (uma
+      // anotação que o autor tornou pessoal, por exemplo). A linha que a pessoa
+      // tocou é velha, e as outras podem ser também: reler em vez de deixá-la
+      // tentando de novo um item que não existe mais. SEM_TURMA não: a pessoa está
+      // sendo levada embora, e a lista não é mais dela.
+      if (
+        e instanceof ErroApi &&
+        e.status === 404 &&
+        e.codigo !== CODIGO_SEM_TURMA
+      ) {
+        await this.carregarOcultados();
+      }
     } finally {
       this.agindo.set(false);
     }

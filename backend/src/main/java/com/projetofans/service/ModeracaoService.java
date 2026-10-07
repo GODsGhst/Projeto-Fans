@@ -243,6 +243,9 @@ public class ModeracaoService {
 
     @Transactional
     public void transferirLideranca(UsuarioAtual lider, UUID novoLiderUsuarioId) {
+        // Primeiro de tudo: ver MembroRepository#travarDoUsuario. Remover membro e
+        // transferir competem pelo mesmo vinculo do lider.
+        membros.travarDoUsuario(lider.usuarioId());
         UUID turmaId = escopo.turmaDoUsuario(lider.usuarioId());
         exigirLider(lider);
 

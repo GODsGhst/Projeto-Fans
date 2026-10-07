@@ -126,6 +126,27 @@ class FerramentasDoLiderTurmaTest extends TesteDeApi {
     }
 
     @Test
+    @DisplayName("so o 404 de quem esta sem turma leva codigo SEM_TURMA — e o texto e o mesmo dos outros 404")
+    void soOSemTurmaLevaCodigo() throws Exception {
+        remover(lider, ana.getId());
+        Turma outra = novaTurma();
+        Usuario deOutra = membroDe(outra, "Caio", PapelMembro.ALUNO);
+
+        // O app so apaga a turma local diante deste codigo. Um 404 de proxy ou de
+        // registro que sumiu nao pode ter esse poder, entao tem de vir sem ele.
+        for (String rota : new String[] {"/api/v1/turmas/minha", "/api/v1/home", "/api/v1/sync"}) {
+            JsonNode removido = json.readTree(http.perform(get(rota).header("Authorization", bearer(ana)))
+                    .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString());
+            assertThat(removido.path("codigo").asText()).as(rota).isEqualTo("SEM_TURMA");
+            assertThat(removido.get("detail").asText()).isEqualTo("Registro nao encontrado");
+        }
+
+        JsonNode alheio = remover(lider, deOutra.getId()).json();
+        assertThat(alheio.has("codigo")).as("404 de outra turma nao leva codigo").isFalse();
+        assertThat(alheio.get("detail").asText()).isEqualTo("Registro nao encontrado");
+    }
+
+    @Test
     @DisplayName("o que o removido postou CONTINUA na turma, com o nome dele")
     void conteudoDoRemovidoContinuaComAutoria() throws Exception {
         Evento prova = eventoDe(ana, "Prova de Calculo");

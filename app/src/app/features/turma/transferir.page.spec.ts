@@ -57,7 +57,7 @@ describe('TransferirPage', () => {
         provideIonicAngular(),
         provideHttpClient(withInterceptors([erroHttpInterceptor])),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { usuario: eu } },
+        { provide: AuthService, useValue: { usuario: eu, turmaId: () => 't1' } },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
