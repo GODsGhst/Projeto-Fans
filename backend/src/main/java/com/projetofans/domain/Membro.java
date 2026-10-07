@@ -1,5 +1,6 @@
 package com.projetofans.domain;
 
+import com.projetofans.erro.ErroDeNegocio;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -8,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
+import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -51,6 +53,18 @@ public class Membro {
     @Column(name = "entrou_em", nullable = false, insertable = false, updatable = false)
     private Instant entrouEm;
 
+    /**
+     * Quando o LIDER contestou este docente NESTA turma (spec 2.4). Nulo = nao
+     * contestado; "contestado" nao e um boolean separado para nao haver dois campos
+     * que divirjam. Mora no vinculo, e nao no usuario, porque vale por turma — e
+     * entrar de novo com o codigo nao limpa: o vinculo (usuario+turma) e o mesmo.
+     */
+    @Column(name = "docente_contestado_em")
+    private Instant docenteContestadoEm;
+
+    @Column(name = "docente_contestado_por")
+    private UUID docenteContestadoPor;
+
     protected Membro() {
     }
 
@@ -81,12 +95,52 @@ public class Membro {
         return entrouEm;
     }
 
+    public Instant getDocenteContestadoEm() {
+        return docenteContestadoEm;
+    }
+
+    public UUID getDocenteContestadoPor() {
+        return docenteContestadoPor;
+    }
+
+    public boolean isContestado() {
+        return docenteContestadoEm != null;
+    }
+
+    /** O lider tira o poder e o selo deste docente nesta turma, ate restaurar (spec 2.4). */
+    public void contestar(UUID liderId, Instant agora) {
+        this.docenteContestadoEm = agora;
+        this.docenteContestadoPor = liderId;
+    }
+
+    /** Desfaz a contestacao: zera o rastro, e o poder volta na proxima requisicao. */
+    public void restaurar() {
+        this.docenteContestadoEm = null;
+        this.docenteContestadoPor = null;
+    }
+
     /**
      * Usado na transferencia de lideranca, que precisa rebaixar o atual e promover
      * o novo na MESMA transacao — o indice unico parcial do banco garante no maximo
      * um LIDER por turma e estouraria no meio de duas transacoes separadas.
+     *
+     * A guarda: so ALUNO vira LIDER (spec 2.7 e 3.3). `papel` e um valor so por
+     * vinculo, entao promover um PROFESSOR/COORDENADOR apagaria o papel dele — e a
+     * turma e o grupo de alunos, o docente e visita com poderes, nao dono. Fica
+     * aqui, e nao no service, porque este metodo e o gargalo de TODOS os caminhos
+     * que criam lider (transferencia pelo lider e `definirLider` do admin): uma
+     * checagem so, que um caminho novo nao tem como esquecer.
+     *
+     * LIDER -> LIDER passa (nao muda nada). O `definirLider` do admin e idempotente
+     * hoje — "defina de novo quem ja lidera" e 204, nao erro — e a guarda nao pode
+     * transformar isso em 409.
      */
     public void mudarPapel(PapelMembro novo) {
+        if (novo == PapelMembro.LIDER
+                && papel != PapelMembro.ALUNO && papel != PapelMembro.LIDER) {
+            throw new ErroDeNegocio(HttpStatus.CONFLICT,
+                    "Professor e coordenador nao podem ser lider da turma.");
+        }
         this.papel = novo;
     }
 }
