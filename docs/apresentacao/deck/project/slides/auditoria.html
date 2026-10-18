@@ -1,0 +1,38 @@
+<section id="auditoria" data-transition="push" style="background:#14181A;color:#EEF0EC;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#4DBFB3">09 &middot; Auditoria de segurança</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Três falhas reais foram encontradas no próprio projeto. E provadas.</h2>
+</div>
+
+<div style="display:flex;gap:26px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2527;padding:34px;border-radius:14px;border-left:6px solid #F87171">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#F87171">achado 1 &middot; corrigido</p>
+<h3 style="font-size:30px;font-weight:600;line-height:1.25">Tomada de conta pelo login do Google</h3>
+<p style="font-size:24px;line-height:1.4;color:#BFC6C2">O sistema usava o e-mail do token para decidir que dois logins eram a mesma pessoa, sem conferir se o e-mail era <b style="font-weight:600;color:#EEF0EC">verificado</b>. Um domínio corporativo pode emitir token com e-mail não confirmado — e quem o apresentasse assumia a conta da vítima.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2527;padding:34px;border-radius:14px;border-left:6px solid #F87171">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#F87171">achado 2 &middot; corrigido</p>
+<h3 style="font-size:30px;font-weight:600;line-height:1.25">Registro oculto respondia pelo id direto</h3>
+<p style="font-size:24px;line-height:1.4;color:#BFC6C2">O líder ocultava uma prova, mas quem soubesse o id continuava lendo o registro inteiro — e os ids já estavam em todo aparelho que havia sincronizado. A moderação furava por baixo.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2527;padding:34px;border-radius:14px;border-left:6px solid #F87171">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#F87171">achado 3 &middot; corrigido</p>
+<h3 style="font-size:30px;font-weight:600;line-height:1.25">Qualquer um desvinculava material alheio</h3>
+<p style="font-size:24px;line-height:1.4;color:#BFC6C2">Dava para arrancar todos os materiais da prova de outra pessoa — e sumia sem rastro, porque o vínculo era apagado de verdade e o histórico não cobria esse caso.</p>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#0B5D56;padding:32px;border-radius:14px">
+<h3 style="font-size:32px;font-weight:600;color:#EEF0EC">Verificadas por mutação, não por teste verde</h3>
+<p style="font-size:26px;line-height:1.4;color:#CFF0EB">Teste que passa não prova que a proteção funciona — prova que ele não a exercita. Para cada falha eu <b style="font-weight:600;color:#FFFFFF">desliguei a guarda</b> e confirmei que o teste ficava vermelho. Só então religuei. As três eram exploráveis de verdade.</p>
+</div>
+<aside>Este é o slide mais forte da apresentação. Falar devagar.
+
+A ideia central, dita em voz alta: "um teste que passa não prova que a proteção funciona. Prova que ou ela funciona, ou o teste não a exercita — e são coisas muito diferentes. Então para cada falha eu desliguei a correção de propósito e rodei o teste de novo. Se ele continuasse verde, o teste era inútil. Os três ficaram vermelhos, com a mensagem esperada 404 e veio 200. Aí eu soube que a falha era real e que o teste morde."
+
+Se o professor perguntar "quem fez a auditoria": eu mesmo, com revisão assistida, em outubro, e o relatório está no repositório com evidência de arquivo e linha para cada achado. Não é um selo — é um documento que diz onde está cada coisa.
+
+O slide de próximos passos abre o que NÃO está coberto — sem RLS no banco, força bruta limitada só pelo hardware, sem CSP. Não pular: é o que separa auditoria de propaganda.</aside>
+</section>

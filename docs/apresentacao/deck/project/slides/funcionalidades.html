@@ -1,0 +1,35 @@
+<section id="funcionalidades" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:46px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">05 &middot; Principais funcionalidades</p>
+<h2 style="font-size:66px;font-weight:600;line-height:1.1;letter-spacing:-2px">Quatro telas, e uma regra em cada uma.</h2>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:26px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #1D4ED8">
+<h3 style="font-size:36px;font-weight:600">Início &mdash; o que vem aí</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">Provas e entregas dos próximos 14 dias, teto de 6 itens, ordem por urgência. <b style="font-weight:600">A janela, o teto e a ordem são calculados no servidor</b>, nunca no celular — assim existe uma implementação e uma suíte de testes, em vez de cada tela divergir.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #0369A1">
+<h3 style="font-size:36px;font-weight:600">Matérias &mdash; o que foi dado</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">Material de <b style="font-weight:600">aula</b> e material <b style="font-weight:600">adicional</b>, separados. Link ou arquivo. Na tela de uma prova aparecem só os materiais vinculados àquela prova — nunca o semestre inteiro.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #15803D">
+<h3 style="font-size:36px;font-weight:600">Calendário &mdash; o mês</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">Grade mensal que anda para frente e para trás, com marca por matéria no dia. Toca no dia e vê o que tem nele. Mais as anotações da turma.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #6D28D9">
+<h3 style="font-size:36px;font-weight:600">Meu quadro &mdash; só meu</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">A fazer e feito. <b style="font-weight:600">Estado pessoal vive em outra tabela</b>, então marcar resolvido não altera uma linha do registro compartilhado. A regra é garantida pelo banco, não por disciplina de quem programa.</p>
+</div>
+</div>
+
+<p style="position:absolute;left:128px;bottom:64px;font-size:26px;color:#7C8486">Mais: lembrete na véspera, convite por código de 8 caracteres, e histórico de quem editou o quê.</p>
+<aside>Não ler os cards. Apontar e resumir cada um numa frase — a sala está lendo junto.
+
+A frase que vale destacar é a do Meu quadro: "estado pessoal vive em outra tabela". Se o professor perguntar por que isso importa: porque se existisse uma coluna 'feito' no registro da prova, bastava um programador distraído para o 'feito' de um aluno aparecer para a turma inteira. Como a coluna não existe, o banco recusa a violação. A regra deixou de depender de alguém lembrar dela.
+
+A do Início também: a ordenação no servidor. Se fosse no celular, cada tela poderia divergir com o tempo e ninguém perceberia até a turma perder uma prova.</aside>
+</section>

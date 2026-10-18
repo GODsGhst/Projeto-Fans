@@ -1,0 +1,57 @@
+{
+  "v": 4,
+  "createdOnFiles": { "v": 1, "at": "2026-10-18T19:05:00Z" },
+  "lists": "css",
+  "title": "projetoFans — Apresentação 21/10",
+  "order": [
+    "capa",
+    "problema",
+    "objetivo",
+    "nao-e",
+    "demo",
+    "funcionalidades",
+    "arquitetura",
+    "acesso",
+    "seguranca",
+    "auditoria",
+    "obstaculos",
+    "recursos",
+    "numeros",
+    "beneficios",
+    "proximos",
+    "canal"
+  ],
+  "sections": {
+    "abertura": {
+      "description": "O problema que a turma tem e o que o app se propõe a ser — e o que ele deliberadamente não é.",
+      "start": "capa"
+    },
+    "produto": {
+      "description": "O sistema funcionando ao vivo e as funcionalidades principais.",
+      "start": "demo"
+    },
+    "construcao": {
+      "description": "Como foi construído: arquitetura, níveis de acesso e segurança verificada.",
+      "start": "arquitetura"
+    },
+    "realidade": {
+      "description": "O que deu errado no caminho, com o que foi construído e o que ainda falta.",
+      "start": "obstaculos"
+    },
+    "encerramento": {
+      "description": "Canal de comunicação, acesso para teste e perguntas da plateia.",
+      "start": "canal"
+    }
+  },
+  "faces": {
+    "ibm-plex-sans": {
+      "family": "IBM Plex Sans",
+      "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    },
+    "jetbrains-mono": {
+      "family": "JetBrains Mono",
+      "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    }
+  },
+  "designSystems": []
+}

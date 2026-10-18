@@ -1,0 +1,45 @@
+<section id="canal" data-transition="push" style="background:#14181A;color:#EEF0EC;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:24px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#4DBFB3">15 &middot; Encerramento</p>
+<h2 style="font-size:118px;font-weight:700;line-height:1.02;letter-spacing:-4px">Perguntas?</h2>
+<p style="font-size:36px;line-height:1.35;color:#BFC6C2;width:1500px">E se alguém quiser testar, o sistema está no ar agora &mdash; não é protótipo.</p>
+</div>
+
+<div style="display:flex;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1F2527;padding:36px;border-radius:16px;border-top:6px solid #4DBFB3">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;letter-spacing:2px;text-transform:uppercase;color:#4DBFB3">Testar o app</p>
+<p style="font-size:27px;line-height:1.4;color:#BFC6C2">Instale o APK e entre com o código da turma de demonstração:</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;letter-spacing:6px;color:#EEF0EC">65722528</p>
+<p style="font-size:23px;line-height:1.35;color:#8E9793">Turma separada, criada para esta apresentação &mdash; os dados da minha turma não ficam expostos.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1F2527;padding:36px;border-radius:16px;border-top:6px solid #1D4ED8">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;letter-spacing:2px;text-transform:uppercase;color:#7FA7F5">Sugestões e melhorias</p>
+<p style="font-size:27px;line-height:1.4;color:#BFC6C2">Abra uma issue no repositório. Toda sugestão vira item com data e resposta:</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:27px;font-weight:500;line-height:1.35;color:#EEF0EC">github.com/GODsGhst/<br>Projeto-Fans/issues</p>
+<p style="font-size:23px;line-height:1.35;color:#8E9793">Dentro do app também há um caminho para relatar problema.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1F2527;padding:36px;border-radius:16px;border-top:6px solid #A16207">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;letter-spacing:2px;text-transform:uppercase;color:#E0A458">O que eu quero ouvir</p>
+<ul style="font-size:25px;line-height:1.45;color:#BFC6C2">
+<li>Alguma tela ficou parada ou em branco?</li>
+<li>Algum botão não fez nada?</li>
+<li>Alguma mensagem deixou dúvida sobre o que aconteceu?</li>
+<li>O que faltou para você usar de verdade?</li>
+</ul>
+</div>
+</div>
+<aside>Ficar NESTE slide durante todo o Q&A. Ele responde três itens da lista do professor ao mesmo tempo: abrir para perguntas, deixar canal de comunicação e disponibilizar acesso para teste.
+
+Ao chegar aqui, dizer: "o código da turma de demonstração está na tela. Quem quiser instalar agora e cadastrar uma prova, pode — e eu vejo aparecer aqui no meu celular na hora." Isso costuma gerar a melhor demonstração possível, porque é a plateia testando.
+
+Avisar sobre a primeira abertura: "a primeira tela pode demorar até dois minutos, porque o servidor é gratuito e dorme. A segunda é instantânea."
+
+PERGUNTAS PROVÁVEIS estão no documento de apoio. As três mais certas:
+- "Por que não usou Firebase?" → o modelo tem relação muitos-para-muitos e histórico auditável; banco relacional faz isso naturalmente.
+- "Como você garante que um aluno não edita a prova do outro?" → a checagem é no servidor, não na tela, e tem teste que falha se alguém tirar a guarda.
+- "E se dois cadastrarem a mesma prova?" → ficam duas; o app não bloqueia, porque bloquear exigiria aprovação, e aprovação é o que ele recusa ter. O cliente avisa quando já existe algo parecido na mesma data.
+
+Agradecer e parar. Não encher o silêncio.</aside>
+</section>

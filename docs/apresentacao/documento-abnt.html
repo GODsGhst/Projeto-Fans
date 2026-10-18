@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>projetoFans — Documentação do Projeto</title>
+<style>
+  /* ABNT NBR 14724: A4, margens superior e esquerda 3cm, inferior e direita 2cm. */
+  @page { size: A4; margin: 3cm 2cm 2cm 3cm; }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+    margin: 0;
+    text-align: justify;
+  }
+
+  /* Parágrafo: recuo de 1,25 cm na primeira linha. */
+  p { margin: 0 0 0 0; text-indent: 1.25cm; }
+  p + p { margin-top: 0; }
+
+  .sem-recuo { text-indent: 0; }
+
+  /* Seção primária: caixa alta, negrito, inicia em nova página. */
+  h1 {
+    font-size: 12pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: left;
+    margin: 0 0 1.5em 0;
+    page-break-before: always;
+    text-indent: 0;
+  }
+  h1.primeira { page-break-before: avoid; }
+
+  /* Seção secundária: negrito, sem caixa alta. */
+  h2 {
+    font-size: 12pt;
+    font-weight: bold;
+    text-align: left;
+    margin: 1.5em 0 0.75em 0;
+    text-indent: 0;
+  }
+
+  h3 {
+    font-size: 12pt;
+    font-weight: normal;
+    font-style: italic;
+    text-align: left;
+    margin: 1.2em 0 0.6em 0;
+    text-indent: 0;
+  }
+
+  ul, ol { margin: 0.6em 0 0.6em 1.25cm; padding-left: 1em; text-align: justify; }
+  li { margin-bottom: 0.3em; }
+
+  /* Citação direta longa: recuo 4cm, fonte 10pt, espaçamento simples, sem aspas. */
+  blockquote {
+    margin: 1em 0 1em 4cm;
+    font-size: 10pt;
+    line-height: 1;
+    text-indent: 0;
+    text-align: justify;
+  }
+
+  /* Folha sem numeração e sem recuo: capa e folha de rosto. */
+  .folha {
+    height: 100%;
+    page-break-after: always;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-indent: 0;
+  }
+  .folha > * { text-indent: 0; }
+
+  .inst { font-size: 12pt; font-weight: bold; text-transform: uppercase; line-height: 1.5; }
+  .autor { font-size: 12pt; text-transform: uppercase; }
+  .titulo-capa { font-size: 14pt; font-weight: bold; text-transform: uppercase; line-height: 1.5; }
+  .sub-capa { font-size: 12pt; line-height: 1.5; }
+  .local { font-size: 12pt; text-transform: uppercase; }
+
+  /* Natureza do trabalho na folha de rosto: recuo a partir do meio da mancha. */
+  .natureza {
+    margin-left: 8cm;
+    text-align: justify;
+    font-size: 10pt;
+    line-height: 1.2;
+    text-indent: 0;
+  }
+
+  /* Sumário */
+  .sumario-titulo {
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0 0 1.5em 0;
+    text-indent: 0;
+  }
+  /* Entrelinha menor que o corpo de proposito: com 1,5 o sumario passava para
+     uma segunda pagina e deslocava a numeracao de todas as secoes. */
+  .sum { width: 100%; border-collapse: collapse; font-size: 12pt; line-height: 1.3; }
+  .sum td { padding: 0.1em 0; vertical-align: bottom; text-indent: 0; }
+  .sum td.num { width: 1.6cm; }
+  .sum td.pag { width: 1.2cm; text-align: right; }
+  .sum td.tit { border-bottom: 1px dotted #000; }
+  .sum tr.n1 td { font-weight: bold; text-transform: uppercase; }
+
+  table.dados {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    line-height: 1.2;
+    margin: 0.8em 0;
+  }
+  table.dados th, table.dados td {
+    border: 1px solid #000;
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+    text-indent: 0;
+  }
+  table.dados th { font-weight: bold; background: #e8e8e8; }
+
+  .legenda {
+    font-size: 10pt;
+    text-align: center;
+    text-indent: 0;
+    line-height: 1.2;
+    margin: 0 0 0.3em 0;
+  }
+  .fonte {
+    font-size: 10pt;
+    text-align: center;
+    text-indent: 0;
+    line-height: 1.2;
+    margin: 0.2em 0 1em 0;
+  }
+
+  code { font-family: 'Courier New', monospace; font-size: 10pt; }
+
+  /* Referências: alinhadas à esquerda, espaço simples, separadas por espaço duplo. */
+  .ref { text-indent: 0; text-align: left; line-height: 1; margin-bottom: 1em; }
+</style>
+</head>
+<body>
+
+<!-- ============================ CAPA ============================ -->
+<div class="folha">
+  <div>
+    <p class="inst">FANS — Faculdade Nova Serrana<br>Engenharia de Software</p>
+  </div>
+
+  <div>
+    <p class="autor">Otávio de Pádua Rodrigues Ribeiro</p>
+  </div>
+
+  <div>
+    <p class="titulo-capa">projetoFans</p>
+    <p class="sub-capa">Aplicativo colaborativo para registro de provas, entregas e material de aula por uma turma de graduação</p>
+  </div>
+
+  <div>
+    <p class="local">Nova Serrana — MG<br>2026</p>
+  </div>
+</div>
+
+<!-- ======================= FOLHA DE ROSTO ======================= -->
+<div class="folha">
+  <div>
+    <p class="autor">Otávio de Pádua Rodrigues Ribeiro</p>
+  </div>
+
+  <div>
+    <p class="titulo-capa">projetoFans</p>
+    <p class="sub-capa">Aplicativo colaborativo para registro de provas, entregas e material de aula por uma turma de graduação</p>
+  </div>
+
+  <div class="natureza">
+    <p style="text-indent:0">Trabalho apresentado às disciplinas Trabalho Interdisciplinar I e Laboratório de Desenvolvimento de Aplicações Móveis e Distribuídas, do 6º período do curso de Engenharia de Software da FANS — Faculdade Nova Serrana, como requisito de avaliação.</p>
+    <p style="text-indent:0; margin-top:0.8em">Professores: César Augusto Oliveira Soares e Daniel Lucas de Souza Lelis.</p>
+  </div>
+
+  <div>
+    <p class="local">Nova Serrana — MG<br>2026</p>
+  </div>
+</div>
+
+<!-- =========================== SUMÁRIO =========================== -->
+<div style="page-break-after: always">
+  <p class="sumario-titulo">Sumário</p>
+  <table class="sum">
+    <tr class="n1"><td class="num">1</td><td class="tit">Introdução</td><td class="pag">4</td></tr>
+    <tr><td class="num">1.1</td><td class="tit">Problema</td><td class="pag">4</td></tr>
+    <tr><td class="num">1.2</td><td class="tit">Justificativa</td><td class="pag">4</td></tr>
+    <tr class="n1"><td class="num">2</td><td class="tit">Objetivos</td><td class="pag">5</td></tr>
+    <tr><td class="num">2.1</td><td class="tit">Objetivo geral</td><td class="pag">5</td></tr>
+    <tr><td class="num">2.2</td><td class="tit">Objetivos específicos</td><td class="pag">5</td></tr>
+    <tr><td class="num">2.3</td><td class="tit">Delimitação do escopo</td><td class="pag">5</td></tr>
+    <tr class="n1"><td class="num">3</td><td class="tit">Público-alvo</td><td class="pag">6</td></tr>
+    <tr class="n1"><td class="num">4</td><td class="tit">Recursos tecnológicos utilizados</td><td class="pag">7</td></tr>
+    <tr><td class="num">4.1</td><td class="tit">Linguagens e frameworks</td><td class="pag">7</td></tr>
+    <tr><td class="num">4.2</td><td class="tit">Banco de dados e versionamento do esquema</td><td class="pag">7</td></tr>
+    <tr><td class="num">4.3</td><td class="tit">Ferramentas de produtividade e infraestrutura</td><td class="pag">7</td></tr>
+    <tr class="n1"><td class="num">5</td><td class="tit">Arquitetura da solução</td><td class="pag">9</td></tr>
+    <tr><td class="num">5.1</td><td class="tit">Visão geral</td><td class="pag">9</td></tr>
+    <tr><td class="num">5.2</td><td class="tit">Modelo de dados</td><td class="pag">9</td></tr>
+    <tr class="n1"><td class="num">6</td><td class="tit">Principais funcionalidades</td><td class="pag">11</td></tr>
+    <tr class="n1"><td class="num">7</td><td class="tit">Níveis de acesso e segurança</td><td class="pag">12</td></tr>
+    <tr><td class="num">7.1</td><td class="tit">Níveis de acesso</td><td class="pag">12</td></tr>
+    <tr><td class="num">7.2</td><td class="tit">Mecanismos de segurança</td><td class="pag">12</td></tr>
+    <tr><td class="num">7.3</td><td class="tit">Auditoria de segurança e vulnerabilidades corrigidas</td><td class="pag">13</td></tr>
+    <tr class="n1"><td class="num">8</td><td class="tit">Dificuldades encontradas</td><td class="pag">14</td></tr>
+    <tr><td class="num">8.1</td><td class="tit">Indisponibilidade do ambiente de testes por vinte e sete dias</td><td class="pag">14</td></tr>
+    <tr><td class="num">8.2</td><td class="tit">Conflito de versões do ambiente de execução Java</td><td class="pag">14</td></tr>
+    <tr><td class="num">8.3</td><td class="tit">Falha inexistente provocada por cache de compilação</td><td class="pag">14</td></tr>
+    <tr><td class="num">8.4</td><td class="tit">Demais dificuldades</td><td class="pag">15</td></tr>
+    <tr class="n1"><td class="num">9</td><td class="tit">Benefícios da implantação</td><td class="pag">16</td></tr>
+    <tr class="n1"><td class="num">10</td><td class="tit">Considerações finais e trabalhos futuros</td><td class="pag">17</td></tr>
+    <tr class="n1"><td class="num"></td><td class="tit">Referências</td><td class="pag">18</td></tr>
+  </table>
+</div>
+
+<!-- ========================= 1 INTRODUÇÃO ========================= -->
+<h1 class="primeira">1 Introdução</h1>
+
+<p>Este documento descreve o <i>projetoFans</i>, um aplicativo para dispositivos móveis desenvolvido para que uma turma de graduação mantenha, de forma colaborativa, o registro do que precisa saber sobre o período letivo: as provas e entregas que se aproximam e o material apresentado em cada aula.</p>
+
+<p>O sistema encontra-se em operação desde setembro de 2026, hospedado em servidor acessível pela internet, e vem sendo utilizado por integrantes da turma em seus próprios aparelhos. Não se trata, portanto, de protótipo ou de maquete de interface: o que este documento descreve está em funcionamento.</p>
+
+<h2>1.1 Problema</h2>
+
+<p>A informação acadêmica cotidiana de uma turma circula hoje, majoritariamente, por aplicativos de mensagem instantânea. Esse meio é adequado para <i>avisar</i>, mas inadequado para <i>consultar</i>. Um grupo de turma acumula centenas de mensagens por semana, de modo que a data de uma avaliação comunicada na terça-feira torna-se, na quinta-feira, praticamente irrecuperável sem releitura integral do histórico.</p>
+
+<p>Decorrem desse formato três problemas recorrentes. O primeiro é o da submersão do aviso: a informação foi efetivamente transmitida, mas não pode ser localizada quando necessária. O segundo é o da irrecuperabilidade do material: o estudante ausente depende da disposição de um colega para obter o conteúdo da aula, o que transforma um direito acadêmico em favor pessoal. O terceiro é o da ausência de responsável: planilhas compartilhadas mantidas voluntariamente por um único estudante costumam ser abandonadas ao final de um ou dois períodos, pois dependem da persistência de uma só pessoa.</p>
+
+<h2>1.2 Justificativa</h2>
+
+<p>As plataformas institucionais de gestão acadêmica atendem à relação entre a instituição e o estudante — notas, frequência, matrícula — mas não ao registro horizontal que a turma produz entre si. Ambientes virtuais de aprendizagem, por sua vez, pressupõem adesão do docente: funcionam quando o professor alimenta a plataforma e deixam de funcionar quando ele não o faz.</p>
+
+<p>O <i>projetoFans</i> ocupa deliberadamente o espaço intermediário. Seu funcionamento não depende de adesão institucional nem docente: qualquer integrante da turma registra informação, e o sistema opera integralmente ainda que nenhum professor jamais o acesse. A participação docente é possível e bem-vinda, mas permanece opcional por decisão de projeto.</p>
+
+<!-- ========================= 2 OBJETIVOS ========================= -->
+<h1>2 Objetivos</h1>
+
+<h2>2.1 Objetivo geral</h2>
+
+<p>Desenvolver e implantar um aplicativo móvel que permita a uma turma de graduação registrar e consultar, de maneira colaborativa e sem necessidade de aprovação prévia, as avaliações e entregas futuras e o material didático de cada disciplina.</p>
+
+<h2>2.2 Objetivos específicos</h2>
+
+<ul>
+  <li>Apresentar, como tela inicial, as avaliações e entregas dos próximos quatorze dias, ordenadas por urgência e limitadas a seis itens, de modo a responder à pergunta &ldquo;o que vem a seguir&rdquo; em poucos segundos;</li>
+  <li>Organizar o material didático por disciplina, distinguindo material de aula de material complementar, e vinculá-lo às avaliações correspondentes;</li>
+  <li>Garantir que o estado pessoal de cada usuário — a marcação de um item como resolvido — permaneça isolado do registro compartilhado;</li>
+  <li>Emitir aviso local no aparelho na véspera de cada avaliação, independentemente da disponibilidade do servidor no momento do disparo;</li>
+  <li>Assegurar autoria visível e histórico de alterações em todo registro, de modo que a confiabilidade da informação possa ser avaliada por quem a consulta;</li>
+  <li>Implantar a solução em ambiente acessível pela internet e validá-la com usuários reais em aparelhos próprios.</li>
+</ul>
+
+<h2>2.3 Delimitação do escopo</h2>
+
+<p>Delimitar o que não será construído é tão determinante quanto definir o que será. Foram explicitamente excluídos do escopo, por registro documentado no início do projeto: assinatura ou qualquer forma de monetização; geração automática de resumos por inteligência artificial; lançamento de notas ou boletim; integração com o sistema acadêmico da instituição; suporte a múltiplas turmas simultâneas por usuário; e envio e correção de trabalhos.</p>
+
+<p>Cabe observação quanto ao penúltimo item. A estrutura do banco de dados comporta o vínculo de um usuário a diversas turmas, uma vez que o registro desse vínculo era necessário de todo modo para o ingresso por convite. A funcionalidade, contudo, não foi construída: a interface de programação resolve exatamente uma turma por usuário e não existe seletor de turma na interface gráfica. A distinção entre o que a estrutura comporta e o que o sistema oferece é deliberada e está documentada.</p>
+
+<!-- ======================== 3 PÚBLICO-ALVO ======================== -->
+<h1>3 Público-alvo</h1>
+
+<p>O público-alvo primário é a turma de graduação presencial, compreendida como grupo de vinte a sessenta estudantes do mesmo período, cursando disciplinas comuns e já dotado de um canal de comunicação informal entre si.</p>
+
+<p>Esse recorte não é acessório: é ele que sustenta a decisão de arquitetura mais sensível do sistema, a ausência de moderação prévia. Em um grupo cujos integrantes se conhecem pessoalmente, a autoria visível de cada registro constitui mecanismo de confiança suficiente, pois o custo reputacional de inserir informação falsa recai sobre pessoa identificável. Em um sistema aberto a público indeterminado, a mesma decisão seria inadequada e exigiria fila de aprovação.</p>
+
+<p>O público-alvo secundário é o docente, na condição de contribuidor opcional. Sua conta exige aprovação administrativa, uma vez que o código de convite comprova pertencimento à turma, mas não comprova a condição de professor.</p>
+
+<!-- ===================== 4 RECURSOS TECNOLÓGICOS ===================== -->
+<h1>4 Recursos tecnológicos utilizados</h1>
+
+<h2>4.1 Linguagens e frameworks</h2>
+
+<p>O servidor foi implementado em Java 17 com o framework Spring Boot 3.5.3, organizado em camadas de controlador, serviço e repositório. Adotou-se a restrição de que entidades de persistência jamais atravessem a fronteira do controlador: toda resposta da interface de programação é construída a partir de objetos de transferência de dados montados explicitamente. Essa restrição impede que o resumo criptográfico da senha seja exposto por serialização automática — falha silenciosa e frequente em aplicações que devolvem entidades diretamente.</p>
+
+<p>O aplicativo cliente foi construído com Ionic 8 sobre Angular 20, empregando componentes independentes e sinais reativos para gerência de estado. O empacotamento para Android utiliza Capacitor 8.5, que produz um arquivo instalável com acesso a recursos nativos, notadamente o agendamento de notificações locais.</p>
+
+<p>A escolha de Java para o servidor considerou a maturidade do ecossistema e a verificação estática de tipos na camada responsável pela integridade dos dados compartilhados. A opção por Ionic e Angular permitiu manter uma única base de código para o aplicativo Android e para a execução em navegador.</p>
+
+<h2>4.2 Banco de dados e versionamento do esquema</h2>
+
+<p>Adotou-se o sistema gerenciador de banco de dados PostgreSQL 16. A decisão por banco relacional, em detrimento de alternativas orientadas a documentos, decorreu diretamente do modelo de dados: o vínculo entre avaliações e materiais é uma relação de muitos para muitos, e o histórico de alterações exige estrutura apensável e auditável. Ambas as características são atendidas naturalmente por banco relacional, ao passo que um banco orientado a documentos induziria à duplicação de dados e fragilizaria as regras de isolamento.</p>
+
+<p>A evolução do esquema é versionada com Flyway, totalizando dez migrações numeradas. Observa-se a regra de que migração já aplicada nunca é editada: toda alteração dá origem à migração seguinte. O mapeamento objeto-relacional opera em modo de validação, verificando a correspondência entre o esquema esperado e o existente e interrompendo a inicialização em caso de divergência.</p>
+
+<h2>4.3 Ferramentas de produtividade e infraestrutura</h2>
+
+<p>O controle de versão é realizado com Git, em repositório hospedado no GitHub. A prototipação das interfaces foi conduzida em Figma, complementada por protótipos navegáveis em HTML mantidos no próprio repositório. O desenvolvimento contou com programação assistida por inteligência artificial, mediante a ferramenta Claude Code, prática registrada de forma explícita: o repositório mantém diário de decisões com trinta e oito entradas datadas, cada qual identificando o que foi decidido, por qual razão e o que permaneceu pendente.</p>
+
+<p>A hospedagem emprega serviços de camada gratuita: a interface de programação executa na plataforma Render e o banco de dados na plataforma Neon. Registre-se que a camada gratuita suspende a aplicação após quinze minutos de inatividade, com tempo de reativação que pode alcançar dois minutos. Essa limitação foi considerada no projeto, e não descoberta posteriormente: é precisamente por essa razão que o aviso da véspera é agendado localmente no aparelho, em vez de depender de processo em execução no servidor.</p>
+
+<p class="legenda">Quadro 1 — Síntese dos recursos tecnológicos</p>
+<table class="dados">
+  <tr><th style="width:26%">Camada</th><th style="width:30%">Tecnologia</th><th style="width:44%">Versão e observação</th></tr>
+  <tr><td>Linguagem do servidor</td><td>Java</td><td>17</td></tr>
+  <tr><td>Framework do servidor</td><td>Spring Boot</td><td>3.5.3</td></tr>
+  <tr><td>Automação de compilação</td><td>Maven</td><td>3.9 (por wrapper)</td></tr>
+  <tr><td>Banco de dados</td><td>PostgreSQL</td><td>16</td></tr>
+  <tr><td>Versionamento do esquema</td><td>Flyway</td><td>10 migrações</td></tr>
+  <tr><td>Framework do cliente</td><td>Ionic / Angular</td><td>8 / 20</td></tr>
+  <tr><td>Empacotamento móvel</td><td>Capacitor</td><td>8.5</td></tr>
+  <tr><td>Testes do servidor</td><td>JUnit 5 e PostgreSQL embutido</td><td>413 casos de teste</td></tr>
+  <tr><td>Testes do cliente</td><td>Karma e Jasmine</td><td>48 conjuntos</td></tr>
+  <tr><td>Hospedagem</td><td>Render e Neon</td><td>camada gratuita</td></tr>
+</table>
+<p class="fonte">Fonte: elaborado pelo autor (2026).</p>
+
+<!-- ======================= 5 ARQUITETURA ======================= -->
+<h1>5 Arquitetura da solução</h1>
+
+<h2>5.1 Visão geral</h2>
+
+<p>A arquitetura observa o princípio de que o cliente não decide regra de negócio. O aplicativo instalado no aparelho é superfície de apresentação dotada de cópia local para funcionamento sem conexão; a totalidade das regras reside no servidor.</p>
+
+<p>Essa separação é mais que preferência estilística. A tela inicial deve exibir, no máximo, seis itens, restritos aos próximos quatorze dias e ordenados por urgência. Tais regras são computadas pelo servidor e entregues prontas ao cliente, que as renderiza na ordem recebida, sem reordenar, filtrar ou truncar. Caso fossem implementadas no cliente, cada tela poderia divergir ao longo do tempo sem que ninguém o percebesse — até que a turma deixasse de ser avisada de uma avaliação.</p>
+
+<p>A comunicação entre cliente e servidor ocorre sobre HTTPS, autenticada por token JSON Web Token emitido pelo próprio servidor. Dezesseis controladores organizam os recursos: autenticação, turma, disciplina, material, evento, quadro pessoal, moderação, anotação, docente, administração e sincronização, entre outros.</p>
+
+<p>O escopo de turma é resolvido por componente único, do qual todas as consultas dependem. Nenhum controlador filtra turma manualmente. Essa centralização cumpre duplo propósito: elimina a possibilidade de que uma rota nova omita a verificação por esquecimento e concentra em um só arquivo a alteração que seria necessária para suportar múltiplas instituições.</p>
+
+<h2>5.2 Modelo de dados</h2>
+
+<p>O modelo distingue rigorosamente <i>fato compartilhado</i> de <i>estado pessoal</i>. Avaliações, entregas e materiais constituem fatos compartilhados, visíveis a toda a turma. A marcação de um item como resolvido constitui estado pessoal e reside em tabela distinta, associada ao par usuário-evento.</p>
+
+<p>A separação é estrutural, e não meramente convencional: não existe coluna de estado pessoal na tabela de eventos. Em consequência, a regra que proíbe o vazamento do estado de um usuário para os demais não depende da disciplina de quem programa — depende do banco de dados, que recusaria a operação. Há, inclusive, caso de teste que consulta o catálogo do próprio banco e falha caso tal coluna venha a ser criada.</p>
+
+<p>Três outras decisões estruturais merecem registro. A exclusão é sempre lógica, mediante marcação temporal, pois a regra de preservação de histórico proíbe a remoção física de registros. Toda alteração grava, em tabela de revisões, o estado anterior do registro. E as chaves primárias são identificadores universais únicos, e não sequências numéricas, o que evita enumeração e permitiria a consolidação futura de dados de instituições distintas sem colisão.</p>
+
+<!-- ===================== 6 FUNCIONALIDADES ===================== -->
+<h1>6 Principais funcionalidades</h1>
+
+<p>O sistema organiza-se em quatro telas principais, cada qual associada a uma regra determinante.</p>
+
+<p><b>Tela inicial.</b> Apresenta as avaliações e entregas dos próximos quatorze dias, limitadas a seis itens e ordenadas por data crescente. A ordenação é por urgência, nunca por tipo: uma entrega marcada para o dia seguinte precede uma avaliação marcada para dali a quatro dias. O agrupamento por tipo é vedado. Quando não há itens no período, a tela exibe essa informação explicitamente, sem preenchê-la com sugestões ou conteúdo promocional — a ausência de compromissos é resposta correta e útil.</p>
+
+<p><b>Disciplinas.</b> Reúne, por disciplina, o material de aula e o material complementar, apresentados em seções distintas. Na tela de uma avaliação são exibidos exclusivamente os materiais a ela vinculados, e não o acervo integral da disciplina, de modo a responder objetivamente à questão &ldquo;o que estudar para esta prova&rdquo;.</p>
+
+<p><b>Calendário.</b> Oferece visão mensal navegável entre meses, com marcação por disciplina nos dias que contêm compromissos, e detalhamento do dia selecionado. Agrega também as anotações registradas pela turma.</p>
+
+<p><b>Quadro pessoal.</b> Organiza os itens do usuário em duas colunas, a fazer e feito. Conforme exposto na seção 5.2, a marcação não altera o registro compartilhado. Abaixo das colunas, seção recolhida reúne os registros do próprio usuário que tenham sido ocultados pela moderação.</p>
+
+<p>Complementam o conjunto: ingresso em turma mediante código de convite de oito caracteres; cadastro de avaliações, entregas, disciplinas, materiais e anotações por qualquer integrante, sem aprovação prévia; notificação local na véspera de cada compromisso; e registro de autoria e de edição em todos os registros.</p>
+
+<!-- ================== 7 NÍVEIS DE ACESSO E SEGURANÇA ================== -->
+<h1>7 Níveis de acesso e segurança</h1>
+
+<h2>7.1 Níveis de acesso</h2>
+
+<p>O sistema define quatro papéis. Nenhum deles autoriza a edição de registro de autoria alheia.</p>
+
+<p class="legenda">Quadro 2 — Papéis e respectivas permissões</p>
+<table class="dados">
+  <tr><th style="width:20%">Papel</th><th style="width:40%">Permissões</th><th style="width:40%">Restrições</th></tr>
+  <tr>
+    <td>Aluno</td>
+    <td>Criar avaliações, entregas, disciplinas, materiais e anotações; editar e excluir exclusivamente os registros de sua autoria.</td>
+    <td>Não altera registro de terceiros; não acessa dados de outra turma.</td>
+  </tr>
+  <tr>
+    <td>Líder</td>
+    <td>Todas as permissões do aluno; ocultar da turma registro já publicado e solicitar ao autor sua exclusão.</td>
+    <td>Não edita conteúdo alheio nem impede a publicação. Altera visibilidade, jamais conteúdo.</td>
+  </tr>
+  <tr>
+    <td>Professor e Coordenador</td>
+    <td>Contribuir como os demais, com identificação de docente. O coordenador alcança as turmas sob sua coordenação.</td>
+    <td>Nenhuma permissão enquanto a conta não for aprovada administrativamente. O papel, isoladamente, não concede poder.</td>
+  </tr>
+  <tr>
+    <td>Administrador</td>
+    <td>Aprovar ou recusar contas docentes e vinculá-las a turmas.</td>
+    <td>Não acessa o conteúdo de turmas das quais não participe.</td>
+  </tr>
+</table>
+<p class="fonte">Fonte: elaborado pelo autor (2026).</p>
+
+<p>A criação de conta é livre; o ingresso em turma exige o código de convite. Dessa separação decorre que o código de convite, e não o provedor de autenticação, constitui a fronteira de confiança do sistema.</p>
+
+<h2>7.2 Mecanismos de segurança</h2>
+
+<p>As senhas são armazenadas sob função de resumo criptográfico BCrypt, dotada de sal e fator de custo configurável, o que impede a recuperação do valor original. A autenticação por provedor externo é validada no servidor e convertida em token próprio, de modo que a interface de programação reconhece uma única forma de credencial.</p>
+
+<p>O acesso a registro pertencente a outra turma resulta em resposta 404, e não 403. A escolha é deliberada: a resposta &ldquo;proibido&rdquo; confirmaria a existência do registro, de sorte que o próprio código de estado constituiria vazamento de informação.</p>
+
+<p>A edição concorrente é tratada por controle otimista de versão. Toda alteração informa a versão lida; caso outro usuário tenha gravado no intervalo, a operação é recusada com resposta 409 e a interface recarrega o registro, em lugar de sobrescrever silenciosamente a edição alheia.</p>
+
+<p>Soma-se a isso o limite de tentativas de autenticação e a invalidação das sessões ativas quando da alteração de senha — sem a qual a troca de senha posterior a um vazamento não removeria o acesso do invasor.</p>
+
+<h2>7.3 Auditoria de segurança e vulnerabilidades corrigidas</h2>
+
+<p>Foi conduzida auditoria de segurança sobre o próprio sistema, organizada por categorias de vulnerabilidade e documentada com indicação de arquivo e linha para cada constatação. Foram identificadas e corrigidas três falhas efetivamente exploráveis.</p>
+
+<p>A primeira consistia em possibilidade de tomada de conta por meio da autenticação federada. O sistema empregava o endereço de correio eletrônico constante do token para identificar que dois acessos pertenciam à mesma pessoa, sem verificar se tal endereço havia sido confirmado pelo provedor. Dado que domínios corporativos podem emitir token com endereço não confirmado, quem o apresentasse assumiria a conta da vítima.</p>
+
+<p>A segunda permitia a leitura de registro ocultado pela moderação mediante requisição direta por identificador. Como os identificadores já se encontravam nos aparelhos que haviam sincronizado, a moderação era contornável.</p>
+
+<p>A terceira permitia que qualquer integrante desvinculasse materiais de avaliação alheia, operação destrutiva que não deixava rastro, pois o vínculo era removido fisicamente e o histórico não abrangia esse caso.</p>
+
+<p>Cumpre destacar o método de verificação empregado. A aprovação de um caso de teste não demonstra que a proteção funciona; demonstra, apenas, que o teste não a exercita — proposições distintas. Para cada correção, portanto, a proteção foi <i>desativada propositalmente</i> e o teste reexecutado, confirmando-se a reprovação com a mensagem esperada. Somente então a proteção foi restabelecida. Tal procedimento, análogo ao teste de mutação, comprovou que as três falhas eram reais e que os testes correspondentes efetivamente as detectam.</p>
+
+<p>A auditoria registra igualmente os limites não cobertos, examinados na seção 10.</p>
+
+<!-- =================== 8 DIFICULDADES ENCONTRADAS =================== -->
+<h1>8 Dificuldades encontradas</h1>
+
+<p>As três dificuldades que mais consumiram tempo não decorreram de complexidade algorítmica, mas de ambiente de desenvolvimento e de método — categoria que, na prática profissional, responde pela maior parte dos atrasos.</p>
+
+<h2>8.1 Indisponibilidade do ambiente de testes por vinte e sete dias</h2>
+
+<p>Os testes automatizados do servidor executavam contra banco de dados provisionado em contêiner, o que pressupõe serviço de contêineres em funcionamento. Em 3 de agosto de 2026 tal serviço deixou de iniciar na estação de desenvolvimento e não voltou a funcionar.</p>
+
+<p>A consequência foi severa. O critério de conclusão de cada tarefa do servidor era a aprovação dos testes; durante vinte e sete dias não houve como demonstrar a conclusão de tarefa alguma. Havia duas alternativas: prosseguir escrevendo código sem verificação, acumulando risco, ou substituir a infraestrutura de testes.</p>
+
+<p>Optou-se pela substituição. O contêiner foi trocado por PostgreSQL embutido, solução que descarrega e executa binário real do banco a partir do próprio teste, dispensando qualquer serviço previamente instalado. Descartou-se deliberadamente a alternativa de empregar banco em memória de compatibilidade aproximada, ainda que mais leve: o esquema depende de restrições de verificação, de índice parcial condicionado e de consulta ao catálogo do próprio banco. Um banco apenas semelhante aprovaria operações que o PostgreSQL recusa e recusaria outras que ele aceita. Suíte que fornece resultado incorreto é pior que suíte que não executa.</p>
+
+<h2>8.2 Conflito de versões do ambiente de execução Java</h2>
+
+<p>O servidor compila com Java 17; o empacotamento Android exige versão 21 ou superior. Como as ferramentas de compilação utilizam a variável de ambiente, e não o executável do caminho de busca, apontá-la para uma versão inviabiliza a outra. O conflito manifestou-se nos dois sentidos, em semanas distintas, por meio de mensagens de erro que não indicavam a causa real.</p>
+
+<p>A solução não foi de código, e sim documental: registrou-se qual versão cada comando exige, acompanhada da mensagem de erro exata que surge quando a configuração está incorreta. Problema de ambiente resolve-se por documentação.</p>
+
+<h2>8.3 Falha inexistente provocada por cache de compilação</h2>
+
+<p>Um teste da interface acusava reprovação em comportamento que o código-fonte, lido atentamente, tornava impossível. A instrumentação dos sinais reativos no instante exato da verificação revelou divergência entre o código em disco e o código em execução: o cache de compilação servia versão anterior.</p>
+
+<p>A funcionalidade estava correta e quase foi integralmente reescrita. A limpeza do cache restabeleceu a aprovação. O episódio passou a integrar a documentação do projeto como primeira verificação diante de falha aparentemente impossível — procedimento que custa quarenta segundos e evitou a repetição desnecessária de uma tarefa completa.</p>
+
+<h2>8.4 Demais dificuldades</h2>
+
+<p>Registram-se ainda: a limitação de cota da ferramenta de prototipação, que impediu a conclusão do protótipo e motivou a migração para protótipos navegáveis mantidos no repositório; e a suspensão automática da aplicação na camada gratuita de hospedagem, contornada por rotina periódica de requisição e, estruturalmente, pela decisão de agendar os avisos localmente no aparelho.</p>
+
+<!-- =================== 9 BENEFÍCIOS DA IMPLANTAÇÃO =================== -->
+<h1>9 Benefícios da implantação</h1>
+
+<p>Uma vez que o sistema se encontra implantado desde setembro de 2026, os benefícios a seguir não constituem expectativa, mas observação.</p>
+
+<p><b>Para o estudante.</b> A consulta substitui a busca: a data de uma avaliação ocupa posição fixa, em lugar de permanecer submersa no histórico de mensagens. O estudante ausente recupera o material da aula sem depender de solicitação pessoal. O aviso da véspera é emitido pelo próprio aparelho, funcionando ainda que o servidor esteja suspenso. E a pergunta sobre o que estudar para determinada avaliação encontra resposta objetiva nos materiais a ela vinculados.</p>
+
+<p><b>Para a turma.</b> A informação deixa de extinguir-se com o afastamento de quem a mantinha, pois a alimentação é distribuída entre todos os integrantes. A autoria visível permite avaliar a procedência de cada informação. Eventuais equívocos são corrigíveis, e a correção fica registrada.</p>
+
+<p><b>Para o docente.</b> Dispõe de canal para divulgação de material, com identificação de docente, sem que disso decorra obrigação. Trata-se de benefício aparentemente paradoxal que convém explicitar: ferramenta cuja operação dependa da adesão do professor deixa de funcionar quando um professor não adere. A opcionalidade é, portanto, condição de robustez.</p>
+
+<!-- ============== 10 CONSIDERAÇÕES FINAIS ============== -->
+<h1>10 Considerações finais e trabalhos futuros</h1>
+
+<p>O objetivo geral foi alcançado: o sistema encontra-se implantado, acessível pela internet e em uso por integrantes da turma em aparelhos próprios. Os objetivos específicos foram atendidos, com a ressalva relativa ao envio de arquivos, tratada adiante.</p>
+
+<p>Entende-se que a contribuição mais relevante do projeto não reside em funcionalidade isolada, mas no rigor com que as regras invioláveis foram convertidas em estrutura verificável. A proibição de armazenar estado pessoal no registro compartilhado não constitui recomendação a ser observada por quem programa: constitui ausência de coluna, verificada por caso de teste que consulta o catálogo do banco.</p>
+
+<p>Quanto aos limites conhecidos, registre-se, em observância ao princípio de que auditoria que omite limitações converte-se em propaganda: o isolamento entre turmas é assegurado exclusivamente na camada de aplicação, sem segunda barreira no próprio banco de dados; o limite de tentativas de autenticação existe, porém a restrição prática ainda é a capacidade do servidor em camada gratuita; não há política de segurança de conteúdo configurada no cliente, defesa em profundidade cuja ausência não corresponde a falha atual, mas reduz a margem diante de falha futura; e a plataforma iOS não foi submetida a teste, ainda que o código seja compatível.</p>
+
+<p>Como trabalhos futuros, elencados por ordem de prioridade: implementar o envio efetivo de arquivos, hoje restrito a hiperligação, uma vez que a fotografia do quadro constitui provável caso de uso principal; implementar a notificação remota imediata quando da publicação de novo registro por colega; estabelecer a segunda barreira de isolamento no banco de dados; e publicar o aplicativo em loja de aplicativos, passo necessário à expansão para além da turma piloto.</p>
+
+<p>Permanece aberta, por fim, questão de natureza não técnica que condiciona o investimento futuro: verificar junto à coordenação em que medida os sistemas institucionais já atendem ao registro do conteúdo ministrado por período. Caso o atendam satisfatoriamente, o sistema perde parte de sua razão de existir para esta turma — constatação que convém realizar antes, e não depois, de novo ciclo de desenvolvimento.</p>
+
+<!-- ========================= REFERÊNCIAS ========================= -->
+<h1>Referências</h1>
+
+<p class="ref">ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. <b>NBR 6023</b>: informação e documentação: referências: elaboração. Rio de Janeiro: ABNT, 2018.</p>
+
+<p class="ref">ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. <b>NBR 10520</b>: informação e documentação: citações em documentos: apresentação. Rio de Janeiro: ABNT, 2023.</p>
+
+<p class="ref">ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. <b>NBR 14724</b>: informação e documentação: trabalhos acadêmicos: apresentação. Rio de Janeiro: ABNT, 2011.</p>
+
+<p class="ref">GOOGLE. <b>Angular documentation</b>. [S. l.], 2026. Disponível em: https://angular.dev. Acesso em: 18 out. 2026.</p>
+
+<p class="ref">IONIC. <b>Capacitor documentation</b>. [S. l.], 2026. Disponível em: https://capacitorjs.com/docs. Acesso em: 18 out. 2026.</p>
+
+<p class="ref">IONIC. <b>Ionic Framework documentation</b>. [S. l.], 2026. Disponível em: https://ionicframework.com/docs. Acesso em: 18 out. 2026.</p>
+
+<p class="ref">POSTGRESQL GLOBAL DEVELOPMENT GROUP. <b>PostgreSQL 16 documentation</b>. [S. l.], 2026. Disponível em: https://www.postgresql.org/docs/16/. Acesso em: 18 out. 2026.</p>
+
+<p class="ref">RED GATE SOFTWARE. <b>Flyway documentation</b>. [S. l.], 2026. Disponível em: https://documentation.red-gate.com/flyway. Acesso em: 18 out. 2026.</p>
+
+<p class="ref">VMWARE. <b>Spring Boot reference documentation</b>. [S. l.], 2026. Disponível em: https://docs.spring.io/spring-boot/docs/current/reference/html/. Acesso em: 18 out. 2026.</p>
+
+</body>
+</html>

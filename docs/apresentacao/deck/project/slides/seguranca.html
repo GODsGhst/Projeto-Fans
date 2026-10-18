@@ -1,0 +1,53 @@
+<section id="seguranca" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:42px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">08 &middot; Segurança aplicada</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Toda checagem acontece no servidor. Nenhuma só na tela.</h2>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">identidade</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Senha com BCrypt, sessão com JWT</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Login por senha ou Google. O token do Google é validado no servidor e trocado por um JWT próprio — a API conhece uma forma só de autenticação.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">isolamento</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Registro de outra turma responde 404</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Não 403. Um &ldquo;proibido&rdquo; confirmaria que o registro existe — o próprio status vazaria informação. Todas as rotas passam pelo mesmo resolvedor de turma.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">edição simultânea</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Nada é sobrescrito em silêncio</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Toda alteração manda a versão que leu. Se outra pessoa salvou nesse meio-tempo, a API recusa com 409 e a tela recarrega — em vez de a edição de alguém sumir.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">histórico</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Editar não apaga o que havia</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Toda edição grava o estado anterior numa tabela de revisões. Exclusão é sempre lógica: o registro sai da lista, não do banco.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">força bruta</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Teto de tentativas de login</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">E trocar a senha derruba as sessões abertas — senão trocar a senha depois de um vazamento não expulsaria ninguém.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">exposição</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">A senha nunca sai do banco</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">A entidade do banco não cruza o controller: a API monta um objeto de resposta à mão. É o que impede o hash de vazar numa serialização automática.</p>
+</div>
+</div>
+<aside>Seis cartões, seis frases. Não ler todos — escolher três e resumir.
+
+Os dois que mais impressionam banca:
+
+1. O 404 em vez de 403. Explicar: "se eu pedir um registro de outra turma e o sistema responder 'proibido', ele acabou de me confirmar que esse registro existe. Respondendo 'não encontrei', ele não confirma nada."
+
+2. O 409 na edição simultânea. "Se duas pessoas editam a mesma prova, a segunda não apaga a primeira sem ninguém notar. O sistema recusa e avisa."
+
+Se perguntarem sobre senha: BCrypt, que é hash com sal e custo configurável — não é criptografia reversível. Nem eu consigo ler a senha de um usuário.</aside>
+</section>

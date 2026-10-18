@@ -1,0 +1,61 @@
+<section id="recursos" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:38px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">11 &middot; Recursos utilizados</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Cada escolha tem um motivo escrito.</h2>
+</div>
+
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:24px;border:1px solid #D7DBD7;border-radius:12px">
+<tr style="background:#14181A">
+<th style="width:17%;color:#EEF0EC;font-size:23px;text-align:left;padding:17px">Camada</th>
+<th style="width:27%;color:#EEF0EC;font-size:23px;text-align:left">Tecnologia</th>
+<th style="width:56%;color:#EEF0EC;font-size:23px;text-align:left">Por que esta</th>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Linguagem</td>
+<td style="color:#14181A"><b style="font-weight:600">Java 17</b> &middot; Spring Boot 3.5.3</td>
+<td style="color:#4A5254">Tipagem forte e ecossistema maduro para a camada que guarda os dados da turma.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Banco de dados</td>
+<td style="color:#14181A"><b style="font-weight:600">PostgreSQL 16</b></td>
+<td style="color:#4A5254">O modelo tem relação muitos-para-muitos e histórico auditável. Banco de documentos atrapalharia exatamente isso.</td>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Versão do schema</td>
+<td style="color:#14181A"><b style="font-weight:600">Flyway</b> &middot; 10 migrations</td>
+<td style="color:#4A5254">O banco evolui por arquivos numerados e versionados. Migration já aplicada nunca se edita.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Aplicativo</td>
+<td style="color:#14181A"><b style="font-weight:600">Ionic 8 + Angular 20</b></td>
+<td style="color:#4A5254">Um código só para Android e navegador. Componentes standalone e signals.</td>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Empacotamento</td>
+<td style="color:#14181A"><b style="font-weight:600">Capacitor 8.5</b></td>
+<td style="color:#4A5254">Transforma o app em APK instalável, com acesso a notificação local.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Testes</td>
+<td style="color:#14181A"><b style="font-weight:600">JUnit 5</b> &middot; Postgres embutido &middot; Karma</td>
+<td style="color:#4A5254">Testes de servidor rodam contra um Postgres de verdade, sem exigir serviço instalado.</td>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Hospedagem</td>
+<td style="color:#14181A"><b style="font-weight:600">Render</b> (API) &middot; <b style="font-weight:600">Neon</b> (banco)</td>
+<td style="color:#4A5254">Plano gratuito. O app foi desenhado assumindo que o servidor hiberna.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Produtividade</td>
+<td style="color:#14181A"><b style="font-weight:600">Git/GitHub</b> &middot; Figma &middot; Claude Code</td>
+<td style="color:#4A5254">Versionamento, protótipo de telas e programação assistida — com diário de decisões no repositório.</td>
+</tr>
+</table>
+<aside>Não ler a tabela. Apontar 3 linhas e comentar.
+
+A linha do PostgreSQL é a que responde "por que não Firebase", pergunta provável. Versão longa: o app precisa ligar material a prova numa relação muitos-para-muitos, e guardar histórico de quem editou o quê. Banco relacional faz isso naturalmente; banco de documentos te empurra para duplicar dados, e aí o histórico e as regras de isolamento ficam frágeis.
+
+A linha de produtividade menciona programação assistida. ISSO É DELIBERADO E VOCÊ DECIDE SE MANTÉM. O argumento para manter: o repositório tem um diário com 38 entradas datadas registrando cada decisão, quem decidiu e por quê — inclusive as que foram revertidas. Isso é mais transparência do que a maioria dos projetos apresenta, e as decisões de arquitetura são defensáveis uma a uma, que é o que a banca vai testar no Q&A.
+
+Se perguntarem sobre a hospedagem gratuita: o plano dorme com 15 minutos sem uso. Isso não foi descoberto na véspera — o aviso da véspera é agendado no próprio celular justamente para não depender do servidor estar acordado.</aside>
+</section>

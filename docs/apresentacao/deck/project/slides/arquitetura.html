@@ -1,0 +1,53 @@
+<section id="arquitetura" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">06 &middot; Arquitetura</p>
+<h2 style="font-size:66px;font-weight:600;line-height:1.1;letter-spacing:-2px">O celular é vitrine. A regra toda vive no servidor.</h2>
+</div>
+
+<div style="display:flex;align-items:center;gap:8px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">cliente</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.2">App Android</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Ionic 8 + Angular 20, componentes standalone e signals. Empacotado com Capacitor.</p>
+<p style="font-size:24px;line-height:1.35;color:#7C8486">Cache local para funcionar sem rede e para agendar o aviso da véspera.</p>
+</div>
+
+<x-connector x1="0" y1="50%" x2="100%" y2="50%" head="end" head-end="filled" route="straight" style="color:#7C8486;border-width:3px"></x-connector>
+<div style="width:120px;display:flex;flex-direction:column;align-items:center;gap:6px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#4A5254">HTTPS</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:20px;color:#7C8486">JWT</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:16px;border-top:8px solid #0F766E">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">api rest &middot; 16 controllers</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.2">Spring Boot 3.5</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Java 17. Camadas: controller &rarr; service &rarr; repository. Entidade do banco <b style="font-weight:600">nunca</b> cruza o controller.</p>
+<p style="font-size:24px;line-height:1.35;color:#7C8486">Hospedada no Render.</p>
+</div>
+
+<div style="width:120px;display:flex;flex-direction:column;align-items:center;gap:6px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#4A5254">JDBC</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">persistência</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.2">PostgreSQL 16</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Schema versionado em 10 migrations Flyway. Migration aplicada nunca se edita: cria a próxima.</p>
+<p style="font-size:24px;line-height:1.35;color:#7C8486">Hospedado no Neon.</p>
+</div>
+</div>
+
+<div style="display:flex;gap:20px">
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#F7F8F6;padding:26px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600">Escopo de turma num lugar só.</b> Nenhum controller filtra turma à mão — tudo passa por um componente único. É o arquivo que se mudaria para suportar várias instituições.</p>
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#F7F8F6;padding:26px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600">O aviso da véspera é local.</b> O servidor avisa o aparelho quando algo muda; o alarme é agendado no celular. Assim servidor dormindo não derruba a notificação.</p>
+</div>
+<aside>Este slide tem três caixas e uma ideia: o celular não decide nada.
+
+A frase "entidade do banco nunca cruza o controller" merece explicação se perguntarem: a API sempre devolve um objeto de transporte, montado à mão. Isso é o que impede o hash da senha de vazar numa serialização automática — um erro clássico e silencioso.
+
+As duas caixas de baixo são as decisões de arquitetura que eu defenderia num Q&A:
+- Escopo de turma centralizado: se cada controller filtrasse à mão, bastava um esquecer.
+- Aviso local em vez de empurrado pelo servidor: o plano gratuito hiberna. Se o alarme dependesse de um job no servidor às 19h, ele simplesmente não dispararia — e o requisito falharia em silêncio, que é o pior tipo de falha.
+
+Se perguntarem "por que não Firebase, seria mais rápido": slide de recursos responde, mas a versão curta é que o modelo de dados tem relação muitos-para-muitos e histórico auditável, que é exatamente o que banco relacional faz bem e banco de documentos atrapalha.</aside>
+</section>
