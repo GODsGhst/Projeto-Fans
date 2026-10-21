@@ -19,6 +19,12 @@
   }
   section:last-of-type { page-break-after: auto; }
 
+  /* O runtime do artifact nao aceita margin: todo espacamento vem de gap e
+     padding. O navegador comum da 1em de margem a p, h1-h3 e ul — sem este
+     reset os slides estouravam a altura e o fim deles saia cortado. */
+  section * { margin: 0; box-sizing: border-box; }
+  section ul, section ol { padding-left: 1.2em; }
+
   /* Remendo dos elementos do runtime do artifact.
      x-shape kind="rect": o estilo inline ja traz background, width e height —
      falta so deixar de ser inline. */
@@ -389,37 +395,37 @@
 
 </section>
 
-<section id="obstaculos" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<section id="obstaculos" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:28px">
 <div style="display:flex;flex-direction:column;gap:18px">
 <p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">10 &middot; Obstáculos</p>
 <h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">As três dificuldades que mais custaram tempo.</h2>
 </div>
 
-<div style="display:flex;flex-direction:column;gap:22px">
-<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:14px">
-<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;color:#B91C1C;width:150px">27<span style="color:#7C8486"> d</span></p>
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:24px 30px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:46px;font-weight:700;color:#B91C1C;width:118px">27<span style="color:#7C8486"> d</span></p>
 <div style="flex:1;display:flex;flex-direction:column;gap:8px">
-<h3 style="font-size:32px;font-weight:600;line-height:1.2">O Docker da minha máquina morreu &mdash; e com ele, a suíte de testes</h3>
-<p style="font-size:25px;line-height:1.4;color:#4A5254">Os testes de banco dependiam de um contêiner Docker. O serviço parou de subir em 3 de agosto e não voltou. Por <b style="font-weight:600">27 dias nenhuma tarefa de backend conseguiu atingir o próprio critério de aceite</b>, porque o critério era &ldquo;os testes passam&rdquo; e eles não rodavam.</p>
-<p style="font-size:25px;line-height:1.4;color:#0F766E"><b style="font-weight:600">Solução:</b> troquei por um Postgres <b style="font-weight:600">embutido</b> — binário real do banco, baixado pelo próprio teste, sem precisar de serviço nenhum rodando. Recusei usar um banco &ldquo;leve e quase compatível&rdquo;: o schema usa recursos específicos do Postgres, e um banco que mente num teste é pior que um teste que não roda.</p>
+<h3 style="font-size:28px;font-weight:600;line-height:1.2">O Docker da minha máquina morreu &mdash; e com ele, a suíte de testes</h3>
+<p style="font-size:22px;line-height:1.38;color:#4A5254">Os testes de banco dependiam de um contêiner Docker. O serviço parou de subir em 3 de agosto e não voltou. Por <b style="font-weight:600">27 dias nenhuma tarefa de backend conseguiu atingir o próprio critério de aceite</b>, porque o critério era &ldquo;os testes passam&rdquo; e eles não rodavam.</p>
+<p style="font-size:22px;line-height:1.38;color:#0F766E"><b style="font-weight:600">Solução:</b> troquei por um Postgres <b style="font-weight:600">embutido</b> — binário real do banco, baixado pelo próprio teste, sem precisar de serviço nenhum rodando. Recusei usar um banco &ldquo;leve e quase compatível&rdquo;: o schema usa recursos específicos do Postgres, e um banco que mente num teste é pior que um teste que não roda.</p>
 </div>
 </div>
 
-<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:14px">
-<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;color:#B45309;width:150px">2<span style="color:#7C8486"> JDK</span></p>
+<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:24px 30px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:46px;font-weight:700;color:#B45309;width:118px">2<span style="color:#7C8486"> JDK</span></p>
 <div style="flex:1;display:flex;flex-direction:column;gap:8px">
-<h3 style="font-size:32px;font-weight:600;line-height:1.2">O mesmo computador precisa de duas versões de Java</h3>
-<p style="font-size:25px;line-height:1.4;color:#4A5254">O servidor compila com Java 17; o empacotamento Android exige 21 ou mais. Apontar a variável de ambiente para um quebra o outro — e quebrou os dois lados, em semanas diferentes, com a mesma mensagem enganosa.</p>
-<p style="font-size:25px;line-height:1.4;color:#0F766E"><b style="font-weight:600">Solução:</b> documentei qual versão cada comando exige, com a mensagem de erro exata que aparece quando está errada. Problema de ambiente não se resolve com código: se resolve escrevendo.</p>
+<h3 style="font-size:28px;font-weight:600;line-height:1.2">O mesmo computador precisa de duas versões de Java</h3>
+<p style="font-size:22px;line-height:1.38;color:#4A5254">O servidor compila com Java 17; o empacotamento Android exige 21 ou mais. Apontar a variável de ambiente para um quebra o outro — e quebrou os dois lados, em semanas diferentes, com a mesma mensagem enganosa.</p>
+<p style="font-size:22px;line-height:1.38;color:#0F766E"><b style="font-weight:600">Solução:</b> documentei qual versão cada comando exige, com a mensagem de erro exata que aparece quando está errada. Problema de ambiente não se resolve com código: se resolve escrevendo.</p>
 </div>
 </div>
 
-<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:14px">
-<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;color:#6D28D9;width:150px">0</p>
+<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:24px 30px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:46px;font-weight:700;color:#6D28D9;width:118px">0</p>
 <div style="flex:1;display:flex;flex-direction:column;gap:8px">
-<h3 style="font-size:32px;font-weight:600;line-height:1.2">Um bug que não existia</h3>
-<p style="font-size:25px;line-height:1.4;color:#4A5254">Um teste da interface acusava falha num código que, lido com atenção, tornava aquela falha impossível. Quase refiz a funcionalidade inteira.</p>
-<p style="font-size:25px;line-height:1.4;color:#0F766E"><b style="font-weight:600">Causa:</b> o cache de compilação estava servindo a versão antiga. Fonte e execução discordando. Hoje é a primeira coisa da lista de verificação — custa 40 segundos e já ia custando uma tarefa refeita.</p>
+<h3 style="font-size:28px;font-weight:600;line-height:1.2">Um bug que não existia</h3>
+<p style="font-size:22px;line-height:1.38;color:#4A5254">Um teste da interface acusava falha num código que, lido com atenção, tornava aquela falha impossível. Quase refiz a funcionalidade inteira.</p>
+<p style="font-size:22px;line-height:1.38;color:#0F766E"><b style="font-weight:600">Causa:</b> o cache de compilação estava servindo a versão antiga. Fonte e execução discordando. Hoje é a primeira coisa da lista de verificação — custa 40 segundos e já ia custando uma tarefa refeita.</p>
 </div>
 </div>
 </div>

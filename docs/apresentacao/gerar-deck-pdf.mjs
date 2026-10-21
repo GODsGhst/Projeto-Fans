@@ -57,6 +57,12 @@ const html = `<!doctype html>
   }
   section:last-of-type { page-break-after: auto; }
 
+  /* O runtime do artifact nao aceita margin: todo espacamento vem de gap e
+     padding. O navegador comum da 1em de margem a p, h1-h3 e ul — sem este
+     reset os slides estouravam a altura e o fim deles saia cortado. */
+  section * { margin: 0; box-sizing: border-box; }
+  section ul, section ol { padding-left: 1.2em; }
+
   /* Remendo dos elementos do runtime do artifact.
      x-shape kind="rect": o estilo inline ja traz background, width e height —
      falta so deixar de ser inline. */
