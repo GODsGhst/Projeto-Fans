@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>projetoFans — Apresentação 21/10</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  /* Pagina com a proporcao do slide: 1920x1080 a 96dpi. */
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+
+  section {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    page-break-after: always;
+    box-sizing: border-box;
+  }
+  section:last-of-type { page-break-after: auto; }
+
+  /* Remendo dos elementos do runtime do artifact.
+     x-shape kind="rect": o estilo inline ja traz background, width e height —
+     falta so deixar de ser inline. */
+  x-shape { display: block; }
+
+  /* x-connector e uma camada posicionada no runtime; aqui vira um fio
+     horizontal que ocupa seu lugar na linha flex. Aproximacao deliberada: o
+     que ele comunica e "o cliente fala com a API". */
+  x-connector {
+    display: block;
+    align-self: center;
+    width: 64px;
+    height: 0;
+    border-top: 3px solid currentColor;
+  }
+
+  x-icon { display: inline-block; width: 1em; height: 1em; }
+</style>
+</head>
+<body>
+<section id="capa" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:28px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">Apresentação de projeto &middot; 21.10.2026</p>
+<h1 style="font-size:132px;font-weight:700;line-height:1.02;letter-spacing:-4px">projetoFans</h1>
+<p style="font-size:46px;font-weight:400;line-height:1.3;color:#4A5254;width:1300px">O que a turma precisa saber sobre a semana — provas, entregas e o material que caiu em cada aula.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;gap:10px">
+<x-shape kind="rect" style="background:#1D4ED8;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#0369A1;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#0F766E;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#15803D;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#4D7C0F;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#A16207;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#B45309;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#C2410C;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#B91C1C;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#BE185D;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#A21CAF;width:112px;height:14px"></x-shape>
+<x-shape kind="rect" style="background:#6D28D9;width:112px;height:14px"></x-shape>
+</div>
+
+<div style="display:flex;justify-content:space-between;align-items:start;gap:60px;border-top:1px solid #C9CEC9;padding:32px 0 0">
+<div style="display:flex;flex-direction:column;gap:8px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:2px;color:#7C8486">FANS &middot; NOVA SERRANA, MG</p>
+<p style="font-size:34px;font-weight:600;line-height:1.2">Otávio de Pádua Rodrigues Ribeiro</p>
+<p style="font-size:26px;color:#4A5254">Engenharia de Software &middot; 6º período &middot; 2026</p>
+</div>
+<div style="width:860px;display:flex;flex-direction:column;gap:16px;align-items:end">
+<div style="display:flex;flex-direction:column;gap:4px;align-items:end">
+<p style="font-size:25px;font-weight:600;line-height:1.25;text-align:right">Trabalho Interdisciplinar I</p>
+<p style="font-size:23px;color:#7C8486;text-align:right">Prof. César Augusto Oliveira Soares</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;align-items:end">
+<p style="font-size:25px;font-weight:600;line-height:1.25;text-align:right">Laboratório de Desenvolvimento de Aplicações Móveis e Distribuídas</p>
+<p style="font-size:23px;color:#7C8486;text-align:right">Prof. Daniel Lucas de Souza Lelis</p>
+</div>
+</div>
+</div>
+</div>
+
+</section>
+
+<section id="problema" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:20px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">01 &middot; O problema</p>
+<h2 style="font-size:76px;font-weight:600;line-height:1.08;letter-spacing:-2px;width:1500px">Quem perde a prova raramente perde por falta de aviso.</h2>
+</div>
+
+<div style="display:flex;gap:28px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#F7F8F6;padding:40px;border:1px solid #D7DBD7;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:22px;color:#B45309">o aviso afunda</p>
+<h3 style="font-size:34px;font-weight:600;line-height:1.2">O grupo tem 400 mensagens por semana</h3>
+<p style="font-size:27px;line-height:1.45;color:#4A5254">A data foi dita na terça, entre um meme e uma dúvida de outra matéria. Na quinta ninguém acha.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#F7F8F6;padding:40px;border:1px solid #D7DBD7;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:22px;color:#B45309">quem faltou não recupera</p>
+<h3 style="font-size:34px;font-weight:600;line-height:1.2">O material fica com quem foi</h3>
+<p style="font-size:27px;line-height:1.45;color:#4A5254">Pedir a foto do quadro no grupo é pedir favor. E favor depende de alguém estar com disposição.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#F7F8F6;padding:40px;border:1px solid #D7DBD7;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:22px;color:#B45309">ninguém é dono</p>
+<h3 style="font-size:34px;font-weight:600;line-height:1.2">Todo mundo acha que alguém anotou</h3>
+<p style="font-size:27px;line-height:1.45;color:#4A5254">A planilha que uma pessoa mantinha no primeiro período morreu no segundo. Sempre morre.</p>
+</div>
+</div>
+
+<p style="position:absolute;left:128px;bottom:64px;font-size:26px;color:#7C8486">A informação existe. O que falta é um lugar onde ela não afunde.</p>
+
+</section>
+
+<section id="objetivo" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:52px">
+<div style="display:flex;flex-direction:column;gap:20px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">02 &middot; Objetivo e público-alvo</p>
+<h2 style="font-size:70px;font-weight:600;line-height:1.1;letter-spacing:-2px;width:1560px">Um lugar onde a turma mantém, <i>junta</i>, o que precisa saber da semana.</h2>
+</div>
+
+<div style="display:flex;gap:40px">
+<div style="flex:3;display:flex;flex-direction:column;gap:22px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:23px;letter-spacing:2px;text-transform:uppercase;color:#7C8486">Objetivo</p>
+<p style="font-size:34px;line-height:1.4;color:#14181A">Responder duas perguntas em menos de cinco segundos, sem depender de ninguém responder no grupo:</p>
+<ul style="font-size:32px;line-height:1.5;color:#4A5254">
+<li><b style="font-weight:600">O que vem aí?</b> — provas e entregas dos próximos 14 dias, por urgência.</li>
+<li><b style="font-weight:600">O que foi dado?</b> — o material de cada aula, por matéria, com quem subiu.</li>
+</ul>
+<div style="display:flex;flex-direction:column;gap:10px;background:#F7F8F6;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-size:28px;line-height:1.4;color:#4A5254">A proposta de valor é estreita de propósito: o app vende <b style="font-weight:600">&ldquo;o que foi dado no período&rdquo;</b>. Nunca &ldquo;o que vai cair na prova&rdquo; — isso seria promessa que ele não pode cumprir.</p>
+</div>
+</div>
+
+<div style="flex:2;display:flex;flex-direction:column;gap:22px;border-left:3px solid #0F766E;padding:0 0 0 40px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:23px;letter-spacing:2px;text-transform:uppercase;color:#7C8486">Público-alvo</p>
+<h3 style="font-size:38px;font-weight:600;line-height:1.2">Uma turma de graduação que já se conhece</h3>
+<p style="font-size:28px;line-height:1.45;color:#4A5254">De 20 a 60 alunos do mesmo período, com matérias em comum e um grupo de mensagens que já existe.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5254">Esse recorte é o que permite não ter moderação prévia: <b style="font-weight:600">qualquer um posta, sem aprovação</b>, porque todos sabem quem é quem.</p>
+<p style="font-size:28px;line-height:1.45;color:#4A5254">Secundário: o professor, como contribuidor <b style="font-weight:600">opcional</b>.</p>
+</div>
+</div>
+
+</section>
+
+<section id="nao-e" data-transition="push" style="background:#14181A;color:#EEF0EC;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:center;gap:48px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#4DBFB3">03 &middot; Escopo</p>
+<h2 style="font-size:104px;font-weight:700;line-height:1.05;letter-spacing:-3px;width:1600px">Não é um Google Classroom.</h2>
+<p style="font-size:40px;line-height:1.35;color:#BFC6C2;width:1500px">Não tem envio de trabalho, não tem correção e não tem nota. Professor é contribuidor <b style="font-weight:600;color:#EEF0EC">opcional</b> — turma sem professor funciona exatamente igual.</p>
+
+<div style="display:flex;gap:16px;padding:16px 0 0">
+<p style="font-size:26px;color:#8E9793;background:#1F2527;padding:16px 26px;border-radius:999px">assinatura</p>
+<p style="font-size:26px;color:#8E9793;background:#1F2527;padding:16px 26px;border-radius:999px">resumo por IA</p>
+<p style="font-size:26px;color:#8E9793;background:#1F2527;padding:16px 26px;border-radius:999px">notas e boletim</p>
+<p style="font-size:26px;color:#8E9793;background:#1F2527;padding:16px 26px;border-radius:999px">integração com a faculdade</p>
+<p style="font-size:26px;color:#8E9793;background:#1F2527;padding:16px 26px;border-radius:999px">múltiplas turmas</p>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#4DBFB3;width:1500px">Cada um desses foi recusado por escrito, com data. É por isso que o que existe funciona.</p>
+
+</section>
+
+<section id="demo" data-transition="magic" style="background:#0F766E;color:#F2FAF8;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:28px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#A7E8DF">04 &middot; O sistema funcionando</p>
+<h2 style="font-size:104px;font-weight:700;line-height:1.05;letter-spacing:-3px">Demonstração ao vivo</h2>
+<p style="font-size:38px;line-height:1.35;color:#CFF0EB;width:1480px">No ar desde setembro, em celular de verdade, com dados de verdade — e com gente da turma já usando.</p>
+</div>
+
+<div style="display:flex;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#0B5D56;padding:34px;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#A7E8DF">01</p>
+<p style="font-size:29px;font-weight:600;line-height:1.25">A tela inicial</p>
+<p style="font-size:25px;line-height:1.4;color:#CFF0EB">Próximos 14 dias, por urgência, com o nome de quem cadastrou.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#0B5D56;padding:34px;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#A7E8DF">02</p>
+<p style="font-size:29px;font-weight:600;line-height:1.25">Cadastrar uma prova</p>
+<p style="font-size:25px;line-height:1.4;color:#CFF0EB">Sem pedir autorização a ninguém. Aparece para a turma na hora.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#0B5D56;padding:34px;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#A7E8DF">03</p>
+<p style="font-size:29px;font-weight:600;line-height:1.25">Material da aula</p>
+<p style="font-size:25px;line-height:1.4;color:#CFF0EB">Vinculado à prova: a resposta de &ldquo;o que eu estudo&rdquo;.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#0B5D56;padding:34px;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#A7E8DF">04</p>
+<p style="font-size:29px;font-weight:600;line-height:1.25">Marcar como resolvido</p>
+<p style="font-size:25px;line-height:1.4;color:#CFF0EB">Só meu. Ninguém mais vê — e isso é garantido pelo banco.</p>
+</div>
+</div>
+
+</section>
+
+<section id="funcionalidades" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:46px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">05 &middot; Principais funcionalidades</p>
+<h2 style="font-size:66px;font-weight:600;line-height:1.1;letter-spacing:-2px">Quatro telas, e uma regra em cada uma.</h2>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:26px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #1D4ED8">
+<h3 style="font-size:36px;font-weight:600">Início &mdash; o que vem aí</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">Provas e entregas dos próximos 14 dias, teto de 6 itens, ordem por urgência. <b style="font-weight:600">A janela, o teto e a ordem são calculados no servidor</b>, nunca no celular — assim existe uma implementação e uma suíte de testes, em vez de cada tela divergir.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #0369A1">
+<h3 style="font-size:36px;font-weight:600">Matérias &mdash; o que foi dado</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">Material de <b style="font-weight:600">aula</b> e material <b style="font-weight:600">adicional</b>, separados. Link ou arquivo. Na tela de uma prova aparecem só os materiais vinculados àquela prova — nunca o semestre inteiro.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #15803D">
+<h3 style="font-size:36px;font-weight:600">Calendário &mdash; o mês</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">Grade mensal que anda para frente e para trás, com marca por matéria no dia. Toca no dia e vê o que tem nele. Mais as anotações da turma.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#F7F8F6;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-left:8px solid #6D28D9">
+<h3 style="font-size:36px;font-weight:600">Meu quadro &mdash; só meu</h3>
+<p style="font-size:27px;line-height:1.4;color:#4A5254">A fazer e feito. <b style="font-weight:600">Estado pessoal vive em outra tabela</b>, então marcar resolvido não altera uma linha do registro compartilhado. A regra é garantida pelo banco, não por disciplina de quem programa.</p>
+</div>
+</div>
+
+<p style="position:absolute;left:128px;bottom:64px;font-size:26px;color:#7C8486">Mais: lembrete na véspera, convite por código de 8 caracteres, e histórico de quem editou o quê.</p>
+
+</section>
+
+<section id="arquitetura" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:44px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">06 &middot; Arquitetura</p>
+<h2 style="font-size:66px;font-weight:600;line-height:1.1;letter-spacing:-2px">O celular é vitrine. A regra toda vive no servidor.</h2>
+</div>
+
+<div style="display:flex;align-items:center;gap:8px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">cliente</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.2">App Android</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Ionic 8 + Angular 20, componentes standalone e signals. Empacotado com Capacitor.</p>
+<p style="font-size:24px;line-height:1.35;color:#7C8486">Cache local para funcionar sem rede e para agendar o aviso da véspera.</p>
+</div>
+
+<x-connector x1="0" y1="50%" x2="100%" y2="50%" head="end" head-end="filled" route="straight" style="color:#7C8486;border-width:3px"></x-connector>
+<div style="width:120px;display:flex;flex-direction:column;align-items:center;gap:6px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#4A5254">HTTPS</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:20px;color:#7C8486">JWT</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:16px;border-top:8px solid #0F766E">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">api rest &middot; 16 controllers</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.2">Spring Boot 3.5</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Java 17. Camadas: controller &rarr; service &rarr; repository. Entidade do banco <b style="font-weight:600">nunca</b> cruza o controller.</p>
+<p style="font-size:24px;line-height:1.35;color:#7C8486">Hospedada no Render.</p>
+</div>
+
+<div style="width:120px;display:flex;flex-direction:column;align-items:center;gap:6px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#4A5254">JDBC</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">persistência</p>
+<h3 style="font-size:33px;font-weight:600;line-height:1.2">PostgreSQL 16</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Schema versionado em 10 migrations Flyway. Migration aplicada nunca se edita: cria a próxima.</p>
+<p style="font-size:24px;line-height:1.35;color:#7C8486">Hospedado no Neon.</p>
+</div>
+</div>
+
+<div style="display:flex;gap:20px">
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#F7F8F6;padding:26px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600">Escopo de turma num lugar só.</b> Nenhum controller filtra turma à mão — tudo passa por um componente único. É o arquivo que se mudaria para suportar várias instituições.</p>
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#F7F8F6;padding:26px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600">O aviso da véspera é local.</b> O servidor avisa o aparelho quando algo muda; o alarme é agendado no celular. Assim servidor dormindo não derruba a notificação.</p>
+</div>
+
+</section>
+
+<section id="acesso" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">07 &middot; Níveis de acesso</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Quatro papéis &mdash; e nenhum deles edita o registro de outra pessoa.</h2>
+</div>
+
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:25px;border:1px solid #D7DBD7;border-radius:12px">
+<tr style="background:#14181A">
+<th style="width:19%;color:#EEF0EC;font-size:24px;text-align:left;padding:20px">Papel</th>
+<th style="width:40%;color:#EEF0EC;font-size:24px;text-align:left">Pode</th>
+<th style="width:41%;color:#EEF0EC;font-size:24px;text-align:left">Não pode</th>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#14181A"><b style="font-weight:600">Aluno</b></td>
+<td style="color:#4A5254">Criar prova, entrega, matéria, material e anotação. Editar e excluir <b style="font-weight:600">o que ele mesmo criou</b>.</td>
+<td style="color:#4A5254">Tocar em registro de outra pessoa. Ver dado de outra turma.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#14181A"><b style="font-weight:600">Líder</b></td>
+<td style="color:#4A5254">Tudo do aluno, mais <b style="font-weight:600">ocultar da turma</b> um registro já publicado e pedir que o autor o exclua.</td>
+<td style="color:#4A5254">Editar conteúdo alheio. Impedir alguém de publicar. Ele muda visibilidade, nunca o que está escrito.</td>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#14181A"><b style="font-weight:600">Professor / Coordenador</b></td>
+<td style="color:#4A5254">Contribuir como os alunos, com selo de docente. Coordenador alcança as turmas sob sua coordenação.</td>
+<td style="color:#4A5254">Nada, enquanto a conta não for <b style="font-weight:600">aprovada</b> por um administrador. O papel sozinho não concede poder.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#14181A"><b style="font-weight:600">Administrador</b></td>
+<td style="color:#4A5254">Aprovar ou recusar conta de docente e vinculá-la a turmas.</td>
+<td style="color:#4A5254">Ler conteúdo de turma de que não participa.</td>
+</tr>
+</table>
+
+<div style="display:flex;gap:20px">
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#F7F8F6;padding:24px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600">Entrar na turma exige o código de convite.</b> Criar conta é livre; entrar na sala não. O código é a fronteira de confiança — não o provedor de login.</p>
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#F7F8F6;padding:24px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600">Professor é opcional.</b> Uma turma sem nenhum docente funciona igual. Dar poder obrigatório ao professor o tornaria requisito de funcionamento.</p>
+</div>
+
+</section>
+
+<section id="seguranca" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:42px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">08 &middot; Segurança aplicada</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Toda checagem acontece no servidor. Nenhuma só na tela.</h2>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">identidade</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Senha com BCrypt, sessão com JWT</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Login por senha ou Google. O token do Google é validado no servidor e trocado por um JWT próprio — a API conhece uma forma só de autenticação.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">isolamento</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Registro de outra turma responde 404</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Não 403. Um &ldquo;proibido&rdquo; confirmaria que o registro existe — o próprio status vazaria informação. Todas as rotas passam pelo mesmo resolvedor de turma.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">edição simultânea</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Nada é sobrescrito em silêncio</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Toda alteração manda a versão que leu. Se outra pessoa salvou nesse meio-tempo, a API recusa com 409 e a tela recarrega — em vez de a edição de alguém sumir.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">histórico</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Editar não apaga o que havia</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">Toda edição grava o estado anterior numa tabela de revisões. Exclusão é sempre lógica: o registro sai da lista, não do banco.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">força bruta</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">Teto de tentativas de login</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">E trocar a senha derruba as sessões abertas — senão trocar a senha depois de um vazamento não expulsaria ninguém.</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#0F766E">exposição</p>
+<h3 style="font-size:31px;font-weight:600;line-height:1.2">A senha nunca sai do banco</h3>
+<p style="font-size:24px;line-height:1.4;color:#4A5254">A entidade do banco não cruza o controller: a API monta um objeto de resposta à mão. É o que impede o hash de vazar numa serialização automática.</p>
+</div>
+</div>
+
+</section>
+
+<section id="auditoria" data-transition="push" style="background:#14181A;color:#EEF0EC;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#4DBFB3">09 &middot; Auditoria de segurança</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Três falhas reais foram encontradas no próprio projeto. E provadas.</h2>
+</div>
+
+<div style="display:flex;gap:26px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2527;padding:34px;border-radius:14px;border-left:6px solid #F87171">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#F87171">achado 1 &middot; corrigido</p>
+<h3 style="font-size:30px;font-weight:600;line-height:1.25">Tomada de conta pelo login do Google</h3>
+<p style="font-size:24px;line-height:1.4;color:#BFC6C2">O sistema usava o e-mail do token para decidir que dois logins eram a mesma pessoa, sem conferir se o e-mail era <b style="font-weight:600;color:#EEF0EC">verificado</b>. Um domínio corporativo pode emitir token com e-mail não confirmado — e quem o apresentasse assumia a conta da vítima.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2527;padding:34px;border-radius:14px;border-left:6px solid #F87171">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#F87171">achado 2 &middot; corrigido</p>
+<h3 style="font-size:30px;font-weight:600;line-height:1.25">Registro oculto respondia pelo id direto</h3>
+<p style="font-size:24px;line-height:1.4;color:#BFC6C2">O líder ocultava uma prova, mas quem soubesse o id continuava lendo o registro inteiro — e os ids já estavam em todo aparelho que havia sincronizado. A moderação furava por baixo.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#1F2527;padding:34px;border-radius:14px;border-left:6px solid #F87171">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;color:#F87171">achado 3 &middot; corrigido</p>
+<h3 style="font-size:30px;font-weight:600;line-height:1.25">Qualquer um desvinculava material alheio</h3>
+<p style="font-size:24px;line-height:1.4;color:#BFC6C2">Dava para arrancar todos os materiais da prova de outra pessoa — e sumia sem rastro, porque o vínculo era apagado de verdade e o histórico não cobria esse caso.</p>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;background:#0B5D56;padding:32px;border-radius:14px">
+<h3 style="font-size:32px;font-weight:600;color:#EEF0EC">Verificadas por mutação, não por teste verde</h3>
+<p style="font-size:26px;line-height:1.4;color:#CFF0EB">Teste que passa não prova que a proteção funciona — prova que ele não a exercita. Para cada falha eu <b style="font-weight:600;color:#FFFFFF">desliguei a guarda</b> e confirmei que o teste ficava vermelho. Só então religuei. As três eram exploráveis de verdade.</p>
+</div>
+
+</section>
+
+<section id="obstaculos" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">10 &middot; Obstáculos</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">As três dificuldades que mais custaram tempo.</h2>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;color:#B91C1C;width:150px">27<span style="color:#7C8486"> d</span></p>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:600;line-height:1.2">O Docker da minha máquina morreu &mdash; e com ele, a suíte de testes</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Os testes de banco dependiam de um contêiner Docker. O serviço parou de subir em 3 de agosto e não voltou. Por <b style="font-weight:600">27 dias nenhuma tarefa de backend conseguiu atingir o próprio critério de aceite</b>, porque o critério era &ldquo;os testes passam&rdquo; e eles não rodavam.</p>
+<p style="font-size:25px;line-height:1.4;color:#0F766E"><b style="font-weight:600">Solução:</b> troquei por um Postgres <b style="font-weight:600">embutido</b> — binário real do banco, baixado pelo próprio teste, sem precisar de serviço nenhum rodando. Recusei usar um banco &ldquo;leve e quase compatível&rdquo;: o schema usa recursos específicos do Postgres, e um banco que mente num teste é pior que um teste que não roda.</p>
+</div>
+</div>
+
+<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;color:#B45309;width:150px">2<span style="color:#7C8486"> JDK</span></p>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:600;line-height:1.2">O mesmo computador precisa de duas versões de Java</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">O servidor compila com Java 17; o empacotamento Android exige 21 ou mais. Apontar a variável de ambiente para um quebra o outro — e quebrou os dois lados, em semanas diferentes, com a mesma mensagem enganosa.</p>
+<p style="font-size:25px;line-height:1.4;color:#0F766E"><b style="font-weight:600">Solução:</b> documentei qual versão cada comando exige, com a mensagem de erro exata que aparece quando está errada. Problema de ambiente não se resolve com código: se resolve escrevendo.</p>
+</div>
+</div>
+
+<div style="display:flex;gap:26px;align-items:start;background:#FFFFFF;padding:34px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;color:#6D28D9;width:150px">0</p>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:600;line-height:1.2">Um bug que não existia</h3>
+<p style="font-size:25px;line-height:1.4;color:#4A5254">Um teste da interface acusava falha num código que, lido com atenção, tornava aquela falha impossível. Quase refiz a funcionalidade inteira.</p>
+<p style="font-size:25px;line-height:1.4;color:#0F766E"><b style="font-weight:600">Causa:</b> o cache de compilação estava servindo a versão antiga. Fonte e execução discordando. Hoje é a primeira coisa da lista de verificação — custa 40 segundos e já ia custando uma tarefa refeita.</p>
+</div>
+</div>
+</div>
+
+</section>
+
+<section id="recursos" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:38px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">11 &middot; Recursos utilizados</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Cada escolha tem um motivo escrito.</h2>
+</div>
+
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:24px;border:1px solid #D7DBD7;border-radius:12px">
+<tr style="background:#14181A">
+<th style="width:17%;color:#EEF0EC;font-size:23px;text-align:left;padding:17px">Camada</th>
+<th style="width:27%;color:#EEF0EC;font-size:23px;text-align:left">Tecnologia</th>
+<th style="width:56%;color:#EEF0EC;font-size:23px;text-align:left">Por que esta</th>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Linguagem</td>
+<td style="color:#14181A"><b style="font-weight:600">Java 17</b> &middot; Spring Boot 3.5.3</td>
+<td style="color:#4A5254">Tipagem forte e ecossistema maduro para a camada que guarda os dados da turma.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Banco de dados</td>
+<td style="color:#14181A"><b style="font-weight:600">PostgreSQL 16</b></td>
+<td style="color:#4A5254">O modelo tem relação muitos-para-muitos e histórico auditável. Banco de documentos atrapalharia exatamente isso.</td>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Versão do schema</td>
+<td style="color:#14181A"><b style="font-weight:600">Flyway</b> &middot; 10 migrations</td>
+<td style="color:#4A5254">O banco evolui por arquivos numerados e versionados. Migration já aplicada nunca se edita.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Aplicativo</td>
+<td style="color:#14181A"><b style="font-weight:600">Ionic 8 + Angular 20</b></td>
+<td style="color:#4A5254">Um código só para Android e navegador. Componentes standalone e signals.</td>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Empacotamento</td>
+<td style="color:#14181A"><b style="font-weight:600">Capacitor 8.5</b></td>
+<td style="color:#4A5254">Transforma o app em APK instalável, com acesso a notificação local.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Testes</td>
+<td style="color:#14181A"><b style="font-weight:600">JUnit 5</b> &middot; Postgres embutido &middot; Karma</td>
+<td style="color:#4A5254">Testes de servidor rodam contra um Postgres de verdade, sem exigir serviço instalado.</td>
+</tr>
+<tr style="background:#FFFFFF">
+<td style="color:#4A5254">Hospedagem</td>
+<td style="color:#14181A"><b style="font-weight:600">Render</b> (API) &middot; <b style="font-weight:600">Neon</b> (banco)</td>
+<td style="color:#4A5254">Plano gratuito. O app foi desenhado assumindo que o servidor hiberna.</td>
+</tr>
+<tr style="background:#F7F8F6">
+<td style="color:#4A5254">Produtividade</td>
+<td style="color:#14181A"><b style="font-weight:600">Git/GitHub</b> &middot; Figma &middot; Claude Code</td>
+<td style="color:#4A5254">Versionamento, protótipo de telas e programação assistida — com diário de decisões no repositório.</td>
+</tr>
+</table>
+
+</section>
+
+<section id="numeros" data-transition="fade" style="background:#F7F8F6;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:46px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">12 &middot; O projeto em números</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">Julho a outubro de 2026.</h2>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:22px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:70px;font-weight:700;line-height:1;color:#0F766E">413</p>
+<p style="font-size:26px;font-weight:600;line-height:1.25">testes automatizados no servidor</p>
+<p style="font-size:23px;line-height:1.35;color:#7C8486">em 51 arquivos, todos verdes</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:70px;font-weight:700;line-height:1;color:#1D4ED8">48</p>
+<p style="font-size:26px;font-weight:600;line-height:1.25">suítes de teste no aplicativo</p>
+<p style="font-size:23px;line-height:1.35;color:#7C8486">interface e camada de dados</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:70px;font-weight:700;line-height:1;color:#6D28D9">26k</p>
+<p style="font-size:26px;font-weight:600;line-height:1.25">linhas de código</p>
+<p style="font-size:23px;line-height:1.35;color:#7C8486">10 mil de Java, 16 mil de TypeScript</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;padding:32px;border:1px solid #D7DBD7;border-radius:14px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:70px;font-weight:700;line-height:1;color:#B45309">38</p>
+<p style="font-size:26px;font-weight:600;line-height:1.25">entradas no diário de decisões</p>
+<p style="font-size:23px;line-height:1.35;color:#7C8486">cada uma datada, com o que travou</p>
+</div>
+</div>
+
+<div style="display:flex;gap:22px">
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:26px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600;color:#14181A">16</b> endpoints agrupados por recurso &mdash; autenticação, turma, matéria, material, evento, quadro, moderação, anotação, docente, administração, sincronização.</p>
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:26px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600;color:#14181A">12</b> cores de matéria, todas com contraste verificado por cálculo &mdash; não escolhidas no olho.</p>
+<p style="flex:1;font-size:25px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:26px;border:1px solid #D7DBD7;border-radius:12px"><b style="font-weight:600;color:#14181A">19</b> verificações manuais com duas contas reais contra o servidor no ar, em setembro.</p>
+</div>
+
+</section>
+
+<section id="beneficios" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:42px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">13 &middot; Benefícios pós-implantação</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">O que muda para quem usa &mdash; e já mudou.</h2>
+</div>
+
+<div style="display:flex;gap:26px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFFFF;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-top:8px solid #1D4ED8">
+<h3 style="font-size:36px;font-weight:600;line-height:1.2">Para o aluno</h3>
+<ul style="font-size:26px;line-height:1.45;color:#4A5254">
+<li>Consulta em vez de rolagem: a data da prova está num lugar fixo, não enterrada no grupo.</li>
+<li>Quem faltou recupera o material da aula sem pedir favor a ninguém.</li>
+<li>Aviso na véspera, no celular &mdash; e ele funciona mesmo com o servidor dormindo.</li>
+<li>&ldquo;O que eu estudo&rdquo; tem resposta: o material vinculado àquela prova.</li>
+</ul>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFFFF;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-top:8px solid #15803D">
+<h3 style="font-size:36px;font-weight:600;line-height:1.2">Para a turma</h3>
+<ul style="font-size:26px;line-height:1.45;color:#4A5254">
+<li>A informação deixa de morrer junto com a pessoa que mantinha a planilha.</li>
+<li>Qualquer um alimenta, então não depende de ninguém em particular estar disposto.</li>
+<li>Autoria visível em tudo: dá para saber de quem veio a informação e quando.</li>
+<li>Erro se conserta, e o conserto fica registrado.</li>
+</ul>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFFFF;padding:36px;border:1px solid #D7DBD7;border-radius:16px;border-top:8px solid #A16207">
+<h3 style="font-size:36px;font-weight:600;line-height:1.2">Para o professor</h3>
+<ul style="font-size:26px;line-height:1.45;color:#4A5254">
+<li>Um canal para divulgar material, <b style="font-weight:600">sem virar obrigação</b>.</li>
+<li>Com selo de docente, para a turma distinguir a fonte.</li>
+<li>Nenhum trabalho novo: a turma funciona igual se ele nunca entrar.</li>
+</ul>
+</div>
+</div>
+
+<p style="position:absolute;left:128px;bottom:64px;font-size:26px;color:#7C8486">Já implantado: no ar desde setembro, com colegas da turma usando em celular próprio.</p>
+
+</section>
+
+<section id="proximos" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">14 &middot; Limites e próximos passos</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">O que ainda não está resolvido.</h2>
+</div>
+
+<div style="display:flex;gap:28px">
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:23px;letter-spacing:2px;text-transform:uppercase;color:#B91C1C">Limites conhecidos</p>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">Isolamento só na aplicação.</b> Todas as rotas filtram por turma corretamente, mas o banco não tem uma segunda barreira própria. Uma rota nova escrita sem cuidado não seria barrada duas vezes.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">Força bruta.</b> Há teto de tentativas, mas o limite prático ainda é o hardware do plano gratuito.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">Sem política de conteúdo no navegador.</b> Não há falha hoje, mas é defesa em profundidade que falta.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">iOS não foi testado.</b> O código compila, mas o comportamento de notificação em segundo plano é diferente lá.</p>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:23px;letter-spacing:2px;text-transform:uppercase;color:#0F766E">Próximos passos</p>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Envio de arquivo de verdade.</b> Hoje material é link. O armazenamento está desenhado e falta ligar &mdash; e é provável que foto do quadro seja o uso principal.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Aviso quando o colega cadastra.</b> Hoje o lembrete da véspera é local. Falta o empurrão imediato quando alguém publica algo novo.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Segunda barreira no banco.</b> Fechar o limite de isolamento acima.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Distribuição.</b> Hoje é APK por link. Publicar na loja é o passo para sair da turma piloto.</p>
+</div>
+</div>
+</div>
+
+</section>
+
+<section id="canal" data-transition="push" style="background:#14181A;color:#EEF0EC;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:24px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#4DBFB3">15 &middot; Encerramento</p>
+<h2 style="font-size:118px;font-weight:700;line-height:1.02;letter-spacing:-4px">Perguntas?</h2>
+<p style="font-size:36px;line-height:1.35;color:#BFC6C2;width:1500px">E se alguém quiser testar, o sistema está no ar agora &mdash; não é protótipo.</p>
+</div>
+
+<div style="display:flex;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1F2527;padding:36px;border-radius:16px;border-top:6px solid #4DBFB3">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;letter-spacing:2px;text-transform:uppercase;color:#4DBFB3">Testar o app</p>
+<p style="font-size:27px;line-height:1.4;color:#BFC6C2">Instale o APK e entre com o código da turma de demonstração:</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:52px;font-weight:700;letter-spacing:6px;color:#EEF0EC">65722528</p>
+<p style="font-size:23px;line-height:1.35;color:#8E9793">Turma separada, criada para esta apresentação &mdash; os dados da minha turma não ficam expostos.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1F2527;padding:36px;border-radius:16px;border-top:6px solid #1D4ED8">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;letter-spacing:2px;text-transform:uppercase;color:#7FA7F5">Sugestões e melhorias</p>
+<p style="font-size:27px;line-height:1.4;color:#BFC6C2">Abra uma issue no repositório. Toda sugestão vira item com data e resposta:</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:27px;font-weight:500;line-height:1.35;color:#EEF0EC">github.com/GODsGhst/<br>Projeto-Fans/issues</p>
+<p style="font-size:23px;line-height:1.35;color:#8E9793">Dentro do app também há um caminho para relatar problema.</p>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1F2527;padding:36px;border-radius:16px;border-top:6px solid #A16207">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:21px;letter-spacing:2px;text-transform:uppercase;color:#E0A458">O que eu quero ouvir</p>
+<ul style="font-size:25px;line-height:1.45;color:#BFC6C2">
+<li>Alguma tela ficou parada ou em branco?</li>
+<li>Algum botão não fez nada?</li>
+<li>Alguma mensagem deixou dúvida sobre o que aconteceu?</li>
+<li>O que faltou para você usar de verdade?</li>
+</ul>
+</div>
+</div>
+
+</section>
+
+</body>
+</html>
