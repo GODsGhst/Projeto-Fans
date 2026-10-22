@@ -148,9 +148,176 @@ relatório final.
 | B | H3 | Haiku | `MateriaChip`, `EventoCard`, cores do tema + widget tests |
 | C | H4 | Haiku | `SyncService` + `HomeService` + testes |
 | D | H5 | Haiku | Telas + `main.dart` + permissão de Internet no Android |
+| — | — | — | **Depois do pedido "faça em paralelo": H1–H5 rodam todos juntos contra a §7.1; o coordenador integra.** |
 | E | R1 | Sonnet | Revisão de código: bugs, regras da §6, testes |
 | E | R2 | Opus | Avaliação como professor: nota por critério das duas rubricas + pré-mortem |
 | F | Hx | Haiku | Correções apontadas por R1/R2 |
+
+## 7.1 Contratos (todos os agentes trabalham EM PARALELO contra isto)
+
+Mensagem do dono: **"faça cada parte em paralelo"**. Para isso funcionar, cada classe abaixo tem
+assinatura fixa. Implemente **exatamente** estes nomes. Use outra classe só pelo que está aqui —
+não abra o arquivo de outro agente para "descobrir" a API, e **nunca edite arquivo de outro agente**.
+Se o arquivo de que você depende ainda não existe, escreva seu código mesmo assim; se ele existe e
+diverge do contrato, não conserte: anote no relatório.
+
+### Models — H0 (`lib/models/`, puro Dart)
+```dart
+// formatos.dart
+T campo<T>(Map<String, dynamic> json, String chave);          // FormatException se ausente/tipo errado
+T? campoOpcional<T>(Map<String, dynamic> json, String chave);
+String dataIso(DateTime d);            // 'yyyy-MM-dd'
+DateTime lerData(String s);            // só a data, local
+String? horaCurta(String? h);          // '19:00:00' -> '19:00'
+DateTime lerInstante(String s);
+// tipo_evento.dart
+enum TipoEvento { prova, entrega; static TipoEvento fromJson(String s); String toJson(); }
+// autoria.dart
+class Autoria { String autorId, autorNome; String? autorSelo; DateTime criadoEm; DateTime? atualizadoEm;
+  String? editadoPorNome, editadoPorSelo; factory Autoria.fromJson(Map<String, dynamic>); Map<String, dynamic> toJson(); }
+// item_home.dart
+class ItemHome { String eventoId; TipoEvento tipo; String titulo; DateTime data; String? hora; String materiaSigla;
+  String materiaCorHex; Autoria autoria; bool feitoPeloUsuario;
+  factory ItemHome.fromJson(Map<String, dynamic>); Map<String, dynamic> toMap(int posicao);
+  factory ItemHome.fromMap(Map<String, dynamic>, {bool feito = false}); ItemHome copyWith({bool? feitoPeloUsuario}); }
+// materia.dart
+class Materia { String id, nome, sigla, corHex; String? sala, professor;
+  factory Materia.fromJson(...); Map<String, dynamic> toMap(); factory Materia.fromMap(...); }
+// evento.dart
+class Evento { String id; TipoEvento tipo; String titulo; DateTime data; String? hora; String? sala; String materiaId;
+  String materiaSigla; String materiaCorHex; Autoria autoria; int version; bool visivelTurma; DateTime? excluidoEm;
+  factory Evento.fromJson(...); }
+// material_aula.dart
+class MaterialAula { String id, tipo, titulo; String? url; DateTime? dataAula; Autoria autoria; factory MaterialAula.fromJson(...); }
+// evento_detalhe.dart
+class EventoDetalhe { Evento evento; List<MaterialAula> materiais; factory EventoDetalhe.fromJson(...); }
+// usuario.dart / sessao.dart
+class Usuario { String id, nome, email; fromJson; toJson; }
+class Sessao { String jwt; Usuario usuario; String? turmaId; fromJson; toJson; }
+// rascunho_evento.dart
+class RascunhoEvento { int? localId; String materiaId, materiaSigla, materiaCorHex; TipoEvento tipo; String titulo;
+  DateTime data; String? hora; String? sala; DateTime criadoEm; bool sincronizado; String? ultimoErro;
+  Map<String, dynamic> toMap(); factory RascunhoEvento.fromMap(...); Map<String, dynamic> toCriarJson();
+  RascunhoEvento copyWith({int? localId, bool? sincronizado, String? ultimoErro, bool limparErro = false}); }
+```
+Construtores dos models: nomeados, com `required` nos campos não-nulos.
+`lib/config.dart`: `const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://projetofans-api.onrender.com/api/v1');`
+
+### HTTP — H1 (`lib/services/api_exception.dart`, `lib/services/api_service.dart`)
+```dart
+class ApiException implements Exception {
+  final int? status;          // null quando a requisição não chegou ao servidor
+  final String mensagem;      // pronta para mostrar ao usuário, em português
+  final bool semConexao;
+  const ApiException.http(int this.status, this.mensagem) : semConexao = false;
+  const ApiException.semConexao([this.mensagem = 'Sem conexão com o servidor.']) : status = null, semConexao = true;
+  const ApiException.respostaInvalida(int this.status)
+      : mensagem = 'O servidor respondeu num formato inesperado.', semConexao = false;
+  bool get naoAutorizado => status == 401;
+  bool get conflito => status == 409;
+  bool get naoEncontrado => status == 404;
+  @override String toString() => mensagem;
+}
+class ApiService {
+  ApiService({http.Client? client, String baseUrl = apiUrl, Duration timeout = const Duration(seconds: 60)});
+  String? token;                                   // jwt; quando não-nulo vai em Authorization: Bearer
+  Future<Sessao> login(String email, String senha);              // POST /auth/login 200
+  Future<List<ItemHome>> home();                                 // GET /home 200, ordem preservada
+  Future<List<Materia>> materias();                              // GET /materias 200
+  Future<EventoDetalhe> evento(String id);                       // GET /eventos/{id} 200
+  Future<Evento> criarEvento(Map<String, dynamic> corpo);        // POST /eventos 201
+  Future<Evento> atualizarEvento(String id, int version, Map<String, dynamic> corpo); // PATCH + If-Match 200
+  Future<void> excluirEvento(String id, int version);            // DELETE + If-Match 204
+  Future<void> marcarFeito(String eventoId, bool feito);         // PUT /eventos/{id}/estado-pessoal 204
+}
+```
+Toda falha sai como `ApiException` — nunca outra exceção, nunca lista vazia.
+
+### SQLite e SharedPreferences — H2 (`lib/database/`, `lib/repositories/`)
+```dart
+typedef AbrirDb = Future<Database> Function();
+class AppDatabase {
+  static Future<Database> abrir();                 // singleton, arquivo fans_lab.db, version 1
+  static Future<Database> abrirEmMemoria();        // testes: NOVO banco a cada chamada (singleInstance: false)
+  static Future<void> limparTudo([AbrirDb? abrir]); // apaga as linhas das 4 tabelas (logout)
+}
+class HomeCacheRepository { HomeCacheRepository([AbrirDb? abrir]);
+  Future<void> substituir(List<ItemHome> itens);   // troca o snapshot inteiro, posicao = índice
+  Future<List<ItemHome>> listar(); }               // ORDER BY posicao, feito via LEFT JOIN estado_pessoal
+class MateriaRepository { MateriaRepository([AbrirDb? abrir]);
+  Future<void> substituirTodas(List<Materia> materias); Future<List<Materia>> listar(); } // ORDER BY sigla
+class RascunhoRepository { RascunhoRepository([AbrirDb? abrir]);
+  Future<int> inserir(RascunhoEvento r); Future<List<RascunhoEvento>> listar();  // local_id DESC
+  Future<List<RascunhoEvento>> listarPendentes();                                // sincronizado=0, local_id ASC
+  Future<void> atualizar(RascunhoEvento r); Future<void> excluir(int localId);
+  Future<void> marcarSincronizado(int localId); Future<void> registrarErro(int localId, String erro); }
+class EstadoPessoalRepository { EstadoPessoalRepository([AbrirDb? abrir]);
+  Future<void> marcarLocal(String eventoId, bool feito);                         // sincronizado=0
+  Future<List<({String eventoId, bool feito})>> pendentes();
+  Future<void> marcarSincronizado(String eventoId, bool feito);                  // só se feito ainda bate
+  Future<void> descartar(String eventoId);
+  Future<void> aplicarDoServidor(Map<String, bool> feitos); }                    // não sobrescreve pendente local
+class SessaoStore {                                                              // SharedPreferences
+  Future<void> salvar(Sessao s); Future<Sessao?> carregar(); Future<void> limpar();
+  Future<bool> temaEscuro(); Future<void> definirTemaEscuro(bool v);
+  Future<DateTime?> ultimaSincronizacao(); Future<void> registrarSincronizacao(DateTime t);
+  Future<DateTime?> homeSalvaEm(); Future<void> registrarHomeSalva(DateTime t); }
+```
+Tabelas: `home_cache`, `materias`, `rascunhos`, `estado_pessoal` (colunas = `toMap` dos models).
+
+### Visual — H3 (`lib/widgets/`)
+```dart
+// cores.dart
+class CoresFans extends ThemeExtension<CoresFans> { Color paper, surface, ink, ink2, ink3, rule, accent, accentInk,
+  provaBg, provaFg, provaFg2; static const CoresFans claro; static const CoresFans escuro; ... }
+ThemeData temaFans(Brightness brilho);            // inclui a extensão; ler com Theme.of(context).extension<CoresFans>()!
+Color corDaMateria(String hex);                   // '#1D4ED8' ou '1D4ED8'; inválido -> cinza, nunca lança
+// tempo_relativo.dart
+String tempoRelativo(DateTime instante, {DateTime? agora}); // 'agora', 'há 5 min', 'há 2 h', 'há 1 dia', 'há 3 dias', '05/09/2026'
+String mesAbrev(int mes);                          // 'JAN'..'DEZ'
+String dataCurta(DateTime d);                      // '05/09/2026'
+String diaExtenso(DateTime d);                     // 'Quinta, 22 out'
+// materia_chip.dart
+class MateriaChip extends StatelessWidget { const MateriaChip({super.key, required this.sigla, required this.corHex}); }
+// evento_card.dart
+class EventoCard extends StatelessWidget {
+  const EventoCard({super.key, required this.tipo, required this.titulo, required this.data, this.hora,
+    required this.materiaSigla, required this.materiaCorHex, required this.autoriaTexto, this.feito = false, this.onTap});
+  factory EventoCard.deItem(ItemHome item, {VoidCallback? onTap}); // autoriaTexto = 'Nome · há X'
+}
+```
+
+### Serviços e injeção — H4 (`lib/services/home_service.dart`, `sync_service.dart`, `lib/app_deps.dart`)
+```dart
+class ResultadoHome { final List<ItemHome> itens; final bool offline; final DateTime? salvoEm; const ResultadoHome(...); }
+class HomeService { HomeService(ApiService api, HomeCacheRepository cache, EstadoPessoalRepository estado,
+    MateriaRepository materias, SessaoStore sessao);
+  Future<ResultadoHome> carregar();   // API -> cache; sem conexão -> cache c/ offline=true; sem cache -> relança
+  Future<List<Materia>> materias(); } // API -> cache; sem conexão -> cache se não vazio; senão relança
+class ResultadoSync { final int enviados; final int comErro; final int pendentes; final bool semConexao; }
+class SyncService { SyncService(ApiService api, RascunhoRepository rascunhos, EstadoPessoalRepository estado, SessaoStore sessao);
+  Future<ResultadoSync> sincronizar();  // chamadas simultâneas compartilham a MESMA execução
+  Future<int> contarPendentes(); }
+class AppDeps { final ApiService api; final SessaoStore sessao; final HomeCacheRepository homeCache;
+  final MateriaRepository materias; final RascunhoRepository rascunhos; final EstadoPessoalRepository estado;
+  final HomeService home; final SyncService sync; final AbrirDb abrirDb;
+  factory AppDeps.padrao({http.Client? client, AbrirDb? abrirDb, String baseUrl = apiUrl}); }
+```
+
+### Telas — H5a e H5b (`lib/screens/`)
+```dart
+// H5a
+class LoginPage { const LoginPage({super.key, required AppDeps deps, required void Function(Sessao) aoEntrar}); }
+class HomePage { const HomePage({super.key, required AppDeps deps, required VoidCallback aoSair,
+    required ValueChanged<bool> aoMudarTema}); }
+class ConfiguracoesPage { const ConfiguracoesPage({super.key, required AppDeps deps,
+    required ValueChanged<bool> aoMudarTema, required VoidCallback aoSair}); }
+// main.dart (H5a): class FansLabApp { const FansLabApp({super.key, required AppDeps deps, Sessao? sessaoInicial, bool temaEscuro = false}); }
+// H5b — cada uma devolve `true` no Navigator.pop quando algo mudou
+class EventoDetalhePage { const EventoDetalhePage({super.key, required AppDeps deps, required String eventoId, this.feito = false}); }
+class EventoFormPage { const EventoFormPage({super.key, required AppDeps deps, this.rascunho, this.evento}); } // nenhum = novo
+class FilaPage { const FilaPage({super.key, required AppDeps deps}); }
+```
 
 ## 8. Andamento
 
@@ -158,6 +325,12 @@ relatório final.
 
 - 2026-10-22 — SDK Flutter 3.47.7 / Dart 3.13.5 instalado no container; projeto `fans_lab` criado
   (`--platforms android`), dependências adicionadas. Figma recusou acesso (P4).
+- H0 (Haiku) entregou os models: `flutter analyze` sem issues, 19/19 testes — conferido pelo
+  coordenador. Decisões dele: `lerData` recusa data inválida que o `DateTime.parse` rolaria
+  (30/02 → 02/03); `materiais` ausente no detalhe é erro, não lista vazia (regra §6.9).
+- Dono pediu **"faça cada parte em paralelo"** → escrita a §7.1 (contratos) e disparados H1, H2, H3,
+  H4, H5a e H5b ao mesmo tempo (todos Haiku). Custo assumido: divergência de contrato na
+  integração, que o coordenador resolve rodando analyze/test e devolvendo o erro ao dono do arquivo.
 
 ## 9. Riscos e pontos cegos
 
