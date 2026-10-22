@@ -1,0 +1,440 @@
+{
+  "unidade": "Design system (Angular 20 / Ionic 8, standalone, signals): app/src/app/shared/ (materia-chip, evento-card, aula-card, mini-card, material-linha, nota, selo, tipos.ts e o teste design-system.spec.ts), app/src/global.scss (utilitarios de pagina e regras de layout do menu de abas em >= 768px), app/src/theme/variables.scss (tokens). Referencia visual: docs/design/design-system-v1.html, que esta SUPERADA pelo variables.scss (que segue docs/design/telas-v3.html; valores conferidos nesta leitura). Caminho base: C:/Users/gh0st/Projeto Fans/app/src/. Area somente leitura: nenhum arquivo foi alterado.",
+  "telas": [
+    {
+      "rota": "componente <app-materia-chip> (sem rota propria)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/shared/materia-chip.component.ts",
+      "proposito": "Pilula com a sigla da materia sobre preenchimento da cor da materia. E o unico caminho permitido para exibir materia (AGENTS, nao-negociavel 7). Usado por EventoCard, AulaCard, MiniCard e pelas telas Materias, Turma, Painel, Nova materia e Novo evento (ex.: materias.page.ts:67).",
+      "estados": [
+        "unico estado; sem variante por tema (texto branco fixo)",
+        "sem estado vazio: cor e sigla sao input.required; sem um dos dois o chip nao existe (o chamador so renderiza com materia presente)"
+      ],
+      "elementos": [
+        "span.chip dentro do host app-materia-chip: texto = sigla exatamente como recebida (ex.: BD, CALC2, ESOFT); a CSS exibe em caixa alta",
+        "fundo = cor recebida (hex da paleta, ex.: #0369A1) via [style.background]",
+        "texto #FFFFFF literal (nao e token; nao muda com o tema)",
+        "sem icone, sem borda, sem aria-label (a sigla e o nome lido)"
+      ],
+      "acoes": [
+        "nenhuma: componente sem @Output"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "componente <app-evento-card> (sem rota propria)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/shared/evento-card.component.ts",
+      "proposito": "Cartao de prova ou entrega: data, materia, horario ou rotulo, titulo, autoria, selo e edicao por terceiro. Usado na Home (home.page.ts:97), Calendario (calendario.page.ts:141,186), Painel (painel.page.ts:162), Materias (materia.page.ts:289), Evento e Materia. Cada uso envolve o cartao em <a class=ir>.",
+      "estados": [
+        "tipo PROVA (bloco solido, prova-bg) ou ENTREGA (contorno 1px, fundo transparente)",
+        "materia null: sem chip e sem cor; o cartao continua legivel (teste)",
+        "quando com hora (HH:mm) ou rotulo sem hora ('prova' / 'entrega', vindo do view-model)",
+        "autoria null ou '': sem linha de autoria. Na pratica todo chamador passa autoria (a doc diz 'ausente onde a autoria ja e obvia', mas nenhuma tela omite)",
+        "autoriaSelo PROFESSOR / COORDENACAO / null: prefixo 'Prof. ' / 'Coord. ' e selo, so quando ha nome",
+        "editadoPor null ou '': sem linha 'editado por'; com nome, linha com icone de lapis; editadoPorSelo idem"
+      ],
+      "elementos": [
+        "1. coluna da data: span.dia = dia (ex.: '08', 20px, peso 700); span.mes = mes (ex.: 'ago', mono 10px, caixa alta visual, opacidade 0,62)",
+        "2. linha do topo (flex-wrap): [se materia] app-materia-chip (sigla, cor); linha do tipo: span.glifo (quadrado cheio na prova, circulo vazado na entrega, aria-hidden); texto oculto (so leitor de tela) 'Prova —' ou 'Entrega —'; quando visivel (ex.: '19:00', 'prova', 'entrega'; caixa alta visual)",
+        "3. p.titulo = titulo (16px, peso 600; prova 700; line-height 1.3)",
+        "4. [se autoria] p.rodape: texto = prefixo + autoria (ex.: 'Ana Beatriz · há 2 dias'; prefixo 'Prof. ' ou 'Coord. ' ou vazio); [se autoriaSelo] app-selo",
+        "5. [se editadoPor] p.rodape: svg lapis (aria-hidden, 13px) + texto 'editado por ' + prefixo(editadoPorSelo) + editadoPor; [se editadoPorSelo] app-selo"
+      ],
+      "acoes": [
+        "nenhuma no componente; quem envolve (<a class=ir>) decide o toque (cartao inteiro)"
+      ],
+      "navegacao": [
+        "sem navegacao interna; o chamador navega para /tabs/eventos/{id}"
+      ]
+    },
+    {
+      "rota": "componente <app-aula-card> (sem rota propria)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/shared/aula-card.component.ts",
+      "proposito": "Uma aula da grade: sala, materia, horario, nome, detalhe (texto do chamador) e entrega vinculada. Usado so na Home, no bloco 'proximas aulas' (home.page.ts:78).",
+      "estados": [
+        "agora false (padrao): cartao normal",
+        "agora true: borda accent e trilho accent de 2px a esquerda, e a atividade fica em accent (so uma aula por vez)",
+        "detalhe null ou presente",
+        "atividade null ou presente (com glifo de entrega)"
+      ],
+      "elementos": [
+        "1. quadrado da sala (46x46): icone de sala (svg aria-hidden, 20px) e, abaixo, b = sala (ex.: 'B-204', mono 8,5px)",
+        "2. linha do topo: app-materia-chip (sigla, cor) + span.hora = hora (ex.: '19:00–20:40' com en dash U+2013, ou 'seg · 19:00'; mono 11px, sem caixa alta)",
+        "3. p.nome = nome (ex.: 'Banco de Dados', 15px, peso 600)",
+        "4. [se detalhe] p.detalhe = detalhe (texto montado pelo chamador, ex.: 'agora · prof. Marcos', 'em 1 h 50'; 11px, cinza)",
+        "5. [se atividade] p.atividade: span.glifo vazado (aria-hidden) + texto (ex.: 'entregar hoje · Lista 4'; mono 10px, caixa alta)"
+      ],
+      "acoes": [
+        "nenhuma"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "componente <app-mini-card> (sem rota propria)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/shared/mini-card.component.ts",
+      "proposito": "Cartao compacto do kanban 'Meu quadro' (quadro.page.ts:98,122,183). Mesma gramatica de tinta da Home: prova solida, entrega contornada. feito e estado pessoal (esmaece, riscado). aviso aparece so em 'Nao listados'.",
+      "estados": [
+        "tipo PROVA (fundo prova-bg, texto prova-fg) ou ENTREGA (contorno)",
+        "feito false (padrao) ou true (opacidade 0,55 no cartao todo, titulo riscado)",
+        "aviso null ou texto"
+      ],
+      "elementos": [
+        "1. app-materia-chip (sigla, cor)",
+        "2. span.titulo = titulo (13px, peso 500 nos dois tipos)",
+        "3. [se aviso] span.aviso = aviso (mono 9px, caixa normal, ink-3)",
+        "Textos de aviso produzidos por quadro.page.ts:469-474: 'excluído por você · só você vê' (excluidoEm presente; tem precedencia), 'só você vê' (visivel para a turma), 'oculto pelo líder · só você vê' (ocultado pelo lider)."
+      ],
+      "acoes": [
+        "nenhuma; o botao 'Marcar feito' / 'Desfazer' fica fora do componente (quadro.page.ts:103-113)"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "componente <app-material-linha> (sem rota propria)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/shared/material-linha.component.ts",
+      "proposito": "Linha da lista de material: rotulo de formato, titulo e autoria. Sem cartao e sem caixa. Usado em Materias (materia.page.ts:171-275), Evento (evento.page.ts:480-495) e Meu quadro, na secao nao listados (quadro.page.ts:194).",
+      "estados": [
+        "autoriaSelo null ou PROFESSOR / COORDENACAO",
+        "editadoPor null ou '' (sem linha) ou nome (com linha, e selo opcional)",
+        "autoria obrigatoria: string vazia renderiza span vazio (sem @if)"
+      ],
+      "elementos": [
+        "1. span.tipo = tipo (rotulo de formato vindo do VM: 'PDF', 'JPG', 'LINK'; caixa alta visual; coluna fixa de 42px)",
+        "2. span.corpo: span.titulo = titulo (13px, line-height 1.35, cor ink)",
+        "3. span.autoria: span com prefixo + autoria (ex.: 'Ana Beatriz · há 2 dias'); [se autoriaSelo] app-selo",
+        "4. [se editadoPor] span.autoria: span 'editado por ' + prefixo(editadoPorSelo) + editadoPor; [se editadoPorSelo] app-selo (sem icone de lapis)"
+      ],
+      "acoes": [
+        "nenhuma: a linha nao e clicavel. O link fica na pagina que a envolve (MaterialVm.url so vira link se for http/https)"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "componente <app-nota> (sem rota propria)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/shared/nota.component.ts",
+      "proposito": "Anotacao presa a um dia (Calendario, calendario.page.ts:157,241,258). Duas variantes que nunca podem se parecer: da turma (regua solida accent, fundo rule-soft) ou pessoal (regua tracejada ink-3, sem fundo). O rotulo textual diz quem ve.",
+      "estados": [
+        "alcance TURMA (solido accent, texto ink) ou PESSOAL (tracejado ink-3, texto ink-2)",
+        "autoria null (pessoal: sempre null vindo do VM) ou texto",
+        "autoriaSelo null ou COORDENACAO (PROFESSOR nao deveria chegar: ver armadilhas)"
+      ],
+      "elementos": [
+        "1. span.cabeca: 'da turma · todos veem' (alcance TURMA) ou 'pessoal · só você' (PESSOAL); caixa alta visual; cor accent (turma) ou ink-3 (pessoal)",
+        "2. p.texto = texto (texto livre do usuario; 14px, line-height 1.4)",
+        "3. [se autoria] span.autoria: prefixo + autoria (ex.: 'Otávio · há 1 dia'); [se autoriaSelo] app-selo"
+      ],
+      "acoes": [
+        "nenhuma. Na tela, a nota pessoal do usuario vira link de edicao e a da turma pode ter botao 'Ocultar da turma' fora do componente"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "componente <app-selo> (sem rota propria)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/shared/selo.component.ts",
+      "proposito": "Selo de autoria: 'esta pessoa tem poder aqui' (texto + forma + contorno 1px; nunca so cor; nao parece chip de materia). Usado dentro de EventoCard, MaterialLinha e Nota, e em Painel, Turma, Evento, Calendario e Novo evento.",
+      "estados": [
+        "PROFESSOR: contorno na cor do texto (padrao --ink; na prova --prova-fg), icone de capelo, texto 'Professor'",
+        "COORDENACAO: cor --accent (na prova, #5fd3c7 claro ou #0b5f58 escuro), icone de escudo preenchido, texto 'Coordenação'",
+        "qualquer outro valor ou null: nenhum conteudo (o host fica vazio)"
+      ],
+      "elementos": [
+        "PROFESSOR: svg capelo (aria-hidden, 12px, stroke 1,9) + texto 'Professor'",
+        "COORDENACAO: svg escudo (aria-hidden, 12px, preenchido e stroke 1,6) + texto 'Coordenação'",
+        "Ambos dentro de span.selo com borda 1px currentColor, padding 1px 7px 1px 4px, raio 8px, fonte UI 11px peso 600"
+      ],
+      "acoes": [
+        "nenhuma"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "classes globais de pagina (app/src/global.scss): .pf-rotulo, .pf-pilha, .pf-vazio, .pf-aviso, .pf-erro, .alerta, .alerta--desfazer, .pf-cache-aviso",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/global.scss",
+      "proposito": "Utilitarios de pagina que se repetem em mais de uma tela. Estado vazio, aviso de estado, erro de acao e regra explicada precisam parecer diferentes entre si (ver armadilhas).",
+      "estados": [
+        ".pf-aviso = estado da tela (carregando, sem conexao, falha de carregamento): tracejado, fundo rule-soft",
+        ".pf-erro = falha de uma acao: solido, borda ink-3",
+        ".alerta = aviso neutro dentro de formulario; .alerta--desfazer = aviso + botao na mesma linha ('Ocultado.' + 'Desfazer')",
+        ".pf-cache-aviso = explicacao de regra, texto corrido sem caixa",
+        ".pf-vazio = estado vazio: so duas linhas de texto, sem botao, sem icone, sem skeleton"
+      ],
+      "elementos": [
+        ".pf-rotulo: rotulo de grupo em mono 11px caixa alta, com fio de 1px a direita (ex.: 'próximas aulas', 'o que vem aí', 'a fazer', 'feito', 'não listados · N', 'anotações', 'material de aula')",
+        ".pf-pilha: coluna vertical, gap 8px, padding 12px 16px 16px",
+        ".pf-vazio: <b> (16px, peso 600) + <span> (15px); texto da Home: 'Nada nos próximos 14 dias.' e 'Se você sabe de alguma prova ou entrega que não está aqui, adicione — qualquer pessoa da turma pode.'",
+        ".pf-aviso: <p> com texto ('Carregando…' ou mensagem de erro de carregamento), role alert quando usado como erro",
+        ".pf-erro: <p> com mensagem de falha de acao, role alert",
+        ".alerta--desfazer: 'Ocultado.' (role status) + botao 'Desfazer' (botao botao--fio botao--pilula), flex com espaco entre",
+        ".pf-cache-aviso: paragrafo sem caixa, 12,5px, lh 1,45"
+      ],
+      "acoes": [
+        "n/a (classes de estilo)"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "classes globais de botao (.botao, .botao--fantasma, .botao--fio, .botao--pilula) e .ir, .pf-avatar (global.scss)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/global.scss",
+      "proposito": ".botao: acao de largura cheia (<button> ou <a>, mesma aparencia de proposito). .botao--fantasma: contorno de largura cheia. .botao--fio + .botao--pilula: contorno de largura do conteudo, em pilula. .ir: envelope de toque que transforma um cartao em link. .pf-avatar: inicial do nome em circulo de 24px.",
+      "estados": [
+        ".botao: normal; :active (recuo 0,98); :focus-visible (anel 2px accent, offset 3px); [disabled] (opacidade 0,45, cursor not-allowed, sem recuo)",
+        ".botao--fio.botao--pilula:active: recuo 0,92"
+      ],
+      "elementos": [
+        "Textos observados nas telas (copy do chamador, nao da classe): 'Anotar neste dia', 'Anotar alguma coisa', 'Ocultar da turma', 'Desfazer' / 'Desfazendo…'",
+        "pf-avatar: texto = inicial maiuscula (1 caractere) sobre circulo accent"
+      ],
+      "acoes": [
+        "toque dispara a acao do chamador; a classe so da o recuo visual"
+      ],
+      "navegacao": []
+    },
+    {
+      "rota": "menu de abas (app/src/app/tabs/tabs.page.ts) estilizado em >= 768px por global.scss. Rotas: /tabs/home ou /tabs/painel (docente), /tabs/calendario, /tabs/materias, /tabs/quadro ou /tabs/turma (docente), /tabs/perfil",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/tabs/tabs.page.ts (marcacao e estado) + C:/Users/gh0st/Projeto Fans/app/src/global.scss (layout, linhas 337-583)",
+      "proposito": "Navegacao principal. Celular (< 768px): barra inferior com cinco abas. PC (>= 768px): barra lateral a esquerda, recolhivel, com perfil no rodape, e conteudo em coluna centralizada.",
+      "estados": [
+        "celular: barra inferior; sem marca; sem botao de recolher; perfil so com avatar + 'Perfil' (nome e email ocultos)",
+        "PC expandido: barra 200 a 260px; marca 'projetoFans'; perfil com nome e email",
+        "PC recolhido (.pf-abas--recolhida): barra 68px, so icones; textos das abas viram sr-only; botao de recolher centralizado"
+      ],
+      "elementos": [
+        "PC, de cima para baixo: 'projetoFans' (marca 18px peso 700, so no PC) > botao de recolher (32x32, icone chevron-back quando aberto e chevron-forward quando recolhido; aria-label 'Recolher menu' ou 'Expandir menu'; title igual) > abas (44px de altura; icone 20px + rotulo 14px): 'Home' ou 'Painel', 'Calendário', 'Matérias', 'Meu quadro' ou 'Turma' > divisor 1px > perfil (56px: avatar 30px com inicial, nome 600, email 12px)",
+        "Celular, de esquerda para a direita: 'Home' ou 'Painel', 'Calendário', 'Matérias', 'Meu quadro' ou 'Turma', 'Perfil' (so avatar + palavra 'Perfil')"
+      ],
+      "acoes": [
+        "toque em aba navega para a rota (ion-tab-button href)",
+        "toque no botao de recolher alterna o estado e grava localStorage 'pf.menuRecolhido' ('1' ou '0')"
+      ],
+      "navegacao": [
+        "Home/Painel: /tabs/home ou /tabs/painel",
+        "Calendario: /tabs/calendario",
+        "Materias: /tabs/materias",
+        "Meu quadro ou Turma: /tabs/quadro ou /tabs/turma",
+        "Perfil: /tabs/perfil"
+      ]
+    }
+  ],
+  "endpoints": [],
+  "modelos": [
+    {
+      "nome": "Materia (shared/tipos.ts, par indivisivel)",
+      "campos": "sigla: string (obrigatorio; ex.: 'BD', 'CALC2')\ncor: string (obrigatorio; hex de uma das 12 hues, vindo como corHex do servidor; o aluno nao digita; o componente NAO valida)"
+    },
+    {
+      "nome": "TipoEvento (tipos.ts)",
+      "campos": "'PROVA' | 'ENTREGA' (sem nulo). Reexportado em data/models.ts e usado no ItemHome/Evento."
+    },
+    {
+      "nome": "AlcanceNota (tipos.ts)",
+      "campos": "'TURMA' | 'PESSOAL'"
+    },
+    {
+      "nome": "Selo (tipos.ts)",
+      "campos": "'PROFESSOR' | 'COORDENACAO'. Nos pontos de uso: Selo | null. Prefixo: PROFESSOR gera 'Prof. ', COORDENACAO gera 'Coord. ', null gera ''."
+    },
+    {
+      "nome": "EstadoQuadro (tipos.ts) - MORTO",
+      "campos": "'A_FAZER' | 'FEITO'. Declarado e exportado, sem nenhum uso em app/src. O estado pessoal real e feitoPeloUsuario: boolean (ItemHome) ou o prop feito do MiniCard."
+    },
+    {
+      "nome": "Inputs de <app-materia-chip>",
+      "campos": "cor: string (obrigatorio)\nsigla: string (obrigatorio)"
+    },
+    {
+      "nome": "Inputs de <app-evento-card>",
+      "campos": "tipo: TipoEvento (obrigatorio)\ndia: string (obrigatorio; '08')\nmes: string (obrigatorio; 'ago')\ntitulo: string (obrigatorio)\nquando: string (obrigatorio; 'HH:mm' ou 'prova' ou 'entrega')\nmateria: Materia | null (padrao null)\nautoria: string | null (padrao null)\nautoriaSelo: Selo | null (padrao null)\neditadoPor: string | null (padrao null)\neditadoPorSelo: Selo | null (padrao null)"
+    },
+    {
+      "nome": "Inputs de <app-aula-card>",
+      "campos": "materia: Materia (obrigatorio, nunca null)\nnome: string (obrigatorio)\nhora: string (obrigatorio; 'HH:mm–HH:mm' ou 'dia · HH:mm')\nsala: string (obrigatorio)\ndetalhe: string | null (padrao null)\natividade: string | null (padrao null)\nagora: boolean (padrao false)"
+    },
+    {
+      "nome": "Inputs de <app-mini-card>",
+      "campos": "materia: Materia (obrigatorio)\ntitulo: string (obrigatorio)\ntipo: TipoEvento (obrigatorio)\nfeito: boolean (padrao false)\naviso: string | null (padrao null)"
+    },
+    {
+      "nome": "Inputs de <app-material-linha>",
+      "campos": "tipo: string (obrigatorio; rotulo de formato do VM: 'PDF', 'LINK'...)\ntitulo: string (obrigatorio)\nautoria: string (obrigatorio; sem @if, '' renderiza span vazio)\nautoriaSelo: Selo | null (padrao null)\neditadoPor: string | null (padrao null)\neditadoPorSelo: Selo | null (padrao null)"
+    },
+    {
+      "nome": "Inputs de <app-nota>",
+      "campos": "alcance: AlcanceNota (obrigatorio)\ntexto: string (obrigatorio)\nautoria: string | null (padrao null)\nautoriaSelo: Selo | null (padrao null)"
+    },
+    {
+      "nome": "Inputs de <app-selo>",
+      "campos": "selo: Selo (obrigatorio). Valor fora do enum ou null: nenhum conteudo."
+    },
+    {
+      "nome": "Autoria (data/models.ts) - origem de autor, selo e edicao",
+      "campos": "autorId: string\nautorNome: string\ncriadoEm: string (instante ISO, com fuso ou Z)\natualizadoEm: string\nautorSelo?: Selo | null (ausente no JSON = undefined)\neditadoPorNome?: string | null (ausente no JSON = undefined)\neditadoPorSelo?: Selo | null (ausente no JSON = undefined)\nNota: o backend OMITE campo nulo: undefined e null devem ser tratados como 'ausente'."
+    },
+    {
+      "nome": "ItemHome (data/models.ts) - item de GET /home",
+      "campos": "eventoId: string\ntipo: TipoEvento\ntitulo: string\ndata: string ('AAAA-MM-DD')\nhora: string | null ('HH:mm:ss'; cortar para HH:mm)\nmateriaSigla: string\nmateriaCorHex: string\nautoria: Autoria\nfeitoPeloUsuario: boolean (vem de estado_pessoal)"
+    },
+    {
+      "nome": "Evento (data/models.ts)",
+      "campos": "id, tipo: TipoEvento, titulo, data: string ('AAAA-MM-DD'), hora: string | null ('HH:mm:ss'), materiaId, materiaSigla, materiaCorHex, autoria: Autoria, version: number, visivelTurma: boolean, excluidoEm: string | null, sala?: string | null (ausente = sala da materia)"
+    },
+    {
+      "nome": "EventoVm (features/evento-vm.ts) - o que EventoCard recebe, montado por eventoVm()",
+      "campos": "tipo: TipoEvento\ndia: string ('08'; sem conversao de fuso: split de 'AAAA-MM-DD')\nmes: string (abreviacao minuscula pt-BR de lista fixa: jan fev mar abr mai jun jul ago set out nov dez; se o indice for invalido, o mes cru)\nquando: string (hora.slice(0,5) quando ha hora; senao 'prova' se PROVA, 'entrega' se ENTREGA)\ntitulo: string\nmateria: { sigla: string; cor: string }\nautoria: string (assinatura(): 'Nome · há N min' | 'Nome · há N h' | 'Nome · há 1 dia' | 'Nome · há N dias' | 'Nome · agora' | so 'Nome' se o instante for invalido)\nautoriaSelo: Selo | null (autorSelo ?? null)\neditadoPor: string | null (editadoPorNome ?? null)\neditadoPorSelo: Selo | null (editadoPorSelo ?? null)\nsala: string ('' quando na sala da materia)"
+    },
+    {
+      "nome": "MaterialVm (features/material-vm.ts) - o que MaterialLinha recebe, montado por materialVm()",
+      "campos": "id: string\ntipo: string (extensao do arquivo ou da url em caixa alta, 1 a 5 caracteres alfanumericos; 'LINK' se nao houver extensao)\ntitulo: string\nurl: string | null (so http:// ou https://; qualquer outro esquema vira null)\ndaAula: string ('aula de 2 set', sem zero a esquerda no dia; '' se nao for de aula)\nautorId: string\nautoria: string (assinatura, igual ao EventoVm)\nautoriaSelo: Selo | null\neditadoPor: string | null\neditadoPorSelo: Selo | null\ntemResumo: boolean"
+    },
+    {
+      "nome": "AulaVm (features/home/home.page.ts:22-31) - o que AulaCard recebe",
+      "campos": "materia: Materia (obrigatorio)\nnome: string\nhora: string\nsala: string\ndetalhe?: string (ausente = null)\natividade?: string (ausente = null)\nagora?: boolean (ausente = false)"
+    },
+    {
+      "nome": "Nota (data/nota.repository.ts) e NotaVm do Calendario (calendario.page.ts:535-556)",
+      "campos": "Nota: id, alcance: AlcanceNota, data: 'AAAA-MM-DD', texto, autorId, autorNome?: string | null (so na nota da TURMA), autorSelo?: Selo | null (so COORDENACAO, so TURMA), criadoEm, atualizadoEm, version, visivelTurma: boolean (false = lider tirou da lista da turma)\nNotaVm: id, alcance, texto, data, dia (diaCurto), minha: boolean (= !autorNome: nota pessoal ou propria), visivelTurma, autoriaSelo: Selo | null (so com autorNome), autoria: string | null (assinatura; null na pessoal)"
+    },
+    {
+      "nome": "Tokens de tema (theme/variables.scss). Formato: claro | escuro | uso. Escuro vale por @media (prefers-color-scheme: dark); a app nao tem data-theme.",
+      "campos": "--paper: #E7EAE5 | #0C0F11 | ground da tela\n--surface: #F7F9F6 | #171B1D | cartao; fundo do bloco 'sala' da aula\n--surface-2: #FDFEFC | #202527 | aba selecionada (desktop)\n--ink: #14181A | #E8EBE6 | texto primario, nome, titulo, 'editado por' na entrega\n--ink-2: #464E50 | #AEB6B7 | texto secundario (texto da nota pessoal, hora da aula, sala)\n--ink-3: #626A6C | #878F91 | rotulo, autoria, tipo, aviso, borda da nota pessoal (4,56:1 e 5,83:1 sobre paper; 4,70:1 sobre surface-2 no escuro)\n--rule: rgba(20,24,26,.10) | rgba(232,235,230,.12) | bordas de 1px\n--rule-soft: rgba(20,24,26,.05) | rgba(232,235,230,.06) | fundo da nota da turma e dos avisos\n--accent: #0F766E | #4DBFB3 | so o interativo pela regra do design; hoje tambem: selo Coordenacao, trilho da aula em andamento, regua da nota da turma\n--accent-ink: #FFFFFF | #06201D | texto sobre accent\n--accent-soft: rgba(15,118,110,.12) | rgba(77,191,179,.16) | nao usado nesta area\n--accent-line: rgba(15,118,110,.28) | rgba(77,191,179,.34) | nao usado nesta area\n--prova-bg: #14181A | #E8EBE6 | bloco solido da prova (inverte com o tema)\n--prova-fg: #EEF0EC | #14181A | texto no bloco da prova\n--prova-fg-2: rgba(238,240,236,.64) | rgba(20,24,26,.62) | rotulo no bloco da prova\n--e1: 0 1px 1.5px rgba(16,20,22,.055), 0 2px 6px -2px rgba(16,20,22,.07) | 0 1px 1.5px rgba(0,0,0,.4), 0 2px 6px -2px rgba(0,0,0,.5) | sombra; nenhum componente desta area usa\n--r-sm: 8px (ambos) | --r-md: 14px (ambos) | --r-pill: 999px (ambos). --r-lg nao existe (comentado, 0 usos)\n--mola: cubic-bezier(.22, 1, .36, 1) | (ambos) | curva do toque\n--dur-toque: 0.14s (unica duracao do app)\n--press: 0.98 (bloco largo) | --press-forte: 0.92 (alvo pequeno)\n--ui: Roboto, system-ui, -apple-system, \"Segoe UI\", sans-serif\n--mono: \"Roboto Mono\", ui-monospace, \"SF Mono\", Menlo, Consolas, monospace\nPaleta (fixa, nao muda com o tema): m-01 azul #1D4ED8 (contraste branco 6,70); m-02 azul-celeste #0369A1 (5,93); m-03 teal #0F766E (5,47); m-04 verde #15803D (5,02); m-05 oliva #4D7C0F (4,99); m-06 ambar #A16207 (4,92, o minimo); m-07 laranja-queimado #B45309 (5,02); m-08 laranja #C2410C (5,18); m-09 vermelho #B91C1C (6,47); m-10 rosa #BE185D (6,04); m-11 magenta #A21CAF (6,32); m-12 violeta #6D28D9 (7,10). L* entre 37,4 e 47,4.\nIonic (--ion-*): background = --paper (rgb 231,234,229 | 12,15,17); text = --ink; font = --ui; toolbar e tab bar = --paper; cor do tab bar = --ink-3; selecionada = --accent; color-primary = --accent (rgb 15,118,110 | 77,191,179); primary-contrast = --accent-ink (rgb 255,255,255 | 6,32,29); shade #0d685f | #44a89d; tint #27847d | #5fc5ba"
+    }
+  ],
+  "servicos_e_estado": [
+    "Nao ha servico, repositorio, store, nem chamada HTTP nesta area. Nao se aplicam cabecalhos If-Match, X-Turma-Id nem Authorization.",
+    "Estado: nenhum estado global e nenhum estado persistido na area. Os sete componentes sao sem estado proprio: recebem inputs (signals) e derivam via computed, com ChangeDetectionStrategy.OnPush. Derivados: MiniCard.ehProva (tipo === 'PROVA'); EventoCard.ehProva; EventoCard/MaterialLinha/Nota.prefixoAutor e prefixoEditor (prefixoDoSelo do selo); Nota.ehTurma (alcance === 'TURMA').",
+    "prefixoDoSelo(selo) em selo.component.ts (funcao pura exportada): PROFESSOR -> 'Prof. ' (com espaco final); COORDENACAO -> 'Coord. ' (com espaco final); null, undefined ou outro -> ''. Fica no mesmo arquivo do selo para que palavra e desenho nao divirjam.",
+    "Formatacao upstream (fora da area, mas define o texto impresso): features/evento-vm.ts eventoVm() (linhas 78-108) produz dia, mes, quando, materia, autoria, selo e edicao; assinatura() e desde() (linhas 141-164) produzem 'Nome · há ...'; diaPorExtenso() e MESES; features/material-vm.ts materialVm() com formato(), abrivel() (so http/https) e rotuloDaAula() ('aula de 2 set'). A origem exata dos AulaVm na Home nao foi auditada nesta leitura (so o tipo).",
+    "Tema: CSS custom properties em :root com redefinicao em @media (prefers-color-scheme: dark). Nenhuma troca manual de tema (grep: app/src nao tem data-theme; prefers-color-scheme aparece so em variables.scss e evento-card.component.ts).",
+    "Preferencia do menu (fora da area, em tabs.page.ts:25 e 110-152): localStorage chave 'pf.menuRecolhido'. Leitura com try/catch (qualquer falha = expandido, false). Gravacao com try/catch (falha silenciosa: o menu so nao lembra). E preferencia deste aparelho, nao da conta.",
+    "Aria-label do dia no calendario (calendario.page.ts:596-605, fora da area): 'Dia N' sem marcas; 'Dia N, com prova', 'Dia N, com entrega', 'Dia N, com anotação'; combinadas com ' e ', ex.: 'Dia 12, com prova e entrega e anotação'. E o unico texto que o leitor de tela recebe das marcas coloridas do dia."
+  ],
+  "regras": [
+    "Autoria visivel em tudo (AGENTS, nao-negociavel 1): EventoCard, MaterialLinha e Nota exibem autor, selo e 'editado por' quando o dado existe. Nao existe cartao anonimo. Ver armadilhas sobre a Home e o Quadro, que nao repassam os campos.",
+    "Cor sempre com sigla (nao-negociavel 7): o chip e o unico caminho para materia. Os dois inputs do chip sao obrigatorios. EventoCard sem materia nao mostra nenhuma cor (nao cai para cor pura). AulaCard e MiniCard sempre passam pelo chip. O calendario desvia (ver armadilhas).",
+    "Prova pesa mais que entrega (nao-negociavel 8): por tinta, nunca por cor. Prova = bloco solido no valor oposto ao da pagina (prova-bg), titulo peso 700, glifo cheio quadrado. Entrega = contorno 1px, sem fundo, titulo peso 600, glifo vazado circular. Teste de aceite: em escala de cinza os dois continuam distintos. Os canais redundantes sao: fundo, peso, forma do glifo e texto oculto (EventoCard). A cor nao participa dessa distincao.",
+    "Vazio nao e falha e nao se preenche (nao-negociavel 6): .pf-vazio tem so duas linhas de texto; nenhum componente desta area tem placeholder, dica, card promocional ou skeleton. Lista vazia e resposta.",
+    "Estados de aviso nao se confundem: .pf-aviso (tracejado) e estado da tela; .pf-erro (solido) e falha de acao; .alerta e aviso neutro de formulario; .pf-cache-aviso e regra explicada sem caixa. O comentario de global.scss diz que vazio e offline nao podem se parecer.",
+    "Nota da turma e nota pessoal nunca se parecem (tipos.ts:21-23): a diferenca precisa ser de palavra e de forma (regua solida ou tracejada), nao so de cor, e o rotulo textual faz parte da regra ('da turma · todos veem' / 'pessoal · só você'). Nao remover o rotulo.",
+    "Estado pessoal nunca altera o fato compartilhado (AGENTS, nao-negociavel 3): MiniCard.feito e so visual e vem de estado_pessoal. Marcar feito nao muda nada para mais ninguem.",
+    "Ordem e urgencia, nunca tipo (nao-negociavel 4): esta area nao ordena nada. Os componentes renderizam na ordem recebida; a Home e a fonte da ordem.",
+    "Selo = 'esta pessoa tem poder aqui' (spec docs/superpowers/specs/2026-10-06-professor-coordenador.md §2.6): 'Professor' so nos registros da materia dele; 'Coordenação' em qualquer registro da turma; conta pendente, recusada ou contestada: sem selo. Os componentes so exibem o que recebem: a regra mora no backend.",
+    "Regra de nota (data/nota.repository.ts:16-17 e spec §6): autorSelo so pode ser COORDENACAO e so em nota da turma (professor nao alcanca nota, que nao tem materia). O NotaComponent aceita qualquer Selo; a guarda esta no chamador (calendario.page.ts:543-545).",
+    "Selo e prefixo andam juntos (spec §8 e comentario do rodape): sem selo, a autoria e so o nome. Com selo, o nome leva 'Prof. ' ou 'Coord. ' e o selo aparece depois do nome.",
+    "Editado por (spec §6): 'editado por Prof. Fulano' quando alguem alem do autor corrigiu o registro. O cartao precisa continuar mostrando quem postou E quem corrigiu; nao pode mostrar so o nome de quem cadastrou (comentario do EventoCard, citando o nao-negociavel 1).",
+    "Componentes visuais em app/src/app/shared/ nao se alteram para caber num caso novo (AGENTS): dado faltando vira registro em LOG, nao improviso no componente. Para o port: reproduzir o comportamento; mudanca de visual precisa de decisao registrada.",
+    "Regra de codigo do front (AGENTS): componentes standalone, signals para estado, sem NgModule novo; nenhuma regra de negocio no componente (ordenacao, teto e janela vem prontos da API).",
+    "Acento so para o interativo (tokens do design, docs/design/design-system-v1.html §01 e theme/variables.scss:50): o acento nao identifica materia. Hoje o codigo usa --accent tambem em selo da coordenacao, trilho da aula em andamento e regua da nota da turma: desvio do principio, nao do AGENTS. Registrar.",
+    "Cor so em hue da paleta fixa de 12 (AGENTS e tipos.ts:11): o aluno escolhe da lista; o hex e validado no servidor (spec: cor_hex restrito a paleta). O componente nao valida (ver armadilhas).",
+    "Sem sombra nos cartoes (o token --e1 existe, mas nenhum componente desta area o usa). Elevacao nao e regra do design para estes cartoes."
+  ],
+  "armadilhas": [
+    "1. CAMPOS AUSENTES: o backend omite campo nulo do JSON, entao autorSelo, editadoPorNome, editadoPorSelo, sala, hora, detalhe, atividade e agora chegam como undefined, nao null (data/models.ts:33-35 e comentarios; features/evento-vm.ts:101-106). Trate ausente = null em todo parametro opcional. Os componentes so testam truthy, entao aqui os dois se comportam igual.",
+    "2. OCULTAR POR FALSY: @if (valor; as v) esconde o bloco tambem quando o valor e string vazia. autoria '' ou editadoPor '' fazem a linha sumir. No port, o teste precisa ser 'nulo ou vazio = ausente'; se nao, a linha aparece com texto vazio.",
+    "3. DUAS REGRAS DE AUTORIA: MaterialLinha.autoria e obrigatoria e NAO tem @if (string vazia renderiza um span vazio); EventoCard e Nota tem autoria opcional e somem a linha. Nao unifique as duas regras sem decidir.",
+    "4. SELO DEPENDE DO NOME: app-selo so renderiza dentro do bloco de autoria (ou de editado por). autoriaSelo sem autoria nao mostra nada, nem prefixo, nem selo. O mesmo para editadoPorSelo sem editadoPor.",
+    "5. PREFIXO DEPENDE SO DO SELO: 'Prof. ' ou 'Coord. ' sai de autoriaSelo, nao de quem e o autor. O prefixo termina com espaco; o texto final e 'Prof. Ana Beatriz', com um espaco. Nao faca trim nem concatene espaco extra.",
+    "6. ABREVIACAO DIFERENTE: o prefixo e 'Coord. ' (abreviado), mas o rotulo do selo e 'Coordenação' (por extenso). E literal, nao normalize para o mesmo termo.",
+    "7. TEXTO DE AUTORIA PRONTO: o componente nao formata. O VM gera 'Nome · há N min' (menos de 60 min), 'há N h' (menos de 24 h), 'há 1 dia' ou 'há N dias', e 'Nome · agora' quando faltam menos de 1 min OU o instante e futuro (ms negativo). Arredondamento por Math.round, nao floor. Data invalida (NaN) mostra so o nome. Nao reimplemente isso no widget.",
+    "8. DATA SEM FUSO: dia e mes saem do split da string 'AAAA-MM-DD', sem Date. O codigo evita new Date(data) de proposito: a string de data pura e lida como UTC e, em fuso negativo, mostra o dia anterior. Dia vem com zero a esquerda ('08'); mes vem em minusculo e da lista pt-BR (set e out, nao sep e oct). Se o indice do mes for invalido, usa o valor cru.",
+    "9. QUANDO SEM HORA: o VM manda 'prova' ou 'entrega' em minusculo (a CSS poe em caixa alta). O texto oculto 'Prova —' mais o visivel 'prova' faz o leitor de tela dizer 'Prova — prova'. Decida no port: anunciar um rotulo so, sem repetir o tipo.",
+    "10. COR NAO VALIDADA: hex vazio ou invalido faz [style.background] ser ignorado. O chip fica sem fundo e a sigla branca cai sobre o papel (branco contra #E7EAE5 da 1,2:1, quase invisivel). No Flutter, nunca desenhe chip sem preenchimento: defina o que acontece com cor fora das 12 hues (falhar alto ou um fallback que mantenha 4,5:1) e registre a decisao.",
+    "11. CAIXA ALTA SO VISUAL: text-transform uppercase nao muda o texto; 'bd' exibe 'BD' mas o conteudo continua 'bd'. Em Flutter, aplique toUpperCase() na exibicao e mantenha a string original para semantica e teste. Quem fica em caixa alta: chip (sigla), mes e tipo do EventoCard, tipo do MaterialLinha, atividade da AulaCard, cabeca da Nota, rotulo .pf-rotulo.",
+    "12. ROTULOS DA NOTA EM MINUSCULO NA FONTE: 'da turma · todos veem' e 'pessoal · só você' estao em minusculo no codigo; o teste procura o texto minusculo (toContain 'todos veem' e 'só você'). Escreva a string minuscula no Flutter, com ponto medio U+00B7 e os acentos. Nao grave em maiusculas na fonte.",
+    "13. COMENTARIOS DEFASADOS: MaterialLinha documenta autoria 'Ana Beatriz · 22 jul' e tipo 'pdf/slide/foto/link'; Nota documenta 'Otávio · líder da turma · ontem'. O VM real gera 'Nome · há N dias' e tipo = extensao em caixa alta ('PDF', 'JPG', 'PPTX') ou 'LINK'. 'SLIDE' e 'FOTO' nunca sao gerados. Siga o VM, nao o comentario.",
+    "14. ROTULO 'prova · 2 materiais' NAO EXISTE NO CODIGO: aparece na doc do EventoCard e no mockup da tela Materias, mas eventoVm so gera hora, 'prova' ou 'entrega'. Nao ha contagem de materiais no cartao hoje. Nao invente sem decisao de produto.",
+    "15. COLUNA DO FORMATO (42px): 'PDF' e 'LINK' cabem; extensoes de 4 ou 5 letras (PPTX, JPEG, XLSX) ficam apertadas em mono 10px com tracking 0,11em. Com outra fonte monoespacada o rotulo pode quebrar em duas linhas. Mantenha numa linha so.",
+    "16. FONTES NAO SAO CARREGADAS: nao ha @font-face nem CDN (grep confirmou). --ui = Roboto (so se estiver no aparelho) e cai em system-ui (SF no iOS, Roboto no Android). --mono = 'Roboto Mono' (quase nunca instalada) cai em ui-monospace, SF Mono, Menlo, Consolas, monospace. Nao embuta Roboto Mono sem medir: troca largura de tabular-nums, da coluna de 42px e do quadrado de 46px da sala.",
+    "17. PESO 600 vs 700: o titulo da entrega e 600 e o da prova e 700 (EventoCard). Se a fonte nao tem 600 (Roboto estatico tem 500 e 700), 600 cai para um vizinho e a regra 'prova pesa mais' pode sumir. Teste no aparelho; se preciso use 500 para entrega e 700 para prova, mantendo prova > entrega. O MiniCard usa 500 para os dois tipos (sem diferenca de peso).",
+    "18. LETTER-SPACING EM EM (converter para px pelo tamanho do texto): chip 11px x 0,055 = 0,605px; mes 10px x 0,10 = 1,0px; tipo 10px x 0,11 = 1,1px; dia 20px x -0,03 = -0,6px; titulo 16px x -0,008 = -0,128px; nome 15px x -0,008 = -0,12px; hora 11px x 0,06 = 0,66px; sala 8,5px x 0,04 = 0,34px; atividade 10px x 0,09 = 0,9px; aviso 9px x 0,06 = 0,54px; cabeca da nota 10px x 0,09 = 0,9px; selo 11px x -0,004 = -0,044px; .pf-rotulo 11px x 0,11 = 1,21px; marca 18px x -0,03 = -0,54px.",
+    "19. NUMERAIS TABULARES: font-variant-numeric tabular-nums em dia, mes, tipo e quando do EventoCard, e em hora da AulaCard. Sem isso os horarios andam na coluna. Em Flutter: FontFeature.tabularFigures().",
+    "20. QUEBRA DENTRO DE PALAVRA: titulos, nome, texto da nota e aviso usam overflow-wrap: anywhere. O Flutter nao tem o equivalente exato. Teste com palavra sem espaco de 40 ou mais caracteres em cada cartao.",
+    "21. NOWRAP: chip e selo nao quebram linha. Uma sigla longa estoura, sem truncamento. Decida truncar com reticencias ou manter, e registre.",
+    "22. SALA SEM CONTROLE: o quadrado de 46x46 nao tem overflow controlado, e a sala e um <b> de 8,5px sem nowrap. Sala longa pode vazar ou quebrar. 8,5px esta abaixo de 10px: legibilidade e decisao de produto. Registre o limite.",
+    "23. ICONES (path fixo, viewBox 24): (a) sala da AulaCard: stroke currentColor 1,4, fill none, linecap e linejoin round, exibido a 20px; rect x=3 y=3.2 w=18 h=10 rx=1.2; path 'M6.4 7h7M6.4 9.8h4.6'; path 'M4 17.4h6v3.2H4zM14 17.4h6v3.2h-6z'; path 'M7 17.4v-1.7M17 17.4v-1.7'. (b) lapis do editado por: stroke 2, 13px, paths 'M4 20h4L19 9l-4-4L4 16z' e 'M13.5 6.5l4 4'. (c) capelo do Professor: stroke 1,9, fill none, 12px, paths 'M2.5 9.5 12 5l9.5 4.5L12 14z' e 'M6.5 11.8V16c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-4.2'. (d) escudo da Coordenacao: fill currentColor, stroke 1,6, linejoin round, 12px, path 'M12 3 20 6v5.5c0 4.4-3.2 7.8-8 9.5-4.8-1.7-8-5.1-8-9.5V6z'. Reproduza em CustomPainter com esses caminhos; nao troque por icone generico.",
+    "24. CURRENTCOLOR: glifo, selo e icones herdam a cor do texto do elemento pai, nao um token proprio. O glifo de prova herda prova-fg-2 (64% de alfa), nao prova-fg cheio. O glifo de entrega herda ink-3. A borda do selo tambem usa currentColor.",
+    "25. OPACIDADE DO MES: 0,62 sobre a cor do texto do cartao (ink na entrega, prova-fg no bloco). Nao troque por uma cor pre-misturada nem por ink-3.",
+    "26. BORDA DA PROVA: .ev--prova tem border 1px da mesma cor do bloco (prova-bg). Tirar essa borda muda a geometria e o alinhamento com a entrega. Mantenha a borda de 1px com a cor do bloco.",
+    "27. ENTREGA SEM FUNDO: background transparent. Nunca pinte a entrega com paper ou surface: ela fica sobre o fundo da tela.",
+    "28. TRACEJADO NAO EXISTE NO FLUTTER: a regua pessoal da Nota (border-left 3px dashed) e o .pf-aviso (border 1px dashed) nao sao suportados por Border. Pinte com CustomPainter e um padrao de traco visivel. O padrao exato do navegador nao esta especificado; confira em escala de cinza.",
+    "29. BORDA DE UM LADO COM RAIO: a Nota tem border-left 3px com border-radius 8px. BoxDecoration pode nao aceitar borda nao uniforme combinada com raio (verificar na versao do Flutter em uso). Alternativa: ClipRRect mais barra de 3px.",
+    "30. TRILHO DA AULA EM ANDAMENTO: .aula--agora usa box-shadow inset 2px 0 0 accent, que nao existe no Flutter. Emule com barra de 2px dentro da borda, recortada pelo raio (ClipRRect), sem mudar o tamanho do cartao.",
+    "31. BOX-SIZING NAO DECLARADO: os componentes nao declaram. O v1 declara * { box-sizing: border-box } (ver design-system-v1.html). Assuma border-box para o glifo 8x8 com borda 1,5px (caixa externa de 8px) e confirme no CSS base do Ionic (nao verificado nesta leitura).",
+    "32. TEXTO OCULTO NAO OCUPA ESPACO: .apenas-leitor e absolutamente posicionado, recortado e fora do flex; nao entra no gap. No Flutter use Semantics com label e nenhum filho visivel. Nao o coloque como item de Row com espacamento, senao aparece um vao de 5px.",
+    "33. GAP GLIFO-QUANDO: 5px entre o glifo e o quando (gap do flex). Sem o texto oculto, o quando segue o glifo a 5px.",
+    "34. CHIP NAO EXPANDE: host inline-flex, min-width 0, texto nowrap. Dentro de Wrap ou Row, nao cresce nem quebra. Sem overflow visivel, o chip pode invadir o vizinho. Use Flexible ou ConstrainedBox conforme o caso.",
+    "35. TOPO QUEBRA LINHA: .topo e flex-wrap. Com titulo ou horario longos, chip e tipo vao para a linha de baixo. No Flutter, use Wrap, nao Row.",
+    "36. GRADES E PADDINGS: EventoCard = colunas 44px e 1fr, gap 14px, padding 12px 14px, raio 14px, borda 1px. MaterialLinha = colunas 42px e 1fr, gap 8px, padding 6px 2px, sem raio e sem borda. AulaCard = quadrado 46px, gap 12px, padding 10px 12px, raio 14px, borda 1px. MiniCard = coluna, gap 5px, padding 8px 9px, raio 8px. Nota = coluna, gap 4px, padding 9px 12px, raio 8px. Chip = padding 3px 7px, raio 4px. Selo = padding 1px 7px 1px 4px, raio 8px.",
+    "37. AVISO SOBRE BLOCO DE PROVA ABAIXO DO CONTRASTE: o MiniCard de prova (bloco solido) com aviso ('oculto pelo líder · só você vê') usa ink-3 para o aviso. Medido: ink-3 sobre prova-bg da 3,23:1 no claro e 2,74:1 no escuro, abaixo de 4,5:1 para texto de 9px. E um defeito real: uma prova oculta cai em 'Nao listados' com esse contraste. Corrija no port (por exemplo prova-fg-2 no bloco) e registre o desvio.",
+    "38. FEITO NO CARTAO TODO: .mini--feita aplica opacidade 0,55 no cartao inteiro (chip incluido) e risca o titulo. No Flutter, aplique Opacity no cartao todo, nao so no texto. A sigla branca tambem perde contraste; e o esperado.",
+    "39. SELO DA COORDENACAO NA PROVA COM HEX FIXO: #5fd3c7 (claro) e #0b5f58 (escuro), so em .ev--prova. Fora do bloco vale --accent (#0F766E claro: 4,51:1 sobre o papel, no limite AA). Esses hex nao sao tokens: documente como excecao ou mova para token.",
+    "40. SELO SEM FUNDO: --selo-bg nao e definido em nenhum lugar; o fundo e transparente. O selo e so contorno de 1px na cor do texto.",
+    "41. TEMA ESCURO INVERTE O BLOCO: a prova fica clara (#E8EBE6 com texto #14181A). O chip mantem #FFFFFF literal nos dois temas. O selo Professor usa --prova-fg, entao muda de cor mas nao de forma. A troca e automatica por prefers-color-scheme; nao crie seletor manual.",
+    "42. SEM SOMBRA: --e1 existe, mas nenhum componente desta area a usa. Os cartoes sao planos. Nao adicione elevacao.",
+    "43. ORDEM DO DOM = ORDEM DE LEITURA: EventoCard = dia, mes, chip, tipo (glifo, texto oculto, quando), titulo, autoria, editado por. AulaCard = sala (antes do chip), chip, hora, nome, detalhe, atividade. Nao reordene: o leitor de tela segue o DOM.",
+    "44. AULA 'AGORA' SO TROCA A CLASSE: a frase 'agora · prof. Marcos' ou 'em 1 h 50' vem do chamador em detalhe. O componente nao calcula tempo nem destaca sozinho; so o booleano agora muda o visual.",
+    "45. TOQUE E DO CHAMADOR: componentes nao tem clique. As telas envolvem o cartao em <a class=ir> (display block, sem decoracao, cor herdada). O alvo e o cartao inteiro, incluindo chip e autoria. No Flutter, o InkWell deve cobrir o cartao todo, nao so o titulo.",
+    "46. MATERIAL NAO CLICAVEL: MaterialLinha nao mostra URL e nao tem toque. MaterialVm.url so vira link se for http ou https (abrivel); qualquer outro esquema vira null e a linha nao vira link. Nunca renderize href com data:, intent: ou file: (o VM comenta o risco de intent: abrir app externo no WebView).",
+    "47. EDITADO POR: EventoCard tem icone de lapis antes de 'editado por'; MaterialLinha nao tem. E inconsistencia visual real; escolha uma forma e aplique nas duas, e registre.",
+    "48. HOME NAO REPASSA SELO NEM EDICAO (defeito): features/home/home.page.ts:97-105 passa tipo, dia, mes, quando, titulo, materia e autoria para app-evento-card, mas NAO passa autoriaSelo, editadoPor nem editadoPorSelo. Na Home, o selo e o 'editado por' somem mesmo com o dado presente (ItemHome.autoria traz tudo). Calendario, Materia, Painel e Evento passam os quatro campos. Viola o nao-negociavel 1 na Home. No port, passe os quatro.",
+    "49. QUADRO TAMBEM NAO REPASSA (caso raro): quadro.page.ts:194-198 passa so tipo, titulo e autoria para o MaterialLinha da secao nao listados. O autor ve o proprio material, entao o caso e raro, mas e o mesmo furo.",
+    "50. CALENDARIO DESVIA DO NAO-NEGOCIAVEL 7: features/calendario/calendario.page.ts:122-128 desenha as marcas do dia como pontos coloridos (u de 4x4, fundo var(--c) com a cor da materia), sem sigla. Pela regra escrita ('nunca renderize so a cor'), e um desvio. O aria-label do dia (rotuloDoDia) diz 'Dia N, com prova e entrega e anotação' para o leitor, mas o visual nao mostra a materia. Decida no port: sigla junto ou legenda.",
+    "51. MINICARD NAO ANUNCIA O TIPO: nao tem texto oculto nem glifo; so o bloco solido. O EventoCard tem texto oculto 'Prova —' porque 'a distincao existia so no visual' (comentario do componente). A mesma regra nao foi aplicada ao MiniCard. Decida no port se o tipo e anunciado (recomendado: paridade).",
+    "52. NOTA ACEITA QUALQUER SELO E AUTORIA: o NotaComponent nao impede autoria nem selo em nota pessoal, nem PROFESSOR em nota. A guarda esta no chamador (calendario.page.ts:541-545: minha = !autorNome; selo e autoria so com autorNome). Regra do backend: autorSelo so COORDENACAO e so na nota da turma. No port, proteja no construtor ou no mapeamento, uma vez.",
+    "53. SELO NAO E COMPENSADO NO CLIENTE: pendente, recusado e contestado nao tem selo (spec 2026-10-06 §2.6). O componente so exibe o que recebe. Nao tente calcular o selo no app.",
+    "54. SELO SEGUE O PODER, NAO O CADASTRO: 'Professor' so aparece nos registros da materia dele; em outra materia ele assina como aluno (selo nulo para aquele registro). O componente confia no selo recebido.",
+    "55. CONFLITO DE REGRA SOBRE EDICAO: EventoCard e MaterialLinha mostram 'editado por Prof. X' porque o spec de 2026-10-06 (§2.5) permite docente aprovado corrigir registro alheio. O AGENTS.md que tenho (nao-negociavel 10) diz que so o autor edita e que o lider nao edita. Os dois documentos nao batem. Confirme qual vale antes de tratar editadoPor como caso normal.",
+    "56. ESTADO VAZIO FORA DESTA AREA: nenhum componente aqui mostra vazio, carregando ou erro; quem chama decide. Nao crie placeholder nem skeleton dentro do cartao. Falha de busca nunca vira lista vazia (AGENTS).",
+    "57. ESCRITA DO VAZIO NA HOME: o codigo diz 'adicione — qualquer pessoa da turma pode'; o mockup v1 diz 'cadastre'. Use o codigo.",
+    "58. DESIGN-SYSTEM-V1 NAO E FONTE DE TOKENS: theme/variables.scss segue telas-v3.html (conferido nesta leitura: --paper #E7EAE5, --ink-3 #626A6C, --r-md 14px, --mola iguais nos dois arquivos). O v1 tem valores antigos e nao deve ser portado: paper #EEF0EC; panel #F7F8F6 (no lugar de surface); ink-3 #7C8486 (3,33:1 no claro, reprova AA para texto pequeno, como diz o proprio variables.scss); raios 6/10/18 (codigo: 8/14/999); chip com padding .16rem .42rem (codigo: 3px 7px); titulo do cartao 14px (codigo: 16px); titulo do mini 11px (codigo: 13px); nota com borda 2px (codigo: 3px); marcas do calendario de cor pura (ver armadilha 50); grade de fundo .pg (so no v1).",
+    "59. TOKENS MORTOS NESTA AREA: --accent-soft e --accent-line (definidos, nao usados aqui), --e1 (definido, nao usado aqui), --surface-2 so na aba selecionada, --r-pill so em botao pilula e avatar. Nao crie consumidores sem uso.",
+    "60. PALETA: 12 hues na ordem m-01 a m-12 (ver modelos). Contraste com branco verificado nesta leitura: minimo 4,92:1 (m-06 ambar #A16207), maximo 7,10:1 (violeta). L* entre 37,4 e 47,4 (o v1 diz 'entre 37 e 47', confere com arredondamento). A associacao sigla-hue e dado do servidor; os pares do mockup (CALC2 azul, BD celeste, etc.) sao so exemplo.",
+    "61. HEX LITERAIS: #FFFFFF (chip, texto fixo), #5fd3c7 e #0b5f58 (selo na prova). Todo o resto e token. Mantenha essas excecoes com comentario no port.",
+    "62. MOVIMENTO REDUZIDO: o CSS zera transicoes para 0,01ms e animacoes com !important, mas mantem o transform de recuo do toque (scale). No Flutter use MediaQuery.disableAnimations para duracao zero, e mantenha a escala do toque. Sem o recuo, o toque no Android nao tem confirmacao visual (o realce nativo foi desligado).",
+    "63. RECUO DO TOQUE: .botao:active = scale(0,98), duracao 0,14s, curva cubic-bezier(0,22; 1; 0,36; 1). .botao--fio.botao--pilula:active = scale(0,92). .botao[disabled] = opacidade 0,45 e cursor not-allowed, sem recuo. Botao desabilitado continua visivel (nao some).",
+    "64. MODIFICADORES DEPENDEM DE .botao: .botao--fio e .botao--pilula so tem anel de foco e recuo porque estao combinados com .botao. Sozinhos perdem os dois. .botao--fio troca a largura 100% por auto e vira inline-flex. .botao--fantasma e largura total; para largura de conteudo use --fio.",
+    "65. ANEL DE FOCO: .botao:focus-visible = 2px accent, offset 3px; .pf-recolher = 2px, offset 2px. Mantenha no foco do teclado do Flutter.",
+    "66. AVISOS COM SIGNIFICADOS DIFERENTES: .pf-aviso (tracejado, rule-soft: 'Carregando…' e erro de carregamento de tela) nao pode parecer .pf-erro (solido, borda ink-3: falha de acao). Vazio e offline nao podem se parecer (comentario de global.scss). .alerta e neutro de formulario; .pf-cache-aviso e texto corrido sem caixa. Quatro estilos, quatro significados.",
+    "67. PF-VAZIO TEM DOIS ELEMENTOS: b (16px, peso 600, ink) e span (15px, line-height 1.5, ink-3). Sem botao, sem icone, sem skeleton. O texto e da tela (Home: 'Nada nos próximos 14 dias.').",
+    "68. BREAKPOINT DO DESKTOP: >= 768px de largura. Abaixo, barra inferior sem marca e sem recolher. Use largura logica (LayoutBuilder ou MediaQuery), nao a plataforma: um tablet de 800px cai no layout desktop.",
+    "69. COLUNA CENTRAL NO DESKTOP: largura maxima = clamp(720px, 60% da JANELA, 1100px). O padding lateral e max(0, (area - coluna) / 2), em que area e a largura MENOS a barra lateral (o 100% do conteudo do ion-content). Nao centre pela largura total, senao a coluna sai deslocada quando a barra esta aberta. Vale para o cabecalho e para o conteudo, que devem alinhar.",
+    "70. BARRA LATERAL: largura clamp(200px, 14vw, 260px) quando aberta, 68px quando recolhida. Padding 20px 12px; borda direita 1px rule; altura total; abas de 44px; perfil de 56px; marca 'projetoFans' 18px peso 700 (so no desktop, em ::before). Borda e fundo sao paper, nao branco.",
+    "71. RECOLHIDA: os textos das abas viram sr-only (recorte, nao display:none): o leitor de tela ainda le o nome e o botao mostra o nome em title. Icones centralizados. O botao de recolher fica no centro (right 50%, translateX 50%). O espaco do marcador da marca usa nbsp (U+00A0) para manter a altura.",
+    "72. RECOLHER PERSISTE NO APARELHO: localStorage 'pf.menuRecolhido' ('1' = recolhido; qualquer outro valor = aberto), lido com try/catch (falha = aberto) e gravado com try/catch (falha silenciosa). E preferencia deste aparelho, nao da conta. No Flutter, use armazenamento local equivalente; nao sincronize com o servidor.",
+    "73. ACESSIBILIDADE DO BOTAO DE RECOLHER: aria-label 'Recolher menu' quando aberto e 'Expandir menu' quando recolhido; aria-expanded = !recolhido; title igual ao aria-label; icone chevron-back (aberto) ou chevron-forward (recolhido). Esses icones sao Ionicons no codigo; use equivalentes no Flutter.",
+    "74. PERFIL NA BARRA: no celular, a quinta aba mostra so o avatar e a palavra 'Perfil' (nome e email display:none). No desktop, 'Perfil' vira sr-only e aparecem nome (600, ink) e email (12px, ink-3), ambos com ellipsis. As duas formas sao de proposito; nao 'consertar' um dos dois.",
+    "75. AVATAR: a inicial e o primeiro code point (runes.first, nao grafema e nao unidade UTF-16) do nome com trim, em maiusculas (tabs.page.ts:118-120). Sem nome, '?'. Em Flutter: converta o primeiro rune de volta para String. characters.first daria outro resultado para emoji composto.",
+    "76. DIVISOR E PERFIL NO RODAPE: ion-tab-bar::after tem margin-top auto e empurra o perfil para baixo. Em janela baixa, o auto vira 0 e o fio fica entre as abas e o perfil. Reproduza com Spacer e divisor de 1px.",
+    "77. ESTADO DAS ABAS: aba selecionada = fundo surface-2; hover (nao selecionada) = fundo surface. Os dois sao so fundo, sem borda.",
+    "78. ORDEM DAS ABAS (tabs.page.ts:53-104): primeira Home (aluno) ou Painel (docente); depois Calendário; Matérias; Meu quadro (aluno) ou Turma (docente); Perfil por ultimo, inclusive no desktop (order 2). Docente nao tem Meu quadro.",
+    "79. TOKENS DO IONIC: o cromo (toolbar, tab bar, item) e PAPER, nao branco nem surface. Texto da tab bar = ink-3; selecionada = accent. Mapeie as cores do cromo para essas, nao para o padrao do Material.",
+    "80. CARGA DOS ESTILOS: angular.json (linhas 34 e 119) carrega src/global.scss e depois src/theme/variables.scss. Os tokens sobrescrevem o dark.system.css do Ionic. No Flutter, defina o ThemeData uma vez, sem camadas.",
+    "81. GRADE DE FUNDO: o .pg com grid de 22px existe SO no design-system-v1.html (documento). O app nao tem grade de fundo. Nao porte.",
+    "82. ACENTO EM USO NAO INTERATIVO: --accent esta no selo da coordenacao (fora da prova), no trilho da aula em andamento e na regua da nota da turma. Pela regra do design ('um unico acento, reservado ao interativo'), e desvio; a decisao esta no codigo. Registre antes de reusar a cor em outro lugar.",
+    "83. CONTRASTE DO ACENTO NA NOTA DA TURMA: --accent claro sobre o papel mede 4,51:1, no limite AA, e a cabeca da nota da turma e texto de 10px nessa cor. Sobre a superficie rule-soft da nota nao medi. Verifique no port.",
+    "84. CONTRASTE DO SELO DA COORDENACAO DENTRO DA PROVA: #5fd3c7 sobre prova-bg claro mede 9,89:1; #0b5f58 sobre prova-bg escuro mede 6,25:1. Os valores do comentario do selo (9,9 e 6,3) conferem.",
+    "85. CONTRASTE DO PROFESSOR NA PROVA: --prova-fg sobre --prova-bg mede 15,58:1 (claro). Nao ha problema de contraste no selo Professor dentro da prova.",
+    "86. AS DUAS VERSOES DO CARTAO DE PROVA: no EventoCard a prova tem titulo 16px peso 700 e fundo; no MiniCard a prova tem titulo 13px peso 500 e fundo. A distincao do MiniCard depende so do fundo solido (em escala de cinza, ainda distingue, que e o teste de aceite)."
+  ],
+  "testes": [
+    "ARQUIVO: app/src/app/shared/design-system.spec.ts (Jasmine + TestBed, rodado pelo Karma em navegador real com getComputedStyle; a regra de caso de teste vale para o port, mas a forma de medir precisa ser traduzida para widget tests do Flutter com asserts em BoxDecoration, TextStyle e Border).",
+    "T1 MateriaChip: com cor '#0369A1' e sigla 'BD', o texto de .chip (trim) e 'BD' e getComputedStyle.backgroundColor e 'rgb(3, 105, 161)'. Traducao: o fundo do container e Color(0xFF0369A1) e o texto e 'BD'.",
+    "T2 MateriaChip: getComputedStyle.color e 'rgb(255, 255, 255)' (uma regra so, sem variante por tema). Traducao: a cor do texto e Colors.white no tema claro e no escuro.",
+    "T3 EventoCard: o fontWeight de .titulo em PROVA e maior que em ENTREGA (700 contra 600). Traducao: TextStyle.fontWeight de prova (w700) > entrega (w600 ou w500 se a fonte nao tiver 600).",
+    "T4 EventoCard: o backgroundColor de .ev em ENTREGA e 'rgba(0, 0, 0, 0)' (transparente), e em PROVA nao e transparente.",
+    "T5 EventoCard: o .glifo de PROVA e de ENTREGA tem borderRadius diferente (prova: 1px; entrega: 50%); o glifo de ENTREGA nao tem fundo; o de PROVA tem fundo.",
+    "T6 EventoCard: o textContent contem 'Prova' em PROVA e 'Entrega' em ENTREGA, mesmo que a palavra nao esteja visivel (texto so para leitor de tela). Traducao: Semantics com label.",
+    "T7 EventoCard sem materia: nao existe app-materia-chip no DOM, e o titulo e o quando continuam no texto ('Prova 2').",
+    "T8 NotaComponent: o textContent contem 'todos veem' em TURMA e 'só você' em PESSOAL (as strings minusculas da fonte).",
+    "T9 NotaComponent: .nota tem borderLeftStyle 'solid' em TURMA e 'dashed' em PESSOAL. Traducao: TURMA = regua solida; PESSOAL = regua tracejada (CustomPainter).",
+    "T10 AulaCardComponent: .sala tem texto 'B-204' (trim) e um svg dentro de .sala (icone de sala aula).",
+    "T11 AulaCardComponent: .aula--agora nao existe por padrao; existe quando agora = true.",
+    "LACUNAS (sem teste hoje no Angular, precisam de teste no port): MiniCardComponent inteiro (tipo, feito, aviso, esmaecer, riscar); MaterialLinhaComponent (autoria, selo, editado por); SeloComponent e prefixoDoSelo (texto 'Professor' e 'Coordenação', prefixo 'Prof. ' e 'Coord. ', vazio para null); prefixo no autor e no editado por; EventoCard com autoriaSelo sem autoria (nada aparece); autoria e editado com string vazia (linha some); rotulo fallback 'prova' e 'entrega' (e a redundancia com o texto oculto); cor do selo na prova (#5fd3c7 e #0b5f58); modo escuro dos tokens; ausencia de sombra; global.scss inteiro (nenhuma classe pf-* ou .botao e testada); layout desktop (>= 768px) e largura da coluna; movimento reduzido; faixa de L* e contraste das 12 hues (verificado nesta leitura por calculo, nao por teste)."
+  ],
+  "nativo": [
+    "Nenhum plugin Capacitor e usado por esta area (shared/, global.scss, variables.scss). Nao ha chamada a recurso nativo.",
+    "Ionic UI estilizado aqui sem componente proprio no shared: ion-tabs.pf-abas, ion-tab-bar, ion-tab-button (com ::part(native)), ion-tab-button ion-label, ion-tab-button ion-icon, ion-content (::part(scroll)), ion-toolbar. O comportamento (navegacao, rotas, recolher) e do TabsPage em tabs.page.ts, que usa ion-tabs e ion-tab-button. No Flutter reimplemente com NavigationBar (celular) e NavigationRail ou um painel proprio (desktop).",
+    "Ionicons usados em tabs.page.ts (fora da area): list-outline, calendar-outline, library-outline, checkbox-outline, grid-outline, people-outline, chevron-back-outline, chevron-forward-outline. Os icones dos componentes (sala, lapis, capelo, escudo) sao SVG inline, nao Ionicons: reproduza os caminhos (armadilha 23).",
+    "localStorage (web) para a preferencia do menu 'pf.menuRecolhido' (tabs.page.ts). No Flutter, preferencia local persistente equivalente, sem envio ao servidor.",
+    "prefers-color-scheme (SO): tema escuro automatico. Flutter: ThemeMode.system e MediaQuery.platformBrightness.",
+    "prefers-reduced-motion (SO): zera transicoes e animacoes. Flutter: MediaQuery.disableAnimations; manter a escala do recuo do toque.",
+    "Recursos exclusivos da web, sem equivalente e que nao devem ser portados: touch-action: manipulation (botoes e ion-tab-button); -webkit-tap-highlight-color: transparent (o Flutter nao tem realce do navegador); -webkit-font-smoothing: antialiased (so no v1); scroll-behavior: auto; max(16px, 1em) em input/textarea/select (zoom automatico do Safari no iOS; no Flutter manter fonte de campo >= 16 sem depender disso); clip / clip-path / position absolute de sr-only (vira Semantics no Flutter); :focus-visible e :hover sao web, mas o Flutter tem Focus e MouseRegion equivalentes para o teclado e o ponteiro."
+  ]
+}

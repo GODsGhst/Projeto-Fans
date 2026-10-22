@@ -1,0 +1,591 @@
+{
+  "unidade": "materias — app/features/materias/* (materias.page, materia.page, nova-materia.page, novo-material.page, editar-material.page, resumo.page) + app/data/materia.repository.ts (e o que importam de core/, data/, shared/, features/material-vm.ts, features/evento-vm.ts, features/auth/erro.ts, features/auth/espera.ts). Base da API: dev http://localhost:8080/api/v1 ; prod https://projetofans-api.onrender.com/api/v1",
+  "telas": [
+    {
+      "rota": "/tabs/materias",
+      "arquivo": "app/src/app/features/materias/materias.page.ts",
+      "proposito": "Aba Matérias: hub por disciplina. Lista as matérias da turma (ordem do servidor) e é a porta para a tela de cada matéria e para cadastrar uma nova. Três estados que não podem se parecer: carregando, falhou, vazio.",
+      "estados": [
+        "CARREGANDO: repo.carregando()==true -> aviso tracejado (.pf-aviso) 'Carregando…'. A lista NÃO é escondida: se havia matérias em memória (carga anterior) ou vindas do disco (aquecerDoDisco), elas aparecem abaixo do aviso ao mesmo tempo. Estado vazio NUNCA aparece enquanto carrega.",
+        "ERRO: !carregando && erro()!=null -> aviso tracejado (.pf-aviso) com o texto do erro (ex.: 'Sem conexão.'). A lista anterior/cache continua visível abaixo. Estado vazio NÃO aparece (falha != 'não há matérias').",
+        "VAZIO: vazia = !carregando && erro==null && materias.length==0 -> bloco .pf-vazio com <b>'Nenhuma matéria cadastrada.'</b> e <span>'Matéria é o que organiza material e prova. Qualquer pessoa da turma pode adicionar.'</span>. Sem aviso .pf-aviso.",
+        "CONTEÚDO: uma linha por matéria (chip cor+sigla + nome), na ordem que veio do servidor (servidor ordena por sigla ASC). Sem aviso."
+      ],
+      "elementos": [
+        "Cabeçalho (ion-toolbar, translucent): título = turmaAtiva.nome() ?? 'Matérias' (docente com várias turmas vê o NOME DA TURMA ATIVA; aluno vê 'Matérias'). Sem botão voltar (é raiz de aba).",
+        "Link-botão primário (.botao, largura total) com texto 'Adicionar matéria' -> /tabs/materias/nova. Fica FORA de qualquer @if: aparece sempre, com lista cheia, vazia, carregando ou com erro.",
+        "Se carregando: <p class='pf-aviso'>'Carregando…'</p> ; senão, se erro: <p class='pf-aviso'>{erro}</p>",
+        "Para cada matéria (track m.id), link para /tabs/materias/{m.id} contendo: MateriaChip(cor=m.corHex, sigla=m.sigla) + <span class='nome'>{m.nome}</span> (14px, quebra palavra longa). Linha com borda inferior 1px (--rule), gap 9px.",
+        "Se vazia(): bloco .pf-vazio: <b>'Nenhuma matéria cadastrada.'</b> + <span>'Matéria é o que organiza material e prova. Qualquer pessoa da turma pode adicionar.'</span>"
+      ],
+      "acoes": [
+        "Entrar na aba (ionViewWillEnter — TODA vez que a aba aparece, inclusive a primeira; NÃO no construtor) -> repo.carregar() -> GET /materias. A promessa rejeitada é capturada só com console.error('[materias] falha ao carregar as matérias', e); a tela mostra o erro pelo signal do repositório.",
+        "Tocar 'Adicionar matéria' -> navega para /tabs/materias/nova.",
+        "Tocar uma linha -> navega para /tabs/materias/{id}."
+      ],
+      "navegacao": [
+        "-> /tabs/materias/nova (NovaMateriaPage, modo criar)",
+        "-> /tabs/materias/{id} (MateriaPage)"
+      ]
+    },
+    {
+      "rota": "/tabs/materias/:id",
+      "arquivo": "app/src/app/features/materias/materia.page.ts",
+      "proposito": "Tela de uma matéria: sala/professor, material de AULA e material ADICIONAL em seções separadas (R4), eventos da matéria, e as ações de moderação (ocultar material, com desfazer de 8 s) e de líder (editar/apagar a matéria). Renderiza na ordem do servidor; não ordena, não filtra, não corta (R14: oculto já não chega).",
+      "estados": [
+        "CARREGANDO (só na 1a carga): signal carregando começa true -> <p class='pf-aviso'>'Carregando…'</p>. Ele vira false após a primeira resposta (sucesso ou erro) e NUNCA volta a true nas recargas seguintes (reentrada, pós-ocultar, pós-desfazer): recarga é silenciosa.",
+        "ERRO: <p class='pf-aviso'>{erro}</p> (ex.: 'Sem conexão.'). erro só é limpo quando uma carga dá certo. Se já havia detalhe carregado antes, ele CONTINUA na tela junto do aviso (inclusive os botões de líder, porque carregada()=detalhe!=null). Na 1a carga com falha não há detalhe: não aparece estado vazio, nem Editar/Apagar matéria, título fica 'Matéria'. O link 'Adicionar material' aparece mesmo assim.",
+        "VAZIO: vazia = !carregando && erro==null && aula.length==0 && adicionais.length==0 && eventos.length==0 -> .pf-vazio <b>'Nada nesta matéria ainda.'</b> + <span>'Material e prova aparecem aqui assim que alguém da turma adicionar.'</span>",
+        "CONTEÚDO: seções 'material de aula', 'material adicional', 'eventos' — cada seção só existe se a lista dela não for vazia.",
+        "JANELA DE DESFAZER aberta (8 s após ocultar com sucesso): aviso 'Ocultado.' + botão 'Desfazer'.",
+        "CONFIRMANDO OCULTAR (um material por vez), CONFIRMANDO APAGAR MATÉRIA, OCULTANDO/DESFAZENDO/APAGANDO (botões desabilitados com rótulo em gerúndio)."
+      ],
+      "elementos": [
+        "Cabeçalho: botão voltar (ion-back-button, defaultHref '/tabs/materias' — usado só se não houver histórico) + título = detalhe.materia.nome ?? 'Matéria'.",
+        "1) Se carregando: <p class='pf-aviso'>'Carregando…'</p> ; senão se erro: <p class='pf-aviso'>{erro}</p>",
+        "2) Se janela.aberta() E ocultadoAgora() != null: <div class='alerta alerta--desfazer' role='status'> com <span>'Ocultado.'</span> e botão pílula de contorno com texto 'Desfazer' (ou 'Desfazendo…' enquanto desfazendo; desabilitado enquanto desfazendo). Logo abaixo, se erroDoDesfazer: <p class='pf-erro' role='alert'>{erro}</p>.",
+        "3) Se ondeEQuem não vazio: <p class='onde-e-quem'>{sala} · {professor}</p> — junta só os que existem com ' · ' (ex.: 'B-204 · prof. Marcos', ou só 'B-204'); se nenhum dos dois, a linha NÃO é renderizada.",
+        "4) Link-botão primário (.botao) 'Adicionar material' -> /tabs/materias/{id-da-rota}/material/novo. SEMPRE presente (fora dos @if), mesmo com erro ou vazio.",
+        "5) Se aula().length>0: rótulo de seção <p class='pf-rotulo'>'material de aula'</p> (CSS: mono 11px, text-transform uppercase -> aparece 'MATERIAL DE AULA', com um fio horizontal à direita). Para cada material (ordem do servidor):",
+        "5a) Se m.url (só http/https, ver materialVm): <a class='abrir' href={url} target='_blank' rel='noopener noreferrer'> envolvendo MaterialLinha(tipo=rótulo de formato, titulo, autoria, autoriaSelo, editadoPor, editadoPorSelo) — o toque na linha inteira abre o arquivo FORA do app. Em seguida <span class='linha-meta'>: se m.daAula -> <span class='da-aula'>'aula de {d} {mes}'</span> (ex.: 'aula de 2 set'); se (m.autorId == meuId OU alcanca()) -> link <a class='editar'>'editar'</a> -> /tabs/materiais/{m.id}/editar; SEMPRE (qualquer membro) link <a class='editar'>{m.temResumo ? 'resumo ✓' : 'resumo'}</a> -> /tabs/materiais/{m.id}/resumo. Links de 11px, peso 600, cor accent.",
+        "5b) Se m.url == null: só MaterialLinha, sem link de abrir, SEM linha-meta (sem 'aula de', sem 'editar', sem 'resumo').",
+        "5c) Depois de cada material (com ou sem url): bloco de moderação. Só se (souLider() OU alcanca()) E m.autorId != meuId(): se confirmandoOcultar()==m.id -> <p class='alerta' role='status'>'Ocultar <b>{m.titulo}</b> da turma? Fica registrado com o seu nome, e quem criou continua vendo em \"não listados\".'</p>; se erroDaModeracao -> <p class='pf-erro' role='alert'>{erro}</p>; linha com dois botões pílula de contorno: 'Ocultar da turma' ('Ocultando…' enquanto moderando; desabilitado enquanto moderando) e 'Cancelar' (desabilitado enquanto moderando). Senão -> botão pílula pequeno, alinhado à esquerda (12px, padding 5x10) 'Ocultar'.",
+        "6) Se adicionais().length>0: rótulo 'material adicional' (aparece 'MATERIAL ADICIONAL') e as mesmas linhas de 5a/5b/5c (MaterialLinha com classe 'adicional' em vez de 'aula').",
+        "7) Se eventos().length>0: rótulo 'eventos' (aparece 'EVENTOS'); para cada evento, link (.ir) para /tabs/eventos/{e.id} envolvendo EventoCard(tipo, dia, mes, quando, titulo, materia={sigla, cor} [o chip É mostrado aqui], autoria, autoriaSelo, editadoPor, editadoPorSelo). A sala do evento NÃO é mostrada no card.",
+        "8) Se vazia(): .pf-vazio <b>'Nada nesta matéria ainda.'</b> + <span>'Material e prova aparecem aqui assim que alguém da turma adicionar.'</span>",
+        "9) Só se souLider() E carregada() (detalhe != null): link-botão fantasma (.botao.botao--fantasma) 'Editar matéria' -> /tabs/materias/{id}/editar. Depois: se confirmandoApagar -> <p class='alerta' role='status'>'Apagar <b>{nome}</b> da turma? Não tem volta. Só dá para apagar matéria sem provas nem materiais.'</p>; se erroDeApagar -> <p class='pf-erro' role='alert'>{erro}</p>; dois botões pílula de contorno: 'Apagar matéria' ('Apagando…' enquanto apagando; desabilitado enquanto apagando) e 'Cancelar' (desabilitado enquanto apagando). Senão -> botão fantasma (largura total) 'Apagar matéria'.",
+        "MaterialLinha (shared, não alterar): coluna fixa de 42px com o rótulo de formato em mono 10px uppercase (PDF/JPG/LINK…), e corpo: título (13px) ; linha de autoria '{prefixo}{autoria}' + Selo se houver (prefixo 'Prof. ' para PROFESSOR, 'Coord. ' para COORDENACAO, '' sem selo; autoria = 'Nome · há 5 h'); se editadoPor: linha 'editado por {prefixo do selo do editor}{nome}' + Selo.",
+        "EventoCard (shared): prova = bloco sólido (fundo --prova-bg, título 700, glifo cheio quadrado); entrega = contorno 1px, sem fundo, título 600, glifo vazado redondo. Coluna da data: dia (20px bold) e mês abreviado mono uppercase. Topo: chip da matéria + texto 'quando' (hora 'HH:mm' ou 'prova'/'entrega'), com texto só para leitor de tela 'Prova —' / 'Entrega —'. Rodapé: '{prefixo}{autoria}' + Selo; se editadoPor: ícone de lápis + 'editado por {prefixo}{nome}' + Selo."
+      ],
+      "acoes": [
+        "Construção: id = parâmetro 'id' da rota (snapshot; '' se ausente). Dispara turmas.garantirCarregada() (GET /turmas/minha só se a turma ainda não estiver em memória) — souLider/alcanca ficam false até chegar.",
+        "Entrar na tela (ionViewWillEnter — TODA entrada, inclusive a 1a e a volta de 'Editar matéria'/'Adicionar material'/'editar material'): carregar(id) -> GET /materias/{id}. Sucesso: detalhe=resposta, erro=null. Falha: erro = e.message (ErroApi já traduzida) ou 'Não deu para carregar a matéria.'. finally: carregando=false.",
+        "Tocar linha de material com url -> abre a URL no navegador do sistema (fora do app).",
+        "Tocar 'editar' -> /tabs/materiais/{materialId}/editar. Tocar 'resumo'/'resumo ✓' -> /tabs/materiais/{materialId}/resumo.",
+        "Tocar 'Ocultar' -> erroDaModeracao=null; confirmandoOcultar=materialId (só um aberto por vez; abrir outro fecha o anterior). Nenhuma chamada HTTP.",
+        "Tocar 'Cancelar' (ocultar) -> confirmandoOcultar=null (não limpa erroDaModeracao, mas ele só aparece dentro do bloco de confirmação).",
+        "Tocar 'Ocultar da turma' -> se moderando, ignora. moderando=true, erroDaModeracao=null; POST /moderacao/material/{id}/ocultar com corpo {\"motivo\":null}. Sucesso: confirmandoOcultar=null; ocultadoAgora=id; erroDoDesfazer=null; janela.abrir() (8 s, reinicia o relógio se já aberta); depois await carregar(id) (recarrega do servidor em vez de filtrar localmente). Falha: erroDaModeracao=mensagemDeErro(e) e a confirmação fica aberta (material continua na lista). finally moderando=false.",
+        "Tocar 'Desfazer' -> se desfazendo OU moderando, ignora. desfazendo=true, erroDoDesfazer=null; POST /moderacao/material/{id}/reexibir (corpo {}). Sucesso: janela.fechar() e await carregar(id). Falha: erroDoDesfazer=mensagemDeErro(e), janela continua aberta (pode tentar de novo enquanto o relógio não fecha). finally desfazendo=false.",
+        "Janela fecha sozinha exatamente 8000 ms após abrir (7999 ms ainda aberta); também fecha ao destruir a tela.",
+        "Tocar 'Editar matéria' -> /tabs/materias/{id}/editar.",
+        "Tocar 'Apagar matéria' (gatilho) -> erroDeApagar=null; confirmandoApagar=true. Nenhuma chamada.",
+        "Tocar 'Cancelar' (apagar) -> confirmandoApagar=false.",
+        "Tocar 'Apagar matéria' (confirmação — MESMO rótulo do gatilho) -> se apagando, ignora. apagando=true, erroDeApagar=null; DELETE /materias/{id} (sem If-Match). Falha: erroDeApagar=mensagemDeErro(e) (ex.: 409 'Mova ou apague as provas e materiais antes'), confirmação fica aberta, NÃO navega. Sucesso: await materiaRepo.carregar() (GET /materias; falha só vira console.error, o erro fica no repo e a aba mostra) e só ENTÃO navigateByUrl('/tabs/materias')."
+      ],
+      "navegacao": [
+        "<- voltar: pilha; sem histórico -> /tabs/materias",
+        "-> /tabs/materias/{id}/material/novo",
+        "-> /tabs/materiais/{materialId}/editar",
+        "-> /tabs/materiais/{materialId}/resumo",
+        "-> /tabs/eventos/{eventoId} (fora desta área)",
+        "-> /tabs/materias/{id}/editar",
+        "-> URL externa do material (navegador do sistema)",
+        "-> /tabs/materias após apagar a matéria"
+      ]
+    },
+    {
+      "rota": "/tabs/materias/nova (criar) e /tabs/materias/:id/editar (editar; mesma página, o id liga o modo)",
+      "arquivo": "app/src/app/features/materias/nova-materia.page.ts",
+      "proposito": "Cadastrar matéria (qualquer membro, sem aprovação) e, com id na rota, editar a matéria (só o líder; o servidor decide). Mesmo formulário, mesma paleta de 12 cores, mesma validação. Sugere os PROFESSORES da turma para ligar a conta à matéria.",
+      "estados": [
+        "CRIAR: pronto desde o início; campos vazios; cor = PALETA[0] '#1D4ED8'; prévia do chip com 'SIGLA'.",
+        "EDITAR carregando: formulário NÃO aparece até a matéria chegar (PATCH substitui tudo; salvar em branco apagaria). Mostra <p class='pf-aviso'>'Carregando…'</p> (só se erro==null).",
+        "EDITAR erro ao ler: <p class='pf-erro' role='alert'>{mensagemDeErro}</p> e NENHUM formulário (nem 'Carregando…').",
+        "EDITAR pronto: campos preenchidos com nome, sigla, sala ?? '', professor ?? ''; cor marcada = corHex da matéria; prévia = sigla da matéria.",
+        "ENVIANDO: botão desabilitado; rótulo 'Criando…'/'Salvando…'; após 4 s ainda esperando: 'Acordando o servidor…'.",
+        "ERRO de validação ou do servidor: <p class='pf-erro' role='alert'> no topo, formulário continua."
+      ],
+      "elementos": [
+        "Cabeçalho: botão voltar (defaultHref: editar -> '/tabs/materias/{id}'; criar -> '/tabs/materias') + título 'Editar matéria' (editar) ou 'Nova matéria' (criar).",
+        "Container .pf-auth (coluna, gap 10px, padding 12/16/24).",
+        "1) Se erro: <p class='pf-erro' role='alert'>{erro}</p>",
+        "2) Se pronto (bloco do formulário):",
+        "rótulo <p class='rot-campo'>'nome'</p> (12.5px, peso 600, cor ink-3, minúsculo mesmo); campo texto maxlength 80, placeholder 'Banco de Dados', aria-label 'Nome da matéria', valor inicial = nome original ou ''.",
+        "rótulo 'sigla'; campo texto maxlength 12, autocapitalize 'characters', exibido em CAIXA ALTA (CSS), placeholder 'BD', aria-label 'Sigla'; a cada digitação: previa = valor.trim().toUpperCase() || 'SIGLA'.",
+        "rótulo 'sala' + <span class='opcional'>'— opcional'</span> (texto completo 'sala — opcional'); campo texto name 'sala', maxlength 40, placeholder 'B-204', aria-label 'Sala habitual'.",
+        "rótulo 'professor — opcional'; campo texto name 'professor', maxlength 80, placeholder 'prof. Marcos', aria-label 'Professor'; a cada digitação do usuário: aoDigitarProfessor(valor).",
+        "Se professoresDaTurma não vazio: rótulo 'professores desta turma' e grupo (role=group, aria-label 'Professores desta turma') de botões-pílula (min-height 36, borda 1px, 13px) com o nome de cada professor; aria-pressed=true no escolhido (anel 2px paper + 4px ink e peso 600 — não só cor).",
+        "Se professorEscolhido: <p class='pf-cache-aviso'>'{nome} fica ligado a esta matéria: ela aparece no painel dele, e com a conta aprovada ele corrige e oculta aqui.'</p>",
+        "<p class='pf-cache-aviso'>'A sala aqui é a de sempre. Quando uma prova cair em outra sala, dá para dizer isso na própria prova — sem mexer na matéria.'</p>",
+        "rótulo 'cor'; grade (role=group, aria-label 'Cor da matéria') de 6 colunas x 2 linhas, gap 8, com 12 quadrados (aspect 1:1, raio --r-sm) na ordem da PALETA, fundo = hex, aria-label = nome da cor, data-cor = hex, aria-pressed = (cor()==hex). Selecionado ganha ANEL (box-shadow 0 0 0 2px paper, 0 0 0 4px ink), não brilho. Pressionar encolhe (scale).",
+        "Prévia: MateriaChip(cor=cor(), sigla=previa()) + <span>'é assim que ela vai aparecer'</span> (12.5px ink-3).",
+        "<p class='alerta'>'As 12 cores foram medidas para dar contraste suficiente com o texto branco do chip. Por isso a escolha é entre elas, e não livre.'</p>",
+        "Botão primário (.botao, largura total), desabilitado enquanto enviando, texto rotuloDoBotao: parado -> 'Salvar' (editar) / 'Criar matéria' (criar); enviando e >4 s -> 'Acordando o servidor…'; enviando -> 'Salvando…' / 'Criando…'.",
+        "3) Senão, se erro==null: <p class='pf-aviso'>'Carregando…'</p>",
+        "PALETA (ordem e nomes exatos): #1D4ED8 'azul'; #0369A1 'azul-petróleo'; #0F766E 'verde-azulado'; #15803D 'verde'; #4D7C0F 'oliva'; #A16207 'âmbar'; #B45309 'laranja-queimado'; #C2410C 'laranja'; #B91C1C 'vermelho'; #BE185D 'rosa'; #A21CAF 'magenta'; #6D28D9 'violeta'."
+      ],
+      "acoes": [
+        "Construção: turmas.garantirCarregada() (GET /turmas/minha se a turma não estiver em memória; falha é ignorada — só não há sugestões). Se editando: GET /materias/{id} -> original=materia; cor=materia.corHex; previa=materia.sigla. Falha -> erro=mensagemDeErro(e) (formulário nunca aparece).",
+        "professoresDaTurma = turma.membros filtrados por papel=='PROFESSOR', ordenados por nome com localeCompare 'pt-BR' (ALUNO, LIDER, COORDENADOR excluídos).",
+        "Tocar um quadrado de cor -> cor=hex (só um marcado por vez).",
+        "Tocar professor NÃO escolhido -> professorEscolhido={usuarioId, nome}; campo professor recebe exatamente o nome (troca programática, não conta como digitação).",
+        "Tocar o professor JÁ escolhido -> professorEscolhido=null; se campo.trim()==p.nome, o campo é limpo; se o usuário tinha digitado outra coisa, o texto fica.",
+        "Digitar no campo professor -> se há escolhido e texto.trim() != escolhido.nome -> professorEscolhido=null (aviso 'fica ligado' some, aria-pressed volta a false).",
+        "Tocar o botão -> salvar(nome,sigla,sala,professor) lendo os valores atuais dos campos: se enviando, ignora. limpo={nome: nome.trim(), sigla: sigla.trim().toUpperCase()}. Se nome ou sigla vazios -> erro 'Preencha o nome e a sigla da matéria.' e NENHUMA requisição. Senão: enviando=true, erro=null, espera.comecar(); corpo = {nome, sigla, corHex: cor(), sala: sala.trim()==''?null:sala.trim(), professor: professor.trim()==''?null:professor.trim(), professorId: (escolhido!=null && professor.trim()==escolhido.nome) ? escolhido.usuarioId : null}. Editar -> PATCH /materias/{id} (SEM If-Match); criar -> POST /materias. Falha -> erro=mensagemDeErro(e) e FICA no formulário. finally: enviando=false, espera.terminar().",
+        "Após sucesso: await materiaRepo.carregar() (GET /materias; falha só console.error('[nova-materia] falha ao recarregar as materias', e) — não volta para o formulário) e então navigateByUrl(voltarPara): criar -> '/tabs/materias' (a LISTA, não a matéria criada); editar -> '/tabs/materias/{id}'."
+      ],
+      "navegacao": [
+        "<- voltar: pilha; sem histórico -> /tabs/materias (criar) ou /tabs/materias/{id} (editar)",
+        "-> /tabs/materias após criar",
+        "-> /tabs/materias/{id} após editar"
+      ]
+    },
+    {
+      "rota": "/tabs/materias/:id/material/novo",
+      "arquivo": "app/src/app/features/materias/novo-material.page.ts",
+      "proposito": "Adicionar material (link) a uma matéria. A matéria vem da rota (sem seletor). É LINK, não arquivo: url obrigatória (arquivoRef continua nulo).",
+      "estados": [
+        "FORMULÁRIO: tipo 'AULA' marcado por padrão, campos vazios.",
+        "ENVIANDO: botão desabilitado com 'Adicionando…'; >4 s: 'Acordando o servidor…'.",
+        "ERRO (validação local ou servidor): <p class='pf-erro' role='alert'> no topo; continua na tela."
+      ],
+      "elementos": [
+        "Cabeçalho: voltar (defaultHref '/tabs/materias/{materiaId}') + título 'Adicionar material'.",
+        "Container .pf-auth.",
+        "Se erro: <p class='pf-erro' role='alert'>{erro}</p>",
+        "rótulo 'tipo'; grupo segmentado (role=group, aria-label 'Tipo de material') com dois botões: 'De aula' (data-tipo AULA) e 'Adicional' (data-tipo ADICIONAL); aria-pressed no escolhido. Padrão: AULA.",
+        "rótulo 'o que é'; campo texto name 'titulo', maxlength 120, placeholder 'Slides da aula 3', aria-label 'Título do material'.",
+        "rótulo 'link'; campo type url, name 'url', inputmode url, autocapitalize off, placeholder 'https://…', aria-label 'Link do material'.",
+        "rótulo 'de que aula — opcional'; campo de data (type date, AAAA-MM-DD), name 'dataAula', aria-label 'Data da aula'.",
+        "<p class='alerta'>'Cole o endereço de onde o material está — Drive, Classroom, site da matéria. Enviar o arquivo direto do celular ainda não dá; por enquanto é o link.'</p>",
+        "Botão primário largura total, desabilitado enquanto enviando: 'Adicionar material' / 'Adicionando…' / 'Acordando o servidor…'."
+      ],
+      "acoes": [
+        "materiaId = parâmetro 'id' da rota (?? '').",
+        "Tocar 'De aula'/'Adicional' -> tipo='AULA'/'ADICIONAL'.",
+        "Tocar o botão -> adicionar(titulo, url, dataAula): se enviando, ignora. limpo=url.trim(). Se titulo.trim()=='' ou limpo=='' -> erro 'Preencha o que é e o link do material.' (sem requisição). Se limpo não casa /^https?:\\/\\/\\S+$/i -> erro 'O link precisa começar com http:// ou https://' (sem requisição). Senão enviando=true, erro=null, espera.comecar(); POST /materiais {materiaId, tipo, titulo: titulo.trim(), url: limpo, dataAula: dataAula=='' ? null : dataAula}. Falha -> erro=mensagemDeErro(e), fica na tela. finally enviando=false, espera.terminar(). Sucesso -> navigateByUrl('/tabs/materias/{materiaId}') SEM recarregar nada aqui (a tela da matéria recarrega ao reentrar)."
+      ],
+      "navegacao": [
+        "<- voltar: pilha; sem histórico -> /tabs/materias/{materiaId}",
+        "-> /tabs/materias/{materiaId} após adicionar (volta à tela da matéria já existente na pilha, que recarrega no ionViewWillEnter)"
+      ]
+    },
+    {
+      "rota": "/tabs/materiais/:id/editar",
+      "arquivo": "app/src/app/features/materias/editar-material.page.ts",
+      "proposito": "Editar (autor, ou docente que alcança a matéria) e apagar (SÓ o autor) um material. Abre preenchido porque o PATCH substitui o objeto inteiro (A13).",
+      "estados": [
+        "CARREGANDO: <p class='pf-aviso'>'Carregando…'</p> (carregando começa true; vira false após a resposta).",
+        "ERRO: <p class='pf-erro' role='alert'>{erro}</p> — carregando e erro são @if independentes (não else-if). Erro ao ler: sem material, só a mensagem.",
+        "NÃO É SEU (material carregado e !podeEditar): .pf-vazio <b>'Este material não é seu.'</b> + <span>'Editar e apagar é de quem criou — aqui, {autorNome}. Se estiver errado, fale com quem cadastrou; se for impróprio, o líder pode ocultar.'</span>. Sem campos, sem Salvar, sem Apagar.",
+        "EDITANDO como autor: formulário + Salvar + Apagar.",
+        "EDITANDO como docente com alcance (não autor): aviso de correção + formulário + Salvar; SEM Apagar.",
+        "CONFIRMANDO APAGAR (autor): aviso + 'Sim, apagar' + 'Cancelar'.",
+        "ENVIANDO: 'Salvando…' / 'Acordando o servidor…' (>4 s); 'Sim, apagar' desabilitado."
+      ],
+      "elementos": [
+        "Cabeçalho: voltar (defaultHref: material null -> '/tabs/materias'; senão '/tabs/materias/{materiaId}') + título 'Editar material'.",
+        "Se carregando: <p class='pf-aviso'>'Carregando…'</p>",
+        "Se erro: <p class='pf-erro' role='alert'>{erro}</p>",
+        "Se material e !podeEditar: bloco .pf-vazio descrito em estados.",
+        "Se material e podeEditar:",
+        "  Se !souAutor: <p class='alerta'>'Você está corrigindo um material de <b>{autorNome}</b>. A autoria continua sendo de quem postou; o material passa a mostrar “editado por” com o seu nome.'</p> (aspas curvas “ ”).",
+        "  rótulo 'tipo'; grupo segmentado (aria-label 'Tipo de material'): 'De aula' / 'Adicional' (aria-pressed), valor inicial = m.tipo.",
+        "  rótulo 'o que é'; campo texto name 'titulo', maxlength 120, aria-label 'Título do material', valor inicial m.titulo (sem placeholder).",
+        "  rótulo 'link'; campo url name 'url', inputmode url, autocapitalize off, aria-label 'Link do material', valor inicial m.url ?? ''.",
+        "  rótulo 'de que aula — opcional'; campo date name 'dataAula', aria-label 'Data da aula', valor inicial m.dataAula ?? ''.",
+        "  Botão primário 'Salvar' / 'Salvando…' / 'Acordando o servidor…' (desabilitado enquanto enviando).",
+        "  Só se souAutor: se confirmando -> <p class='alerta'>'Apagar mesmo? Some da matéria e das provas em que está anexado.'</p> + botão fantasma 'Sim, apagar' (desabilitado enquanto enviando) + botão fantasma 'Cancelar'; senão botão fantasma 'Apagar'."
+      ],
+      "acoes": [
+        "Construção (uma vez, NÃO a cada entrada): GET /materiais/{id} -> material=m; tipo=m.tipo; se !souAutor -> turmas.garantirCarregada() SEM await (GET /turmas/minha; o autor NUNCA pergunta a turma). Falha -> erro=mensagemDeErro(e). finally carregando=false.",
+        "souAutor = material!=null && usuario!=null && m.autoria.autorId == usuario.id.",
+        "podeEditar = souAutor || turmas.alcanca(m.materiaId) (TURMA -> sim; MATERIAS -> se materiaIds contém; senão não). Líder sem alcance NÃO edita.",
+        "Tocar 'De aula'/'Adicional' -> tipo.",
+        "Tocar 'Salvar' -> se material null ou enviando, ignora. Mesmas validações de novo-material: vazio -> 'Preencha o que é e o link do material.'; regex -> 'O link precisa começar com http:// ou https://'. Senão enviando=true, erro=null, espera.comecar(); PATCH /materiais/{id} com If-Match: '{version}' e corpo COMPLETO {materiaId: m.materiaId (nunca muda), tipo, titulo: trim, url: trim, dataAula: ''->null}. Falha -> erro=mensagemDeErro(e), fica. Sucesso -> navigateByUrl('/tabs/materias/{materiaId}').",
+        "Tocar 'Apagar' -> confirmando=true (sem requisição).",
+        "Tocar 'Cancelar' -> confirmando=false.",
+        "Tocar 'Sim, apagar' -> se material null ou enviando, ignora. enviando=true, erro=null; DELETE /materiais/{id} com If-Match: '{version}'. Falha -> erro=mensagemDeErro(e) E confirmando=false. finally enviando=false. Sucesso -> navigateByUrl('/tabs/materias/{materiaId}')."
+      ],
+      "navegacao": [
+        "<- voltar: pilha; sem histórico -> /tabs/materias/{materiaId} (ou /tabs/materias se não carregou)",
+        "-> /tabs/materias/{materiaId} após salvar ou apagar",
+        "Também é aberta a partir de /tabs/quadro (outra aba), não só da tela da matéria"
+      ]
+    },
+    {
+      "rota": "/tabs/materiais/:id/resumo",
+      "arquivo": "app/src/app/features/materias/resumo.page.ts",
+      "proposito": "Resumo por IA de um material, compartilhado pela turma (gravado no material). Abrir a tela NUNCA gera nada; gerar/refazer é ação explícita e usa a chave de IA guardada só neste aparelho, enviada em header. ATENÇÃO: 'Resumo por IA' está na lista 'Proibido implementar' do AGENTS.md, mas existe no código — decisão humana se entra no port.",
+      "estados": [
+        "CARREGANDO: <p class='pf-aviso'>'Carregando…'</p> até material E chave lidos (Promise.all).",
+        "ERRO: <p class='pf-erro' role='alert'>{erro}</p> (independente do carregando; ao gerar com falha, o material continua na tela e o botão volta a 'Gerar resumo'/'Refazer o resumo').",
+        "SEM RESUMO: texto 'Ainda não tem resumo. Gerar usa a chave que está neste aparelho.' + botão 'Gerar resumo'.",
+        "COM RESUMO: 'Resumo escrito por IA em {data}.' + texto do resumo + botão 'Refazer o resumo' + aviso de IA.",
+        "SEM CHAVE: aviso + link 'Ir para Ajustes' no lugar do botão.",
+        "GERANDO: botão desabilitado 'Lendo o arquivo… isso demora'."
+      ],
+      "elementos": [
+        "Cabeçalho: voltar (defaultHref: material null -> '/tabs/materias'; senão '/tabs/materias/{materiaId}') + título 'Resumo'.",
+        "Se carregando: <p class='pf-aviso'>'Carregando…'</p>",
+        "Se erro: <p class='pf-erro' role='alert'>{erro}</p>",
+        "Se material: div.marca com <b>{m.titulo}</b> (26px bold) e <span>: se m.resumoEm -> 'Resumo escrito por IA em {quando(resumoEm)}.' ; senão 'Ainda não tem resumo. Gerar usa a chave que está neste aparelho.'",
+        "Se m.resumo (truthy): <p class='texto-resumo'>{resumo}</p> (white-space pre-wrap, 15px, line-height 1.55).",
+        "Se semChave: <p class='alerta'>'Este aparelho não tem chave de IA. Cole a sua em Ajustes — ela fica só aqui.'</p> + link-botão fantasma 'Ir para Ajustes' -> /tabs/ajustes. Senão: botão primário (desabilitado enquanto gerando) com rótulo: gerando -> 'Lendo o arquivo… isso demora'; m.resumo truthy -> 'Refazer o resumo'; senão 'Gerar resumo'.",
+        "Se m.resumo (truthy): <p class='alerta'>'Isto foi escrito por uma IA a partir do arquivo do link. Confira antes de estudar só por ele.'</p>",
+        "quando(iso) = new Date(iso).toLocaleDateString('pt-BR', {day:'2-digit', month:'short'}) no fuso local (ex.: '03 de set.' no ICU pt-BR)."
+      ],
+      "acoes": [
+        "Construção (uma vez): Promise.all([GET /materiais/{id}, chaveIa.ler()]) -> material; semChave = (chave==''). Falha -> erro=mensagemDeErro(e). finally carregando=false. NENHUM POST de resumo na abertura.",
+        "Tocar 'Gerar resumo'/'Refazer o resumo' -> gerar(refazer = m.resumo !== null && m.resumo !== undefined): se gerando, ignora. chave = await chaveIa.ler() (assíncrono: o POST sai depois do clique). Se chave=='' -> semChave=true e para. Senão gerando=true, erro=null; POST /materiais/{id}/resumo (+ '?refazer=true' quando refazer) com header X-IA-Key: {chave} e corpo {} (chave NUNCA no corpo). Sucesso -> material = resposta (texto aparece). Falha -> erro=mensagemDeErro(e). finally gerando=false.",
+        "Tocar 'Ir para Ajustes' -> /tabs/ajustes."
+      ],
+      "navegacao": [
+        "<- voltar: pilha; sem histórico -> /tabs/materias/{materiaId} ou /tabs/materias",
+        "-> /tabs/ajustes"
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/materias",
+      "quando": "MateriaRepository.carregar(): toda entrada na aba Matérias; após criar/editar matéria (antes de navegar); após apagar matéria (antes de navegar). Também usado por novo-evento e turma (outras áreas) via o mesmo repositório singleton.",
+      "corpo": "nenhum",
+      "resposta": "200: Materia[] — [{id: uuid, nome: string, sigla: string, corHex: string ('#RRGGBB' maiúsculo, uma das 12), sala?: string, professor?: string}] ordenado pelo servidor por sigla ASC. Campos nulos OMITIDOS do JSON.",
+      "headers": "Authorization: Bearer <jwt>; X-Turma-Id: <turma ativa> só se a conta for docente (tipoConta != ALUNO) e a URL for da API (espera a leitura do disco da turma ativa). Sem If-Match.",
+      "erros": "Qualquer erro -> repo.erro = ErroApi.message e a promessa é RELANÇADA (lista anterior/cache permanece; nunca vira lista vazia). Mensagens do interceptor: status 0 'Sem conexão.'; 401 detail ?? 'Sua sessão expirou. Entre de novo.' + encerra sessão + vai a /login; 404 com codigo 'SEM_TURMA' -> esquece a turma e vai a /entrar-turma; >=500 'Deu problema no servidor. Tente de novo.' (ignora detail); timeout 75 s 'O servidor demorou demais para responder. Tente de novo.'"
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/materias/{id}",
+      "quando": "MateriaPage: a cada entrada (ionViewWillEnter), após ocultar com sucesso, após desfazer com sucesso. NovaMateriaPage em modo editar: uma vez ao abrir (só usa .materia).",
+      "corpo": "nenhum",
+      "resposta": "200: MateriaDetalhe {materia: Materia, materiaisAula: Material[], materiaisAdicionais: Material[], eventos: Evento[]} — já separados por tipo e só com visíveis (oculto/excluído não vem).",
+      "headers": "Authorization; X-Turma-Id (docente). Sem If-Match.",
+      "erros": "MateriaPage: erro = message (ex.: 'Sem conexão.'), sem estado vazio; matéria de outra turma/inexistente -> 404 'Registro nao encontrado' (detail do servidor). NovaMateriaPage: erro = mensagemDeErro(e) e formulário nunca aparece (500 -> 'Deu problema no servidor. Tente de novo.')."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/materias",
+      "quando": "NovaMateriaPage em modo criar, ao tocar 'Criar matéria' com nome e sigla preenchidos.",
+      "corpo": "{nome: string (trim, <=80), sigla: string (trim + MAIÚSCULAS, <=12), corHex: string (uma das 12 da PALETA), sala: string|null ('' vira null; <=40), professor: string|null ('' vira null; <=80), professorId: uuid|null (só se o texto final do campo == nome do professor escolhido)} — todas as 6 chaves sempre presentes.",
+      "resposta": "201: Materia (não usada pela tela; a tela recarrega a lista).",
+      "headers": "Authorization; X-Turma-Id (docente); Content-Type JSON. Sem If-Match.",
+      "erros": "Tudo vira pf-erro com a mensagem e a pessoa FICA no formulário: 409 'Ja existe uma materia com a sigla {SIGLA} nesta turma.'; 400 cor fora da paleta 'A cor {hex} nao esta na paleta da turma. Escolha uma das 12 cores disponiveis.'; 400 validação genérica (ex.: 'Invalid request content.'); 404 'Registro nao encontrado' se professorId não for PROFESSOR desta turma; 5xx/0/timeout como no interceptor."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/api/v1/materias/{id}",
+      "quando": "NovaMateriaPage em modo editar, ao tocar 'Salvar'.",
+      "corpo": "Mesmo corpo do POST, COMPLETO (o PATCH substitui tudo): {nome, sigla, corHex, sala, professor, professorId}.",
+      "resposta": "200: Materia (não usada; a tela recarrega a lista e volta).",
+      "headers": "Authorization; X-Turma-Id (docente). NÃO enviar If-Match (materia não tem version; o teste afirma ausência do header).",
+      "erros": "pf-erro e fica no formulário: 403 'Somente o lider da turma modera' (não-líder, inclusive quem criou); 409 sigla de OUTRA matéria; 400 paleta/validação; 404 matéria de outra turma ou professorId inválido. Sem 428/409 de versão (vale a última gravação)."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/api/v1/materias/{id}",
+      "quando": "MateriaPage, líder, após confirmar 'Apagar matéria'.",
+      "corpo": "nenhum",
+      "resposta": "204 sem corpo.",
+      "headers": "Authorization; X-Turma-Id (docente). SEM If-Match.",
+      "erros": "409 'Mova ou apague as provas e materiais antes' (qualquer evento ou material ligado, INCLUSIVE ocultos e excluídos logicamente) -> pf-erro dentro da confirmação, não navega; 403 'Somente o lider da turma modera'; 404; demais pelo interceptor."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/moderacao/material/{materialId}/ocultar",
+      "quando": "MateriaPage, líder ou docente com alcance na matéria, após confirmar 'Ocultar da turma' (nunca no material do próprio usuário).",
+      "corpo": "{\"motivo\": null}",
+      "resposta": "200 sem corpo útil.",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "erros": "Qualquer falha -> erroDaModeracao (pf-erro dentro da confirmação), material continua listado. 403 'Somente o lider da turma modera' ou 'Sem permissao nesta materia'; 500 -> 'Deu problema no servidor. Tente de novo.' (o detail do servidor é descartado)."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/moderacao/material/{materialId}/reexibir",
+      "quando": "MateriaPage, botão 'Desfazer' enquanto a janela de 8 s está aberta.",
+      "corpo": "{} (ApiService manda corpo ?? {})",
+      "resposta": "200 sem corpo útil.",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "erros": "Falha -> erroDoDesfazer (pf-erro logo abaixo do aviso 'Ocultado.'), janela continua aberta."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/turmas/minha",
+      "quando": "Via TurmaRepository.garantirCarregada() (só se turma==null e não carregando): MateriaPage (construção), NovaMateriaPage (construção, criar e editar), EditarMaterialPage (só se quem abre NÃO é o autor).",
+      "corpo": "nenhum",
+      "resposta": "200: MinhaTurma {id, nome, semestre: string|null, codigoConvite, membros: [{usuarioId, nome, papel: 'ALUNO'|'LIDER'|'PROFESSOR'|'COORDENADOR', entrouEm, selo?, contestado?, lecionadas?}], meuAlcance?: {tipo: 'NENHUM'|'MATERIAS'|'TURMA', materiaIds: uuid[]}}",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "erros": "TurmaRepository.carregar NÃO lança: guarda turmaRepo.erro e mantém dado anterior; SEM_TURMA -> limpa a turma. Nesta área a falha é silenciosa: souLider/alcanca ficam false (botões não aparecem), sugestões de professor não aparecem."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/materiais",
+      "quando": "NovoMaterialPage, ao tocar 'Adicionar material' após validação local.",
+      "corpo": "{materiaId: uuid (da rota), tipo: 'AULA'|'ADICIONAL', titulo: string (trim), url: string (trim, casa ^https?://\\S+ ), dataAula: 'AAAA-MM-DD'|null}",
+      "resposta": "201: Material (ignorado; a tela volta para a matéria).",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "erros": "pf-erro e fica na tela: 400 validação (o servidor tem a mensagem 'o link precisa começar com http:// ou https://' mas responde detail genérico); 404 matéria de outra turma; 500 -> 'Deu problema no servidor. Tente de novo.'"
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/materiais/{id}",
+      "quando": "EditarMaterialPage e ResumoPage, uma vez na construção.",
+      "corpo": "nenhum",
+      "resposta": "200: Material (com version, autoria, dataAula?, resumo?, resumoEm?).",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "erros": "404 'Registro nao encontrado' se de outra turma, ou se oculto/excluído e quem pede não é o autor. Vira pf-erro; nada mais é mostrado."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/api/v1/materiais/{id}",
+      "quando": "EditarMaterialPage, 'Salvar' (autor ou docente com alcance).",
+      "corpo": "Objeto COMPLETO (substitui tudo): {materiaId (o mesmo do material), tipo, titulo, url, dataAula|null}",
+      "resposta": "200: Material (ignorado; navega).",
+      "headers": "Authorization; X-Turma-Id (docente); If-Match: '<version>' (string do inteiro version recebido no GET).",
+      "erros": "pf-erro e fica: 428 'Header If-Match com a version e obrigatorio'; 409 'Este registro mudou desde que voce abriu (version X, voce enviou Y)' (a tela NÃO relê o registro); 403 'Somente o autor edita ou exclui o proprio registro'; 400; 404."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/api/v1/materiais/{id}",
+      "quando": "EditarMaterialPage, só autor, após 'Sim, apagar'. Exclusão é LÓGICA no servidor.",
+      "corpo": "nenhum",
+      "resposta": "204.",
+      "headers": "Authorization; X-Turma-Id (docente); If-Match: '<version>'.",
+      "erros": "pf-erro e a confirmação FECHA (confirmando=false): 409 versão; 403 não-autor; 428; 404."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/materiais/{id}/resumo  (ou /api/v1/materiais/{id}/resumo?refazer=true)",
+      "quando": "ResumoPage, só ao tocar 'Gerar resumo' (sem query) ou 'Refazer o resumo' (refazer=true). Nunca ao abrir.",
+      "corpo": "{} (a chave NUNCA vai no corpo)",
+      "resposta": "200: Material atualizado com resumo e resumoEm (substitui o material da tela).",
+      "headers": "Authorization; X-Turma-Id (docente); X-IA-Key: <chave do aparelho>. Sem If-Match.",
+      "erros": "pf-erro e a tela continua utilizável: 400 'Falta a chave da IA. Cole a sua em Ajustes.'; 400 'Esse material nao tem link para ler.'; 400 'A IA recusou a sua chave. Confira em Ajustes.'; 422 'Esse link nao devolve o arquivo, devolve uma pagina. Cole o link direto do PDF ou da imagem.' (cai em DESCONHECIDO com o detail); 429 'Sua chave atingiu o limite de uso. Tente daqui a pouco.' (DESCONHECIDO com detail); 502/500 -> 'Deu problema no servidor. Tente de novo.' (detail descartado); timeout 75 s -> 'O servidor demorou demais para responder. Tente de novo.'"
+    }
+  ],
+  "modelos": [
+    {
+      "nome": "Materia",
+      "campos": "id: String (uuid)\nnome: String\nsigla: String\ncorHex: String ('#RRGGBB', uma das 12 hues; vem do servidor, nunca inventada)\nsala: String? (OMITIDA do JSON quando nula -> tratar ausente como null)\nprofessor: String? (idem)"
+    },
+    {
+      "nome": "MateriaDetalhe (GET /materias/{id})",
+      "campos": "materia: Materia\nmateriaisAula: List<Material>\nmateriaisAdicionais: List<Material>\neventos: List<Evento>"
+    },
+    {
+      "nome": "Material",
+      "campos": "id: String\ntipo: TipoMaterial ('AULA' | 'ADICIONAL')\ntitulo: String\nurl: String? (pode faltar no JSON)\narquivoRef: String? (sempre nulo hoje; pode faltar)\nmateriaId: String\nautoria: Autoria\nversion: int (vai no If-Match)\nvisivelTurma: bool\nexcluidoEm: String? (ISO instant; normalmente AUSENTE do JSON, apesar do TS tipar sem '?')\ndataAula: String? ('AAAA-MM-DD'; ausente = não se aplica)\nresumo: String? (resumo por IA compartilhado)\nresumoEm: String? (ISO instant UTC)"
+    },
+    {
+      "nome": "Evento (itens de MateriaDetalhe.eventos)",
+      "campos": "id: String\ntipo: TipoEvento ('PROVA' | 'ENTREGA')\ntitulo: String\ndata: String ('AAAA-MM-DD')\nhora: String? ('HH:mm:ss' com segundos; ausente/nula = sem horário)\nmateriaId: String\nmateriaSigla: String\nmateriaCorHex: String\nautoria: Autoria\nversion: int\nvisivelTurma: bool\nexcluidoEm: String?\nsala: String? (sala deste evento quando difere; ausente = sala da matéria)"
+    },
+    {
+      "nome": "Autoria",
+      "campos": "autorId: String\nautorNome: String\ncriadoEm: String (ISO instant)\natualizadoEm: String (ISO instant)\nautorSelo: Selo? ('PROFESSOR' | 'COORDENACAO'; omitido quando nulo)\neditadoPorNome: String? (omitido quando o próprio autor editou)\neditadoPorSelo: Selo?"
+    },
+    {
+      "nome": "CriarMateriaRequest (corpo de POST e PATCH /materias)",
+      "campos": "nome: String (obrigatório, <=80)\nsigla: String (obrigatório, <=12, maiúsculas)\ncorHex: String (obrigatório, uma das 12)\nsala: String? (<=40; null quando vazio — nunca '')\nprofessor: String? (<=80; null quando vazio)\nprofessorId: String? (uuid de membro PROFESSOR da turma; o app sempre manda a chave, null quando não há escolha válida)"
+    },
+    {
+      "nome": "CriarMaterialRequest / AtualizarMaterialRequest (idênticos)",
+      "campos": "materiaId: String\ntipo: TipoMaterial\ntitulo: String (trim, não vazio)\nurl: String (obrigatória, http(s))\ndataAula: String? ('AAAA-MM-DD' ou null)"
+    },
+    {
+      "nome": "MinhaTurma / MembroDaTurma / MeuAlcance (de GET /turmas/minha, usados para papel e sugestões)",
+      "campos": "MinhaTurma.id: String; nome: String; semestre: String?; codigoConvite: String; membros: List<MembroDaTurma>; meuAlcance: MeuAlcance? (ausente = NENHUM)\nMembroDaTurma.usuarioId: String; nome: String; papel: 'ALUNO'|'LIDER'|'PROFESSOR'|'COORDENADOR'; entrouEm: String; selo: Selo?; contestado: bool?; lecionadas: List<String>? (siglas)\nMeuAlcance.tipo: 'NENHUM'|'MATERIAS'|'TURMA'; materiaIds: List<String>"
+    },
+    {
+      "nome": "Usuario (sessão, AuthService.usuario)",
+      "campos": "id: String\nnome: String\nemail: String\ntipoConta: 'ALUNO'|'PROFESSOR'|'COORDENADOR'? (ausente = ALUNO)\ndocenteStatus: 'PENDENTE'|'APROVADO'|'RECUSADO'?"
+    },
+    {
+      "nome": "SnapshotLocal (Preferences 'pf.snapshot')",
+      "campos": "eventos: List<ItemHome> (escrito pela Home; preservar ao mesclar)\nmaterias: List<Materia> (escrito por MateriaRepository)\nultimoSync: String (ISO, atualizado a cada mesclar)"
+    },
+    {
+      "nome": "ErroApi (erro de domínio de toda falha HTTP)",
+      "campos": "classe: 'DEMOROU'|'AUTH'|'PROIBIDO'|'NAO_ENCONTRADO'|'PRECONDICAO'|'CONFLITO'|'SERVIDOR'|'OFFLINE'|'DESCONHECIDO'\nstatus: int (0 para offline/timeout)\nmessage: String (frase pronta para a tela)\npodeTentarNovamente: bool (5xx, offline, timeout)\nrecarregarRegistro: bool (409)\ncodigo: String? (ProblemDetail.codigo; 'SEM_TURMA' é o único usado)"
+    },
+    {
+      "nome": "MaterialVm (features/material-vm.ts — o que a linha de material recebe)",
+      "campos": "id: String\ntipo: String (rótulo de FORMATO, não AULA/ADICIONAL: extensão de (arquivoRef ?? url) via /\\.([a-z0-9]{1,5})(?:$|[?#])/i em MAIÚSCULAS, senão 'LINK')\ntitulo: String\nurl: String? (só se (arquivoRef ?? url) casar /^https?:\\/\\//i; senão null)\ndaAula: String ('aula de {dia sem zero} {mes curto}' ou '' — parse por split da string, sem DateTime)\nautorId: String\nautoria: String (assinatura: 'Nome · há N min/h/dias')\nautoriaSelo: Selo?\neditadoPor: String?\neditadoPorSelo: Selo?\ntemResumo: bool ((resumo ?? null) != null)"
+    },
+    {
+      "nome": "EventoVm (features/evento-vm.ts)",
+      "campos": "tipo: TipoEvento\ndia: String (2 dígitos da string ISO, ex.: '02')\nmes: String (jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\nquando: String (hora.slice(0,5) se hora não vazia; senão 'prova' para PROVA, 'entrega' para ENTREGA)\ntitulo: String\nmateria: {sigla, cor} (cor = materiaCorHex)\nautoria: String (assinatura)\nautoriaSelo/editadoPor/editadoPorSelo: nullable\nsala: String ('' se ausente; não exibida nesta área)"
+    },
+    {
+      "nome": "PALETA (constante exportada de nova-materia.page.ts)",
+      "campos": "12 itens {hex, nome}, nesta ordem: #1D4ED8 azul; #0369A1 azul-petróleo; #0F766E verde-azulado; #15803D verde; #4D7C0F oliva; #A16207 âmbar; #B45309 laranja-queimado; #C2410C laranja; #B91C1C vermelho; #BE185D rosa; #A21CAF magenta; #6D28D9 violeta. Idêntica a Paleta.HUES do backend (qualquer outra -> 400)."
+    }
+  ],
+  "servicos_e_estado": [
+    "MateriaRepository (singleton, providedIn root; compartilhado com novo-evento e turma): estado materias: List<Materia> (inicial []), carregando: bool (false), erro: String? (null). carregar(): carregando=true, erro=null, servidorRespondeu=false; DISPARA o GET /materias PRIMEIRO e, em paralelo, aquecerDoDisco(); aguarda o servidor -> servidorRespondeu=true, materias=resposta, await storage.mesclar({materias}) ; catch -> erro = e.message (ou 'Não deu para carregar as matérias.') e RELANÇA ; finally carregando=false. aquecerDoDisco(): só se materias estiver vazia no momento; lê o snapshot; se o servidor ainda não respondeu e snapshot.materias não vazio -> materias=snapshot.materias (não toca em erro). detalhe(id) -> GET /materias/{id}. criar(req) -> POST /materias. atualizar(id, req) -> PATCH /materias/{id} sem If-Match. apagar(id) -> DELETE /materias/{id} sem If-Match.",
+    "MaterialRepository (singleton, sem estado): detalhe(id) GET /materiais/{id}; criar(req) POST /materiais; atualizar(id, version, req) PATCH com If-Match; excluir(id, version) DELETE com If-Match; resumir(id, chave, refazer=false) POST /materiais/{id}/resumo[?refazer=true] com header X-IA-Key e corpo {}. NÃO existe listagem por matéria (de propósito: impediria despejar a matéria inteira numa prova).",
+    "ModeracaoRepository (usado aqui): ocultar('material', id, null) -> POST /moderacao/material/{id}/ocultar {motivo:null}; reexibir('material', id) -> POST /moderacao/material/{id}/reexibir {}.",
+    "TurmaRepository (singleton): turma: MinhaTurma? ; carregando; erro. souLider (computed): usuario logado é membro com papel LIDER na turma carregada; false enquanto não se sabe. alcanca(materiaId): meuAlcance.tipo TURMA -> true; MATERIAS -> materiaIds contém; senão false. garantirCarregada(): carrega só se turma==null && !carregando. carregar(): NUNCA lança (guarda erro; SEM_TURMA -> limpar). Limpa-se sozinho quando usuario ou turmaId da sessão vira null.",
+    "AuthService (core): usuario (signal Usuario?) — meuId = usuario?.id; token (JWT) para Authorization; turmaId da sessão.",
+    "TurmaAtivaService (core, só docente): nome() = nome da turma ativa (título da aba Matérias), turmaId() para X-Turma-Id; pronto = leitura do disco ('pf.turmaAtiva'); trocar de turma limpa o snapshot 'pf.snapshot' e recarrega o app.",
+    "StorageService (core): ler()/gravar()/limpar()/mesclar(parcial) do snapshot JSON em Preferences 'pf.snapshot' {eventos, materias, ultimoSync}; mesclar preserva a parte que não veio e atualiza ultimoSync; JSON ilegível é descartado (remove a chave) e devolve null.",
+    "ChaveIaService (core): ler() devolve a chave ('' = não há); cache em memória (null = ainda não lido); Preferences 'projetofans.chave-ia'; gravar(chave) faz trim e remove a chave se vazia; mascarada() (usada em Ajustes).",
+    "JanelaDesfazer (core): aberta: bool; abrir() fecha o timer anterior, aberta=true e agenda fechar() em 8000 ms; fechar() cancela timer e aberta=false; fecha automaticamente quando a tela é destruída.",
+    "Espera (features/auth/espera.ts): demorando: bool; comecar(apos=4000 ms) agenda demorando=true; terminar() cancela e demorando=false (chamado no finally, inclusive em erro).",
+    "mensagemDeErro(e) (features/auth/erro.ts): ErroApi -> e.message; qualquer outra coisa -> 'Não deu para completar a ação. Tente de novo.'",
+    "Interceptores (ordem externa->interna): auth (Authorization: Bearer <jwt> em toda URL que não contenha '/auth/'), turmaAtiva (X-Turma-Id só para conta docente e só para URL da API, após TurmaAtivaService.pronto), erroHttp (traduz em ErroApi; 401 -> encerra sessão + /login; codigo SEM_TURMA -> registrarTurma(null) + /entrar-turma; sempre relança), timeout (75 000 ms). Tradução: 0 'Sem conexão.'; 401 detail ?? 'Sua sessão expirou. Entre de novo.'; 403 detail ?? 'Só quem criou pode editar.'; 404 detail ?? 'Isso não existe mais.'; 409 detail ?? 'Alguém editou isso enquanto você editava.'; 428 detail ?? 'Recarregue o registro e tente de novo.'; >=500 'Deu problema no servidor. Tente de novo.' (sem detail); outro detail ?? 'Não deu para completar a ação.'; TimeoutError 'O servidor demorou demais para responder. Tente de novo.'. detail = corpo.detail ?? corpo.title.",
+    "Estado por tela — MateriasPage: só lê o repo (materias, carregando, erro) + vazia (computed). MateriaPage: detalhe (MateriaDetalhe?), carregando (true inicial), erro, carregada (detalhe!=null), nome, aula/adicionais (MaterialVm[]), eventos (EventoVm+id), vazia, ondeEQuem, meuId, souLider, alcanca (do id da ROTA), confirmandoOcultar (id?), moderando, erroDaModeracao, confirmandoApagar, apagando, erroDeApagar, janela, ocultadoAgora (id?), erroDoDesfazer, desfazendo, agora (DateTime fixado na construção). NovaMateriaPage: editandoId, original (Materia?), pronto, valorInicial, voltarPara, cor (inicial PALETA[0].hex), enviando, erro, previa ('SIGLA'), professoresDaTurma, professorEscolhido ({usuarioId,nome}?), espera, rotuloDoBotao. NovoMaterialPage: materiaId, voltarPara, tipo ('AULA'), enviando, erro, espera. EditarMaterialPage: material?, carregando (true), erro, enviando, confirmando, tipo, voltarPara, souAutor, podeEditar, rotulo. ResumoPage: material?, carregando (true), erro, gerando, semChave, voltarPara, rotulo."
+  ],
+  "regras": [
+    "NN1 Autoria visível em tudo: toda linha de material e todo card de evento mostram 'Nome · há X' (+ selo e 'editado por' quando houver). Se o timestamp for ilegível, cai para só o nome — nunca some a autoria nem mostra 'NaN'.",
+    "NN2 Edição não apaga histórico / exclusão lógica: DELETE de material é lógico no servidor e exige If-Match; PATCH de material exige If-Match: <version>. A matéria (que não é evento nem material) tem DELETE real, mas só se nunca teve evento/material ligado.",
+    "NN6 Vazio mostra pouco: 'Nenhuma matéria cadastrada.' e 'Nada nesta matéria ainda.' sem sugestão, dica ou skeleton. Só aparecem com carga concluída E sem erro.",
+    "Proibido catch que vira lista vazia: falhar ao buscar NUNCA vira 'não há matérias'/'matéria vazia'. Carregando, erro e vazio são três telas distintas (testes afirmam).",
+    "NN7 Cor + sigla sempre juntas, por um único componente (MateriaChip): na lista de matérias, na prévia do formulário e no card de evento. A prévia do formulário usa o MESMO componente (desenhar à mão seria o segundo caminho proibido). Texto do chip sempre branco.",
+    "Paleta fechada de 12 hues (contraste >= 4.5:1 com branco); a tela oferece só essas 12 em grade, nunca seletor livre. O backend recusa outra com 400.",
+    "Seleção sinalizada por ANEL/peso, não por cor (cor escolhida, professor escolhido): tem de sobreviver em escala de cinza.",
+    "NN8 Prova = bloco sólido, entrega = contorno 1px (EventoCard, na seção 'eventos' da matéria).",
+    "NN9 Qualquer membro cadastra matéria e material, sem fila nem aprovação. O link 'Adicionar matéria' e 'Adicionar material' aparecem para todos, sempre.",
+    "NN10 Só o autor edita/apaga o próprio material. Docente com alcance na matéria (professor que leciona ou coordenação) CORRIGE material alheio mas NUNCA apaga; o material passa a mostrar 'editado por'. O líder só muda visibilidade (Ocultar), não ganha 'editar' em material alheio.",
+    "Matéria: só o LÍDER edita e apaga (nem quem a criou — matéria não guarda autor). A UI só mostra 'Editar matéria'/'Apagar matéria' para o líder e com a matéria carregada; o servidor responde 403 aos demais.",
+    "Papel e alcance são lidos da turma (GET /turmas/minha), nunca guardados na sessão: a liderança se transfere. Enquanto não se sabe, não oferecer (false).",
+    "Moderação: ocultar não apaga (autor continua vendo em 'não listados'); pergunta antes; desfazer por 8 s; depois o caminho é 'Ocultados' na tela da turma. Ocultar nunca é oferecido no material do próprio usuário.",
+    "R14 Quem decide o que é visível é o servidor: após ocultar/desfazer a tela RECARREGA o detalhe em vez de filtrar/recolocar localmente.",
+    "R4 Material de aula e material adicional em seções separadas, já separados pelo servidor; a tela não reclassifica.",
+    "Nenhuma regra de negócio no cliente: ordem das matérias (sigla ASC) e dos materiais/eventos vem do servidor; a tela não ordena, filtra nem corta.",
+    "Todo erro HTTP passa pelo interceptor central e chega à tela como frase pronta (mensagemDeErro); nenhuma tela lê status cru.",
+    "Material só abre se for http(s) (achado de segurança C1): outros esquemas (javascript:, data:, intent:, file:, sem esquema) não viram link. Validação local do link igual ao servidor: ^https?://\\S+ (case-insensitive).",
+    "Material sem link não serve: url obrigatória no cadastro e na edição (upload de arquivo é a Task 15, ainda não existe).",
+    "Multi-turma proibida na UI do aluno: nenhum seletor de turma nesta área. Para conta docente a turma ativa vai em X-Turma-Id e o título da aba Matérias mostra o nome dela.",
+    "Resumo por IA: chave só no aparelho, enviada em header X-IA-Key (nunca no corpo); abrir a tela nunca gera; refazer é botão explícito; o texto sempre é marcado como escrito por IA. CONFLITO: 'Resumo por IA' está em 'Proibido implementar' no AGENTS.md — confirmar com o dono antes de portar."
+  ],
+  "armadilhas": [
+    "RECARGA AO ENTRAR: MateriasPage e MateriaPage carregam em ionViewWillEnter (TODA vez que a tela/aba fica visível, inclusive a primeira), NÃO no construtor/initState. Em Flutter, com IndexedStack/abas vivas e voltas de rota, é preciso recarregar ao voltar para a aba e ao voltar (pop) para a tela da matéria (RouteAware.didPopNext / await do push). Sem isso: colega cadastra e o outro vê a tela velha; quem editou o nome vê o antigo.",
+    "NÃO carregar duas vezes na abertura: a carga saiu do construtor justamente para não haver 2 GET na primeira entrada (servidor que dorme custa dezenas de segundos por chamada).",
+    "As outras telas (NovaMateria editar, EditarMaterial, Resumo) carregam UMA vez na criação. NovoMaterial não recarrega nada: confia que a tela da matéria recarrega ao reentrar.",
+    "Voltar para a MESMA instância da tela da matéria: navigateByUrl('/tabs/materias/{id}') após adicionar/editar material ou editar matéria faz o Ionic voltar à tela que já está na pilha (não empilha outra). Em Flutter, use pop (ou popUntil) e recarregue; não faça push de uma segunda MateriaPage. EditarMaterial também é aberta a partir do Meu quadro (outra aba): aí não há MateriaPage na pilha e é preciso ir para /tabs/materias/{materiaId}.",
+    "Criar matéria volta para a LISTA (/tabs/materias), editar matéria volta para a MATÉRIA (/tabs/materias/{id}), apagar volta para a LISTA.",
+    "Recarregar a lista ANTES de navegar (criar/editar/apagar matéria): GET /materias deve sair antes do navigate (testes afirmam). Falha nessa recarga NÃO impede a navegação nem traz a pessoa de volta (repetir o cadastro daria 409); o erro fica no repositório e a aba o mostra. Consequência: ao voltar à aba há um segundo GET (do ionViewWillEnter) — comportamento atual.",
+    "Erro != vazio: em MateriasPage e MateriaPage o estado vazio exige !carregando && erro==null && listas vazias. Uma falha mostra o aviso tracejado e NUNCA o vazio. Testes: ProgressEvent de erro -> texto contém 'Sem conexão' e .pf-vazio ausente.",
+    "Repositório RELANÇA o erro depois de gravá-lo no estado; quem chama precisa capturar (só log) para não ter rejeição solta — e nunca converter em lista vazia.",
+    "Lista de matérias na falha: mantém o que já havia (carga anterior ou cache do disco) visível JUNTO do aviso de erro. 'Carregando…' também aparece junto da lista cacheada. erro é zerado no INÍCIO de cada carregar() (o aviso antigo some enquanto recarrega).",
+    "Cache do disco (aquecerDoDisco): o GET sai antes da leitura do disco; o disco só pinta se a lista em memória estiver vazia E o servidor ainda não respondeu (flag servidorRespondeu) — senão uma turma que apagou todas as matérias seria repintada com o cache velho. O cache não mexe em erro.",
+    "storage.mesclar é aguardado DENTRO do try de carregar(): se gravar no disco falhar, vira erro do carregamento (mesmo com a lista já atualizada) e carregando só vira false depois da gravação. mesclar precisa preservar snapshot.eventos (escrito pela Home).",
+    "MateriaPage: carregando é true só até a 1a resposta e NUNCA volta a true; recargas seguintes são silenciosas. erro só é zerado em sucesso: um aviso de falha persiste durante a recarga seguinte. Após falha de recarga com detalhe anterior, conteúdo velho + aviso + botões de líder continuam (carregada = detalhe != null).",
+    "Botões 'Editar matéria'/'Apagar matéria' só com souLider() E matéria carregada: matéria que falhou ao carregar não oferece apagar o que não se vê (teste).",
+    "Os links 'Adicionar matéria' e 'Adicionar material' ficam FORA de todos os @if: existem com conteúdo, vazio, carregando e erro (testes).",
+    "Título da aba Matérias: turmaAtiva.nome() ?? 'Matérias' — docente vê o nome da turma ativa, aluno vê 'Matérias'.",
+    "Material sem url abrível (null ou esquema não http/https) aparece só como linha: SEM link de abrir, SEM 'aula de …', SEM 'editar', SEM 'resumo'. O botão 'Ocultar' continua aparecendo.",
+    "Abrir material: sempre FORA do app (navegador do sistema; url_launcher LaunchMode.externalApplication). Abrir dentro (WebView) prende a pessoa num PDF sem voltar. Filtrar o esquema ANTES de virar link (javascript:, data:, intent:, file: proibidos; 'HTTP://' maiúsculo vale).",
+    "Rótulo de formato da linha vem da extensão da URL por regex /\\.([a-z0-9]{1,5})(?:$|[?#])/i: 'https://x/fn.pdf' -> 'PDF'; link sem extensão -> 'LINK'; peculiaridade: 'https://site.com' -> 'COM' (o domínio no fim casa). Reproduzir a regex, não inventar 'PDF'.",
+    "'aula de 2 set': data partida por split da string ('2026-09-02' -> dia sem zero à esquerda + mês curto), sem construir data (DateTime/Date em UTC faria a aula andar um dia para trás em fuso negativo). Mês inválido -> ''.",
+    "EventoVm: dia é a string de 2 dígitos ('02'), não número; hora 'HH:mm:ss' é cortada para 'HH:mm'; hora ausente/vazia vira 'prova'/'entrega' (nunca '00:00'). Data também por split.",
+    "Assinatura relativa ('há N min/h/dias') usa 'agora' fixado na CONSTRUÇÃO da MateriaPage (não atualiza em reentradas). Regras: <1 min -> 'agora' (inclusive datas futuras); <60 -> 'há N min'; horas arredondadas <24 -> 'há N h'; dias arredondados: 1 -> 'há 1 dia', senão 'há N dias'; data ilegível -> só o nome.",
+    "Prefixo de selo: 'Prof. ' (PROFESSOR), 'Coord. ' (COORDENACAO) antes do nome do autor e do editor; selo COORDENACAO (não COORDENADOR). Teste: 'Prof. Otavio', 'editado por Coord. Helena', 'Coord. Otavio' + selo 'Coordenação' no card.",
+    "Backend OMITE campos nulos (jackson non_null): sala, professor, url, arquivoRef, dataAula, resumo, resumoEm, excluidoEm, hora, autorSelo, editadoPor*, meuAlcance podem simplesmente não existir no JSON. fromJson tem de aceitar chave ausente como null; nunca exibir 'null'/'undefined'.",
+    "'B-204 · prof. Marcos': junta só os campos não vazios com ' · '; se nenhum, a linha não existe (nada de separador solto).",
+    "Ocultar: só para (souLider OU alcanca(id da ROTA)) E autor != eu — o líder não vê 'Ocultar' no próprio material. Pergunta antes (texto com o título em negrito); um material em confirmação por vez. Falha mantém a confirmação aberta com o erro e o material na lista (500 mostra 'Deu problema no servidor. Tente de novo.', não o detail).",
+    "Desfazer: janela abre ANTES da recarga terminar; dura exatamente 8000 ms (teste: aberta em 7999, fechada em 8000); reabrir reinicia o relógio; fechar ao sair da tela (timer não pode escrever em tela morta). Desfazer ignora toque enquanto desfazendo OU moderando; sucesso fecha a janela e recarrega; falha mostra pf-erro e mantém a janela. Em Flutter: Timer cancelado no dispose.",
+    "O timer do desfazer roda fora da zona Angular para não segurar whenStable; em Flutter, cuidado com pumpAndSettle/fake async nos testes (usar fakeAsync e avançar 7999/1 ms).",
+    "Confirmação de apagar matéria usa o MESMO rótulo 'Apagar matéria' do gatilho (o teste clica duas vezes no mesmo texto). 409 'Mova ou apague as provas e materiais antes' conta também eventos/materiais ocultos e excluídos logicamente: matéria que parece vazia na tela pode recusar.",
+    "PATCH /materias substitui TUDO e NÃO leva If-Match (teste afirma ausência do header). Por isso o formulário de edição só aparece depois de ler a matéria; abrir em branco e salvar apagaria os campos. DELETE /materias também sem If-Match.",
+    "Materia em edição: valores iniciais vêm de materia (sala/professor ausentes -> ''); cor inicial = corHex do servidor; se não estiver na PALETA nenhum quadrado fica marcado e salvar daria 400. Prévia inicial = sigla da matéria.",
+    "Corpo da matéria: nome trim; sigla trim + toUpperCase (o campo só PARECE maiúsculo via CSS); sala/professor vazios viram null, nunca ''; professorId SEMPRE presente (null quando não há escolha válida). Validação local só de nome/sigla vazios -> 'Preencha o nome e a sigla da matéria.' (o servidor responderia uma frase genérica em inglês). maxlength (80/12/40/80) só no campo.",
+    "professorId só vai se o texto FINAL do campo professor (trim) for exatamente o nome do escolhido; escolha velha com outro nome por cima não liga ninguém. Na edição, nenhum professor vem pré-escolhido mesmo que o texto bata. Mandar professorId null NÃO desliga professor já ligado no servidor.",
+    "Flutter: trocar o texto do campo professor programaticamente (ao tocar a sugestão) NÃO pode disparar a lógica de 'digitou outro nome' — no Angular a troca de .value não emite 'input'. Use onChanged (só edição do usuário), não addListener do controller, senão a escolha se desfaz sozinha.",
+    "Desmarcar professor só limpa o campo se o texto ainda for exatamente o nome dele; texto digitado pelo usuário fica.",
+    "Sugestões de professor: só papel PROFESSOR (servidor recusa outros com 404), ordenadas por nome com collation pt-BR (localeCompare 'pt-BR'). Sem professores, o grupo inteiro (rótulo incluído) não aparece. Falha ao buscar a turma é silenciosa (só sem sugestões).",
+    "Rótulo dos botões de envio muda após 4 s esperando para 'Acordando o servidor…' (cold start do Render ~45 s); o timer tem de ser cancelado no finally também em erro.",
+    "Duplo toque: criar/salvar/adicionar/ocultar/apagar/desfazer/gerar ignoram nova chamada enquanto a anterior está em voo (guarda no estado + botão desabilitado).",
+    "Link do material: validação local idêntica em adicionar e editar — trim; vazio (título ou link) -> 'Preencha o que é e o link do material.'; não casa ^https?://\\S+$ (i) -> 'O link precisa começar com http:// ou https://'. 'drive.google.com/x' (sem esquema) é recusado sem requisição.",
+    "dataAula: campo de data opcional; vazio vira null. Em Flutter o seletor de data precisa permitir LIMPAR a data (na edição, remover a data é válido e o PATCH substitui tudo — esquecer o campo apagaria a data sem querer, que foi um bug real). Formato enviado 'AAAA-MM-DD'.",
+    "Editar material: tipo inicial = m.tipo; materiaId enviado é sempre o do material (não move de matéria). url inicial = m.url ?? ''. Após 409 de versão a tela NÃO relê: insistir dá 409 de novo até reabrir (ErroApi.recarregarRegistro=true, mas ninguém usa aqui).",
+    "Editar material: o autor NUNCA dispara GET /turmas/minha (o teste falharia com requisição pendente); só o não-autor. Para não-autor, podeEditar começa false até a turma chegar: hoje a tela mostra 'Este material não é seu.' por um instante e depois troca para o formulário — considerar mostrar carregando enquanto a turma não chega.",
+    "Editar material: falha ao apagar fecha a confirmação (confirmando=false) e mostra o erro; 'Cancelar' da confirmação não fica desabilitado; não há rótulo 'Apagando…'.",
+    "Controle segmentado 'De aula'/'Adicional': no Angular estas duas telas NÃO estilizam .seg (estilos são por componente), então o escolhido não tem destaque visual — só aria-pressed. No port, mostrar o selecionado como em novo-evento (fundo accent, texto accent-ink) mantendo a semântica de selecionado para leitor de tela.",
+    "Resumo: abrir a tela nunca chama POST /resumo (teste). A chave é lida do armazenamento ANTES do POST (assíncrono). refazer = (m.resumo != null), não truthiness: resumo '' manda refazer=true com rótulo 'Gerar resumo'. semChave só é avaliado na abertura e quando gerar encontra chave vazia; voltar de Ajustes para a mesma instância não reavalia (a pessoa colou a chave e continua vendo o aviso). Considerar reler ao voltar.",
+    "Resumo: gerar pode passar dos 75 s do timeout global -> 'O servidor demorou demais…'; cada nova tentativa custa dinheiro da chave. Erros 5xx do resumo perdem o detail do servidor ('Nao deu para falar com a IA.' vira 'Deu problema no servidor. Tente de novo.'); 400/422/429 mostram o detail.",
+    "Data do resumo: resumoEm é instant UTC; formatar no fuso local, dia com 2 dígitos + mês curto pt-BR (Intl dá '03 de set.').",
+    "Interceptor 5xx descarta o detail do servidor: testes com {detail:'Servidor fora do ar.'} status 500 só verificam que .pf-erro existe — a frase exibida é 'Deu problema no servidor. Tente de novo.'.",
+    "404 com ProblemDetail.codigo == 'SEM_TURMA' em QUALQUER chamada desta área: esquecer a turma (registrarTurma(null)) e navegar para /entrar-turma. Um 404 SEM esse código (proxy, servidor acordando) é só erro comum. Decidir pelo campo codigo, nunca pelo status.",
+    "401 em qualquer chamada: encerrar sessão e ir para /login, além de mostrar a mensagem.",
+    "X-Turma-Id: só conta docente (tipoConta presente e != ALUNO) e só para o host da API; esperar a leitura da turma ativa do disco antes de enviar a 1a requisição (senão o servidor responde pela turma 'mais recente' — dado de outra turma sem erro). Aluno nunca manda.",
+    "Rotas: 'materias/nova' tem de casar antes de 'materias/:id' (senão abre a matéria id='nova' e pede ao servidor algo que não existe). 'materias/:id/editar' e 'materias/nova' usam a MESMA tela; o modo vem da presença do id (falsy -> criar).",
+    "Ordem das matérias é a do servidor (sigla ASC) e a dos materiais/eventos também: não reordenar no cliente.",
+    "O card de evento na tela da matéria MOSTRA o chip da matéria (apesar do comentário do componente dizer que seria ausente nesta tela); a sala do evento não é exibida.",
+    "MateriaRepository é singleton compartilhado (novo-evento e turma leem materias/carregando/erro): o estado de erro de uma tela aparece nas outras; manter um único provider."
+  ],
+  "testes": [
+    "MateriasPage: lista as matérias na ordem que veio do servidor (nomes 'Banco de Dados','Cálculo 2','Redes'), cada uma com chip mostrando a sigla ('BD','CALC2','REDES'); sem estado vazio.",
+    "MateriasPage: GET /materias respondendo [] mostra o estado vazio e NÃO mostra aviso de falha.",
+    "MateriasPage: erro de rede no GET /materias mostra aviso contendo 'Sem conexão' e NÃO mostra o estado vazio.",
+    "MateriasPage: link para /tabs/materias/nova existe com lista vazia e com lista cheia.",
+    "MateriasPage: a carga é disparada pelo evento de entrada na aba (ionViewWillEnter), uma requisição GET /materias por entrada.",
+    "MateriaPage: material de aula e adicional renderizados em grupos separados (linha .aula com 'Formas normais', linha .adicional com 'Lista extra').",
+    "MateriaPage: eventos da matéria aparecem (card com título 'Prova 2 — normalização').",
+    "MateriaPage: detalhe sem material nem evento mostra estado vazio e nenhum aviso de falha.",
+    "MateriaPage: erro de rede mostra aviso contendo 'Sem conexão' e não mostra estado vazio.",
+    "MateriaPage: material com url vira link com href http(s), target _blank e rel contendo 'noopener' (abre fora do app).",
+    "MateriaPage: sala 'B-204' e professor 'prof. Marcos' aparecem na linha onde-e-quem; dataAula '2026-09-02' gera texto contendo '2 set'.",
+    "MateriaPage: matéria sem sala nem professor não renderiza a linha onde-e-quem.",
+    "MateriaPage (docente): com alcance na matéria m1, material de OUTRA pessoa mostra link '/tabs/materiais/a1/editar' e botão 'Ocultar'.",
+    "MateriaPage (docente): alcance em outra matéria -> sem link editar e sem 'Ocultar'.",
+    "MateriaPage (docente): Ocultar -> Ocultar da turma faz POST /moderacao/material/a1/ocultar e em seguida GET /materias/m1.",
+    "MateriaPage: selo e editado-por — linha de material contém 'Prof. Otavio' e 'editado por Coord. Helena'; card de evento contém 'Coord. Otavio' e selo com texto 'Coordenação'.",
+    "MateriaPage (líder): aluno comum não vê 'Ocultar'; ao virar líder (souLider=true) o botão aparece.",
+    "MateriaPage (líder): tocar 'Ocultar' não chama o servidor e mostra pergunta contendo o título 'Formas normais'; 'Ocultar da turma' faz POST (método POST) e recarrega o detalhe; após recarga sem o material, nenhuma linha e nenhum pf-erro.",
+    "MateriaPage (líder): falha 500 ao ocultar mostra .pf-erro e o material continua listado.",
+    "MateriaPage desfazer: após ocultar aparece aviso contendo 'Ocultado.' e botão 'Desfazer'.",
+    "MateriaPage desfazer: 'Desfazer' faz POST /moderacao/material/a1/reexibir, recarrega GET /materias/m1, o material volta e o botão 'Desfazer' some.",
+    "MateriaPage desfazer: com relógio falso, em 7999 ms o 'Desfazer' ainda existe; em 8000 ms some.",
+    "MateriaPage desfazer: falha 500 no reexibir mostra .pf-erro e o botão 'Desfazer' continua.",
+    "MateriaPage (líder): não-líder não vê link 'Editar matéria' nem botão 'Apagar matéria'; líder vê os dois.",
+    "MateriaPage (líder): 'Editar matéria' aponta para '/tabs/materias/m1/editar'.",
+    "MateriaPage (líder): se o detalhe falhou ao carregar, não há 'Editar matéria' nem 'Apagar matéria'.",
+    "MateriaPage (líder): 'Apagar matéria' abre pergunta contendo 'Banco de Dados' sem chamar o servidor; 'Cancelar' fecha a pergunta sem chamada.",
+    "MateriaPage (líder): confirmar faz DELETE /materias/m1, depois GET /materias e então navega para '/tabs/materias'.",
+    "MateriaPage (líder): DELETE com 409 {detail:'Mova ou apague as provas e materiais antes'} mostra esse texto em .pf-erro e não navega.",
+    "NovaMateriaPage: a grade tem exatamente as 12 cores da PALETA, na ordem (data-cor == PALETA[i].hex).",
+    "NovaMateriaPage: tocar uma cor deixa exatamente uma marcada (aria-pressed), a tocada.",
+    "NovaMateriaPage: criar envia {nome:'Banco de Dados', sigla:'BD', corHex: PALETA[1].hex, sala:null, professor:null, professorId:null} a partir de '  Banco de Dados  ' e ' bd '; depois recarrega GET /materias.",
+    "NovaMateriaPage: nome em branco não gera requisição, mostra .pf-erro e não navega.",
+    "NovaMateriaPage: 409 de sigla repetida mostra a mensagem do servidor (contém 'sigla BD') e não navega.",
+    "NovaMateriaPage: após criar, GET /materias acontece antes de navegar para '/tabs/materias' e não há erro na tela.",
+    "NovaMateriaPage: ao abrir pede GET /turmas/minha; lista só membros PROFESSOR em ordem alfabética ('Marcos Lima','Vanessa Prado'), dentro do grupo 'Professores desta turma'.",
+    "NovaMateriaPage: tocar professor escreve 'Marcos Lima' no campo, marca aria-pressed, mostra 'Marcos Lima fica ligado a esta matéria' e o POST leva professor:'Marcos Lima', professorId:'p1'.",
+    "NovaMateriaPage: tocar de novo desescolhe: campo vazio, aria-pressed false, sem 'fica ligado', POST com professor null e professorId null.",
+    "NovaMateriaPage: escolher e digitar outro nome ('Ana Externa') desfaz a escolha; POST com professorId null e professor 'Ana Externa'.",
+    "NovaMateriaPage: turma sem professores não mostra o grupo de sugestões e o POST leva professorId null.",
+    "NovaMateriaPage (editar): abre com nome, sigla, sala, professor preenchidos, a cor da matéria marcada, título contendo 'Editar matéria' e botão 'Salvar'.",
+    "NovaMateriaPage (editar): a paleta tem 12 cores.",
+    "NovaMateriaPage (editar): antes do GET /materias/m1 responder não há campos nem botão.",
+    "NovaMateriaPage (editar): falha 500 ao ler a matéria mostra .pf-erro e nenhum formulário.",
+    "NovaMateriaPage (editar): salvar faz PATCH /materias/m1 SEM If-Match com {nome:'Banco de Dados II', sigla:'BD2', corHex: PALETA[7].hex, sala:null, professor:'prof. Marcos', professorId:null}, recarrega GET /materias e navega para '/tabs/materias/m1'.",
+    "NovaMateriaPage (editar): 409 de sigla mostra mensagem do servidor e não navega.",
+    "NovaMateriaPage (editar): 403 {detail:'Só o líder pode fazer isso.'} mostra texto contendo 'líder'.",
+    "NovaMateriaPage (editar): escolher professor e salvar manda PATCH com professor 'Marcos Lima' e professorId 'p1', depois recarrega e navega para '/tabs/materias/m1'.",
+    "NovoMaterialPage: envia POST /materiais {materiaId:'m1', tipo:'AULA', titulo:'Slides da aula 3', url:'https://drive.google.com/arquivo', dataAula:null}.",
+    "NovoMaterialPage: link só com espaços não envia nada e o erro contém 'link'.",
+    "NovoMaterialPage: link sem esquema ('drive.google.com/arquivo') não envia e o erro contém 'http'.",
+    "NovoMaterialPage: sucesso navega para '/tabs/materias/m1'.",
+    "NovoMaterialPage: falha 500 mostra .pf-erro e não navega.",
+    "EditarMaterialPage: campos preenchidos com título, url e dataAula ('2026-09-02') existentes.",
+    "EditarMaterialPage: salvar faz PATCH /materiais/mat-1 com If-Match '2' e o objeto inteiro {materiaId:'m1', tipo:'AULA', titulo, url, dataAula:'2026-09-02'}; depois navega para '/tabs/materias/m1'.",
+    "EditarMaterialPage: 'Apagar' pede confirmação sem chamar o servidor; 'Sim, apagar' faz DELETE com If-Match '2'.",
+    "EditarMaterialPage: quem não é autor (e sem alcance) não vê 'Salvar' nem 'Apagar' e vê texto contendo 'quem criou'.",
+    "EditarMaterialPage: o autor não dispara GET /turmas/minha; o não-autor dispara.",
+    "EditarMaterialPage (docente com alcance MATERIAS [m1]): vê 'Salvar', não vê 'Apagar', vê texto contendo 'editado por'.",
+    "EditarMaterialPage (coordenação, alcance TURMA): PATCH com If-Match '2' e materiaId 'm1' (não move o registro).",
+    "EditarMaterialPage (docente com alcance em outra matéria): sem 'Salvar' e sem 'Apagar'.",
+    "EditarMaterialPage: link inválido ('drive.google.com/sem-esquema') não chama o servidor e o erro contém 'http'.",
+    "ResumoPage: abrir a tela NÃO faz POST /materiais/m1/resumo e mostra 'Gerar resumo'.",
+    "ResumoPage: gerar faz POST com header X-IA-Key igual à chave e corpo sem a chave; o texto retornado aparece.",
+    "ResumoPage: com resumo pronto ele aparece sem POST e o botão é 'Refazer o resumo'.",
+    "ResumoPage: refazer chama URL contendo 'refazer=true'.",
+    "ResumoPage: sem chave no aparelho não há botão 'Gerar resumo' e há link para '/tabs/ajustes'.",
+    "ResumoPage: a tela contém 'IA' quando há resumo.",
+    "ResumoPage: erro 400 {detail:'A IA recusou a sua chave. Confira em Ajustes.'} aparece em .pf-erro (contém 'recusou') e o botão 'Gerar resumo' continua.",
+    "materialVm: 'https://ex.dev/a.pdf' e 'HTTP://ex.dev/a' viram url abrível; 'javascript:alert(1)', 'data:text/html,…', 'intent://…', 'file:///sdcard/a.pdf' e 'ex.dev/sem-esquema' viram null."
+  ],
+  "nativo": [
+    "@capacitor/preferences (StorageService): snapshot JSON 'pf.snapshot' {eventos, materias, ultimoSync} — cache offline da lista de matérias lido por aquecerDoDisco e gravado por mesclar. Flutter: shared_preferences (mesma chave/forma para convivência).",
+    "@capacitor/preferences (ChaveIaService): chave de IA em 'projetofans.chave-ia' (só no aparelho; vai no header X-IA-Key). Flutter: flutter_secure_storage é o equivalente mais seguro; manter a semântica '' = sem chave.",
+    "@capacitor/preferences (indireto, core): 'pf.sessao' (jwt+usuário para Authorization) e 'pf.turmaAtiva' (X-Turma-Id e título da aba para docente).",
+    "Abrir link externo: <a target='_blank' rel='noopener noreferrer'> — o Capacitor intercepta e abre no navegador do sistema. Flutter: url_launcher com LaunchMode.externalApplication, só para http/https.",
+    "Campo de data nativo (input type=date, valor 'AAAA-MM-DD', pode ser limpo). Flutter: showDatePicker + ação de limpar.",
+    "Teclado: campo link com inputmode url e autocapitalize off (TextInputType.url, sem capitalização); campo sigla com autocapitalize characters (TextCapitalization.characters).",
+    "Nenhum outro plugin nativo nesta área (sem haptics, share, local-notifications, câmera ou upload)."
+  ]
+}

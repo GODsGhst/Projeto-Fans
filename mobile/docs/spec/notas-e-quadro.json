@@ -1,0 +1,327 @@
+{
+  "unidade": "notas-e-quadro — app/features/notas/nova-nota.page.ts (+spec), app/features/quadro/quadro.page.ts (+spec), app/data/quadro.repository.ts; dependências lidas: data/nota.repository.ts, data/moderacao.repository.ts, data/models.ts, features/material-vm.ts, features/evento-vm.ts (assinatura), features/auth/erro.ts, core/api.service.ts, core/interceptores.ts, core/auth.interceptor.ts, core/turma-ativa.interceptor.ts, core/http-error.interceptor.ts, core/timeout.interceptor.ts, core/docente.guard.ts, tabs/tabs.routes.ts, tabs/tabs.page.ts, shared/mini-card, shared/material-linha, shared/materia-chip, shared/tipos; e o backend (QuadroController, EstadoPessoalService, NotaController/NotaService, ModeracaoService, DTOs, application.yml) só para confirmar o contrato.",
+  "telas": [
+    {
+      "rota": "/tabs/quadro (aba “Meu quadro”, só para aluno)",
+      "arquivo": "app/features/quadro/quadro.page.ts",
+      "proposito": "Kanban pessoal com duas colunas, “a fazer” e “feito”, vindas prontas do servidor. É o único lugar do app com estado pessoal: marcar como feito grava em estado_pessoal e não muda nada para mais ninguém. Abaixo do kanban ficam duas seções que só aparecem quando há algo: os pedidos do líder para eu apagar algo meu, e “não listados” (registros meus ocultos pelo líder ou excluídos por mim).",
+      "estados": [
+        "PRIMEIRA CARGA (carregando == true E aFazer e feito vazios): parágrafo .pf-aviso (caixa de borda tracejada 1px, fundo rule-soft, texto ink-2 12,5px) com “Carregando…” (reticências num único caractere, U+2026). O kanban não aparece. O link “a turma →” continua visível. As seções de pedidos e de não listados podem aparecer sozinhas se as chamadas delas responderem antes.",
+        "REVALIDANDO COM DADOS (carregando == true e alguma das duas listas não vazia, por exemplo ao voltar para a aba ou depois de marcar): o kanban continua visível com os dados antigos, SEM indicador de carregamento. Nada pisca.",
+        "REVALIDANDO SEM DADOS (as duas listas vazias e uma recarga em curso): volta a mostrar “Carregando…” e esconde o kanban. temDados é calculado pelo conteúdo das listas, não por “já carreguei uma vez”, então um quadro vazio pisca “Carregando…” a cada entrada na aba. É o comportamento real.",
+        "ERRO (erro != null): .pf-aviso mostra a mensagem do erro, por exemplo “Sem conexão.”, “O servidor demorou demais para responder. Tente de novo.” ou “Deu problema no servidor. Tente de novo.”. O kanban NÃO renderiza, nem com colunas vazias e nem com dados antigos que ainda estejam no repositório. O aviso de não listados também some. As seções de pedidos e de não listados NÃO dependem do erro principal e continuam aparecendo se tiverem dados.",
+        "VAZIO (carregou, sem erro, as duas listas vazias): kanban com as duas colunas, “Nada pendente.” em “a fazer” e “Nada ainda.” em “feito”. Sem dica, sugestão nem card promocional.",
+        "CONTEÚDO: as duas colunas com os cartões na ordem em que o servidor mandou.",
+        "FALHA SÓ EM NÃO LISTADOS (erro == null e erroNaoListados != null): kanban normal mais o parágrafo .aviso-nao-listados com o texto fixo “Não deu para carregar os não listados.”. A seção .nao-listados não renderiza na primeira carga (naoListados continua null).",
+        "FALHA EM PEDIDOS: nenhum aviso. A seção de pedidos simplesmente não aparece (ou continua com o valor anterior; ver armadilhas).",
+        "OFFLINE: igual ao ERRO, com “Sem conexão.”. Não existe snapshot offline nesta tela."
+      ],
+      "elementos": [
+        "1. Barra superior (ion-toolbar, translúcida) com o título “Meu quadro”. Sem botão de voltar, porque é raiz de aba.",
+        "2. Link de texto alinhado à direita: “a turma →” (13px, peso 600, cor accent, sem sublinhado). Vai para /tabs/turma. Aparece em TODOS os estados.",
+        "3. Linha de estado .pf-aviso, mutuamente exclusiva: “Carregando…” (quando carregando && !temDados) OU o texto do erro (quando erro != null). Sem role=alert.",
+        "4. Kanban (só quando !erro && (!carregando || temDados)): grade de 2 colunas iguais (1fr 1fr, gap 8px), lado a lado também no celular, alinhada ao topo.",
+        "4a. Coluna 1: rótulo .pf-rotulo “a fazer” (fonte mono 11px, letter-spacing 0.11em, cor ink-3, em CAIXA ALTA via CSS, então aparece “A FAZER”, com um fio de 1px que vai até a borda direita). Depois, para cada item de aFazer, na ordem do servidor: MiniCard (chip de matéria com cor+sigla, sigla em branco e maiúscula sobre a cor da matéria; título 13px/500; PROVA = bloco sólido com fundo prova-bg e texto prova-fg; ENTREGA = contorno de 1px na cor rule; raio 8px; padding 8px 9px). Logo abaixo do cartão, um botão de texto (11px, peso 600, cor accent, sem fundo, alinhado à esquerda) com um ícone de checkbox VAZADO de 15px (retângulo arredondado rx 4,5 com traço 1,7 e o check em traço) seguido de “marcar como feita” (PROVA) ou “marcar como entregue” (ENTREGA). Lista vazia: “Nada pendente.” (12px, ink-3).",
+        "4b. Coluna 2: rótulo “feito” (aparece como “FEITO”). Para cada item de feito: MiniCard com feito=true (opacidade 0,55 e título riscado) e, abaixo, um botão com o checkbox PREENCHIDO na cor accent e o check desenhado na cor do papel (invertido), seguido de “feita” (PROVA) ou “entregue” (ENTREGA). Lista vazia: “Nada ainda.”",
+        "5. Aviso de não listados (só quando !erro && erroNaoListados): “Não deu para carregar os não listados.” (12,5px, ink-2, sem caixa). O texto é FIXO e não usa a mensagem do signal.",
+        "6. Seção de pedidos (só quando pedidos.length > 0): fio tracejado de 1px no topo, margem 10px e padding 12px. Rótulo “o líder pediu que você apague”. Para cada pedido, na ordem do servidor (mais recente primeiro), um cartão-link (fundo surface, borda 1px rule, raio 14px, padding 11px 13px) com: o título (14px, peso 600); o motivo (12,5px, ink-2), só quando não for nulo nem vazio; e a linha “{pedidoPor} pediu · você decide” (11px, ink-3). O campo “em” não é exibido. Depois da lista vem o parágrafo .pf-cache-aviso: “O líder não apaga registro de ninguém — ele pede. Quem apaga é sempre quem criou, e ignorar o pedido é uma resposta válida.”",
+        "7. Seção não listados (só quando eventos+materiais > 0): fio tracejado no topo. Rótulo “não listados · {N}”, onde N é o total de eventos mais materiais. Primeiro TODOS os eventos ocultos: MiniCard com opacidade 0,72, largura máxima 250px e o aviso em mono 9px ink-3 dentro do cartão. Depois TODOS os materiais ocultos: MaterialLinha (rótulo de formato em mono 10px numa coluna fixa de 42px, como “PDF”, “JPG” ou “LINK”; o título; e a autoria “{autorNome} · {há quanto tempo}”) com o aviso abaixo (10,5px, ink-3) e opacidade 0,72. Os avisos possíveis são “excluído por você · só você vê”, “oculto pelo líder · só você vê” e “só você vê”. Nada nesta seção é tocável."
+      ],
+      "acoes": [
+        "A aba fica visível (ionViewWillEnter: TODA entrada, inclusive a primeira e a volta de uma tela empilhada) → dispara em paralelo, sem await e de forma independente: GET /meu-quadro, GET /nao-listados e GET /moderacao/pedidos. NÃO carrega também no construtor (seriam chamadas duplicadas na abertura).",
+        "Toque em “marcar como feita” ou “marcar como entregue” (coluna a fazer) → PUT /eventos/{eventoId}/estado-pessoal com {\"feito\":true}. Quando responde, GET /meu-quadro (só este). O cartão muda de coluna somente quando o GET chega; não há atualização otimista.",
+        "Toque em “feita” ou “entregue” (coluna feito) → PUT /eventos/{eventoId}/estado-pessoal com {\"feito\":false}, depois GET /meu-quadro. Não pede confirmação.",
+        "Se o PUT falhar: o original não faz nada visível (a promise rejeitada não é tratada e nenhum GET é feito). Se o PUT der certo e o GET falhar: erro é preenchido → o kanban some e a mensagem aparece.",
+        "Toque em “a turma →” → navega para /tabs/turma.",
+        "Toque num pedido com registroTipo EVENTO → /tabs/eventos/{registroId}. Qualquer outro tipo (MATERIAL) → /tabs/materiais/{registroId}/editar.",
+        "Os MiniCards (das colunas e de não listados) e as linhas de material oculto NÃO são tocáveis. Não abrem evento nem link."
+      ],
+      "navegacao": [
+        "Aba “Meu quadro” (ícone checkbox-outline) na barra de abas, só para conta de aluno. Para docente, a aba é trocada por “Turma” (/tabs/turma).",
+        "Guarda soAluno: docente que acessar /tabs/quadro é redirecionado para /tabs/painel.",
+        "Saídas: /tabs/turma, /tabs/eventos/{id} e /tabs/materiais/{id}/editar. Ao voltar delas, a tela recarrega tudo (ionViewWillEnter).",
+        "Erros globais do interceptor também valem aqui: 401 encerra a sessão e leva a /login; 404 com codigo SEM_TURMA esquece a turma e leva a /entrar-turma."
+      ]
+    },
+    {
+      "rota": "/tabs/notas/nova (com query opcional ?dia=AAAA-MM-DD) e /tabs/notas/:id/editar",
+      "arquivo": "app/features/notas/nova-nota.page.ts",
+      "proposito": "Escrever ou editar uma anotação presa a um dia. A pessoa escolhe quem lê: PESSOAL (“Só eu”) ou TURMA (“A turma”). A mesma tela serve para criar e para editar; o :id na rota liga o modo de edição. Editar abre o formulário preenchido a partir da lista que já está em memória (NotaRepository.notas), porque GET /notas/{id} não existe de propósito.",
+      "estados": [
+        "CRIANDO (sem :id): título “Anotação”. Alcance PESSOAL marcado (“Só eu” com aria-pressed=true). Dia = ?dia, se veio, senão hoje no fuso LOCAL. Texto vazio. Sem botão Apagar. Nenhuma chamada HTTP ao abrir.",
+        "EDITANDO, nota encontrada na lista em memória: título “Editar anotação”. Alcance, dia e texto vêm da nota; version é guardada para o If-Match. Botão “Apagar” visível.",
+        "EDITANDO, nota NÃO encontrada (deep link, app reaberto, lista vazia): título “Editar anotação” e erro “Abra a anotação pelo calendário para poder editar.” em .pf-erro. O formulário CONTINUA visível com os padrões (PESSOAL, dia/hoje, texto vazio, version 0), e Salvar e Apagar continuam habilitados.",
+        "ERRO DE VALIDAÇÃO: .pf-erro com “Escreva alguma coisa.” ou “Escolha o dia.”. Nenhuma chamada.",
+        "ENVIANDO: o botão Salvar fica desabilitado (opacidade 0,45) com o texto “Salvando…”. “Sim, apagar” também desabilitado.",
+        "ERRO DO SERVIDOR: .pf-erro (role=alert, caixa sólida com borda ink-3) com a mensagem do interceptor. Os campos mantêm o que a pessoa digitou.",
+        "CONFIRMANDO EXCLUSÃO (só ao editar): o botão Apagar é trocado pelo alerta e por dois botões."
+      ],
+      "elementos": [
+        "1. Barra superior: à esquerda, botão de voltar (ion-back-button, defaultHref /tabs/calendario: volta pelo histórico ou, sem histórico, vai ao calendário); título “Anotação” (criando) ou “Editar anotação” (editando).",
+        "2. Contêiner .pf-auth: coluna com gap 10px e padding 12px 16px 24px. A partir de 768px vira um cartão centralizado, com max-width clamp(380px, 30vw, 520px) e conteúdo centralizado na vertical.",
+        "3. (Condicional) Erro: parágrafo .pf-erro role=alert com o texto do erro. É o PRIMEIRO item do formulário.",
+        "4. Rótulo “quem lê” (.rot-campo: 12,5px, peso 600, ink-3).",
+        "5. Grupo segmentado (role=group, aria-label “Quem lê a anotação”) com dois botões, nesta ordem: “Só eu” (PESSOAL) e “A turma” (TURMA). O estado selecionado vai em aria-pressed.",
+        "6. Explicação (12px, ink-3), que muda conforme o alcance: TURMA → “Todo mundo da turma vai ler, com o seu nome.”; PESSOAL → “Fica só com você. Ninguém da turma vê.”",
+        "7. Rótulo “dia”.",
+        "8. Campo de data (input type=date, name=data, aria-label “Dia da anotação”), com o valor inicial em AAAA-MM-DD. Estilo campo--linha: fundo surface, borda 1px rule, raio 14px, padding 12px 13px, fonte de pelo menos 16px; o foco deixa a borda na cor accent.",
+        "9. Rótulo “o que anotar”.",
+        "10. Área de texto (textarea, name=texto, rows=4, maxlength=2000, aria-label “Texto da anotação”, min-height 96px, redimensionável na vertical) com o texto inicial.",
+        "11. Botão primário de largura cheia (.botao: fundo accent, texto accent-ink, 14,5px, peso 700, raio 14px, padding 14px): “Salvar”, ou “Salvando…” enquanto envia.",
+        "12. (Só ao editar) Se não estiver confirmando: botão fantasma de largura cheia (fundo transparente, borda 1px rule, texto ink) “Apagar”.",
+        "12'. (Só ao editar, confirmando) Parágrafo .alerta “Apagar esta anotação?”, depois o botão fantasma “Sim, apagar” (desabilitado enquanto envia) e o botão fantasma “Cancelar”."
+      ],
+      "acoes": [
+        "Toque em “Só eu” → alcance = PESSOAL; a explicação muda para “Fica só com você. Ninguém da turma vê.”. Não mexe nos campos.",
+        "Toque em “A turma” → alcance = TURMA; a explicação muda para “Todo mundo da turma vai ler, com o seu nome.”. Trocar o alcance ao editar é permitido (o rascunho vira recado).",
+        "Toque em Salvar → (1) se já estiver enviando, ignora; (2) se texto.trim() estiver vazio → erro “Escreva alguma coisa.” e para; (3) se o dia estiver vazio → erro “Escolha o dia.” e para; (4) enviando = true, erro = null, corpo = {alcance, data, texto: texto.trim()}; (5) criando → POST /notas; editando → PATCH /notas/{id} com If-Match: {version}; (6) em erro → erro = mensagemDeErro(e), enviando = false, fica na tela; (7) em sucesso → enviando = false e navega para /tabs/calendario (navegação para a aba do calendário, não um pop). O resultado da API é ignorado e a lista em memória NÃO é atualizada; o calendário recarrega ao entrar.",
+        "Toque em “Apagar” → confirmando = true. Nenhuma chamada.",
+        "Toque em “Cancelar” → confirmando = false.",
+        "Toque em “Sim, apagar” → se não estiver editando ou já estiver enviando, ignora; senão enviando = true, erro = null, DELETE /notas/{id} com If-Match: {version}; em erro → erro = mensagemDeErro(e), confirmando = false (volta a mostrar “Apagar”), enviando = false; em sucesso → navega para /tabs/calendario."
+      ],
+      "navegacao": [
+        "Entradas (todas na tela de calendário, fora desta área): o link “Anotar neste dia” → /tabs/notas/nova?dia={dia aberto}; o botão “Anotar alguma coisa” → /tabs/notas/nova sem dia; e tocar numa anotação “minha” → /tabs/notas/{id}/editar. Hoje o calendário considera “minha” a nota SEM autorNome, ou seja, só as PESSOAIS.",
+        "Saída depois de salvar ou apagar: /tabs/calendario.",
+        "Botão de voltar: histórico, ou /tabs/calendario como padrão.",
+        "Rotas dentro das abas (a barra de abas continua visível). Não há guarda de tipo de conta: aluno e docente usam a tela.",
+        "Ordem das rotas: 'notas/nova' é declarada antes de 'notas/:id/editar'."
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "GET",
+      "caminho": "{apiUrl}/meu-quadro  (apiUrl = http://localhost:8080/api/v1 em dev, https://projetofans-api.onrender.com/api/v1 em prod)",
+      "quando": "A cada entrada na aba Meu quadro (ionViewWillEnter) e depois de cada PUT de estado-pessoal que der certo.",
+      "headers": "Authorization: Bearer <jwt> (omitido quando não há token). X-Turma-Id só para conta docente, e a tela é só de aluno, então na prática nunca vai. Sem If-Match. Sem parâmetro de usuário: o servidor usa o usuário autenticado.",
+      "corpo": "nenhum",
+      "resposta": "200 MeuQuadro { aFazer: ItemHome[], feito: ItemHome[] }. As listas sempre vêm presentes (podem ser []). Ordem do servidor: data do evento ascendente. SEM teto de 6 e SEM janela de 14 dias (essas regras são só da Home). Inclui só eventos visíveis da turma (visivelTurma = true e não excluídos). A separação das colunas é feita pelo servidor a partir de estado_pessoal.",
+      "erros": "Qualquer erro → QuadroRepository.erro = ErroApi.message (ou “Não deu para carregar o quadro.” se o que foi lançado não for Error). As listas aFazer/feito NÃO são limpas, mas a tela esconde o kanban enquanto erro != null. Status 0 → “Sem conexão.”. Timeout de 75 s → “O servidor demorou demais para responder. Tente de novo.”. 5xx → “Deu problema no servidor. Tente de novo.” (ignora o detail). 401 → encerra a sessão em memória e navega a /login (mensagem: detail ou “Sua sessão expirou. Entre de novo.”). 404 com corpo {codigo:\"SEM_TURMA\"} → registrarTurma(null) e navega a /entrar-turma. Outro 404 → detail ?? “Isso não existe mais.”. Os demais → detail ?? title ?? “Não deu para completar a ação.”."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "{apiUrl}/nao-listados",
+      "quando": "A cada entrada na aba Meu quadro, em paralelo e de forma independente do /meu-quadro. NÃO é rechamado depois de marcar.",
+      "headers": "Authorization: Bearer <jwt>. Sem If-Match.",
+      "corpo": "nenhum",
+      "resposta": "200 NaoListados { eventos: Evento[], materiais: Material[] }. Contém os registros DO PRÓPRIO usuário que estão ocultos pela moderação (visivelTurma = false) ou excluídos logicamente (excluidoEm presente). Vazio para quase todo mundo. Cada item traz version, visivelTurma e excluidoEm. ATENÇÃO: o backend omite campos nulos (jackson non_null), então excluidoEm, hora, sala, url, arquivoRef, dataAula etc. simplesmente NÃO aparecem no JSON quando são nulos.",
+      "erros": "Qualquer erro → erroNaoListados = mensagem (ou “Não deu para carregar os não listados.”). naoListados NÃO é limpo (fica o valor anterior, que é null na primeira carga). erroNaoListados volta a null no começo de cada carregarNaoListados. A tela mostra o texto fixo “Não deu para carregar os não listados.” só se o quadro principal não estiver em erro. O interceptor ainda aplica os efeitos de 401 e SEM_TURMA."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "{apiUrl}/moderacao/pedidos",
+      "quando": "A cada entrada na aba Meu quadro, em paralelo com as outras duas (via ModeracaoRepository.meusPedidos).",
+      "headers": "Authorization: Bearer <jwt>.",
+      "corpo": "nenhum",
+      "resposta": "200 PedidoDeExclusao[]: { registroTipo: 'EVENTO'|'MATERIAL', registroId: uuid, titulo: string, motivo: string|null (AUSENTE quando nulo), pedidoPor: string (nome do líder), em: ISO instant }. Ordenada pelo servidor por 'em' decrescente. Só inclui pedidos sobre registros meus que ainda existem: apagar o registro faz o pedido sumir. Hoje o servidor nunca devolve NOTA, embora o enum dele tenha NOTA.",
+      "erros": "Engolido de propósito: catch vazio, sem aviso e sem log. pedidos mantém o valor anterior ([] na primeira vez). Os efeitos colaterais do interceptor (401 → login; SEM_TURMA → entrar-turma) acontecem mesmo assim, porque rodam antes do catch."
+    },
+    {
+      "metodo": "PUT",
+      "caminho": "{apiUrl}/eventos/{eventoId}/estado-pessoal",
+      "quando": "Toque no botão de marcar ou desmarcar de um cartão do quadro. eventoId = ItemHome.eventoId.",
+      "headers": "Authorization: Bearer <jwt>. Content-Type: application/json. SEM If-Match (o recurso alterado é o estado pessoal, que não tem version).",
+      "corpo": "{ \"feito\": true } para marcar e { \"feito\": false } para desmarcar. O campo é obrigatório no servidor (Boolean @NotNull): sem ele, 400.",
+      "resposta": "204 No Content (corpo vazio; o Angular resolve com null). É idempotente: marcar duas vezes atualiza a mesma linha (PK usuário+evento). Em seguida o app faz GET /meu-quadro.",
+      "erros": "404 (corpo ProblemDetail detail “Registro nao encontrado”) se o evento for de outra turma, ou se estiver oculto ou excluído e eu não for o autor. 400 se o corpo estiver inválido. Na tela original NENHUM erro é tratado: QuadroPage.marcar faz `void repo.marcar(...)`, a rejeição sobe sem tratamento, não há mensagem e o GET de recarga não acontece. O interceptor ainda aplica 401 → login e SEM_TURMA → entrar-turma."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "{apiUrl}/notas?de=AAAA-MM-DD&ate=AAAA-MM-DD",
+      "quando": "NÃO é chamado por esta área. Quem chama é o calendário (NotaRepository.carregar) ao entrar no mês. É listado aqui porque é a ÚNICA fonte da nota no modo de edição.",
+      "headers": "Authorization: Bearer <jwt>. Para docente: X-Turma-Id: <turma ativa>, enviado depois de esperar a leitura do disco (turmaAtiva.pronto).",
+      "corpo": "nenhum (de e ate como query string)",
+      "resposta": "200 Nota[] — as notas da TURMA visíveis mais as PESSOAIS de quem pergunta, no período. autorNome e autorSelo só vêm em nota TURMA (ausentes na PESSOAL).",
+      "erros": "NotaRepository.erro = mensagem (ou “Não deu para carregar as anotações.”); a lista NÃO é limpa."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "{apiUrl}/notas",
+      "quando": "Salvar no modo criar, depois de passar na validação local.",
+      "headers": "Authorization: Bearer <jwt>. Content-Type: application/json. Docente: X-Turma-Id. Sem If-Match.",
+      "corpo": "{ \"alcance\": \"PESSOAL\"|\"TURMA\", \"data\": \"AAAA-MM-DD\", \"texto\": string já com trim, 1..2000 caracteres }. Exatamente esses três campos (o teste compara com igualdade estrita).",
+      "resposta": "201 Nota (o app ignora o corpo).",
+      "erros": "Tudo cai em .pf-erro via mensagemDeErro: ErroApi.message, cujo texto prioriza o 'detail' do servidor; se não for ErroApi → “Não deu para completar a ação. Tente de novo.”. 400 de validação (alcance ou data nulos, texto vazio ou com mais de 2000) → detail do Spring (em inglês, ex.: “Invalid request content.”) ou “Não deu para completar a ação.”. 0 → “Sem conexão.”; timeout → “O servidor demorou demais para responder. Tente de novo.”; 5xx → “Deu problema no servidor. Tente de novo.”; 401 → logout + /login."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "{apiUrl}/notas/{id}",
+      "quando": "Salvar no modo editar.",
+      "headers": "Authorization: Bearer <jwt>. If-Match: <version> (o inteiro como string, ex.: \"3\"; é a version que estava na nota da lista em memória, ou 0 se a nota não foi encontrada). Content-Type: application/json. Docente: X-Turma-Id.",
+      "corpo": "O mesmo objeto do POST, COMPLETO: { alcance, data, texto (com trim) }. O PATCH SUBSTITUI o objeto, não é merge parcial.",
+      "resposta": "200 Nota atualizada, com version incrementada (o app ignora).",
+      "erros": "428 sem If-Match (não acontece, porque o app sempre manda) → detail “Header If-Match com a version e obrigatorio”. 409 version divergente → detail “Este registro mudou desde que voce abriu (version X, voce enviou Y)” (o fallback local seria “Alguém editou isso enquanto você editava.”); a version local NÃO é recarregada, e a pessoa precisa sair e reabrir pelo calendário. 403 nota TURMA de outro autor → detail “Somente o autor edita ou exclui o proprio registro” (fallback “Só quem criou pode editar.”). 404 nota PESSOAL de outra pessoa, nota excluída ou de outra turma → “Registro nao encontrado” (fallback “Isso não existe mais.”). Todos aparecem em .pf-erro e a pessoa continua na tela."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "{apiUrl}/notas/{id}",
+      "quando": "“Sim, apagar” no modo editar, depois da confirmação.",
+      "headers": "Authorization: Bearer <jwt>. If-Match: <version>. Docente: X-Turma-Id.",
+      "corpo": "nenhum",
+      "resposta": "204 No Content. A exclusão é LÓGICA no servidor (excluido_em).",
+      "erros": "Os mesmos do PATCH (428/409/403/404/0/timeout/5xx). Em erro: .pf-erro com a mensagem e confirmando = false."
+    }
+  ],
+  "modelos": [
+    {
+      "nome": "ItemHome (item de /meu-quadro; o mesmo DTO da Home)",
+      "campos": "eventoId: String (uuid) — NÃO se chama 'id'\ntipo: TipoEvento ('PROVA' | 'ENTREGA')\ntitulo: String\ndata: String 'AAAA-MM-DD' (não exibida no quadro)\nhora: String? 'HH:mm:ss' (ausente no JSON quando nula; não exibida no quadro)\nmateriaSigla: String\nmateriaCorHex: String (ex.: '#0369A1')\nautoria: Autoria (não exibida no quadro)\nfeitoPeloUsuario: bool (NÃO usar para separar as colunas)"
+    },
+    {
+      "nome": "MeuQuadro",
+      "campos": "aFazer: List<ItemHome> (sempre presente)\nfeito: List<ItemHome> (sempre presente)"
+    },
+    {
+      "nome": "Autoria",
+      "campos": "autorId: String\nautorNome: String\ncriadoEm: String ISO-8601 instant (ex.: '2026-08-30T12:00:00Z', pode ter fração)\natualizadoEm: String ISO instant\nautorSelo: Selo? ('PROFESSOR' | 'COORDENACAO'), ausente quando nulo\neditadoPorNome: String?, ausente quando nulo\neditadoPorSelo: Selo?, ausente quando nulo"
+    },
+    {
+      "nome": "Evento (item de NaoListados.eventos)",
+      "campos": "id: String\ntipo: TipoEvento\ntitulo: String\ndata: String 'AAAA-MM-DD'\nhora: String? 'HH:mm:ss' (ausente quando nula)\nmateriaId: String\nmateriaSigla: String\nmateriaCorHex: String\nautoria: Autoria\nversion: int\nvisivelTurma: bool\nexcluidoEm: String? ISO instant — AUSENTE no JSON quando nulo (jackson non_null)\nsala: String? (ausente quando nula)"
+    },
+    {
+      "nome": "Material (item de NaoListados.materiais)",
+      "campos": "id: String\ntipo: TipoMaterial ('AULA' | 'ADICIONAL')\ntitulo: String\nurl: String? (ausente quando nula)\narquivoRef: String? (ausente quando nula)\nmateriaId: String\nautoria: Autoria\nversion: int\nvisivelTurma: bool\nexcluidoEm: String? (AUSENTE quando nulo)\ndataAula: String? 'AAAA-MM-DD'\nresumo: String?\nresumoEm: String?"
+    },
+    {
+      "nome": "NaoListados",
+      "campos": "eventos: List<Evento> (sempre presente)\nmateriais: List<Material> (sempre presente)"
+    },
+    {
+      "nome": "PedidoDeExclusao",
+      "campos": "registroTipo: 'EVENTO' | 'MATERIAL' (o enum do backend também tem 'NOTA', que hoje nunca é devolvido)\nregistroId: String (uuid)\ntitulo: String\nmotivo: String? (ausente quando nulo)\npedidoPor: String (nome de quem pediu)\nem: String ISO instant (não exibido)"
+    },
+    {
+      "nome": "EstadoPessoalRequest (corpo do PUT)",
+      "campos": "feito: bool (obrigatório, nunca nulo nem ausente)"
+    },
+    {
+      "nome": "Nota",
+      "campos": "id: String\nalcance: AlcanceNota ('TURMA' | 'PESSOAL')\ndata: String 'AAAA-MM-DD'\ntexto: String\nautorId: String\nautorNome: String? — só vem em nota TURMA (ausente na PESSOAL)\nautorSelo: Selo? — só 'COORDENACAO' e só em nota TURMA; ausente quando nulo\ncriadoEm: String ISO instant\natualizadoEm: String ISO instant\nversion: int\nvisivelTurma: bool (false = o líder tirou da lista da turma; só o autor continua vendo)"
+    },
+    {
+      "nome": "SalvarNota (corpo de POST e PATCH /notas)",
+      "campos": "alcance: AlcanceNota (obrigatório, sem padrão no servidor)\ndata: String 'AAAA-MM-DD' (obrigatório)\ntexto: String (obrigatório, não pode ser só espaço, máximo 2000 caracteres UTF-16; o app manda com trim)"
+    },
+    {
+      "nome": "CartaoVm (view-model da tela de quadro)",
+      "campos": "id: String (= ItemHome.eventoId ou Evento.id)\nmateria: { sigla: String, cor: String } (par indivisível: cor + sigla sempre juntas)\ntitulo: String\ntipo: TipoEvento\naviso: String? (só em não listados)"
+    },
+    {
+      "nome": "MaterialVm (subconjunto usado em não listados)",
+      "campos": "id: String\ntipo: String — rótulo de FORMATO, não AULA/ADICIONAL: a extensão de (arquivoRef ?? url) pela regex /\\.([a-z0-9]{1,5})(?:$|[?#])/i em maiúsculas, ou 'LINK' quando não casa ou quando é nulo\ntitulo: String\nautoria: String — assinatura: '{autorNome} · {desde(criadoEm)}', ou só o nome quando a data não puder ser lida\n(url/daAula/selo/editadoPor/temResumo existem no VM mas NÃO são usados nesta tela)"
+    },
+    {
+      "nome": "ErroApi (erro de domínio produzido pelo interceptor central)",
+      "campos": "classe: 'DEMOROU'|'AUTH'|'PROIBIDO'|'NAO_ENCONTRADO'|'PRECONDICAO'|'CONFLITO'|'SERVIDOR'|'OFFLINE'|'DESCONHECIDO'\nstatus: int (0 para offline e timeout)\nmessage: String (pronta para a tela)\npodeTentarNovamente: bool (true em 0, timeout e 5xx)\nrecarregarRegistro: bool (true em 409)\ncodigo: String? (ProblemDetail.codigo; o único usado é 'SEM_TURMA')"
+    }
+  ],
+  "servicos_e_estado": [
+    "QuadroRepository (singleton global, providedIn root; o estado SOBREVIVE entre instâncias da tela). Signals: aFazer: List<ItemHome> = []; feito: List<ItemHome> = []; naoListados: NaoListados? = null; carregando: bool = false; erro: String? = null; erroNaoListados: String? = null; pedidos: List<PedidoDeExclusao> = [].",
+    "QuadroRepository.carregar(): carregando = true; erro = null; GET /meu-quadro; sucesso → aFazer = resposta.aFazer e feito = resposta.feito; erro → erro = (e is Error ? e.message : 'Não deu para carregar o quadro.'), SEM limpar as listas; finally carregando = false. Não relança: ler o signal erro é o tratamento.",
+    "QuadroRepository.carregarNaoListados(): erroNaoListados = null; GET /nao-listados; sucesso → naoListados = resposta; erro → erroNaoListados = (e.message ou 'Não deu para carregar os não listados.'), sem limpar naoListados. Não mexe em carregando.",
+    "QuadroRepository.carregarPedidos(): pedidos = await moderacao.meusPedidos() (GET /moderacao/pedidos); erro engolido sem aviso nenhum, e pedidos fica como estava.",
+    "QuadroRepository.marcar(eventoId, feito): await PUT /eventos/{eventoId}/estado-pessoal {feito}; depois await carregar(). Se o PUT falhar, relança e NÃO recarrega.",
+    "QuadroPage (estado derivado): temDados = aFazer.isNotEmpty || feito.isNotEmpty; aFazer/feitos = listas mapeadas para CartaoVm na ordem recebida; eventosOcultos = naoListados?.eventos mapeados para CartaoVm com aviso (ou []); materiaisOcultos = naoListados?.materiais mapeados para {vm: materialVm(m, agora), aviso}, com 'agora' calculado na hora do recálculo (o tempo relativo só muda quando chegam dados novos); totalNaoListados = eventos + materiais; temNaoListados = total > 0; pedidos = repo.pedidos. acao(tipo) = PROVA ? 'marcar como feita' : 'marcar como entregue'; desfazer(tipo) = PROVA ? 'feita' : 'entregue'; caminhoDo(p) = EVENTO ? '/tabs/eventos/{id}' : '/tabs/materiais/{id}/editar'; porQueSumiu(visivelTurma, excluidoEm) = excluidoEm != null ? 'excluído por você · só você vê' : (visivelTurma ? 'só você vê' : 'oculto pelo líder · só você vê').",
+    "QuadroPage.ionViewWillEnter(): dispara carregar(), carregarNaoListados() e carregarPedidos() sem await (fire-and-forget, em paralelo). QuadroPage.marcar(id, feito): `void repo.marcar(...)`, sem tratamento de erro.",
+    "NotaRepository (singleton global; usado também pelo calendário). Signals: notas: List<Nota> = []; carregando: bool; erro: String?. carregar(de, ate): GET /notas?de&ate, e em erro guarda a mensagem sem limpar a lista. criar(req) → POST /notas e devolve Nota. atualizar(id, version, req) → PATCH /notas/{id} com If-Match. excluir(id, version) → DELETE /notas/{id} com If-Match. criar/atualizar/excluir NÃO atualizam a lista notas.",
+    "NovaNotaPage (estado local): editandoId = paramMap['id'] (string vazia também conta como null); alcance = 'PESSOAL'; erro: String? = null; enviando = false; confirmando = false; dataInicial = hoje() local ou ?dia; textoInicial = ''; version = 0 (privado). No construtor: aplica ?dia se não for null; se estiver editando, procura repo.notas() por id e aplica alcance/data/texto/version, ou mostra o erro de “abra pelo calendário”. Campos de data e texto NÃO controlados: o valor é lido na hora do clique.",
+    "ModeracaoRepository.meusPedidos(): GET /moderacao/pedidos → List<PedidoDeExclusao>. Os outros métodos (ocultar, reexibir, pedirExclusao, ocultados, transferirLideranca) não são usados nesta área.",
+    "ApiService: base = environment.apiUrl. get(rota, params) monta a query com String(valor). post(rota, corpo) manda corpo ?? {}. put(rota, corpo) manda corpo ?? {}. patch(rota, corpo, version?) e delete(rota, version?) mandam If-Match: String(version) quando a version é informada. Não trata erro; tudo sobe.",
+    "Cadeia de interceptores, nesta ordem, do mais externo ao mais interno: auth (Authorization: Bearer, menos em URLs com '/auth/') → turmaAtiva (só docente e só para URLs que começam com apiUrl: espera turmaAtiva.pronto e põe X-Turma-Id se houver turma) → erroHttp (traduz em ErroApi; 401 → encerrarSessao + /login; SEM_TURMA → registrarTurma(null) + /entrar-turma; TimeoutError → DEMOROU) → timeout (75.000 ms por requisição).",
+    "mensagemDeErro(e) (features/auth/erro.ts, usada por NovaNotaPage): devolve ErroApi.message; para qualquer outra coisa, 'Não deu para completar a ação. Tente de novo.'. ATENÇÃO: o QuadroRepository NÃO usa essa função. Ele usa e.message de qualquer Error (um TypeError vazaria a mensagem técnica) e o padrão próprio só para o que não for Error."
+  ],
+  "regras": [
+    "Não-negociável 3 — fato compartilhado nunca guarda estado pessoal: marcar como feito é PUT /eventos/{id}/estado-pessoal (recurso separado, sem If-Match e sem version) e NUNCA um PATCH no evento. O MiniCard “feito” é só visual e pessoal.",
+    "Não-negociável 5 e a regra “nenhuma regra de negócio no componente”: as colunas a fazer/feito vêm prontas do servidor. A tela não separa por feitoPeloUsuario, não reordena e não corta. O quadro não tem teto de 6 nem janela de 14 dias; essas regras são só da Home, e cortar o quadro esconderia entrega atrasada.",
+    "Não-negociável 4 — ordem é urgência: renderize na ordem recebida (o servidor manda por data ascendente). Não agrupe provas.",
+    "Proibido o catch que transforma falha em lista vazia: falha no /meu-quadro mostra o erro e ESCONDE o kanban, porque coluna vazia diria “nada pendente”, a frase oposta de “não consegui descobrir”. Falha em /nao-listados vira aviso próprio e não pode esconder o quadro.",
+    "Não-negociável 6 — semana vazia mostra pouca coisa: quadro vazio mostra só “Nada pendente.” e “Nada ainda.”; as seções de pedidos e de não listados nem existem quando estão vazias (nada de caixa explicando o que não aconteceu).",
+    "Não-negociável 7 — cor + sigla sempre juntas: todo cartão usa o chip de matéria com cor e sigla (CartaoVm.materia é um par).",
+    "Não-negociável 8 — prova pesa mais que entrega pela tinta: no MiniCard, PROVA é bloco sólido (fundo prova-bg) e ENTREGA é contorno de 1px; a cor só identifica a matéria. O estado feito também se lê pela forma (opacidade + risco no título; checkbox vazado × preenchido) e não só pela cor.",
+    "Handoff 2.4: “Não listados” é uma seção ABAIXO do kanban, separada por fio tracejado, e nunca uma terceira coluna. Só aparece quando há algo.",
+    "Não-negociável 10 — só o autor edita ou exclui: o líder não apaga, ele pede. A seção de pedidos diz isso literalmente e leva ao registro para que o próprio autor decida; ignorar é uma resposta válida.",
+    "Autoria visível: em não listados, o material mostra 'autorNome · há X'. O aviso distingue “oculto pelo líder” (decisão de outra pessoa) de “excluído por você” (sua), e a exclusão prevalece sobre a ocultação.",
+    "Não-negociável 2 — edição não apaga histórico: o DELETE /notas é lógico no servidor; o PATCH exige If-Match (sem ele, 428; divergente, 409; nunca sobrescreve em silêncio).",
+    "Anotação: a escolha do alcance vem ANTES do texto e é explicada em palavras. O custo do erro é assimétrico (um rascunho que a turma vê é pior que um recado que ninguém vê), por isso o padrão marcado na tela é o fechado, PESSOAL (“Só eu”). O servidor não tem padrão: alcance é obrigatório.",
+    "Não existe GET /notas/{id}, de propósito: com ele, adivinhar um UUID permitiria ler o rascunho pessoal de outra pessoa. Editar só funciona a partir da lista que o calendário carregou. Não crie essa chamada no port.",
+    "Erros de 404 entre turmas: o servidor responde 404 (e não 403) para o que é de outra turma ou é pessoal de outra pessoa, e 403 quando o registro é da sua turma mas não é seu. O app só mostra a mensagem.",
+    "Todo erro HTTP passa pelo interceptor central, que traduz o status em frase pronta; nenhuma tela lê status cru.",
+    "Sem suporte a múltiplas turmas: aluno não manda X-Turma-Id. Só docente manda, e o quadro é exclusivo de aluno."
+  ],
+  "armadilhas": [
+    "RECARREGAR A CADA ENTRADA NA ABA, não só ao criar a tela: no Ionic a página da aba fica viva, e carregar só no construtor fazia a tela mostrar para sempre o que havia na primeira abertura. Isso inclui VOLTAR de uma tela empilhada (/tabs/turma, /tabs/eventos/{id}, /tabs/materiais/{id}/editar). Em Flutter, com IndexedStack/StatefulShellRoute, o initState NÃO basta: dispare ao selecionar a aba e também em didPopNext (RouteAware). E NÃO carregue também no initState: seriam duas chamadas na abertura, e num servidor dormindo cada uma custa dezenas de segundos.",
+    "As três chamadas de entrada saem em paralelo, sem await e com erros independentes. O teste exige exatamente UMA de cada (/meu-quadro, /nao-listados, /moderacao/pedidos) por entrada, e de novo as três a cada reentrada.",
+    "“Carregando…” só aparece quando não há o que mostrar (carregando && aFazer.isEmpty && feito.isEmpty). Um spinner incondicional apagaria o quadro a cada troca de aba. Mas temDados é calculado pelo CONTEÚDO das listas: um quadro vazio volta a mostrar “Carregando…” a cada reentrada. Não troque por uma flag de “já carreguei uma vez” sem decidir isso conscientemente.",
+    "Erro esconde o kanban mesmo que o repositório ainda tenha os dados antigos (as listas não são limpas, mas a condição do kanban exige !erro). E erro volta a null no INÍCIO de cada carregar(): durante a revalidação seguinte, os dados antigos reaparecem no kanban até a resposta chegar.",
+    "Nunca refaça a separação das colunas por feitoPeloUsuario. O teste manda um item na lista 'feito' com feitoPeloUsuario=false e exige que ele apareça na coluna feito. Também não reordene e não aplique teto de 6 nem janela de 14 dias.",
+    "Marcar não é otimista: o cartão só muda de coluna quando o GET /meu-quadro de recarga responde. Depois do PUT, só /meu-quadro é rechamado; /nao-listados e /moderacao/pedidos NÃO (o teste falha se houver chamada extra).",
+    "O PUT usa ItemHome.eventoId (mapeado para CartaoVm.id) e o caminho /eventos/{eventoId}/estado-pessoal, com corpo exatamente {\"feito\": true|false}. Não é PATCH, não tem If-Match. O servidor recusa o corpo sem o campo (400): nunca mande feito nulo.",
+    "Falha ao marcar não tem tratamento no original (promise rejeitada sem catch): sem mensagem, o cartão não se mexe e a tela não recarrega. Se o PUT passar e o GET falhar, o kanban some e aparece o erro. O AGENTS proíbe catch vazio; no port, não engula em silêncio: no mínimo registre o erro e, de preferência, mostre a mensagem do ErroApi (registre como decisão). Não transforme a falha numa remoção otimista do cartão.",
+    "O botão de marcar não fica desabilitado durante a requisição: toque duplo manda dois PUTs e dois GETs (o servidor é idempotente). Recargas simultâneas: vence a ÚLTIMA RESPOSTA a chegar, não a última requisição, e 'carregando' vira false quando a PRIMEIRA termina. Se o port descartar respostas antigas, não pode quebrar o comportamento de “revalidar sem esconder”.",
+    "Os textos dos botões são vocabulário de aluno: na coluna a fazer, “marcar como feita” (PROVA) e “marcar como entregue” (ENTREGA); na coluna feito, o botão nomeia o ESTADO atual, “feita” ou “entregue”, e não a operação. Nunca “resolvido”. Cada botão TEM o ícone de checkbox (o teste exige o vetor): vazado em a fazer, preenchido com o check invertido em feito.",
+    "O backend omite campos nulos do JSON (spring.jackson.default-property-inclusion = non_null). No Angular, porQueSumiu testa `excluidoEm !== null`, e com o campo AUSENTE (undefined) isso é verdadeiro: em produção, TODO item oculto pelo líder aparece como “excluído por você · só você vê”. Os testes passam só porque as fixtures mandam null explícito. No Dart, parse como String? (ausente = null) e implemente a semântica pretendida: excluidoEm presente → 'excluído por você · só você vê'; senão visivelTurma=false → 'oculto pelo líder · só você vê'; senão 'só você vê'. Escreva um teste com o campo AUSENTE.",
+    "A mesma omissão de nulos vale para Autoria.autorSelo/editadoPorNome/editadoPorSelo, ItemHome.hora, Evento.hora/sala/excluidoEm, Material.url/arquivoRef/dataAula/resumo/resumoEm, Nota.autorNome/autorSelo e Pedido.motivo. TODO campo anulável precisa aceitar a chave ausente sem lançar exceção no fromJson. Listas (aFazer, feito, eventos, materiais) sempre vêm, mesmo vazias.",
+    "O aviso de falha de não listados é texto FIXO (“Não deu para carregar os não listados.”) e não a mensagem do signal; ele só aparece quando o quadro principal NÃO está em erro.",
+    "naoListados e pedidos NÃO são limpos quando a chamada falha. Na primeira carga não há problema (null ou []), mas depois de um sucesso, uma falha seguinte deixa a seção .nao-listados ANTIGA na tela junto do aviso de falha, contrariando o comentário (“a seção NÃO renderiza”). O teste só cobre a primeira carga. No port, siga a intenção (falhou → a seção não renderiza) e registre isso como decisão.",
+    "As seções de pedidos e de não listados NÃO dependem do erro principal: com /meu-quadro falhando e as outras respondendo, elas aparecem junto da mensagem de erro.",
+    "Os pedidos falham em silêncio por desenho (não há aviso), mas o interceptor ainda age: 401 em /moderacao/pedidos desloga e leva ao login; SEM_TURMA leva a /entrar-turma.",
+    "Rota de pedido: só EVENTO vai para /tabs/eventos/{id}; QUALQUER outro tipo cai em /tabs/materiais/{id}/editar. O enum do servidor tem NOTA (hoje nunca devolvido); se um dia vier, o original mandaria para uma tela de material. No port, trate NOTA explicitamente.",
+    "A chave dos pedidos no Angular é registroId, mas o servidor devolve uma linha POR AÇÃO de pedir exclusão: se o líder pedir duas vezes sobre o mesmo registro, o registroId se repete. Em Flutter, chave duplicada derruba a lista: use índice ou registroId+em.",
+    "O motivo do pedido só aparece se for “truthy”: ausente, null ou string vazia somem.",
+    "Em não listados: primeiro todos os eventos e depois todos os materiais (não intercalados); N no rótulo = eventos + materiais. O material oculto mostra o rótulo de FORMATO (extensão de arquivoRef ?? url em maiúsculas, ou 'LINK') e não 'AULA'/'ADICIONAL'. A autoria usa criadoEm (não atualizadoEm). O tempo relativo segue: minutos = round(ms/60000); <1 → 'agora' (inclusive datas no futuro); <60 → 'há N min'; horas = round(min/60), <24 → 'há N h'; dias = round(h/24), 1 → 'há 1 dia', senão 'há N dias'; data ilegível → só o nome. Selo e “editado por” NÃO são passados nesta tela.",
+    "Os cartões do quadro mostram só chip e título: sem data, sem hora, sem autoria e sem link para o evento, apesar de o ItemHome trazer esses dados. Não adicione navegação nem metadados sem decisão.",
+    "Os rótulos .pf-rotulo são escritos em minúsculas no template ('a fazer', 'feito', 'o líder pediu que você apague', 'não listados · N') e viram CAIXA ALTA por CSS. Em Flutter, se você usar .toUpperCase() no Text, os testes de widget precisam procurar o texto em maiúsculas; se aplicar só no estilo, decida e mantenha consistente.",
+    "O kanban são duas colunas lado a lado também em tela de celular (grid 1fr 1fr, min-width 0, título com quebra em qualquer ponto). Não empilhe as colunas.",
+    "O quadro é só de aluno: a guarda soAluno redireciona o docente para /tabs/painel, e a aba nem existe para ele (no lugar entra “Turma”).",
+    "Repositórios singleton NÃO são limpos no logout (sair() e encerrarSessao() não limpam QuadroRepository nem NotaRepository e não recarregam a página). Se outra pessoa entrar no mesmo aparelho, vê por instantes o quadro da anterior (temDados=true) até o GET responder; e um deep link /tabs/notas/{id}/editar poderia preencher o formulário com o RASCUNHO PESSOAL de outra conta. No port, limpe esses estados em sair, em 401, em SEM_TURMA e na troca de turma do docente (no Angular, a troca faz location.reload()).",
+    "Não existe cache offline no quadro (ao contrário da Home): offline é “Sem conexão.” e não há kanban.",
+    "Teto de 75 s por requisição: num servidor do Render dormindo, a primeira carga pode ficar em “Carregando…” por dezenas de segundos. Um teto de 30 s abortaria requisições legítimas. O timeout vira “O servidor demorou demais para responder. Tente de novo.”.",
+    "Nova anotação: o comentário diz “sem padrão marcado”, mas o código e o TESTE exigem PESSOAL (“Só eu” com aria-pressed=true) marcado ao abrir. Siga o teste.",
+    "Nova anotação: o grupo .seg NÃO tem estilo nesta página (o .seg só é estilizado dentro de novo-evento e de cadastro, com encapsulamento por componente), então no original o botão selecionado não tem destaque visual, só aria-pressed. No port, deixe a seleção visível como no .seg de novo-evento (fundo accent, texto accent-ink, container rule-soft, raio 14px) e registre como decisão; exponha também a semântica de selecionado para a acessibilidade.",
+    "Editar NÃO busca no servidor: a nota vem de NotaRepository.notas (carregada pelo calendário). Não encontrada → erro “Abra a anotação pelo calendário para poder editar.”, mas o formulário segue habilitado com os padrões e version=0. Salvar ou Apagar mandariam If-Match: 0, e o servidor responderia 409, 403 ou 404. Não “conserte” com GET /notas/{id}, que não existe por regra de privacidade.",
+    "O dia padrão é HOJE no fuso LOCAL, montado com getFullYear/getMonth/getDate. Nada de toISOString/UTC, que daria o dia anterior em fuso negativo (Brasil). ?dia só vale quando não é null; no modo editar, a data da nota sobrescreve o ?dia. Um ?dia em formato inválido deixa o campo vazio no navegador e cai em “Escolha o dia.” ao salvar.",
+    "Ordem da validação: primeiro o texto (trim vazio → “Escreva alguma coisa.”), depois a data vazia (“Escolha o dia.”). Erro de validação não faz chamada. O texto vai COM trim. A validação só substitui a mensagem anterior; erro=null só depois de passar.",
+    "Limite de 2000: o maxlength do HTML e o @Size do servidor contam unidades UTF-16. O maxLength do TextField do Flutter conta grapheme clusters, então texto com emoji pode passar no app e levar 400 no servidor. Use um TextInputFormatter que limite por String.length (UTF-16).",
+    "O PATCH manda o objeto INTEIRO (alcance, data, texto), porque é substituição e não merge. O If-Match é a version como string. O DELETE também leva If-Match. Depois de um 409, a version local não é recarregada: para tentar de novo, a pessoa precisa voltar ao calendário (que recarrega) e reabrir.",
+    "Os campos de data e texto não são controlados: o valor é lido no clique. Trocar o alcance, mostrar erro ou abrir/fechar a confirmação NÃO reseta o que a pessoa digitou. Em Flutter, crie os TextEditingControllers uma vez e não os recrie em rebuild.",
+    "Sucesso em salvar ou apagar → navegar para /tabs/calendario (ir para a aba do calendário, não dar pop). A lista em memória não é atualizada; o calendário depende de recarregar ao entrar. Garanta que a aba do calendário recarregue ao receber o foco.",
+    "Proteção contra duplo envio: as funções retornam cedo se enviando=true; Salvar fica desabilitado e com “Salvando…”, e “Sim, apagar” também fica desabilitado. “Apagar” e “Cancelar” NÃO ficam desabilitados.",
+    "Excluir pede confirmação em dois toques (“Apagar” → “Apagar esta anotação?” + “Sim, apagar”/“Cancelar”). Em erro, a confirmação fecha (confirmando=false) e o erro aparece no topo. Criando, o botão Apagar nem existe (o teste procura qualquer botão com 'Apagar' e exige que não haja).",
+    "O modo edição é ligado pelo parâmetro :id NÃO VAZIO (paramMap.get('id') || null): string vazia conta como criar.",
+    "As mensagens de erro priorizam o 'detail' do servidor, que vem em português SEM acento (ex.: “Este registro mudou desde que voce abriu (version 4, voce enviou 3)”, “Somente o autor edita ou exclui o proprio registro”, “Registro nao encontrado”). Os textos locais acentuados são só fallback quando não há detail. Em 5xx o detail é ignorado. Erros de validação 400 do Spring podem vir em inglês.",
+    "Efeito colateral entre áreas: o calendário só oferece editar a nota SEM autorNome, isto é, só a PESSOAL, porque o servidor só manda autorNome na TURMA. Quando o autor troca o alcance para “A turma” ao editar, a nota deixa de ser editável e apagável pela interface. É um defeito do critério 'minha' do calendário (o correto seria autorId == usuário logado) e deve ser decidido no port do calendário, não escondido aqui.",
+    "Para docente, as chamadas de /notas levam X-Turma-Id e esperam a leitura da turma ativa no disco antes de sair (fora do teto de 75 s). Sem essa espera, o servidor responderia pela turma “mais recente”, ou seja, dado de OUTRA turma sem erro nenhum."
+  ],
+  "testes": [
+    "Quadro — abrir: entrar na aba dispara exatamente um GET /meu-quadro, um GET /nao-listados e um GET /moderacao/pedidos; nenhuma outra requisição (verify ao fim de cada teste).",
+    "Quadro — 'as duas colunas saem do servidor, nao de filtro no cliente': com aFazer=[Lista 4, Prova 2] e feito=[Diagrama com feitoPeloUsuario=false], a coluna 0 mostra ['Lista 4','Prova 2'] nessa ordem e a coluna 1 mostra ['Diagrama'].",
+    "Quadro — 'nao listados nao aparece quando nao ha nada': com {eventos:[], materiais:[]}, não existe a seção .nao-listados.",
+    "Quadro — 'nao listados separa o que o lider ocultou do que o autor excluiu': evento com visivelTurma=false e excluidoEm=null mostra 'oculto pelo líder'; evento com excluidoEm preenchido mostra 'excluído'; o título do material oculto ('Resumo de grafos') aparece na seção.",
+    "Quadro — 'falha ao carregar o quadro nao vira quadro vazio': com erro de rede (status 0) nas duas chamadas, .pf-aviso contém 'Sem conexão' e .kanban não existe.",
+    "Quadro — 'falha so em nao-listados nao esconde o quadro': quadro ok com 'Lista 4' e /nao-listados com erro de rede → coluna 0 = ['Lista 4'], .aviso-nao-listados contém 'não listados' e .nao-listados não existe.",
+    "Quadro — 'marcar feito manda estado pessoal e rele o quadro': tocar no primeiro .marcar → PUT /eventos/e1/estado-pessoal com corpo exatamente {feito:true}; depois exatamente um GET /meu-quadro; com a resposta {aFazer:[], feito:[Lista 4]}, a coluna 0 fica [] e a coluna 1 fica ['Lista 4'].",
+    "Quadro — 'a barra leva para a turma': existe um link para /tabs/turma.",
+    "Quadro — 'recarregar nao apaga o quadro que ja esta na tela': depois de carregar com um item, chamar a entrada na aba de novo mantém .kanban visível enquanto as três novas requisições estão pendentes; as três (/meu-quadro, /nao-listados, /moderacao/pedidos) são refeitas.",
+    "Quadro — 'a acao diz o que a pessoa fez': o rótulo do botão de PROVA contém 'feita', o de ENTREGA contém 'entregue', e nenhum rótulo contém 'resolvido'.",
+    "Quadro — 'cada acao carrega o vetor de confirmacao': existe um ícone (svg) dentro do botão .marcar.",
+    "Quadro — 'o pedido do lider para eu apagar algo meu aparece aqui': com um pedido EVENTO e1 ('Prova duplicada', motivo 'ja existe outra igual', pedidoPor 'Lia'), a seção .pedidos contém o título, o motivo e 'Lia', e tem um link para /tabs/eventos/e1.",
+    "Quadro — 'sem pedido nenhum, a secao nao existe': com [], .pedidos não existe.",
+    "NovaNota — 'nenhum alcance vem marcado como padrao': ao abrir para criar, o botão com aria-pressed=true é 'Só eu'.",
+    "NovaNota — 'a tela diz o que cada alcance significa': ao abrir, o texto contém 'Ninguém da turma vê'; depois de tocar em 'A turma', contém 'Todo mundo da turma vai ler'.",
+    "NovaNota — 'cria a anotacao e volta para o calendario': tocar em 'A turma', data 2026-09-12, texto 'aula cancelada', Salvar → POST /notas com corpo exatamente {alcance:'TURMA', data:'2026-09-12', texto:'aula cancelada'}.",
+    "NovaNota — 'texto em branco nao vai para o servidor': texto '   ' + Salvar → nenhuma requisição para /notas, e .pf-erro contém 'Escreva'.",
+    "NovaNota — 'o dia vem do calendario quando ele manda um': com ?dia=2026-09-20, o campo de data vale '2026-09-20'.",
+    "NovaNota — 'editar abre preenchido a partir da lista, e manda o If-Match': com NotaRepository.notas=[n1 (version 3, texto 'estudar cap 4', data 2026-09-10)] e rota id=n1, os campos abrem com 'estudar cap 4' e '2026-09-10'; editar o texto + Salvar → PATCH /notas/n1 com If-Match '3'.",
+    "NovaNota — 'trocar o alcance na edicao e permitido': editando n1 (PESSOAL), tocar em 'A turma' + Salvar → o corpo do PATCH tem alcance 'TURMA'.",
+    "NovaNota — 'apagar pede confirmacao antes': tocar em 'Apagar' não faz requisição; 'Sim, apagar' → DELETE /notas/n1 com If-Match '3'.",
+    "NovaNota — 'criando, nao ha botao de apagar': nenhum botão com 'Apagar' e nenhuma navegação ao abrir; nenhuma requisição HTTP ao abrir (nem criando nem editando).",
+    "Sugeridos para o port (não existem no Angular): parse de Evento/Material com excluidoEm AUSENTE no JSON deve dar 'oculto pelo líder · só você vê' (visivelTurma=false) ou 'só você vê'; limite de 2000 contado em UTF-16; pedidos com registroId repetido renderizam sem erro de chave; logout limpa QuadroRepository e NotaRepository."
+  ],
+  "nativo": [
+    "Nenhum plugin Capacitor nesta área. Não usa Preferences, Filesystem, LocalNotifications nem Share.",
+    "Usa só componentes Ionic de layout (ion-header, ion-toolbar, ion-title, ion-buttons, ion-back-button com defaultHref /tabs/calendario, ion-content) e o ciclo de vida ionViewWillEnter (Ionic) para recarregar a aba. Em Flutter isso equivale a ouvir a seleção da aba mais RouteAware.didPopNext.",
+    "O campo de data é <input type=\"date\"> nativo do navegador/WebView, com valor AAAA-MM-DD. Em Flutter, use showDatePicker (locale pt_BR) e formate a data local como AAAA-MM-DD.",
+    "Indiretamente, pelo interceptor: a leitura da turma ativa do disco (TurmaAtivaService.pronto, só para docente) e o encerramento da sessão / cancelamento de lembretes no 401 (AuthService). Nada disso é chamado diretamente pelas telas desta área."
+  ]
+}

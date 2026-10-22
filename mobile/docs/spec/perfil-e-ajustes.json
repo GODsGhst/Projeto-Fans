@@ -1,0 +1,354 @@
+{
+  "unidade": "perfil-e-ajustes — app/src/app/features/perfil/perfil.page.ts (+spec), app/src/app/features/ajustes/ajustes.page.ts (+spec), app/src/app/core/chave-ia.service.ts. Dependências lidas: core/auth.service.ts, core/api.service.ts, core/http-error.interceptor.ts, core/auth.interceptor.ts, core/turma-ativa.interceptor.ts, core/timeout.interceptor.ts, core/interceptores.ts, core/storage.service.ts, core/auth.guard.ts, core/turma-ativa.service.ts, data/models.ts, data/docente.models.ts, data/material.repository.ts (resumir), features/auth/erro.ts, features/auth/auth-teste.ts, features/auth/auth.scss, src/global.scss, notifications/notificacoes.service.ts, notifications/reagendador.ts, tabs/tabs.routes.ts, tabs/tabs.page.ts, app.routes.ts, backend EuController/AuthService/PerfilResponse/ProblemDetailHandler.",
+  "telas": [
+    {
+      "rota": "/tabs/perfil",
+      "arquivo": "app/src/app/features/perfil/perfil.page.ts",
+      "proposito": "A conta de quem está logado: nome, e-mail, situação do cadastro docente, troca de nome, troca de senha, atalhos (Minha turma, Ajustes, Aprovar professores para admin), sair e versão do app. É a 5ª aba no celular (rótulo 'Perfil', avatar com a inicial) e o rodapé do menu lateral no PC. Rota protegida por guardaSessao (sessão + turma). Sem guarda de tipo: aluno e docente usam a mesma tela.",
+      "estados": [
+        "INICIAL/CARREGANDO PRIMEIRA VEZ (carregando=true e perfil=null): só o parágrafo .pf-aviso (tracejado, sem role) 'Carregando…' + o bloco fixo 'conta' (Minha turma / Ajustes / Sair da conta) + 'Versão X'. O sinal carregando começa true, então este é o estado antes mesmo do GET sair.",
+        "RECARREGANDO COM PERFIL NA TELA (carregando=true e perfil!=null): NADA de indicador — o conteúdo antigo continua igual (recarga silenciosa). Motivo: o aviso empurraria tudo para baixo a cada toque na aba.",
+        "ERRO SEM PERFIL (primeira carga falhou): .pf-aviso com role=alert contendo a mensagem traduzida (ex.: 'Sem conexão.') + botão fantasma 'Tentar de novo' + bloco 'conta' + versão. NÃO aparece topo, nome, senha.",
+        "ERRO COM PERFIL (recarga falhou): o mesmo aviso role=alert + 'Tentar de novo' aparecem NO TOPO, e TODO o conteúdo do perfil anterior continua exibido abaixo (não é apagado).",
+        "CONTEÚDO aluno (tipoConta ausente/null ou 'ALUNO'): topo + (selo admin se adminPlataforma) + (seção plataforma se admin) + nome + senha + conta + versão. Nenhuma faixa nem seção 'cadastro'.",
+        "CONTEÚDO docente PENDENTE: faixa tracejada com ícone de ampulheta + seção 'cadastro' com 'Situação' = 'em análise'.",
+        "CONTEÚDO docente RECUSADO: faixa de borda sólida com ícone círculo-com-X + 'Situação' = 'não aprovada'.",
+        "CONTEÚDO docente APROVADO: sem faixa; 'Situação' = 'aprovada'.",
+        "CONTEÚDO docente com docenteStatus null/ausente: sem faixa; linha 'Situação' com valor vazio ''.",
+        "CONTA SÓ GOOGLE (temSenha=false): no lugar do formulário de senha, o parágrafo .pf-cache-aviso explicativo.",
+        "SALVANDO NOME: botão 'Salvando…' desabilitado; nova submissão ignorada.",
+        "NOME SALVO: .alerta role=status 'Nome atualizado.' fica até a próxima tentativa.",
+        "ERRO NOME: .pf-erro (borda sólida) role=alert com a mensagem; sessão intacta.",
+        "TROCANDO SENHA: botão 'Trocando…' desabilitado; nova submissão ignorada.",
+        "SENHA TROCADA: .alerta role=status 'Senha trocada.'; os três campos limpos.",
+        "ERRO SENHA: .pf-erro role=alert com a mensagem (local ou do servidor); campos NÃO limpos; NÃO desloga."
+      ],
+      "elementos": [
+        "Cabeçalho (ion-header translucent) com título 'Perfil'. Sem botão voltar (é raiz de aba).",
+        "[se carregando && !perfil] <p class=pf-aviso> 'Carregando…'",
+        "[senão, se erroCarga] <p class=pf-aviso role=alert> '<mensagem do erro>' seguido de botão fantasma 'Tentar de novo'",
+        "[se perfil] Bloco 'topo' centralizado em coluna: avatar circular 72x72 (fonte 30px, fundo --accent, texto --accent-ink, aria-hidden) com a INICIAL do nome; nome em negrito 22px (<b>{{nome}}</b>); e-mail 14px cor --ink-3 com quebra em qualquer ponto; [se adminPlataforma] selo-pílula 11px negrito cor --accent fundo --accent-soft: 'Admin da plataforma'",
+        "[se docente e docenteStatus=PENDENTE] faixa role=status, borda 1px TRACEJADA --ink-3, fundo --rule-soft, ícone ampulheta 18px (SVG: linhas M6 3h12/M6 21h12 e as duas curvas) e o texto: negrito 'Cadastro em análise.' + ' Você ainda não corrige nem oculta nada.'",
+        "[se docente e docenteStatus=RECUSADO] faixa role=status, borda 1px SÓLIDA --ink-3, ícone círculo r=9 com X, texto todo em negrito: 'Seu cadastro de professor não foi aprovado.'",
+        "[se docente] rótulo de seção 'cadastro' (.pf-rotulo: mono 11px, CAIXA ALTA via CSS, letter-spacing .11em, cor --ink-3, seguido de uma linha horizontal que preenche o resto); linha-campo (min 48px, borda --rule, fundo --surface) com '<b>Tipo de conta</b>' à esquerda e à direita 'Coordenação' (se tipoConta=COORDENADOR) ou 'Professor' (qualquer outro); linha-campo 'Situação' | 'em análise' / 'não aprovada' / 'aprovada' / '' (PENDENTE/RECUSADO/APROVADO/outro)",
+        "[se adminPlataforma] rótulo 'plataforma' + link com aparência de botão primário 'Aprovar professores' (href /tabs/admin)",
+        "Formulário do nome: rótulo 'nome'; campo de texto (name=nome, maxlength=120, autocomplete=name, aria-label 'Nome', valor = perfil.nome); [se erroNome] <p class=pf-erro role=alert>; [se nomeSalvo] <p class=alerta role=status> 'Nome atualizado.'; botão primário submit 'Salvar nome' (ou 'Salvando…' e desabilitado durante a ida)",
+        "Rótulo 'senha'",
+        "[se temSenha] Formulário da senha: campo OCULTO type=email autocomplete=username readonly com o e-mail (para o gerenciador de senhas); rótulo de campo (.rot-campo 12.5px semibold, minúsculo) 'senha atual' + campo password (name=senhaAtual, autocomplete=current-password, aria 'Senha atual'); 'nova senha' + campo password (name=novaSenha, maxlength=72, autocomplete=new-password, placeholder 'pelo menos 8 caracteres', aria 'Nova senha'); 'confirmar a nova senha' + campo password (name=confirmarSenha, maxlength=72, autocomplete=new-password, aria 'Confirmar a nova senha'); [se erroSenha] .pf-erro role=alert; [se senhaTrocada] .alerta role=status 'Senha trocada.'; botão primário submit 'Trocar senha' (ou 'Trocando…' desabilitado)",
+        "[se !temSenha] <p class=pf-cache-aviso> 'Esta conta entra pelo Google e não tem senha aqui. Para trocar a senha, troque a da sua conta Google.'",
+        "SEMPRE (fora de qualquer @if): rótulo 'conta'; link fantasma 'Minha turma' (/tabs/turma); link fantasma 'Ajustes' (/tabs/ajustes); botão fantasma 'Sair da conta'",
+        "SEMPRE: <p class=versao> 'Versão 1.2.0' (texto 'Versão ' + version do package.json; centralizado, 11px, --ink-3, margem superior 16px)"
+      ],
+      "acoes": [
+        "Entrar/voltar à aba (ionViewWillEnter — inclusive ao voltar de /tabs/ajustes, /tabs/admin, /tabs/turma) -> carregar(): carregando=true, erroCarga=null, GET /eu; sucesso -> perfil=resposta; erro -> erroCarga=mensagemDeErro(e) (perfil anterior mantido); finally carregando=false. Sem cancelamento de chamadas concorrentes: a última a responder vence.",
+        "Tocar 'Tentar de novo' -> carregar() (mesma função).",
+        "Submeter o form do nome (botão 'Salvar nome' OU Enter no campo) -> salvarNome(valor): se já salvando, ignora; nomeSalvo=false; nome=valor.trim(); se '' -> erroNome='O nome não pode ficar em branco.' e PARA (sem API, sem mexer em salvando); senão salvando=true, erroNome=null, PATCH /eu {nome}; sucesso -> AuthService troca jwt+usuario na sessão (memória e disco, mesma turma), perfil=resp.perfil, nomeSalvo=true; erro -> erroNome=mensagemDeErro(e); finally salvando=false.",
+        "Submeter o form da senha (botão 'Trocar senha' OU Enter em qualquer dos 3 campos) -> trocarSenha: se já trocando, ignora; senhaTrocada=false; valida NESTA ORDEM, primeira que falhar vira erroSenha e PARA sem API: (1) atual === '' -> 'Digite a senha atual.'; (2) nova.length < 8 -> 'A nova senha precisa de pelo menos 8 caracteres.'; (3) nova.trim() === '' -> 'A nova senha não pode ser só espaços.'; (4) nova.length > 72 -> 'A nova senha pode ter no máximo 72 caracteres.'; (5) nova !== confirma -> 'A confirmação não bate com a nova senha.'; se tudo ok erroSenha=null, trocando=true, POST /eu/senha {senhaAtual, novaSenha} (sem trim, sem a confirmação); sucesso -> AuthService grava o jwt novo na sessão, os 3 campos ficam '' e senhaTrocada=true; erro -> erroSenha=mensagemDeErro(e), campos mantidos; finally trocando=false.",
+        "Tocar 'Sair da conta' -> await auth.sair() (zera token/usuario/turmaId em memória, cancela lembretes agendados e apaga alarmes personalizados, remove pf.sessao e pf.snapshot; nenhuma chamada HTTP) e depois navega para '/login'. Sem diálogo de confirmação.",
+        "Tocar 'Aprovar professores' -> navega para /tabs/admin (só visível se adminPlataforma).",
+        "Tocar 'Minha turma' -> /tabs/turma. Tocar 'Ajustes' -> /tabs/ajustes."
+      ],
+      "navegacao": [
+        "Entrada: aba 'Perfil' da tab bar (href /tabs/perfil), 5ª e última aba para aluno e docente; também é o defaultHref do botão voltar de /tabs/ajustes e /tabs/admin.",
+        "Saídas: /tabs/turma ('Minha turma'), /tabs/ajustes ('Ajustes'), /tabs/admin ('Aprovar professores', só admin), /login (após sair).",
+        "401 em qualquer chamada desta tela: o interceptor encerra a sessão e navega para /login.",
+        "404 com ProblemDetail.codigo='SEM_TURMA' em qualquer chamada: o interceptor zera a turma e navega para /entrar-turma (improvável em /eu, mas a regra é global)."
+      ]
+    },
+    {
+      "rota": "/tabs/ajustes",
+      "arquivo": "app/src/app/features/ajustes/ajustes.page.ts",
+      "proposito": "Ajustes DESTE APARELHO: os três liga/desliga de lembretes locais (no dia 7h, véspera 19h, 1 hora antes), estado da permissão de notificação e do alarme exato do Android, botão de teste de notificação, e a chave pessoal da IA (usada para gerar resumo de material). Nada desta tela vai para o servidor.",
+      "estados": [
+        "NÃO SUPORTADO (navegador/web: plataforma não nativa): seção Lembretes mostra só .pf-aviso role=status 'Lembretes funcionam no app Android.'; nenhum checkbox, nenhuma frase de estado, nenhum 'Testar agora'. A seção 'Chave da IA' aparece normalmente.",
+        "SUPORTADO, ANTES DE LER O SO/DISCO (valores iniciais dos sinais): checkboxes todos marcados (LEMBRETES_PADRAO), frase de estado 'Verificando…', frase de exato = 'Permitido: o aviso chega na hora marcada.' (exato começa 'granted'), sem botão 'Permitir horário exato'. Após as leituras assíncronas, tudo é substituído pelos valores reais.",
+        "SUPORTADO com exato negado: frase 'Sem o alarme no horário exato, o Android pode atrasar o aviso em até 1 hora.' + botão 'Permitir horário exato' na seção 'horário exato'.",
+        "AVISO CONTEXTUAL (avisoExato=true — só depois de LIGAR '1 hora antes' com exato negado): logo abaixo dos checkboxes, .pf-aviso 'Sem o alarme no horário exato, o Android pode atrasar este aviso em até 1 hora.' + um SEGUNDO botão 'Permitir horário exato' (ficam 2 botões na tela).",
+        "TESTANDO: frase de estado 'Agendando…' até o plugin responder.",
+        "TESTE AGENDADO: frase 'Agendado. O aviso deve aparecer em uns 10 segundos — pode sair desta tela.'",
+        "TESTE NEGADO/SEM SUPORTE: frase volta a ser a do estado atual (FRASES[estado]) e o exato é relido.",
+        "CHAVE AUSENTE (mascarada=''): rótulo do campo 'cole a chave'; sem 'chave guardada'; sem botão 'Apagar a chave deste aparelho'. (Também é o que aparece por um instante antes do disco responder.)",
+        "CHAVE PRESENTE: 'chave guardada' + valor mascarado em monoespaçada; rótulo do campo 'trocar por outra'; botão 'Apagar a chave deste aparelho'.",
+        "CHAVE GUARDADA AGORA (salvo=true): .alerta role=status 'Guardado neste aparelho.' no topo da seção, até a próxima ação Guardar/Apagar."
+      ],
+      "elementos": [
+        "Cabeçalho: botão voltar (ion-back-button, defaultHref '/tabs/perfil' — se não houver histórico, vai para o Perfil) + título 'Ajustes'",
+        "Bloco .marca: título negrito 26px 'Lembretes' + texto 14px --ink-3 'Avisos de cada prova e entrega da turma, agendados neste aparelho — chegam mesmo com o app fechado.'",
+        "[se !suportado] <p class=pf-aviso role=status> 'Lembretes funcionam no app Android.'",
+        "[se suportado] fieldset sem borda com legend (.rot-campo) 'quando avisar' e três linhas clicáveis inteiras (label envolvendo checkbox 20px + texto 15px, altura mínima 44px), cada checkbox com data-lembrete=<campo>, NESTA ORDEM: 'No dia · 7h' (noDia), 'Na véspera · 19h' (vespera), '1 hora antes · só com horário' (umaHora). O separador é ' · ' (ponto médio U+00B7).",
+        "[se suportado e avisoExato] <p class=pf-aviso role=status> 'Sem o alarme no horário exato, o Android pode atrasar este aviso em até 1 hora.' + botão fantasma 'Permitir horário exato'",
+        "[se suportado] rótulo .rot-campo 'estado neste aparelho' + <p class=pf-aviso role=status> {frase}. Frases por estado: granted 'Ligado. Os lembretes marcados acima chegam neste aparelho.' | denied 'O Android está bloqueando os avisos deste app, e daqui não dá para pedir de novo. Para religar: Ajustes do celular › Apps › projetoFans › Notificações.' | prompt 'O Android ainda não perguntou. Ele pergunta na primeira prova que houver para avisar — ou agora, se você tocar em Testar.' | sem-suporte 'Lembretes funcionam no app Android.' (separador › é U+203A)",
+        "[se suportado] rótulo .rot-campo 'horário exato' + <p class=pf-aviso role=status> {FRASES_EXATO[exato]}: granted 'Permitido: o aviso chega na hora marcada.' | denied 'Sem o alarme no horário exato, o Android pode atrasar o aviso em até 1 hora.' | sem-suporte 'Lembretes funcionam no app Android.'",
+        "[se suportado e exato==='denied'] botão fantasma 'Permitir horário exato'",
+        "[se suportado] botão fantasma 'Testar agora'",
+        "Separador horizontal (hr 1px --rule-soft, margem 22px em cima)",
+        "Bloco .marca: 'Chave da IA' + 'Serve para gerar o resumo de um material. Ela fica só neste aparelho — não vai para o servidor nem para dentro do app, e cada pessoa usa a sua.'",
+        "[se salvo] <p class=alerta role=status> 'Guardado neste aparelho.'",
+        "[se mascarada != ''] rótulo .rot-campo 'chave guardada' + <p class=valor-chave> (fonte mono 14px --ink-2) com a chave mascarada",
+        "Rótulo .rot-campo: 'trocar por outra' (se há chave) ou 'cole a chave' (se não há)",
+        "Campo type=password name=chave, autocapitalize=off, autocomplete=off, spellcheck=false, placeholder 'sk-ant-…', aria-label 'Chave da IA'",
+        "Botão primário 'Guardar'",
+        "[se mascarada != ''] botão fantasma 'Apagar a chave deste aparelho'",
+        "SEMPRE: <p class=alerta> 'O resumo que sair dela fica com a turma inteira. Quem tem chave gera uma vez e todo mundo lê — ninguém paga duas vezes pelo mesmo PDF.'"
+      ],
+      "acoes": [
+        "Abrir a tela (CONSTRUTOR, uma vez por instância — não a cada entrada) -> atualizar(): mascarada = await chaves.mascarada(); e, se suportado: lerEstado() (estado = avisos.estado(); frase = FRASES[estado]; exato = avisos.estadoExato()) e lerPreferencias() (c = avisos.config(); preferencias = {noDia, vespera, umaHora} de c).",
+        "Marcar/desmarcar um checkbox -> mudar(campo, ligado): novas = {...preferencias, [campo]: ligado}; preferencias = novas (otimista, antes de gravar); await avisos.salvarPreferencias(novas) — grava OS TRÊS de uma vez e reagenda; se campo === 'umaHora': avisoExato = ligado && (await avisos.estadoExato()) === 'denied' (relê o SO na hora). Mudar noDia/vespera não mexe no avisoExato. Não atualiza o sinal exato da seção.",
+        "Tocar qualquer 'Permitir horário exato' (os dois chamam o mesmo) -> permitirExato(): r = await avisos.permitirExato() (abre a tela 'Alarmes e lembretes' do Android, resolve com o estado ao voltar, e reagenda tudo); exato = r; avisoExato = (r === 'denied' && avisoExato).",
+        "Tocar 'Testar agora' -> testar(): frase = 'Agendando…'; r = await avisos.testar(); se r === 'agendado' -> frase = 'Agendado. O aviso deve aparecer em uns 10 segundos — pode sair desta tela.' e para; senão -> lerEstado() (frase do estado + relê exato). O testar pode abrir o diálogo do sistema pedindo POST_NOTIFICATIONS (forçado, mesmo se já pediu nesta execução), exceto se o SO já diz 'denied'.",
+        "Tocar 'Guardar' -> guardar(campo.value) e, no MESMO toque e sem esperar, campo.value = ''. guardar: await chaves.gravar(valor) (trim; vazio REMOVE a chave); mascarada = await chaves.mascarada(); salvo = valor.trim() !== ''. Atenção: Guardar com o campo vazio APAGA a chave existente e esconde 'Guardado…'.",
+        "Tocar 'Apagar a chave deste aparelho' -> guardar('') -> remove a chave do disco, mascarada='', salvo=false. Sem confirmação.",
+        "Botão voltar -> volta na pilha; sem histórico vai para /tabs/perfil."
+      ],
+      "navegacao": [
+        "Entradas: link 'Ajustes' do Perfil; link para /tabs/ajustes na tela de resumo do material (quando não há chave) e na tela da turma (turma.page.ts).",
+        "Saída: botão voltar (pop) ou /tabs/perfil como padrão.",
+        "Não chama a API do projeto: nenhuma navegação por 401/SEM_TURMA nasce aqui."
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/eu",
+      "quando": "Toda vez que a aba Perfil aparece (ionViewWillEnter: abrir a aba, trocar de aba e voltar, voltar de Ajustes/Admin/Turma) e no botão 'Tentar de novo'. (Fora desta tela, AuthService.restaurar também chama GET /eu no boot, sem await, só para atualizar tipoConta/docenteStatus da sessão gravada.)",
+      "headers": "Authorization: Bearer <jwt da sessão> (o authInterceptor só omite em URLs que contêm '/auth/'). X-Turma-Id: <turma ativa> SÓ se a conta da sessão é docente (tipoConta PROFESSOR/COORDENADOR) e existe turma ativa do mesmo usuarioId; a requisição do docente espera a leitura de pf.turmaAtiva do disco antes de sair. SEM If-Match. Teto de 75 s (timeout).",
+      "corpo": "nenhum",
+      "resposta": "200 PerfilResponse JSON: id: string(uuid); nome: string; email: string; adminPlataforma: boolean; temSenha: boolean (false = conta só Google, sem senha_hash); tipoConta: 'ALUNO'|'PROFESSOR'|'COORDENADOR'; docenteStatus: 'PENDENTE'|'APROVADO'|'RECUSADO' — o backend OMITE campos nulos do JSON, então docenteStatus vem AUSENTE para aluno; trate tipoConta ausente como aluno também.",
+      "erros": "Tudo passa pelo interceptor central, que converte em ErroApi com mensagem pronta; a tela mostra mensagemDeErro(e) em .pf-aviso role=alert + 'Tentar de novo', e mantém o perfil anterior se houver. Status 0/rede -> 'Sem conexão.'; timeout 75 s -> 'O servidor demorou demais para responder. Tente de novo.'; 401 -> interceptor encerra a sessão (síncrono) e navega para /login; mensagem = detail ?? 'Sua sessão expirou. Entre de novo.'; 403 -> detail ?? 'Só quem criou pode editar.'; 404 -> detail ?? 'Isso não existe mais.' (se codigo='SEM_TURMA': registrarTurma(null) + navegar /entrar-turma); 409 -> detail ?? 'Alguém editou isso enquanto você editava.'; 428 -> detail ?? 'Recarregue o registro e tente de novo.'; >=500 -> 'Deu problema no servidor. Tente de novo.' (ignora o detail); outros (400, 429…) -> detail ?? title ?? 'Não deu para completar a ação.'; erro que não é HTTP -> 'Não deu para completar a ação. Tente de novo.'"
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/api/v1/eu",
+      "quando": "Submeter o formulário do nome ('Salvar nome' ou Enter), depois de passar a validação local (nome aparado não vazio).",
+      "headers": "Authorization: Bearer <jwt>; X-Turma-Id para docente (como acima); Content-Type: application/json. SEM If-Match — usuário não tem coluna version; NÃO usar o caminho de PATCH versionado dos registros da turma.",
+      "corpo": "{ \"nome\": string } — o valor do campo com trim() (JS trim: espaços Unicode nas pontas). Servidor: @NotBlank, @Size(max=120), strip() e exige ao menos 1 letra ou dígito.",
+      "resposta": "200 { jwt: string, perfil: PerfilResponse }. O JWT é SEMPRE novo (o token carrega o nome). Efeito no cliente, só se o token em memória ainda for o mesmo de antes da ida: token = jwt; usuario = perfil SEM adminPlataforma e temSenha (mantém id, nome, email, tipoConta, docenteStatus); grava pf.sessao = {jwt, usuario, turmaId: turmaId atual}. A tela faz perfil = resp.perfil e mostra 'Nome atualizado.'. O item 'Perfil' da tab bar (que lê a sessão) atualiza nome/inicial na hora.",
+      "erros": "400 com detail do servidor exibido literalmente em .pf-erro (ex.: 'Nome precisa ter ao menos uma letra ou numero' — o backend escreve sem acento; falha de @NotBlank/@Size sai como 400 genérico do Spring em inglês, por isso a checagem local de branco); 5xx -> 'Deu problema no servidor. Tente de novo.'; demais conforme a tabela do GET. Em qualquer erro a sessão NÃO muda (token velho continua) e 'Nome atualizado' não aparece."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/eu/senha",
+      "quando": "Submeter o formulário de senha ('Trocar senha' ou Enter num dos três campos), só se temSenha e a validação local passou.",
+      "headers": "Authorization: Bearer <jwt>; X-Turma-Id para docente; Content-Type: application/json. Sem If-Match.",
+      "corpo": "{ \"senhaAtual\": string, \"novaSenha\": string } — valores crus, SEM trim; a confirmação NÃO é enviada. Servidor: senhaAtual @NotNull; novaSenha @NotBlank @Size(min=8,max=100) e no máximo 72 BYTES UTF-8.",
+      "resposta": "200 { jwt: string }. O servidor invalida TODO token emitido antes (claim 'sv' = versão da senha), inclusive o desta sessão; o jwt devolvido é o único válido. Efeito: se o token em memória ainda é o de antes e há usuário, renovarSessao(jwt, usuario atual) — memória e pf.sessao (turmaId mantido). A tela limpa os 3 campos e mostra 'Senha trocada.'.",
+      "erros": "400 'Senha atual incorreta' (o backend NUNCA usa 401 aqui — 401 deslogaria pelo interceptor); 400 'Esta conta entra pelo Google e nao tem senha'; 400 'Senha muito longa: use no maximo 72 caracteres' (bytes UTF-8 > 72, ex.: senha cheia de acento com <=72 caracteres); 400 genérico de bean validation; todos exibidos via detail em .pf-erro role=alert; 5xx -> 'Deu problema no servidor. Tente de novo.'. Em erro: campos não são limpos, sessão continua autenticada, nada é gravado."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/materiais/{id}/resumo  (com '?refazer=true' quando é para refazer)",
+      "quando": "FORA desta área (ResumoPage, MaterialRepository.resumir), mas é o ÚNICO consumidor da chave guardada por ChaveIaService/Ajustes. Antes de chamar, a tela lê a chave; se '' não chama e mostra o estado 'sem chave' com link para /tabs/ajustes.",
+      "headers": "X-IA-Key: <chave lida de ChaveIaService.ler()> + Authorization + X-Turma-Id (docente). A chave vai SÓ em header, nunca no corpo nem na URL.",
+      "corpo": "{} (objeto vazio)",
+      "resposta": "Material atualizado (com resumo/resumoEm).",
+      "erros": "Pelo interceptor central, como os demais."
+    }
+  ],
+  "modelos": [
+    {
+      "nome": "TipoConta (enum)",
+      "campos": "'ALUNO' | 'PROFESSOR' | 'COORDENADOR'\nDefine a INTERFACE (aba Home x Painel), não o poder. Ausente na sessão = ALUNO."
+    },
+    {
+      "nome": "DocenteStatus (enum)",
+      "campos": "'PENDENTE' | 'APROVADO' | 'RECUSADO'\nDefine o PODER; o servidor lê do banco a cada requisição. Aluno não tem (null/ausente)."
+    },
+    {
+      "nome": "Usuario (o que mora na sessão)",
+      "campos": "id: String (uuid)\nnome: String\nemail: String\ntipoConta: TipoConta? (opcional — sessão gravada antes dos docentes não tem; ausente = ALUNO)\ndocenteStatus: DocenteStatus? (opcional e nullable)"
+    },
+    {
+      "nome": "Perfil (resposta de GET /eu; estende Usuario)",
+      "campos": "id: String\nnome: String\nemail: String\ntipoConta: TipoConta? (tratar ausente como aluno)\ndocenteStatus: DocenteStatus? (omitido no JSON quando nulo)\nadminPlataforma: bool\ntemSenha: bool (false = só Google)"
+    },
+    {
+      "nome": "AtualizarNomeResponse (PATCH /eu)",
+      "campos": "jwt: String (sempre novo)\nperfil: Perfil"
+    },
+    {
+      "nome": "SenhaTrocadaResponse (POST /eu/senha)",
+      "campos": "jwt: String (o único token válido depois da troca)"
+    },
+    {
+      "nome": "AtualizarPerfilRequest (corpo do PATCH /eu)",
+      "campos": "nome: String (aparado; 1..120; ao menos 1 letra ou dígito)"
+    },
+    {
+      "nome": "TrocarSenhaRequest (corpo do POST /eu/senha)",
+      "campos": "senhaAtual: String (crua, não nula)\nnovaSenha: String (crua; 8..100 chars e <=72 bytes UTF-8 no servidor; cliente limita a 8..72 unidades UTF-16)"
+    },
+    {
+      "nome": "SessaoLocal (disco, chave Preferences 'pf.sessao', JSON)",
+      "campos": "jwt: String\nusuario: Usuario\nturmaId: String? (null/ausente = tem conta e não tem turma — estado válido)"
+    },
+    {
+      "nome": "PreferenciasLembrete",
+      "campos": "noDia: bool (aviso às 07:00 do dia)\nvespera: bool (aviso às 19:00 da véspera)\numaHora: bool (1 h antes; só existe para evento com hora)"
+    },
+    {
+      "nome": "ConfigLembretes (disco, chave Preferences 'pf.lembretes', JSON)",
+      "campos": "noDia: bool\nvespera: bool\numaHora: bool\npersonalizados: Map<String eventoId, AlarmePersonalizado>\nPadrão (LEMBRETES_PADRAO): {noDia:true, vespera:true, umaHora:true, personalizados:{}}. Leitura = {...padrão, ...JSON gravado}; JSON ilegível -> remove a chave e usa o padrão."
+    },
+    {
+      "nome": "AlarmePersonalizado (usado só por outras telas, mas vive na mesma config)",
+      "campos": "{ modo: 'RELATIVO', horasAntes: num } | { modo: 'EXATO', data: 'AAAA-MM-DD', hora: 'HH:mm' }"
+    },
+    {
+      "nome": "EstadoAviso",
+      "campos": "'sem-suporte' | 'granted' | 'denied' | 'prompt'\n(qualquer resposta do plugin diferente de granted/denied — inclusive 'prompt-with-rationale' — vira 'prompt')"
+    },
+    {
+      "nome": "EstadoExato",
+      "campos": "'sem-suporte' | 'granted' | 'denied'"
+    },
+    {
+      "nome": "ResultadoTeste",
+      "campos": "'agendado' | 'negado' | 'sem-suporte'"
+    },
+    {
+      "nome": "Chave da IA (disco)",
+      "campos": "Preferences chave 'projetofans.chave-ia' (prefixo DIFERENTE dos 'pf.*'): String aparada; ausente = sem chave. Nunca gravada vazia (vazio = remove)."
+    },
+    {
+      "nome": "ErroApi (erro de domínio do app)",
+      "campos": "classe: 'DEMOROU'|'AUTH'|'PROIBIDO'|'NAO_ENCONTRADO'|'PRECONDICAO'|'CONFLITO'|'SERVIDOR'|'OFFLINE'|'DESCONHECIDO'\nstatus: int (0 para rede/timeout)\nmessage: String (frase pronta para a tela)\npodeTentarNovamente: bool (5xx, offline, timeout)\nrecarregarRegistro: bool (409)\ncodigo: String? (ProblemDetail.codigo, ex. 'SEM_TURMA')"
+    },
+    {
+      "nome": "ProblemDetail (corpo de erro do backend, RFC 7807)",
+      "campos": "type/title/status/detail/instance + propriedade raiz opcional codigo: String. O app usa detail ?? title. Strings do backend vêm SEM acento (ex.: 'Senha atual incorreta')."
+    }
+  ],
+  "servicos_e_estado": [
+    "AuthService (singleton, providedIn root). Estado (signals read-only): token: String?; usuario: Usuario?; turmaId: String?; autenticado = token != null; temTurma = turmaId != null; ehDocente = usuario.tipoConta != null && != 'ALUNO'. Métodos usados nesta área: obterPerfil() -> GET /eu e devolve Perfil SEM tocar na sessão; atualizarNome(nome) -> guarda o token de antes, PATCH /eu {nome}, se token ainda igual: renovarSessao(r.jwt, r.perfil sem adminPlataforma/temSenha); devolve r.perfil (mesmo se não gravou); trocarSenha(atual, nova) -> guarda token de antes, POST /eu/senha, se token igual e há usuario: renovarSessao(r.jwt, usuario); sair() -> token/usuario/turmaId = null (síncrono, antes de qualquer await), esquecerLembretes() sem await (erro só no console), await storage.limparSessao() (remove 'pf.sessao'), await storage.limpar() (remove 'pf.snapshot'); renovarSessao(jwt, usuario) -> token e usuario em memória + gravarSessao(jwt, usuario, turmaId ATUAL) — não usa definirSessao porque ela zeraria a turma; encerrarSessao() (usado pelo interceptor de 401) -> zera memória síncrono, esquece lembretes, apaga pf.sessao em segundo plano. ROTA_LOGIN = '/login'.",
+    "ChaveIaService (singleton). Estado privado: cache: String? (null = ainda não lido do disco; '' = lido e não há chave). ler(): se cache != null devolve; senão Preferences.get('projetofans.chave-ia'), value ?? '', grava no cache e devolve. gravar(chave): limpa = chave.trim(); cache = limpa; se limpa == '' -> Preferences.remove; senão Preferences.set. mascarada(): chave = ler(); '' -> ''; length <= 12 -> '••••' (4 × U+2022); senão primeiros 8 + '…' (U+2026) + últimos 4. Mesma instância usada pela ResumoPage (ler()) — gravar em Ajustes vale na hora para o resumo.",
+    "NotificacoesService (singleton; contrato que Ajustes usa — a implementação é de outra área). suportado: bool = plugin nativo disponível (Capacitor.isNativePlatform()). config(): ConfigLembretes do disco ('pf.lembretes') mesclado sobre o padrão. salvarPreferencias(p): em fila serial; grava {...configAtual, noDia, vespera, umaHora} (preserva personalizados); se não há lista do /sync nesta execução, cancela os avisos pendentes dos tipos desligados (via extra.tipo, nunca o de teste); reagenda com a última lista se houver. estado(): checkPermissions().display -> 'granted'|'denied'|'prompt' ('sem-suporte' fora do aparelho). estadoExato(): checkExactNotificationSetting().exact_alarm === 'granted' ? 'granted' : 'denied'. permitirExato(): changeExactNotificationSetting() (abre a tela do Android e resolve na volta), reagenda tudo em fila, devolve granted/denied. testar(): se não permitido (com pedido FORÇADO) -> 'negado'; senão cria canal 'lembretes' e agenda o aviso id 2000000001 para agora+10 s com título 'Teste de lembrete' e corpo 'Se voce esta lendo isto, os lembretes vao chegar.', isExactNotification = (estadoExato=='granted'), allowWhileIdle=true, sem extra.tipo; -> 'agendado'. esquecer(): sobe a época, cancela pendentes (menos o teste), apaga personalizados, mantém os 3 liga/desliga.",
+    "StorageService: lerSessao/gravarSessao/limparSessao sobre 'pf.sessao' (JSON {jwt, usuario, turmaId: turmaId ?? null}); limpar() remove 'pf.snapshot'. JSON ilegível é removido e tratado como ausente.",
+    "TurmaAtivaService (só docente; afeta o header das chamadas desta área): turma ativa em 'pf.turmaAtiva' com usuarioId do dono — só vale se o dono é quem está logado; logout não precisa limpá-la.",
+    "ApiService: base = environment.apiUrl ('http://localhost:8080/api/v1' dev; 'https://projetofans-api.onrender.com/api/v1' prod). get/post/patch/delete devolvem Future; patch(rota, corpo, version?) só põe If-Match se version for passada (PATCH /eu não passa). Não trata erro: sempre relança.",
+    "Interceptores, nesta ordem (do mais externo ao mais interno): authInterceptor (Bearer exceto URL com '/auth/') -> turmaAtivaInterceptor (X-Turma-Id para docente, só na URL da API, espera o disco) -> erroHttpInterceptor (traduz para ErroApi, trata 401 e SEM_TURMA, sempre relança) -> timeoutInterceptor (75 000 ms). O tradutor precisa embrulhar o timeout para ver o TimeoutError.",
+    "mensagemDeErro(e) (features/auth/erro.ts): ErroApi -> e.message; qualquer outra coisa -> 'Não deu para completar a ação. Tente de novo.'. Nenhuma tela lê status cru.",
+    "Estado local da PerfilPage: perfil: Perfil? (null); carregando: bool (TRUE no início); erroCarga: String?; docente (derivado) = perfil se tipoConta definido e != 'ALUNO', senão null; inicial (derivado) = primeiro code point de perfil.nome.trim(), maiúsculo, ou '?'; salvandoNome: bool; erroNome: String?; nomeSalvo: bool; trocandoSenha: bool; erroSenha: String?; senhaTrocada: bool; versao: String (package.json).",
+    "Estado local da AjustesPage: mascarada: String (''); salvo: bool (false); suportado: bool (do serviço); estado: EstadoAviso ('prompt', não usado no template); frase: String ('Verificando…'); exato: EstadoExato ('granted'); avisoExato: bool (false); preferencias: PreferenciasLembrete (LEMBRETES_PADRAO = todos true); opcoes: lista fixa [noDia 'No dia · 7h', vespera 'Na véspera · 19h', umaHora '1 hora antes · só com horário']."
+  ],
+  "regras": [
+    "Todo erro HTTP passa pelo interceptor central e vira frase pronta (AGENTS: 'Todo erro de HTTP passa pelo interceptor central'); a tela nunca inventa texto a partir de status, e nunca há catch vazio — falha ao carregar o perfil vira aviso role=alert com 'Tentar de novo', nunca um perfil vazio (AGENTS: 'confundir não há com falhou é o pior bug').",
+    "Erro sai como ProblemDetail do backend; o cliente mostra detail (ou title) literalmente para 4xx e frase própria para 5xx.",
+    "'Sair da conta' e os atalhos ficam fora de qualquer condição: perfil que não carrega não pode trancar a pessoa numa sessão que ela quer encerrar.",
+    "Interface do docente vem do TIPO da conta, não do status (spec 2.9). O status (PENDENTE/RECUSADO/APROVADO) só muda o aviso; quem decide o poder é o servidor a cada requisição. Esta tela é o ÚNICO lugar onde um professor recusado fica sabendo — por isso o status vem do GET /eu desta tela, não da sessão gravada (que pode estar velha).",
+    "Link 'Aprovar professores' só para adminPlataforma, mas isso é comodidade, não segurança: /tabs/admin não tem guarda e quem não é admin leva 404 da API (spec 8; AGENTS: 404, não 403).",
+    "Suporte a múltiplas turmas é proibido para ALUNO: não há seletor de turma aqui; o Perfil só leva a 'Minha turma'. O docente tem turma ativa (X-Turma-Id), resolvida fora desta área.",
+    "PATCH /eu é a exceção documentada à regra 'PATCH exige If-Match': usuário não tem version e só o dono edita o próprio nome; não mandar If-Match nem inventar concorrência.",
+    "Senha atual errada é 400, nunca 401 (contrato com o backend): 401 é reservado para sessão expirada e desloga via interceptor.",
+    "Confirmação e tamanho da nova senha são conferidos NO CLIENTE (o servidor nem recebe a confirmação); errar a digitação trancaria a pessoa fora da conta.",
+    "Autoria visível em tudo (AGENTS NN1): o nome é a autoria exibida em todo registro; por isso o servidor apara/valida o nome e devolve JWT novo (o token carrega o nome) — o cliente tem de trocar o token, senão o nome velho continua circulando.",
+    "Lembrete é preferência de quem usa, não fato da turma (espelha o NN3 'fato compartilhado nunca guarda estado pessoal'): os três liga/desliga ficam no aparelho ('pf.lembretes') e NUNCA vão para o servidor; desligar o aviso das 7h não muda nada para o colega.",
+    "Lembretes são LOCAIS (decisão 2.3 do spec): o host gratuito hiberna, então nada de push agendado pelo servidor; a permissão de notificação só é pedida quando há o que avisar ou no gesto explícito 'Testar agora' — no Android o 'não' é definitivo.",
+    "Segredo hardcoded é proibido (AGENTS): a chave da IA NUNCA vai dentro do app (APK é extraível) e NUNCA é guardada no servidor (viraria alvo); fica só no aparelho e viaja por requisição no header X-IA-Key, usada e descartada. Cada pessoa usa e paga a sua; o resumo gerado é compartilhado com a turma.",
+    "CONFLITO A REGISTRAR: AGENTS.md lista 'Resumo por IA' em 'Proibido implementar', mas o código já o tem (commit ece2036 'feat: resumo do material por IA, com a chave de quem pede') e a seção 'Chave da IA' existe por causa dele. O port deve reproduzir o que existe (o backend não muda), mas a divergência precisa ir para o log/PERGUNTAS-ABERTAS. A chave é 'temporária por desenho': quando o resumo virar recurso pago, a seção sai desta tela e a chave passa a vir da configuração do servidor.",
+    "Logout é local (não há endpoint): sai token, usuário, turma, snapshot offline e lembretes agendados/alarmes personalizados — o alarme não sabe que a sessão acabou e tocaria por semanas.",
+    "Componentes visuais de shared/ não são usados aqui; os estilos são utilitários globais (.pf-aviso tracejado = estado degradado da tela; .pf-erro sólido = a ação falhou; .alerta = confirmação neutra; .pf-cache-aviso = explicação de regra sem caixa). As duas primeiras não podem se parecer."
+  ],
+  "armadilhas": [
+    "RECARREGAR AO ENTRAR NA ABA: o perfil é buscado em ionViewWillEnter (toda vez que a aba aparece, inclusive ao voltar de Ajustes/Admin/Turma, que são rotas irmãs dentro das abas), NÃO no initState. Em Flutter com IndexedStack/StatefulShellRoute o State sobrevive: é preciso disparar a carga ao selecionar a aba E ao voltar de uma rota empilhada (RouteAware.didPopNext). Sem isso, uma falha na primeira abertura (servidor dormindo) fica na tela até matar o app. Teste: 'voltar para a aba recarrega o perfil'.",
+    "'Carregando…' SÓ quando ainda não existe perfil. Recarga com perfil na tela é silenciosa (sem spinner, sem skeleton, sem RefreshIndicator automático).",
+    "Falha de recarga NÃO apaga o perfil: erroCarga aparece em cima e o conteúdo antigo continua embaixo. erroCarga é zerado no começo de cada carga. Não trocar o estado por um enum exclusivo loading/error/data — erro e dado coexistem.",
+    "Erro e vazio são diferentes: perfil null + erro mostra o aviso role=alert com a frase; nunca renderizar um perfil 'em branco' por causa de uma falha.",
+    "'Sair da conta', 'Minha turma', 'Ajustes' e 'Versão X' ficam FORA de qualquer condição — aparecem carregando, com erro e sem perfil. Teste: 'falha ao carregar aparece na tela, e sair continua ao alcance'.",
+    "PATCH /eu NÃO leva If-Match. Se o port tiver um helper de PATCH que sempre exige version, não use aqui.",
+    "Renomear devolve JWT NOVO e é obrigatório trocar o token (memória + disco). Guardar só o perfil e manter o token velho deixa o nome antigo em toda requisição.",
+    "Ao montar o Usuario da sessão a partir de resp.perfil, remover SÓ adminPlataforma e temSenha; manter tipoConta e docenteStatus. Montar {id, nome, email} à mão derruba o docente para a interface de aluno a cada renomeação (teste do AuthService 'renomear nao perde tipoConta nem docenteStatus').",
+    "Renovar a sessão MANTENDO o turmaId atual. Usar um setter que recebe turmaId opcional e zera quando ausente joga a pessoa na tela 'entrar na turma' só por ter trocado o nome.",
+    "ANTI-RESSURREIÇÃO: capture o token ANTES do PATCH /eu e do POST /eu/senha; quando a resposta chegar, só grave a sessão se o token em memória ainda for o mesmo. Se a pessoa saiu (ou outra conta entrou) com a requisição no ar, gravar ressuscitaria a sessão num PC compartilhado. Teste: 'sair com o PATCH do nome no ar nao ressuscita a sessao' (token null, usuario null, disco null).",
+    "TROCAR SENHA DERRUBA TODOS OS TOKENS, inclusive o desta sessão (claim 'sv' no JWT). Gravar o jwt devolvido é obrigatório; sem isso a próxima chamada dá 401 e desloga. Corrida real: qualquer requisição que saiu com o token velho e chega ao servidor depois da troca volta 401 e o interceptor DESLOGA — evite disparar chamadas em paralelo durante a troca.",
+    "Senha atual errada volta 400 com detail 'Senha atual incorreta'; mostrar no .pf-erro e NÃO deslogar. Não mapear essa resposta para 'sessão expirada'. Teste: 'senha atual errada mostra o erro do servidor e NAO desloga'.",
+    "Validação local da senha em ORDEM FIXA e com as frases exatas; a primeira que falha é a única mostrada e nada é enviado: senha atual === '' (sem trim — só espaços passa), nova.length < 8, nova.trim() === '', nova.length > 72, nova !== confirma. Note que a checagem de 'só espaços' vem DEPOIS do mínimo de 8: '   ' (3 espaços) cai em 'pelo menos 8'. Senhas NUNCA são aparadas no envio.",
+    "Comprimento em unidades UTF-16 (JS .length). Dart String.length também conta UTF-16 — use length, NÃO characters.length. O servidor conta BYTES UTF-8 (>72 -> 400 'Senha muito longa: use no maximo 72 caracteres'), então senha acentuada pode passar no cliente e voltar esse 400: isso é esperado e a frase do servidor deve aparecer.",
+    "maxlength do HTML (72 nas senhas novas, 120 no nome) conta unidades UTF-16; o maxLength do TextField do Flutter conta grapheme clusters. Para paridade, use um TextInputFormatter que limite por String.length (code units) e esconda o contador (counterText: '').",
+    "Sucesso da senha LIMPA os três campos (senha escrita na tela é senha exposta); erro NÃO limpa. Sucesso do nome não limpa: o campo passa a mostrar o nome salvo.",
+    "Mensagens 'Nome atualizado.' / 'Senha trocada.' ficam até a próxima tentativa daquele formulário; o reset para false acontece no INÍCIO da submissão (inclusive quando a validação local falha). erroNome só é zerado quando a requisição de fato sai; erroSenha é sobrescrito pelo resultado da validação (null limpa).",
+    "Nome: o cliente só barra branco após trim ('O nome não pode ficar em branco.'); nome só de pontuação/emoji passa e o servidor responde 400 'Nome precisa ter ao menos uma letra ou numero' — exibir o detail. Envia o valor aparado (teste: '  Otávio Neves  ' -> {nome: 'Otávio Neves'}).",
+    "Re-entrância: salvarNome e trocarSenha retornam cedo se já em andamento, além do botão disabled. Enter no campo do nome salva; Enter em qualquer campo de senha dispara a troca (é um form). Em Flutter, ligar onSubmitted/onFieldSubmitted desses campos à mesma ação.",
+    "Valor do campo nome: ligado a perfil.nome e só sobrescrito quando o NOME MUDA. Uma recarga silenciosa com o mesmo nome não pode apagar o que a pessoa está digitando. Em Flutter, atualize o TextEditingController só quando perfil.nome for diferente do último aplicado, nunca em todo build. Teste: após 'Tentar de novo' o campo mostra 'Otavio'.",
+    "Gerenciador de senhas: o form da senha tem um campo de e-mail OCULTO com autocomplete=username, e os campos usam current-password/new-password. Em Flutter: AutofillGroup com autofillHints (username no e-mail oculto/readonly, password, newPassword) e TextInput.finishAutofillContext() no sucesso — sem isso o gerenciador oferece a senha velha no próximo login.",
+    "Inicial do avatar = PRIMEIRO CODE POINT do nome aparado, em maiúscula, ou '?' se vazio. Não usar nome[0] (pega meia surrogate de emoji). Em Dart: String.fromCharCode(nome.trim().runes.first).toUpperCase(). Teste: '  🎓 Formanda' -> '🎓'. A tab bar usa a mesma regra a partir da SESSÃO (não do GET /eu).",
+    "Docente = tipoConta presente E diferente de 'ALUNO'. Ausente/null (sessão antiga ou JSON sem o campo) é aluno: nenhuma faixa, nenhuma seção 'cadastro'. Teste: 'aluno nao ve nada de docente, nem sessao antiga sem tipoConta'.",
+    "Esta tela NÃO atualiza a sessão com tipoConta/docenteStatus vindos do GET /eu (só o boot faz isso). Se o admin aprovar com o app aberto, o Perfil mostra o status novo mas as abas continuam pelo tipo gravado até reabrir. Reproduzir; não 'corrigir' sem decisão.",
+    "Mapeamentos exatos: tipoConta COORDENADOR -> 'Coordenação'; qualquer outro valor de docente -> 'Professor'. situacao: PENDENTE 'em análise', RECUSADO 'não aprovada', APROVADO 'aprovada', null/outro '' (a linha 'Situação' aparece com valor vazio).",
+    "Faixa PENDENTE = borda TRACEJADA + ampulheta; RECUSADO = borda SÓLIDA + círculo com X; APROVADO = sem faixa. O estado nunca pode depender só do tracejado (ícone e texto acompanham). Teste: aprovado -> nenhuma .faixa.",
+    "Textos dos rótulos de seção ('cadastro', 'plataforma', 'nome', 'senha', 'conta') são minúsculos no código e aparecem em CAIXA ALTA monoespaçada por estilo, seguidos de uma linha que ocupa o resto da largura. Os rótulos de campo ('senha atual', 'nova senha', 'confirmar a nova senha', 'quando avisar', 'estado neste aparelho', 'horário exato', 'chave guardada', 'cole a chave'/'trocar por outra') ficam minúsculos.",
+    "'Sair da conta' não chama servidor e não pede confirmação. Ordem: zerar memória primeiro (síncrono), cancelar lembretes sem bloquear (erro só no log), apagar 'pf.sessao' e 'pf.snapshot', e SÓ ENTÃO navegar para /login limpando a pilha. NÃO apaga a chave da IA, NÃO apaga os 3 liga/desliga de 'pf.lembretes' (são do aparelho), NÃO apaga 'pf.turmaAtiva' (escopada pelo usuarioId).",
+    "A CHAVE DA IA É DO APARELHO, NÃO DA CONTA: sobrevive ao logout e quem entrar depois no mesmo celular usa (e paga com) a chave do anterior. É o comportamento atual; replicar e registrar como decisão, não mudar em silêncio.",
+    "Versão exibida = version do package.json ('1.2.0'), não o versionName do build.gradle (que está '1.0'). Em Flutter, use pubspec version via package_info_plus e mostre só 'Versão X.Y.Z' (sem +build). O versionCode do APK Flutter tem de ser MAIOR que o do APK Capacitor instalado, senão a atualização é recusada.",
+    "AJUSTES carrega no CONSTRUTOR, uma vez por instância (a página é recriada a cada navegação para ela). Não relê permissões ao voltar dos ajustes do sistema por 'resume' — só o botão 'Permitir horário exato' (que espera a volta) e 'Testar agora' releem. Comportamento atual.",
+    "Valores iniciais antes das leituras assíncronas: checkboxes TODOS marcados, frase 'Verificando…', exato 'granted' (mostra 'Permitido: o aviso chega na hora marcada.' e esconde o botão), chave '' (mostra 'cole a chave'). Um port que inicialize exato como 'denied' pisca o botão; que inicialize checkboxes desmarcados pisca o estado errado.",
+    "suportado = plataforma NATIVA (Capacitor.isNativePlatform — inclui iOS, apesar do texto dizer Android). No web: só 'Lembretes funcionam no app Android.', zero checkboxes, sem 'Testar agora', e NENHUMA chamada ao plugin (estado/config não são lidos). A seção Chave da IA aparece em qualquer plataforma.",
+    "Mudar um checkbox é OTIMISTA e grava OS TRÊS valores de uma vez (teste: desligar umaHora -> salvarPreferencias({noDia:true, vespera:false, umaHora:false})). A gravação mescla com a config do disco para PRESERVAR os alarmes personalizados. Falha na gravação não reverte o checkbox (não há try/catch) — rejeição não tratada.",
+    "Reagendar na hora: com a lista do /sync em memória, o serviço recalcula e reagenda; SEM lista (o /sync ainda não voltou), DESLIGAR cancela direto os avisos pendentes daquele tipo (identificados por extra.tipo no próprio aviso, porque o id é hash); LIGAR só vale no próximo /sync. Tudo serializado numa fila única com /sync e alarmes personalizados — sem a fila, um cancelar intercala com outro agendar e o aviso desligado volta.",
+    "Aviso contextual de exato: aparece SÓ ao LIGAR '1 hora antes' e relendo o SO naquele instante (estadoExato) — desligar umaHora tira o aviso; ligar/desligar noDia ou vespera não mexe. mudar() NÃO atualiza o sinal 'exato' da seção (só o avisoExato). Testes: 'com o exato negado, avisa ali mesmo…', 'com o exato permitido, nao avisa nada', 'desligar de novo tira o aviso', 'ligar os OUTROS dois nao dispara o aviso'.",
+    "Podem existir DOIS botões 'Permitir horário exato' ao mesmo tempo (aviso contextual + seção 'horário exato'); ambos chamam permitirExato. Depois: exato = resultado; avisoExato = (resultado == 'denied' && avisoExato) — se o usuário continuar negando, o aviso contextual permanece; se permitir, os dois botões somem.",
+    "permitirExato precisa abrir a tela 'Alarmes e lembretes' do Android (ACTION_REQUEST_SCHEDULE_EXACT_ALARM) e só resolver QUANDO a pessoa voltar, com o estado novo; depois reagendar tudo (o que já estava agendado continua inexato até ser reagendado). Em Android < 12 o exato é sempre 'granted'.",
+    "MAPEAMENTO DE PERMISSÃO ao trocar de plugin: no Capacitor 'denied' = negado de vez (não dá para pedir), 'prompt'/'prompt-with-rationale' = ainda dá para pedir. No permission_handler do Flutter, PermissionStatus.denied significa 'ainda dá para pedir' -> deve virar 'prompt'; permanentlyDenied -> 'denied'. Inverter isso mostra a frase 'O Android está bloqueando…' para quem nunca foi perguntado.",
+    "'Testar agora': frase 'Agendando…' imediatamente; 'agendado' -> frase fixa de 10 segundos (exato NÃO é relido); 'negado'/'sem-suporte' -> relê estado e exato e mostra a frase do estado. O teste PODE reabrir o diálogo de permissão mesmo que já tenha pedido nesta execução (gesto explícito), mas nunca se o SO já diz 'denied'. Sem try/catch: exceção do plugin deixa 'Agendando…' preso.",
+    "Notificação de teste: id fixo 2000000001 (fora da faixa 0..1_999_999_999 dos avisos reais), agora+10 s, MESMO canal ('lembretes', importância 4/alta, vibração, som padrão) e MESMAS flags do aviso real (allowWhileIdle=true; exato só se permitido), título 'Teste de lembrete', corpo 'Se voce esta lendo isto, os lembretes vao chegar.' (sem acento, literal). Os reagendamentos (Home, resume) cancelam todos os pendentes MENOS este id — senão o teste some antes de tocar. Não desenhar a notificação na hora: tem de atravessar o AlarmManager.",
+    "Nunca agendar como 'exato' sem a permissão (no plugin Capacitor isso abria a tela de alarmes a cada schedule, em laço com o resume). Em flutter_local_notifications: AndroidScheduleMode.exactAllowWhileIdle só com canScheduleExactNotifications()==true; senão inexactAllowWhileIdle. Nunca um modo sem 'AllowWhileIdle' (o Doze engole o aviso das 19h).",
+    "A frase de permissão negada cita o caminho 'Ajustes do celular › Apps › projetoFans › Notificações': o rótulo do app Android (android:label) tem de continuar 'projetoFans', e o canal tem de continuar chamado 'Lembretes'.",
+    "CHAVE: gravar faz trim; valor vazio REMOVE a chave. 'Guardar' com o campo vazio APAGA a chave já guardada (sem confirmação) e não mostra 'Guardado neste aparelho.' — comportamento atual, provavelmente acidental; replicar e registrar, ou decidir explicitamente.",
+    "O campo da chave é esvaziado no MESMO toque de 'Guardar', antes de a gravação terminar. 'Guardado neste aparelho.' só aparece se o valor aparado não for vazio e não some sozinho (fica até a próxima ação). 'Apagar a chave deste aparelho' não pede confirmação.",
+    "Nunca exibir a chave inteira: <=12 caracteres -> '••••'; >12 -> 8 primeiros + '…' + 4 últimos. O campo é password, sem autocorreção, sem capitalização, sem sugestões e sem autofill (Flutter: obscureText, autocorrect:false, enableSuggestions:false, textCapitalization none, sem autofillHints).",
+    "Cache da chave: null = não lido, '' = lido e vazio. Uma única instância (singleton) compartilhada com a tela de resumo; gravar atualiza o cache, então o resumo enxerga a chave nova sem reiniciar. Não criar uma instância por tela.",
+    "O texto diz que a chave 'não vai para o servidor', mas ela VAI, em cada pedido de resumo, no header X-IA-Key (usada e descartada, não guardada). Não 'corrigir' removendo o header, e nunca mover a chave para corpo, query string ou log.",
+    "Nada de chave padrão/embutida no app, nem em variável de build: chave dentro do APK é chave pública.",
+    "MIGRAÇÃO DE DISCO: Capacitor Preferences grava no SharedPreferences 'CapacitorStorage', SEM prefixo. O shared_preferences padrão do Flutter usa 'FlutterSharedPreferences' com prefixo 'flutter.' — após atualizar o app, sessão ('pf.sessao'), chave ('projetofans.chave-ia'), liga/desliga ('pf.lembretes') e turma ativa ('pf.turmaAtiva') 'somem' (a pessoa cai no login e perde a chave). Ler o arquivo 'CapacitorStorage' (SharedPreferencesAsync com AndroidSharedPreferencesStoreOptions(fileName: 'CapacitorStorage') e backend SharedPreferences) ou migrar uma vez no primeiro boot. Os alarmes já agendados pelo plugin Capacitor não são cancelados pelo plugin Flutter (receivers diferentes).",
+    "'pf.lembretes' é lido como {...padrão, ...gravado}: um liga/desliga que não existia no JSON nasce LIGADO; JSON ilegível é removido e vale o padrão (com log de erro), sem derrubar a tela.",
+    "Interceptores: Authorization em tudo exceto URLs com '/auth/' (então /eu e /eu/senha LEVAM Bearer); X-Turma-Id também vai no /eu para docente e a requisição espera a leitura da turma ativa do disco; timeout de 75 s (cold start do Render levou 45,6 s — não reduzir para 30 s); 5xx ignora o detail do servidor e usa frase própria.",
+    "Semântica de acessibilidade: erros usam role=alert (anunciar já) e confirmações/estados role=status (anunciar educadamente). Em Flutter: Semantics(liveRegion: true) nos dois, com o erro anunciado de forma assertiva (SemanticsService.announce) se possível. A linha inteira do checkbox é o alvo de toque (>=44 px), não só a caixinha.",
+    "O item 'Perfil' da tab bar mostra inicial, nome e e-mail DA SESSÃO (não do GET /eu): depois de renomear ele muda na hora porque a sessão foi renovada. A tab bar tem de ouvir o estado de sessão."
+  ],
+  "testes": [
+    "PerfilPage: carrega e mostra inicial ('O' para 'Otavio'), nome, e-mail e o selo 'Admin da plataforma' quando adminPlataforma; o campo nome vem preenchido com 'Otavio'.",
+    "PerfilPage: professor PENDENTE vê a faixa com 'Cadastro em análise' e 'ainda não corrige nem oculta', vê 'Situação' e 'em análise', e NÃO vê 'Aprovar professores'.",
+    "PerfilPage: cadastro RECUSADO mostra a faixa com 'Seu cadastro de professor não foi aprovado'.",
+    "PerfilPage: docente COORDENADOR APROVADO vê 'Coordenação' e 'aprovada' e nenhuma faixa.",
+    "PerfilPage: aluno (sem tipoConta, e também com tipoConta 'ALUNO' numa recarga) não vê faixa nem 'Tipo de conta'.",
+    "PerfilPage: só o admin vê 'Aprovar professores'; o link aponta para '/tabs/admin' (após recarregar com adminPlataforma=true).",
+    "PerfilPage: GET /eu com erro de rede mostra .pf-aviso com role=alert contendo 'Sem conexão', 'Sair da conta' continua na tela; 'Tentar de novo' faz novo GET /eu; ao suceder o aviso some e o campo nome mostra 'Otavio'.",
+    "PerfilPage: chamar a entrada na aba de novo dispara outro GET /eu e a tela mostra o nome novo ('Renomeado em outro aparelho').",
+    "PerfilPage: nome que começa com emoji ('  🎓 Formanda') tem inicial '🎓' inteiro.",
+    "PerfilPage: salvar nome manda PATCH /eu com corpo {nome: 'Otávio Neves'} (aparado de '  Otávio Neves  '); com resposta {jwt:'jwt-novo', perfil}, a sessão fica token 'jwt-novo', usuario.nome 'Otávio Neves', e o disco = {jwt:'jwt-novo', usuario:{...USUARIO, nome:'Otávio Neves'}, turmaId:'t1'} (turma preservada); aparece 'Nome atualizado'.",
+    "PerfilPage: nome em branco ('   ') não chama a API e mostra erro contendo 'em branco'.",
+    "PerfilPage: PATCH do nome com 400 mostra o detail 'Nome inválido'; com 500 mostra 'Deu problema no servidor'; em ambos o token continua 'jwt-velho' e não aparece 'Nome atualizado'.",
+    "PerfilPage: sair (auth.sair) com o PATCH do nome no ar e a resposta chegando depois: token null, usuario null, sessão em disco null.",
+    "PerfilPage: Enter (requestSubmit do form) no campo nome salva e mostra 'Nome atualizado'; o form da senha contém um input autocomplete=username com valor 'voce@exemplo.com'.",
+    "PerfilPage: não chamam POST /eu/senha e mostram o erro: senha atual vazia ('senha atual'), nova 'curta' ('pelo menos 8'), nova de 10 espaços ('só espaços'), nova com 73 'a' ('máximo 72').",
+    "PerfilPage: confirmação diferente não chama a API e mostra erro contendo 'confirmação'.",
+    "PerfilPage: senha atual errada -> corpo enviado {senhaAtual:'errada', novaSenha:'senha-nova-1'}; resposta 400 {detail:'Senha atual incorreta'} aparece em .pf-erro e a pessoa continua autenticada.",
+    "PerfilPage: troca com sucesso ({jwt:'jwt-pos-senha'}) limpa senhaAtual, novaSenha e confirmarSenha, mostra 'Senha trocada', token em memória e no disco = 'jwt-pos-senha'.",
+    "PerfilPage: conta só Google (temSenha=false) não tem o campo senhaAtual e mostra 'entra pelo Google'.",
+    "PerfilPage: 'Sair da conta' chama auth.sair, a sessão em disco fica null e navega para '/login'.",
+    "AjustesPage: fora do aparelho (suportado=false) mostra 'Lembretes funcionam no app Android', nenhum checkbox e nenhum 'Testar agora'.",
+    "AjustesPage: os três checkboxes refletem a config do aparelho (noDia true, vespera false, umaHora true) e cada um está DENTRO de um label com 'No dia · 7h', 'Na véspera · 19h', '1 hora antes · só com horário'.",
+    "AjustesPage: desmarcar umaHora chama salvarPreferencias({noDia:true, vespera:false, umaHora:false}) — os três de uma vez.",
+    "AjustesPage: com exato negado mostra 'pode atrasar o aviso em até 1 hora' (nunca 'minutos de folga') e o botão 'Permitir horário exato'; ao tocar chama permitirExato e (resultado granted) o botão some.",
+    "AjustesPage: com exato permitido não há botão 'Permitir horário exato' e há 'Testar agora'.",
+    "AjustesPage: ligar '1 hora antes' com exato negado mostra 'pode atrasar este aviso em até 1 hora' e DOIS botões 'Permitir horário exato'; tocar o primeiro chama permitirExato e (granted) o aviso e os dois botões somem.",
+    "AjustesPage: ligar '1 hora antes' com exato permitido não mostra o aviso contextual.",
+    "AjustesPage: desligar '1 hora antes' de novo tira o aviso contextual.",
+    "AjustesPage: ligar 'vespera' (outro liga/desliga) com exato negado não dispara o aviso contextual.",
+    "AuthService: sair() cancela os lembretes; encerrarSessao() (401) também; falha ao cancelar vai para o console e não trava a saída.",
+    "AuthService: renomear não perde tipoConta nem docenteStatus da sessão (docente continua docente).",
+    "AuthService: sair durante o GET /eu do boot não ressuscita a sessão; GET /eu que falha no boot não desloga.",
+    "NotificacoesService (contrato usado pelos Ajustes): estado() conta 'granted'/'denied'/'prompt'; permitirExato() abre o ajuste do Android e reagenda com o exato; testar() agenda para daqui a ~10 s no canal 'lembretes' com allowWhileIdle; testar() com permissão negada devolve 'negado' e não agenda; testar() pede a permissão de novo mesmo depois de um pedido fechado sem resposta; o aviso de teste não é cancelado quando a Home reagenda; mudar a preferência reagenda na hora com a última lista; sem lista, desligar cancela os avisos já agendados daquele tipo; preferência ilegível vira o padrão; esquecer() cancela pendentes, apaga personalizados e mantém os liga/desliga.",
+    "Sugestão de testes Flutter sem equivalente Angular (comportamento já existente): ChaveIaService.mascarada (vazio -> '', 12 chars -> '••••', 13+ -> 8+'…'+4) e gravar('  ') remove a chave; 'Guardar' com campo vazio apaga a chave existente; inicial '?' para nome vazio."
+  ],
+  "nativo": [
+    "@capacitor/preferences ^8.0.1 — armazenamento chave/valor (SharedPreferences 'CapacitorStorage' no Android): 'projetofans.chave-ia' (chave da IA), 'pf.lembretes' (liga/desliga + alarmes personalizados), 'pf.sessao' (jwt+usuario+turmaId, apagado no sair), 'pf.snapshot' (apagado no sair), 'pf.turmaAtiva'. Flutter: shared_preferences (lendo o arquivo 'CapacitorStorage' sem prefixo para não perder dados na atualização). Opcional: flutter_secure_storage para a chave da IA — muda o lugar no disco, então exige migração.",
+    "@capacitor/local-notifications ^8.3.1 — usado via NotificacoesService pelos Ajustes: checkPermissions/requestPermissions (POST_NOTIFICATIONS, Android 13+), checkExactNotificationSetting/changeExactNotificationSetting (SCHEDULE_EXACT_ALARM, Android 12+; abre a tela 'Alarmes e lembretes'), createChannel (id 'lembretes', nome 'Lembretes', descrição 'Provas e entregas da turma', importância 4, vibração, som padrão), schedule (allowWhileIdle=true, isExactNotification conforme permissão, extra.tipo), getPending, cancel. Flutter: flutter_local_notifications (+ timezone, zonedSchedule com AndroidScheduleMode exactAllowWhileIdle/inexactAllowWhileIdle, requestNotificationsPermission, requestExactAlarmsPermission, canScheduleExactNotifications) e/ou permission_handler. Manifesto: POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM (não USE_EXACT_ALARM), RECEIVE_BOOT_COMPLETED e os receivers do plugin para reagendar após reboot.",
+    "@capacitor/core Capacitor.isNativePlatform() — define 'suportado' (lembretes só no app nativo). Flutter: !kIsWeb (e plataforma Android/iOS).",
+    "Versão do app: version do package.json importada na tela ('Versão 1.2.0'). Flutter: package_info_plus (version do pubspec), sem o build number.",
+    "Ionic ion-back-button com defaultHref '/tabs/perfil' em Ajustes: voltar faz pop; sem histórico (deep link) vai para o Perfil. Flutter: leading do AppBar com canPop ? pop : go('/tabs/perfil').",
+    "Ionic ionViewWillEnter (ciclo de vida de página mantida viva nas abas) — gatilho da recarga do Perfil. Flutter: listener de troca de aba + RouteAware.didPopNext.",
+    "Autofill de gerenciador de senhas (atributos autocomplete name/username/current-password/new-password). Flutter: AutofillGroup + autofillHints + TextInput.finishAutofillContext().",
+    "Nenhum plugin de câmera, share, haptics ou status bar é usado nesta área. localStorage não é usado nesta área (só a tab bar usa 'pf.menuRecolhido')."
+  ]
+}

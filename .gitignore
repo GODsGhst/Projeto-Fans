@@ -43,3 +43,6 @@ backend/.dev-db/
 # PDF gerado: sai de gerar-pdf.py em um comando, e 4,7 MB de binario no historico
 # nao ajuda ninguem a revisar desenho.
 docs/design/telas.pdf
+
+# O projeto Flutter precisa versionar o proprio android/ (manifesto, gradle).
+!/mobile/android/

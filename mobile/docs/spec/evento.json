@@ -1,0 +1,599 @@
+{
+  "unidade": "evento (prova e entrega). Cobre app/src/app/features/evento/ (evento.page, novo-evento.page, anexar-material.page), app/src/app/data/material.repository.ts, e as dependências diretas que determinam o comportamento: data/evento.repository.ts, data/turma.repository.ts (alcance e líder), data/moderacao.repository.ts, data/materia.repository.ts, data/sync.repository.ts, notifications/ (lembretes), features/evento-vm.ts e material-vm.ts, shared/ (evento-card, material-linha, materia-chip, selo), core/ (interceptores, ErroApi, JanelaDesfazer, Espera, storage). Todos os caminhos absolutos ficam em C:/Users/gh0st/Projeto Fans/app/src/app/.",
+  "modelos": [
+    {
+      "nome": "Evento (DTO de GET /eventos/{id}, POST, PATCH)",
+      "campos": "id: string\ntipo: 'PROVA' | 'ENTREGA'\ntitulo: string\ndata: string 'AAAA-MM-DD' (construir por partes; nunca new Date(string), que le como UTC)\nhora: string | null — servidor manda 'HH:mm:ss' (LocalTime com segundos) ou omite o campo (= null). Exibir so HH:mm.\nmateriaId: string\nmateriaSigla: string\nmateriaCorHex: string (uma das 12 hues; vem do servidor, nunca digitada)\nautoria: Autoria\nversion: int (vai no If-Match de PATCH e DELETE; sem ele o backend responde 428)\nvisivelTurma: bool\nexcluidoEm: string | null\nsala?: string | null (ausente = na sala da materia; so vem preenchida na excecao daquele dia)"
+    },
+    {
+      "nome": "EventoDetalhe (extends Evento) — resposta de GET /eventos/{id}",
+      "campos": "materiais: Material[] — SOMENTE os vinculados a este evento (evento_material). Nunca a materia inteira."
+    },
+    {
+      "nome": "Autoria (embutida em Evento e Material)",
+      "campos": "autorId: string\nautorNome: string\ncriadoEm: string ISO UTC (ex. '2026-08-31T12:00:00Z')\natualizadoEm: string ISO UTC\nautorSelo?: 'PROFESSOR' | 'COORDENACAO' | null (ausente = sem selo)\neditadoPorNome?: string | null (ausente = nao foi corrigido por outra pessoa)\neditadoPorSelo?: 'PROFESSOR' | 'COORDENACAO' | null"
+    },
+    {
+      "nome": "Selo (enum)",
+      "campos": "'PROFESSOR' -> texto visivel 'Professor', prefixo 'Prof. ' (com espaco final)\n'COORDENACAO' -> texto visivel 'Coordenação', prefixo 'Coord. '\nsem selo -> prefixo '' e so o nome"
+    },
+    {
+      "nome": "Material (embutido em EventoDetalhe e MateriaDetalhe; GET /materiais/{id})",
+      "campos": "id: string\ntipo: 'AULA' | 'ADICIONAL'\ntitulo: string\nurl: string | null\narquivoRef: string | null (sempre null no MVP; upload e a Task 15)\nmateriaId: string\nautoria: Autoria\nversion: int\nvisivelTurma: bool\nexcluidoEm: string | null\ndataAula?: string | null ('AAAA-MM-DD'; ausente = nao se aplica)\nresumo?: string | null (resumo por IA — ver regras, conflito 2)\nresumoEm?: string | null"
+    },
+    {
+      "nome": "CriarEventoRequest (= AtualizarEventoRequest; PATCH SUBSTITUI o objeto inteiro, nao e merge)",
+      "campos": "materiaId: string\ntipo: 'PROVA' | 'ENTREGA'\ntitulo: string (sempre trim() antes de enviar)\ndata: string 'AAAA-MM-DD'\nhora: string | null — 'HH:mm' (o que o input type=time entrega); vazio vira null, NUNCA '00:00'\nsala: string | null — trim(); vazio vira null ('na sala de sempre'). Nunca copiar a sala da materia para ca.\n\nExemplo de corpo: {\"materiaId\":\"m1\",\"tipo\":\"PROVA\",\"titulo\":\"Prova 2 — normalização\",\"data\":\"2026-09-10\",\"hora\":null,\"sala\":null}"
+    },
+    {
+      "nome": "CriarMaterialRequest (= AtualizarMaterialRequest; PATCH substitui tudo)",
+      "campos": "materiaId: string\ntipo: 'AULA' | 'ADICIONAL'\ntitulo: string\nurl: string (obrigatoria no MVP)\ndataAula: string | null ('AAAA-MM-DD'; null se nao for de aula)"
+    },
+    {
+      "nome": "Materia (GET /materias; embutida em MateriaDetalhe)",
+      "campos": "id: string\nnome: string\nsigla: string (ex. 'BD', 'CALC2')\ncorHex: string (uma das 12 hues validadas)\nsala?: string | null\nprofessor?: string | null"
+    },
+    {
+      "nome": "MateriaDetalhe (GET /materias/{id})",
+      "campos": "materia: Materia\nmateriaisAula: Material[]\nmateriaisAdicionais: Material[]\neventos: Evento[]\n(a tela de anexar usa materiaisAula seguidos de materiaisAdicionais, nessa ordem, sem reordenar)"
+    },
+    {
+      "nome": "MinhaTurma (GET /turmas/minha)",
+      "campos": "id: string\nnome: string\nsemestre: string | null\ncodigoConvite: string\nmembros: MembroDaTurma[]\nmeuAlcance?: { tipo: 'NENHUM' | 'MATERIAS' | 'TURMA' (ausente = NENHUM); materiaIds: string[] }"
+    },
+    {
+      "nome": "MembroDaTurma",
+      "campos": "usuarioId: string\nnome: string\npapel: 'ALUNO' | 'LIDER' | 'PROFESSOR' | 'COORDENADOR'\nentrouEm: string\nselo?: Selo | null\ncontestado?: bool\nlecionadas?: string[] (siglas)"
+    },
+    {
+      "nome": "Usuario (sessao, em AuthService.usuario)",
+      "campos": "id: string\nnome: string\nemail: string\ntipoConta?: 'ALUNO' | 'PROFESSOR' | 'COORDENADOR' (ausente = ALUNO)\ndocenteStatus?: 'PENDENTE' | 'APROVADO' | 'RECUSADO' | null (aluno nao tem)"
+    },
+    {
+      "nome": "EventoVm (formatacao; nada ordena nem filtra)",
+      "campos": "tipo: 'PROVA' | 'ENTREGA'\ndia: string — o DD cru com zero a esquerda ('09', nao 9)\nmes: 'jan'|'fev'|'mar'|'abr'|'mai'|'jun'|'jul'|'ago'|'set'|'out'|'nov'|'dez' (minusculo)\nquando: 'HH:mm' (corte de HH:mm:ss) | 'prova' (se PROVA sem hora) | 'entrega' (se ENTREGA sem hora) — vazio ('') conta como sem hora\ntitulo: string\nmateria: { sigla, cor }\nautoria: 'Nome' ou 'Nome · há X' (ver armadilha de tempo relativo)\nautoriaSelo: Selo | null\neditadoPor: string | null\neditadoPorSelo: Selo | null\nsala: string ('' = na sala da materia)"
+    },
+    {
+      "nome": "MaterialVm (formatacao)",
+      "campos": "id: string\ntipo: string — extensao MAIUSCULA do arquivo/link ('PDF', 'SLIDE' etc.) ou 'LINK' quando nao ha extensao\ntitulo: string\nurl: string | null — so http(s) (regex /^https?:\\/\\//i), sem trim; qualquer outro esquema vira null\ndaAula: string ('aula de 2 set' | '') — calculado mas NAO renderizado na tela do evento\nautorId: string\nautoria: 'Nome · há X'\nautoriaSelo: Selo | null\neditadoPor: string | null\neditadoPorSelo: Selo | null\ntemResumo: bool (resumo != null; nao e exibido nesta area)"
+    },
+    {
+      "nome": "AlarmePersonalizado (lembrete do evento, guardado NO APARELHO)",
+      "campos": "{ modo: 'RELATIVO', horasAntes: number } — dias viram horas (n dias = n*24); aceita fracao\nou { modo: 'EXATO', data: 'AAAA-MM-DD', hora: 'HH:mm' } — hora de PAREDE de America/Sao_Paulo, nunca instante\nUm por evento (chave eventoId)."
+    },
+    {
+      "nome": "ConfigLembretes (preferencias do aparelho; chave 'pf.lembretes')",
+      "campos": "noDia: bool (padrao true)\nvespera: bool (padrao true)\numaHora: bool (padrao true)\npersonalizados: Record<eventoId, AlarmePersonalizado> (padrao {})\nLeitura espalha sobre o padrao: campo novo chega ligado para quem ja tinha gravado."
+    },
+    {
+      "nome": "ErroApi (erro de dominio; unico tipo de erro de HTTP que as telas veem)",
+      "campos": "classe: 'DEMOROU' | 'AUTH' | 'PROIBIDO' | 'NAO_ENCONTRADO' | 'PRECONDICAO' | 'CONFLITO' | 'SERVIDOR' | 'OFFLINE' | 'DESCONHECIDO'\nstatus: int (0 para offline e timeout)\nmessage: string (ja pronta para a tela)\npodeTentarNovamente: bool (OFFLINE, DEMOROU, SERVIDOR)\nrecarregarRegistro: bool (so CONFLITO — NENHUMA tela desta area le este campo)\ncodigo: string | null (ProblemDetail.codigo; 'SEM_TURMA' e o unico que importa aqui)"
+    }
+  ],
+  "telas": [
+    {
+      "rota": "/tabs/eventos/:id",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/features/evento/evento.page.ts",
+      "proposito": "Mostra uma prova ou entrega com SOMENTE os materiais vinculados a ela, e as acoes de quem esta olhando: autor edita e apaga; lider (e docente com alcance na materia) oculta, pede que apague; qualquer membro marca o proprio lembrete (so no aparelho Android) e anexa material.",
+      "estados": [
+        "CARREGANDO (inicial, ate GET /eventos/{id} responder): <p class=pf-aviso> 'Carregando…'. Titulo do header = 'Evento'. Sem indicador de 'Acordando o servidor' nesta tela (esse texto so existe em novo-evento).",
+        "ERRO (qualquer falha exceto 404): <p class=pf-aviso> com a mensagem do ErroApi (ex. 'Sem conexão.'; 'Deu problema no servidor. Tente de novo.'; 'O servidor demorou demais para responder. Tente de novo.'). Nenhum card, nenhum 'Nenhum material vinculado', sem botao de tentar de novo. Titulo continua 'Evento'.",
+        "SUMIU (404 NAO_ENCONTRADO): bloco .pf-vazio.pf-sumiu. NADA mais e renderizado: sem card, sem Anexar, sem lembrete, sem moderacao. Titulo 'Evento'.",
+        "CONTEUDO: titulo do header vira 'Prova' (tipo PROVA) ou 'Entrega' (ENTREGA). Card + sala (se houver) + bloco de moderacao (se podeModerar) + bloco de autor/regra + erro da acao (se houver) + secao de lembrete + botao Anexar material (SEMPRE, mesmo sem material) + lista de materiais (se houver) + 'Nenhum material vinculado.' (se nao houver material).",
+        "SEM MATERIAL: bloco .pf-vazio com 'Nenhum material vinculado.' — aparece DEPOIS do botao Anexar material (ver ordem).",
+        "MODERACAO (dentro de .do-lider, so se podeModerar): subestados por cadeia de ifs nesta ordem: (1) ocultado com janela aberta (8 s) — alerta 'Ocultado.' + botao Desfazer; (2) ocultado com janela fechada — aviso fixo; (3) ocultando — formulario de motivo; (4) pedindo — formulario de motivo; (5) pedidoEnviado — aviso 'Pedido enviado.' (permanente nesta sessao de tela); (6) padrao — dois botoes.",
+        "AUTOR (.do-autor, se souAutor): normal = Editar + Apagar; confirmando = 'Apagar mesmo? Some da lista da turma.' + 'Sim, apagar' + 'Cancelar' (Editar some enquanto confirma).",
+        "NAO AUTOR COM ALCANCE (docente na materia do evento): Editar + paragrafo de correcao.",
+        "NAO AUTOR SEM ALCANCE (inclui lider comum e aluno): so o paragrafo de regra, sem nenhum botao de edicao.",
+        "ANTES DA TURMA CARREGAR (garantirCarregada e assincrono e nao e aguardado): souLider e alcanca sao falsos; botoes de moderacao e Editar de docente ficam ausentes e o paragrafo de regra aparece no lugar. Falha em /turmas/minha e SILENCIOSA aqui.",
+        "LEMBRETE: (a) sem suporte (web / nao nativo): so o texto. (b) sem alarme: botao 'Marcar um lembrete'. (c) marcando: segmento + campos + previa + Salvar/Cancelar. (d) alarme gravado: 'Vai tocar …' ou 'Já passou — era …' + 'Remover lembrete'. Aviso de horario exato negado aparece em qualquer um destes estados quando exato == denied."
+      ],
+      "elementos": [
+        "Header: botao voltar (ion-back-button, defaultHref '/tabs/home') + titulo: 'Evento' | 'Prova' | 'Entrega'.",
+        "Estado: 'Carregando…' OU <p class=pf-aviso> com mensagem de erro (exclusivos).",
+        "Se SUMIU: <div class=pf-vazio pf-sumiu> <b>Isso não existe mais.</b> <span>O registro foi excluído por quem criou, ou o líder tirou da lista da turma.</span>.",
+        "Se evento carregado: app-evento-card com: tipo (PROVA/ENTREGA), dia ('09'), mes ('set'), quando ('19:00' | 'prova' | 'entrega'), titulo, chip da materia (sigla + cor), autoria ('Nome · há X') com selo a direita se houver, linha 'editado por <prefixo><nome>' com selo se houver (so quando editadoPor nao e nulo). Texto de sr-only do tipo: 'Prova —' ou 'Entrega —'.",
+        "Se sala: <p class=sala> 'nesta vez, na sala ' + <b>{sala}</b>.",
+        "Se podeModerar: <div class=do-lider> com o subestado de MODERACAO (textos literais na secao telas.elementos abaixo).",
+        "Se souAutor: <div class=do-autor> — 'Editar' (<a> routerLink /tabs/eventos/{id}/editar) + 'Apagar' (button.neutro); ou confirmacao.",
+        "Se alcanca e nao autor: <div class=do-autor> 'Editar' (<a>) + <p class=de-outra-pessoa> 'Quem cadastrou foi <b>{autorNome}</b> e continua como autor: ao corrigir, o card passa a mostrar “editado por” com o seu nome. Apagar é só dessa pessoa — você pode ocultar.'",
+        "Senao: <p class=de-outra-pessoa> 'Quem cadastrou foi <b>{autorNome}</b> — só essa pessoa edita ou apaga. Se a informação mudou, avise no quadro.' (autorNome ausente vira 'alguém da turma').",
+        "Se erroDaAcao: <p class=pf-erro role=alert> {mensagem}.",
+        "Secao <section class=lembrete aria-labelledby=rot-lembrete>: <p class=pf-rotulo> 'seu lembrete'.",
+        "Lembrete, ramo SEM SUPORTE: <p class=pf-cache-aviso> 'Lembretes funcionam no app Android.' (e nada mais, sem botao).",
+        "Lembrete, ramo ALARME GRAVADO: <p class=alerta role=status> 'Já passou — era {quando}.' OU 'Vai tocar {quando}.' ; botao fantasma 'Remover lembrete'.",
+        "Lembrete, ramo MARCANDO: <div class=seg role=group aria-label='Como marcar o lembrete'> com botoes 'Antes do evento' (aria-pressed quando modo RELATIVO) e 'Data e hora' (aria-pressed quando EXATO). Depois: se RELATIVO: input type=number (aria-label 'Quanto antes', min 1, inputmode decimal) + select (aria-label 'Horas ou dias antes', options 'dias antes' e 'horas antes'); <p class=pf-cache-aviso> 'Contando da hora do evento.' (com hora) ou 'O evento não tem horário: conta a partir das 7h do dia.' (sem hora). Se EXATO: input type=datetime-local (aria-label 'Data e hora do lembrete'). Depois: <p class=previa role=status> 'Vai tocar {quando}.' | 'Esse horário já passou — não vai tocar.' | 'Escolha quando.'; botao 'Salvar lembrete' (disabled se !podeSalvar); botao fantasma 'Cancelar'.",
+        "Lembrete, ramo SEM ALARME: botao fantasma 'Marcar um lembrete'.",
+        "Se erroLembrete: <p class=pf-erro role=alert> {mensagem}.",
+        "Se suporte e exato == denied: <p class=pf-cache-aviso role=status> 'Sem o alarme no horário exato, o Android pode atrasar o lembrete em até 1 hora.' ; botao fantasma 'Permitir horário exato'.",
+        "<a class='botao botao--fantasma anexar'> 'Anexar material' (routerLink /tabs/eventos/{id}/anexar) — FORA de qualquer if de materiais; aparece sempre que o evento carregou.",
+        "Se materiais.length > 0: <p class=pf-rotulo> 'materiais'; para cada material: se url http(s): <a class=abrir target=_blank rel='noopener noreferrer'> envolvendo <app-material-linha>; senao: <app-material-linha> sem link. app-material-linha mostra: tipo (ex. 'PDF'), titulo, linha de autoria 'Prof. Nome · há X' com selo, e linha 'editado por <prefixo><nome>' com selo se houver.",
+        "Se semMaterial (carregado, sem erro, sem sumiu, lista vazia): <div class=pf-vazio> <b>Nenhum material vinculado.</b> <span>Só aparece aqui o que alguém vinculou a esta prova ou entrega — a matéria inteira fica na tela da matéria.</span> — este bloco vem DEPOIS do botao Anexar."
+      ],
+      "acoes": [
+        "Voltar -> pilha ou /tabs/home.",
+        "Editar (autor, ou docente com alcance) -> navega para /tabs/eventos/{id}/editar.",
+        "Apagar -> abre confirmacao (nenhuma chamada ao servidor). 'Cancelar' da confirmacao -> fecha sem chamada. 'Sim, apagar' -> DELETE /eventos/{id} com If-Match: version do detalhe JA CARREGADO (nao relido). Sucesso -> navigateByUrl('/tabs/home'). Erro -> erroDaAcao = mensagem; confirmando volta a false.",
+        "Ocultar da turma (ramo padrao) -> mostra formulario de motivo (nenhuma chamada). Em 'Ocultar da turma' (formulario): POST /moderacao/evento/{id}/ocultar com motivo trim (vazio -> null). Sucesso -> ocultado = true, janela de desfazer 8000 ms abre, NAO navega, NAO recarrega o evento. Erro -> erroDaAcao; formulario fecha (finally), motivo digitado se perde.",
+        "Desfazer (dentro da janela) -> POST /moderacao/evento/{id}/reexibir. Sucesso -> janela fecha, ocultado = false (volta o ramo padrao). Erro -> erroDaAcao; botao continua.",
+        "Pedir que apague (ramo padrao) -> formulario de motivo. 'Enviar o pedido' -> POST /moderacao/evento/{id}/pedir-exclusao com motivo. Sucesso -> pedidoEnviado = true (permanente nesta tela). Erro -> erroDaAcao; formulario fecha.",
+        "Marcar um lembrete -> marcando = true (modo RELATIVO por padrao, quanto = 1, unidade = dias). Trocar 'Antes do evento' / 'Data e hora' preserva valores dos dois lados.",
+        "Salvar lembrete -> re-le o relogio; se previa nao e valida ou ja passou, NAO grava (sem mensagem alem da previa). Senao grava via NotificacoesService.salvarAlarme(eventoId, alarme), depois dispara GET /sync forcado (sem await) e relê exato. Em QUALQUER resultado, marcando volta a false (falha: erroLembrete + releitura do disco).",
+        "Remover lembrete -> salvarAlarme(eventoId, null) (sem confirmacao), depois GET /sync forcado.",
+        "Permitir horário exato -> abre tela 'Alarmes e lembretes' do Android; resultado vira exato. Erro -> erroLembrete.",
+        "Anexar material -> navega para /tabs/eventos/{id}/anexar.",
+        "Tocar material com url http(s) -> abre fora do app (navegador do sistema)."
+      ],
+      "navegacao": [
+        "Voltar: pilha ou /tabs/home (defaultHref).",
+        "Editar -> /tabs/eventos/{id}/editar (NovoEventoPage em modo editar).",
+        "Anexar material -> /tabs/eventos/{id}/anexar (AnexarMaterialPage).",
+        "Apagar confirmado -> /tabs/home.",
+        "Quem chega aqui: Home (item), Calendario (item), Materia (item), Painel (item), Quadro (pedido de exclusao de EVENTO, caminho /tabs/eventos/{registroId}), e NovoEvento apos salvar (/tabs/eventos/{id})."
+      ]
+    },
+    {
+      "rota": "/tabs/eventos/novo (criar; query ?tipo=PROVA|ENTREGA&materiaId=) e /tabs/eventos/:id/editar (editar; o :id presente liga o modo de edicao)",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/features/evento/novo-evento.page.ts",
+      "proposito": "Cadastrar prova ou entrega (qualquer membro, sem fila e sem aprovacao) ou corrigir um evento existente (autor; docente com alcance na materia). Mesmo componente para os dois modos.",
+      "estados": [
+        "CARREGANDO MATERIAS: 'Carregando…' (<p class=pf-aviso>). Enquanto isso o formulario nao aparece, mesmo que haja cache de materias no disco (o template checa 'carregando' antes de tudo).",
+        "ERRO DE MATERIAS: <p class=pf-aviso> com a mensagem (ex. 'Sem conexão.'). Sem formulario, sem link de cadastrar materia, sem retry. Mesmo que exista cache do disco.",
+        "SEM MATERIA: bloco .pf-vazio + link 'Adicionar matéria'. Nenhum seletor, nenhum botao de cadastro.",
+        "FORMULARIO CRIAR: titulo 'O que vai cair', botao 'Adicionar'.",
+        "FORMULARIO EDITAR, EVENTO AINDA NAO CHEGOU: campos VAZIOS, titulo 'O que vai cair', botao 'Adicionar' (rotulo e titulo so viram de edicao quando o GET do evento chega). NAO HA indicador de carregamento do evento. Tocar 'Adicionar' aqui faz POST /eventos (duplica).",
+        "FORMULARIO EDITAR, PRONTO: titulo 'Editar', botao 'Salvar', campos preenchidos (hora cortada em HH:mm), tipo e materia do evento marcados.",
+        "FORMULARIO EDITAR, EVENTO FALHOU AO CARREGAR: <p class=pf-erro> com a mensagem sobre o formulario, formulario continua, botao 'Adicionar' — e salvar CRIA um evento novo (ver armadilhas).",
+        "ENVIANDO: botao desabilitado. Rotulo: 'Adicionando…' (criar) ou 'Salvando…' (editar); depois de 4000 ms: 'Acordando o servidor…' (para os dois modos).",
+        "ERRO DE VALIDACAO OU DE ENVIO: <p class=pf-erro role=alert> no topo do formulario; campos preservados; nao navega."
+      ],
+      "elementos": [
+        "Header: botao voltar (defaultHref '/tabs/home') + titulo: 'Editar' (se editando) ou 'O que vai cair'.",
+        "Estado de materias (exclusivo): 'Carregando…' | <p class=pf-aviso> {erro} | .pf-vazio <b>Nenhuma matéria cadastrada ainda.</b> <span>Prova e entrega pertencem a uma matéria — sem matéria não dá para adicionar. Crie a primeira e volte aqui.</span> + <a class=botao routerLink=/tabs/materias/nova>Adicionar matéria</a> (e um <a>, nao <button>).",
+        "Se erro: <p class=pf-erro role=alert> {mensagem}.",
+        "<p class=rot-campo> 'tipo' ; <div class=seg role=group aria-label='Tipo'> com <button data-tipo=PROVA> 'Prova' e <button data-tipo=ENTREGA> 'Entrega' (aria-pressed).",
+        "<p class=rot-campo> 'matéria' ; <div class=chips-pick role=group aria-label='Matéria'>: um <button data-materia={id} aria-label={nome completo}> por matéria da lista escolhivel, contendo <app-materia-chip> (sigla em caixa alta via CSS, cor de fundo da materia). Nao escolhida fica com opacidade 0.38 (cor nao muda).",
+        "<p class=rot-campo> 'o que é' ; <input aria-label='Título' maxlength=120 placeholder='Prova 2 — normalização'> (type text).",
+        "<p class=rot-campo> 'quando' ; <input type=date aria-label='Data'>.",
+        "<p class=rot-campo> 'hora ' + <span class=opcional>'— opcional'</span> ; <input type=time aria-label='Hora'>.",
+        "<p class=rot-campo> 'sala ' + <span class=opcional>'— só se for em outra'</span> ; <input type=text aria-label='Sala, se diferente da habitual' maxlength=40 placeholder='na sala de sempre'>.",
+        "<p class=alerta> 'A hora só entra se a turma precisar saber dela. Sem ela, a prova continua aparecendo no dia certo.'",
+        "<p class=alerta alerta--turma role=status> (um dos quatro textos, nesta ordem de prioridade): (1) EDITANDO REGISTRO ALHEIO: 'A autoria continua sendo de <b>{autorDoOriginal}</b>: ao salvar, o card passa a mostrar “editado por {meuNomeNoCard}”. A versão de agora fica guardada no histórico.' (meuNomeNoCard = prefixo do selo + nome de quem esta logado). (2) SELO (docente com alcance na materia escolhida): 'Vai aparecer para a turma toda com o seu nome e o selo ' + <app-selo>{Professor|Coordenação}</app-selo> + '. Só você pode apagar depois.' (3) DOCENTE SEM SELO (turma carregada e sem alcance nesta materia): 'Vai aparecer com o seu nome, <b>sem selo</b>: nesta matéria você é aluno.' (4) PADRAO: 'Vai aparecer para a turma toda com o seu nome. Só você pode editar ou apagar depois.'",
+        "<button class=botao type=button [disabled]=enviando> rotulo: 'Adicionar' | 'Salvar' | 'Adicionando…' | 'Salvando…' | 'Acordando o servidor…'."
+      ],
+      "acoes": [
+        "Tocar 'Prova' / 'Entrega' -> troca o tipo.",
+        "Tocar um chip de materia -> marca a materia (so as da lista escolhivel).",
+        "Adicionar/Salvar -> cadastrar(titulo, data, hora, sala). Se ja enviando: ignora. Se materia nula, titulo vazio (trim) ou data vazia: mensagem 'Escolha a matéria e preencha o que é e quando.' em pf-erro, SEM requisicao. Hora e sala NAO sao validadas.",
+        "Criar: POST /eventos. Sucesso -> GET /sync forcado (sem await, antes de navegar) e navigateByUrl('/tabs/eventos/{id da resposta}').",
+        "Editar: PATCH /eventos/{id} com If-Match = version do GET. Sucesso -> GET /sync forcado (sem await) e navigateByUrl('/tabs/eventos/{id}').",
+        "Erro em criar ou editar: pf-erro com mensagem; NAO navega; NAO chama /sync; campos preservados.",
+        "Voltar -> pilha ou /tabs/home."
+      ],
+      "navegacao": [
+        "Criar com sucesso -> /tabs/eventos/{id} (nao volta para a Home).",
+        "Editar com sucesso -> /tabs/eventos/{id}.",
+        "'Adicionar matéria' (estado sem materia) -> /tabs/materias/nova.",
+        "Quem chega: Home (botao 'Adicionar prova ou entrega', /tabs/eventos/novo sem query), Painel (atalhos 'Nova prova' / 'Nova entrega' com ?tipo=... e, se so ha uma materia lecionada na turma ativa, &materiaId=...), e EventoPage (Editar)."
+      ]
+    },
+    {
+      "rota": "/tabs/eventos/:id/anexar",
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/features/evento/anexar-material.page.ts",
+      "proposito": "Vincular ou desvincular materiais da MATERIA desta prova ou entrega. Anexar cria um vinculo e NAO move nem apaga o material; desanexar remove so o vinculo.",
+      "estados": [
+        "CARREGANDO: 'Carregando…' (<p class=pf-aviso>). Duas requisicoes em sequencia: GET /eventos/{id}, depois GET /materias/{materiaId}.",
+        "ERRO (de carregamento OU de uma acao de anexar/desanexar): <p class=pf-erro role=alert>. Em carregamento com erro, nenhuma lista e nenhum estado vazio aparece. Em erro de acao, a lista continua como estava.",
+        "LISTA: 1 ou mais materiais, cada um com estado anexado (aria-pressed true, quadro cheio e borda na cor de destaque) ou nao anexado (aria-pressed false, quadro vazado).",
+        "VAZIO: so quando erro === null e a lista da materia esta vazia: bloco 'Esta matéria ainda não tem material.' + link 'Adicionar material'. Erro nunca vira vazio."
+      ],
+      "elementos": [
+        "Header: botao voltar (defaultHref '/tabs/eventos/{id}') + titulo 'Anexar material'.",
+        "Estado: 'Carregando…' | <p class=pf-erro role=alert> {mensagem}.",
+        "Se lista: <p class=pf-rotulo> 'material desta matéria'; para cada material <button class=anexavel type=button aria-pressed={anexado}> contendo: marca (SVG 20x20: retangulo de quadro + check quando anexado), titulo do material, e rotulo 'material de aula' (tipo AULA) ou 'material adicional' (tipo ADICIONAL). Ordem: materiaisAula e depois materiaisAdicionais.",
+        "Se lista: <p class=pf-cache-aviso> 'Anexar não move o material: ele continua na matéria e pode ser anexado a outra prova. Desanexar tira só o vínculo.'",
+        "Se vazio: <div class=pf-vazio> <b>Esta matéria ainda não tem material.</b> <span>Adicione o material na matéria e volte aqui para anexá-lo a esta prova.</span> + <a class=botao> 'Adicionar material' (routerLink /tabs/materias/{materiaId}/material/novo)."
+      ],
+      "acoes": [
+        "Tocar um material NAO anexado -> POST /eventos/{id}/materiais/{materialId} (corpo {}). Sucesso -> marca como anexado. Erro -> pf-erro; estado nao muda.",
+        "Tocar um material anexado -> DELETE /eventos/{id}/materiais/{materialId} SEM If-Match. Sucesso -> desmarca. Erro -> pf-erro; estado nao muda.",
+        "Sem trava de envio: toques repetidos disparam requisicoes repetidas (o estado so muda depois da resposta).",
+        "Voltar -> /tabs/eventos/{id}."
+      ],
+      "navegacao": [
+        "Voltar -> /tabs/eventos/{id}.",
+        "Adicionar material (estado vazio) -> /tabs/materias/{materiaId}/material/novo.",
+        "Chega por: EventoPage (botao 'Anexar material')."
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "GET",
+      "caminho": "/eventos/{id}",
+      "quando": "EventoPage (construtor, a cada instancia — nao ha reload ao re-entrar); NovoEventoPage somente se a rota tem id (modo editar; primeiro passo); AnexarMaterialPage (construtor, primeiro passo).",
+      "corpo": "nenhum",
+      "headers": "Authorization: Bearer <jwt> (sempre, exceto caminhos /auth/*). X-Turma-Id: <turmaId da sessao> so para conta docente (tipoConta definido e != ALUNO), e so depois de a leitura do disco da turma ativa terminar; sem turmaId, nao manda o header.",
+      "resposta": "EventoDetalhe (Evento + materiais: Material[] somente vinculados).",
+      "erros": "EventoPage: NAO_ENCONTRADO (404) -> estado SUMIU (nao e erro). Qualquer outra classe -> estado ERRO com ErroApi.message (SE for Error; senao texto fixo 'Não deu para carregar o evento.'). Anexar: qualquer erro -> ERRO na tela, sem lista e sem 'Nenhum material'; a segunda chamada (GET /materias/{id}) NAO acontece. NovoEvento (editar): qualquer erro -> pf-erro no topo do formulario (formulario continua; botao vira/fica 'Adicionar'). 404 com codigo SEM_TURMA: o interceptor global ja limpou o vinculo e navegou para /entrar-turma (ver regras, mapeamento global)."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/eventos",
+      "quando": "NovoEventoPage em modo criar (botao Adicionar, com validacao minima passando).",
+      "corpo": "CriarEventoRequest: {materiaId, tipo, titulo (trim), data 'AAAA-MM-DD', hora 'HH:mm' | null, sala (trim) | null}. Hora vazia = null; sala vazia = null.",
+      "headers": "Authorization; X-Turma-Id (docente). SEM If-Match.",
+      "resposta": "Evento; a tela usa so o campo id para navegar. Se a resposta nao tiver id, a tela navega para '/tabs/eventos/undefined' (sem guarda no codigo).",
+      "erros": "Qualquer erro -> pf-erro no topo do formulario, sem navegar, sem GET /sync, campos preservados. Mensagem vem do ErroApi (ex. 'Deu problema no servidor. Tente de novo.', 'Sem conexão.', 'O servidor demorou demais para responder. Tente de novo.', ou detail do servidor para 400/403)."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/eventos/{id}",
+      "quando": "NovoEventoPage em modo editar (botao Salvar, com o evento original carregado).",
+      "corpo": "AtualizarEventoRequest = CriarEventoRequest completo (todos os campos, inclusive os nao alterados; PATCH substitui). Ex.: sala preenchida no GET e enviada de volta; sala vazia vira null.",
+      "headers": "If-Match: <version do GET> (string). Authorization; X-Turma-Id (docente).",
+      "resposta": "Evento (descartado pela tela; a tela navega por id).",
+      "erros": "409 CONFLITO -> mensagem detail ou 'Alguem editou isso enquanto voce editava.' (a tela NAO relê o registro; a version continua velha). 428 PRECONDICAO -> 'Recarregue o registro e tente de novo.' (nao deveria acontecer: a tela sempre manda If-Match). 403 PROIBIDO -> detail ou 'Só quem criou pode editar.' (pode ocorrer se um aluno abre /editar de evento alheio por link). 404 NAO_ENCONTRADO -> detail ou 'Isso não existe mais.' Todos: pf-erro no topo, sem navegar, sem sync."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/eventos/{id}",
+      "quando": "EventoPage, somente depois da confirmacao 'Sim, apagar' (so o autor ve o botao).",
+      "corpo": "nenhum",
+      "headers": "If-Match: <version do detalhe carregado na abertura da tela> (nunca relido). Authorization; X-Turma-Id (docente).",
+      "resposta": "vazia (void).",
+      "erros": "409 CONFLITO -> erroDaAcao = mensagem; confirmando = false; cada nova tentativa reenvia a MESMA version (armadilha). 404 NAO_ENCONTRADO -> erroDaAcao 'Isso não existe mais.' (NAO vira estado SUMIU nesta acao). 403 PROIBIDO -> erroDaAcao. Sucesso -> navigateByUrl('/tabs/home'). NAO chama GET /sync: o lembrete do evento apagado so sai no proximo /sync."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/eventos/{eventoId}/materiais/{materialId}",
+      "quando": "AnexarMaterialPage, tocar em material ainda nao anexado.",
+      "corpo": "{} (ApiService envia {} quando nao ha corpo).",
+      "headers": "Authorization; X-Turma-Id (docente). SEM If-Match.",
+      "resposta": "vazia (void).",
+      "erros": "Qualquer erro -> pf-erro na tela; o estado nao muda (sem otimismo)."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/eventos/{eventoId}/materiais/{materialId}",
+      "quando": "AnexarMaterialPage, tocar em material ja anexado (desanexar).",
+      "corpo": "nenhum",
+      "headers": "Authorization; X-Turma-Id (docente). SEM If-Match (desvincularMaterial nao passa version — e diferente de todos os outros DELETE do app).",
+      "resposta": "vazia (void).",
+      "erros": "Qualquer erro -> pf-erro na tela; o estado nao muda."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/moderacao/evento/{id}/ocultar",
+      "quando": "EventoPage, formulario 'Ocultar da turma' (lider ou docente com alcance, nao-autor ou autor sem alcance de pedido).",
+      "corpo": "{\"motivo\": string | null} — motivo = input.trim(); vazio ou so espacos vira null (nunca ''). maxlength 140 so no HTML.",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "vazia (void).",
+      "erros": "403 PROIBIDO -> erroDaAcao com detail do servidor (ex. 'Sem permissão nesta matéria') ou, sem detail, 'Só quem criou pode editar.' (default enganoso para moderacao). Formulario fecha (finally) e motivo se perde. 404 -> erroDaAcao 'Isso não existe mais.'. Sucesso -> ocultado = true; janela de desfazer 8000 ms; nao navega; nao relê o evento."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/moderacao/evento/{id}/reexibir",
+      "quando": "EventoPage, botao 'Desfazer' (so enquanto a janela de 8 s estiver aberta nesta tela).",
+      "corpo": "{} (default do ApiService).",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "vazia (void).",
+      "erros": "Erro -> erroDaAcao; botao continua. Sucesso -> fecha a janela e ocultado = false."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/moderacao/evento/{id}/pedir-exclusao",
+      "quando": "EventoPage, formulario 'Enviar o pedido' (lider ou docente com alcance, nao-autor).",
+      "corpo": "{\"motivo\": string | null} (mesma normalizacao de ocultar).",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "vazia (void).",
+      "erros": "Erro -> erroDaAcao; formulario fecha. Sucesso -> pedidoEnviado = true (aviso 'Pedido enviado.' permanente nesta tela; os botoes de ocultar/pedir somem)."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/turmas/minha",
+      "quando": "TurmaRepository.garantirCarregada(): EventoPage sempre (construtor); NovoEventoPage so se ehDocente. So faz a chamada se turma() == null e nao esta carregando.",
+      "corpo": "nenhum",
+      "headers": "Authorization; X-Turma-Id nao se aplica a este caminho para o lider mas o interceptor manda para docente.",
+      "resposta": "MinhaTurma (membros[] com papel; meuAlcance {tipo, materiaIds}).",
+      "erros": "404 com codigo SEM_TURMA -> turma limpa (limpar) e vinculo esquecido, navegacao global para /entrar-turma. Outro erro -> turmas.erro preenchido; NENHUMA tela desta area exibe; moderacao e Editar de docente simplesmente nao aparecem (falha silenciosa)."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/materias",
+      "quando": "NovoEventoPage, construtor, SEMPRE (rede, nao so cache).",
+      "corpo": "nenhum",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "Materia[] (ordem do servidor, sem reordenar).",
+      "erros": "Erro -> materiasRepo.erro = mensagem; tela mostra pf-aviso e nao mostra formulario. Sucesso -> grava materias no snapshot do disco ('pf.snapshot', via mesclar)."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/materias/{materiaId}",
+      "quando": "AnexarMaterialPage, segundo passo (depois de GET /eventos/{id} dar certo).",
+      "corpo": "nenhum",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "MateriaDetalhe: usa materiaisAula ++ materiaisAdicionais.",
+      "erros": "Erro -> ERRO na tela (pf-erro). Nao limpa nada (a lista nunca chegou)."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/sync",
+      "quando": "SyncRepository.reagendarAvisos(forcar=true) — chamado sem await depois de: criar evento (NovoEvento), editar evento (NovoEvento), salvar alarme e remover alarme (EventoPage). SO na plataforma nativa: no navegador reagendarAvisos retorna sem chamar nada.",
+      "corpo": "nenhum",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "{eventosAlterados: (Partial<Evento> & {id})[]} — para oculto/excluido de nao-autor vem so id, visivelTurma e excluidoEm (lapide).",
+      "erros": "Qualquer erro e capturado e vai para console.error; NUNCA aparece na tela e NUNCA bloqueia navegacao. Forcado = ignora a janela de 60 s e a ida em voo."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/materiais/{materialId}",
+      "quando": "Fora da area (editar-material.page). Registrado aqui porque e MaterialRepository.detalhe.",
+      "corpo": "nenhum",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "Material.",
+      "erros": "Tratamento global (ver regras)."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/materiais",
+      "quando": "Fora da area (novo-material.page). MaterialRepository.criar.",
+      "corpo": "CriarMaterialRequest {materiaId, tipo, titulo, url (obrigatoria no MVP), dataAula | null}.",
+      "headers": "Authorization; X-Turma-Id (docente). SEM If-Match.",
+      "resposta": "Material.",
+      "erros": "Tratamento global."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/materiais/{materialId}",
+      "quando": "Fora da area (editar-material.page). MaterialRepository.atualizar(id, version, req).",
+      "corpo": "AtualizarMaterialRequest = CriarMaterialRequest completo (substitui).",
+      "headers": "If-Match: <version> (obrigatorio). Authorization; X-Turma-Id (docente).",
+      "resposta": "Material.",
+      "erros": "409 CONFLITO; 428 PRECONDICAO; 403 PROIBIDO; 404 NAO_ENCONTRADO — tratamento global."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/materiais/{materialId}",
+      "quando": "Fora da area. MaterialRepository.excluir(id, version). Exclusao logica no servidor.",
+      "corpo": "nenhum",
+      "headers": "If-Match: <version>. Authorization; X-Turma-Id (docente).",
+      "resposta": "void.",
+      "erros": "Tratamento global."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/materiais/{materialId}/resumo  (com ?refazer=true quando refazer)",
+      "quando": "Fora da area (resumo.page). MaterialRepository.resumir(id, chave, refazer=false). CONFLITO: AGENTS.md proibe resumo por IA — nao portar sem decisao do dono (ver regras).",
+      "corpo": "{} (a chave NUNCA vai no corpo).",
+      "headers": "X-IA-Key: <chave do aparelho> (vem de core/chave-ia.service, fora da area). Authorization; X-Turma-Id (docente).",
+      "resposta": "Material com resumo.",
+      "erros": "Tratamento global. Sem refazer, o servidor devolve o resumo ja gerado (nao cobra de novo)."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/eventos?de=AAAA-MM-DD&ate=AAAA-MM-DD",
+      "quando": "Fora da area (calendario.page): EventoRepository.carregarPeriodo. Citado so porque mora no mesmo arquivo de data/evento.repository.ts.",
+      "corpo": "nenhum",
+      "headers": "Authorization; X-Turma-Id (docente).",
+      "resposta": "Evento[].",
+      "erros": "Falha nunca esvazia a lista (repositorio guarda erro e relanca)."
+    }
+  ],
+  "servicos_e_estado": [
+    "EventoRepository (providedIn root; data/evento.repository.ts): detalhe(eventoId): Promise<EventoDetalhe> = GET /eventos/{id}; criar(req): Promise<Evento> = POST /eventos; atualizar(eventoId, version, req): Promise<Evento> = PATCH com If-Match; excluir(eventoId, version): Promise<void> = DELETE com If-Match; vincularMaterial(eventoId, materialId) = POST /eventos/{e}/materiais/{m} sem corpo explicito (vai {}); desvincularMaterial(eventoId, materialId) = DELETE sem If-Match. Fora da area mas no mesmo arquivo: signals eventos, carregando, erro e carregarPeriodo(de, ate) (GET /eventos?de&ate; nunca esvazia a lista por falha).",
+    "MaterialRepository (providedIn root; data/material.repository.ts): sem estado proprio. detalhe(materialId), criar(req), atualizar(materialId, version, req) com If-Match, excluir(materialId, version) com If-Match, resumir(materialId, chave, refazer=false) com header X-IA-Key (conflito: resumo por IA).",
+    "TurmaRepository (providedIn root; data/turma.repository.ts): signals turma: MinhaTurma|null, carregando, erro: string|null. computed souLider: true se algum membro tem usuarioId == eu.id e papel == 'LIDER' (falso enquanto turma nao carregou). alcanca(materiaId|null): meuAlcance.tipo == 'TURMA' -> true; 'MATERIAS' -> materiaId != null && materiaIds contem; senao false. seloNa(materiaId): se !alcanca -> null; se tipo == 'TURMA' -> 'COORDENACAO'; senao 'PROFESSOR'. garantirCarregada(): carrega so se turma == null e nao carregando. carregar(): GET /turmas/minha; SEM_TURMA -> limpar(); outro erro -> erro preenchido e turma antiga mantida. limpar(). Effect interno: zera turma e erro quando auth.usuario == null ou auth.turmaId == null.",
+    "ModeracaoRepository (providedIn root; data/moderacao.repository.ts): ocultar(tipo='evento', id, motivo|null) = POST /moderacao/evento/{id}/ocultar {motivo}; reexibir(tipo, id) = POST /moderacao/evento/{id}/reexibir; pedirExclusao(tipo, id, motivo|null) = POST /moderacao/evento/{id}/pedir-exclusao {motivo}. Fora da area: meusPedidos, ocultados, transferirLideranca.",
+    "MateriaRepository (providedIn root; data/materia.repository.ts): signals materias: Materia[], carregando, erro. carregar(): sempre vai a rede (GET /materias); antes, se materias esta vazia, mostra o cache do disco (pf.snapshot.materias) — mas a tela de evento NAO mostra isso porque checa 'carregando' antes; depois de sucesso grava no disco (mesclar); em erro seta erro e RELANCA (o chamador faz o catch). detalhe(materiaId) = GET /materias/{id}.",
+    "SyncRepository (data/sync.repository.ts): reagendarAvisos(forcar=false): nao lanca; no-op se !suportado; sem forcar, deduplica ida em voo e pula se o ultimo sync deu certo ha menos de 60 s; forcar ignora as duas. Chamado com true pelas telas de evento.",
+    "NotificacoesService (notifications/notificacoes.service.ts): suportado (bool = plugin nativo presente = Capacitor.isNativePlatform()); epoca; config(): ConfigLembretes (le 'pf.lembretes'); salvarAlarme(eventoId, alarme|null) (grava, cancela o id do alarme se nao ha lista, reagenda agora); estadoExato(): 'sem-suporte'|'granted'|'denied'; permitirExato() (abre tela do Android, reagenda); sincronizar(eventos) (chamado pelo SyncRepository; poda alarmes de eventos que sumiram e reagenda tudo, ate 400 avisos). Fora da area: esquecer, salvarPreferencias, testar, estado.",
+    "AuthService (core/auth.service.ts): usuario (signal Usuario|null); turmaId (signal); ehDocente (computed: tipoConta definido e != 'ALUNO'); encerrarSessao() sincrono (usado pelo interceptor em 401: zera token/usuario/turma, esquece lembretes, apaga sessao em disco).",
+    "JanelaDesfazer (core/janela-desfazer.ts; instancia por tela): aberta: signal bool; abrir() reabre do zero com timer de 8000 ms fora da zona; fechar(); fecha sozinha ao destruir a tela.",
+    "Espera (features/auth/espera.ts; so em novo-evento): demorando: signal bool; comecar(apos=4000) liga o aviso; terminar() zera no finally.",
+    "mensagemDeErro(e) (features/auth/erro.ts): ErroApi -> e.message; qualquer outra coisa -> 'Não deu para completar a ação. Tente de novo.'.",
+    "Funcoes puras de formatacao: eventoVm(e, agora), materialVm(m, agora), assinatura(autoria, agora), instantePersonalizado(alarme, evento, tz), rotuloInstante(quando, tz), calcularAgendamentos/idDoAviso (reagendador.ts), TIMEZONE_PADRAO='America/Sao_Paulo', NOTIFICACAO_HORA_NO_DIA='07:00', LEMBRETES_PADRAO.",
+    "EventoPage — estado (signals): detalhe (privado, null ate carregar), carregando (true), erro (string|null), sumiu (false), agora (Date; tick de 30 s; fonte de 'há X', previa e podeSalvar), exato ('granted' inicial), alarme (null inicial), marcando (false), modoAlarme ('RELATIVO'), quanto (1), unidade ('dias'), exatoParede (''), erroLembrete, ocultando, ocultado, pedindo, pedidoEnviado, enviandoModeracao, confirmando, apagando, erroDaAcao. id = paramMap.get('id') ?? '' (lido UMA vez). Computeds: evento, materiais, rotulo ('Evento' | 'Prova' | 'Entrega'), semMaterial (!carregando && erro==null && !sumiu && detalhe!=null && materiais vazio), autorDoRegistro (autorNome ?? 'alguém da turma'), souAutor (detalhe.autoria.autorId == usuario.id), alcanca (turmas.alcanca(detalhe.materiaId)), podeModerar (souLider || (alcanca && !souAutor)), temHora, rascunho, previa, alarmeGravado, podeSalvar (previa != null && !previa.passou). Metodos: carregar, ocultar(motivo), reexibir(), pedirExclusao(motivo), apagar(), permitirExato(), removerAlarme(), salvarAlarme(), gravarAlarme(a) (nao relanca; em falha relê o disco), lerAlarme(), lerExato() (so registra no console em falha).",
+    "NovoEventoPage — estado: materias/carregando/erroDasMaterias (do MateriaRepository), tipo (signal; inicial 'ENTREGA' se ?tipo=ENTREGA senao 'PROVA'), materiaId (null inicial; tocado pelo usuario ou preenchido pelo evento em edicao), materiaDaRota (?materiaId, so usado como fallback), enviando, erro, espera (Espera), editandoId (paramMap 'id' || null), original (EventoDetalhe|null; null em criacao e ate o GET chegar). Computeds: editando (original != null), valorInicial ({titulo, data, hora (cortada em HH:mm), sala} de original; vazios se null), semMateria, editandoAlheio (original.autoria.autorId != eu.id), materiasEscolhiveis (se editandoAlheio: so as com alcance; senao todas), materiaEscolhida (materiaId ?? (URL se existir na lista) ?? primeira ?? null), seloAoSalvar (turmas.seloNa(materiaEscolhida)), docenteSemSelo (ehDocente && turma != null && seloAoSalvar == null), autorDoOriginal, meuNomeNoCard (prefixo do selo + nome), rotuloDoBotao. Injeta HomeRepository sem usar (sem efeito). Constructor: materiasRepo.carregar() (catch so loga), garantirCarregada se docente, carregarOriginal se id.",
+    "AnexarMaterialPage — estado: eventoId (paramMap 'id' ?? '', lido uma vez), voltarPara ('/tabs/eventos/{id}'), carregando (true), erro (null), materiaId (''), daMateria (Material[]), anexados (Set de ids vindos de evento.materiais). Computeds: semMaterial (erro == null && daMateria vazio), disponiveis (lista com anexado e rotuloDoTipo). Metodo alternar(materialId, anexado) (DELETE se anexado, POST se nao; so atualiza o Set depois da resposta)."
+  ],
+  "regras": [
+    "NAO-NEGOCIAVEL 1 — Autoria visivel: todo evento e material mostra o nome de quem postou ('Nome · há X'); sem registro anonimo. Quem nao e o autor ve 'Quem cadastrou foi <nome>' na tela do evento.",
+    "NAO-NEGOCIAVEL 2 — Edicao nao apaga historico: PATCH sempre com If-Match; a tela de editar diz 'A versão de agora fica guardada no histórico'. Exclusao e logica no servidor (o app diz 'Some da lista da turma'; o registro vai para 'Nao listados' do autor).",
+    "NAO-NEGOCIAVEL 3 — Estado pessoal nunca no fato compartilhado: o lembrete e do APARELHO (preferencia 'pf.lembretes'), nunca gravado no evento; o texto da tela diz 'O lembrete e deste aparelho, nao da turma: ninguem mais ve'.",
+    "NAO-NEGOCIAVEL 6 — Semana vazia mostra pouca coisa: 'Nenhum material vinculado.' e 'Esta matéria ainda não tem material.' sao respostas informativas, sem sugestao, sem skeleton permanente.",
+    "NAO-NEGOCIAVEL 7 — Cor + sigla sempre juntas: matéria sempre via MateriaChipComponent (sigla obrigatoria e cor obrigatoria, sem variante so-cor). Nao selecionada = opacidade 0.38 (nunca recolorida).",
+    "NAO-NEGOCIAVEL 8 — Prova pesa mais que entrega por TINTA, nao por cor: prova = bloco solido (fundo --prova-bg, texto --prova-fg, titulo 700, glifo cheio quadrado com radius 1px); entrega = contorno de 1px (--rule), fundo transparente, titulo 600, glifo vazado circular. Teste: em escala de cinza os dois se distinguem. O tipo tambem vai em texto oculto ('Prova —' / 'Entrega —') para leitor de tela.",
+    "NAO-NEGOCIAVEL 9 — Qualquer membro posta sem aprovacao: nenhuma fila, nenhum status pendente na criacao. Textos: 'Vai aparecer para a turma toda com o seu nome...'.",
+    "NAO-NEGOCIAVEL 10 (como implementado) — Autor edita e apaga o proprio registro; lider so oculta/pede exclusao; docente com alcance na materia (professor/coordenacao) EDITA e OCULTA registro alheio, nunca APAGA. Ver conflito 1.",
+    "NAO-NEGOCIAVEL 11 — Tela de prova mostra SOMENTE os materiais vinculados (GET /eventos/{id} ja filtra; a tela nao busca materia). Excecao de tela, por desenho: AnexarMaterialPage lista a materia inteira porque precisa escolher entre os materiais dela.",
+    "Regra de tela: o botao Editar e Apagar NAO aparecem para quem vai levar 403 ('convidar ao erro e depois culpar a pessoa'). Comparar autoria na tela NAO e seguranca (o servidor decide); e honestidade de interface.",
+    "Regra de tela: a regra de quem pode editar e dita ANTES do toque, em texto, para quem nao tem o botao ('ausencia de botao e silencio').",
+    "Regra de tela: 'Apagar' e 'Sim, apagar' NAO sao vermelhos: classe .perigo usa borda e texto --ink-2 ('Apagar nao e vermelho gritante: o app usa forma, nao cor, para peso'). Vermelho e reservado para erro.",
+    "Regra de tela: 'Ocultar' e reversivel e tem janela de desfazer de 8 s; 'Pedir que apague' NAO apaga (avisa o autor; quem apaga e sempre quem criou). Sao dois botoes porque sao duas decisoes.",
+    "Regra de tela: motivo de moderacao e OPCIONAL. Vazio vai como null (nao string vazia), porque motivo inventado fica no registro com cara de verdade.",
+    "Regra de tela: hora do evento e OPCIONAL. Vazia = null (nunca '00:00'). Sem hora, o card mostra 'prova' ou 'entrega' e o lembrete relativo conta das 07:00. Sala vazia = null ('na sala de sempre'); a sala da materia nao e copiada.",
+    "Regra de tela: campo de sala aparece no card so quando e diferente da habitual ('A de sempre nao entra aqui: repetida em toda prova viraria ruido').",
+    "Regra de tela: link de material so com esquema http(s) (regex /^https?:\\/\\//i, sem trim). javascript:, data:, intent:, file: e sem-esquema viram linha sem link. Abrir externo: target=_blank rel=noopener noreferrer; no Capacitor o link sai do app (nunca dentro de um WebView de PDF sem botao voltar).",
+    "Regra de tela: nunca transformar falha em 'vazio'. Falha de rede, 5xx, timeout e 404 de SEM_TURMA NUNCA mostram 'Nenhum material vinculado' nem 'Nenhuma matéria cadastrada ainda' nem 'Esta matéria ainda não tem material'. Catch que devolve lista vazia como sucesso e o pior bug do app (AGENTS).",
+    "Regra de codigo: entidade nunca cruza para a UI (so DTO/view-model). Toda falha de HTTP passa pelo interceptor central (ErroApi). Nenhum catch vazio.",
+    "MAPEAMENTO GLOBAL DE ERRO (erroHttpInterceptor, vale para TODA chamada desta area): status 0 -> OFFLINE 'Sem conexão.' (podeTentarNovamente). TimeoutError (75 000 ms) -> DEMOROU 'O servidor demorou demais para responder. Tente de novo.' (status 0). 401 -> AUTH: encerrarSessao() sincrono, navega para /login, mensagem detail ou 'Sua sessão expirou. Entre de novo.'. 403 -> PROIBIDO: detail ou 'Só quem criou pode editar.'. 404 -> NAO_ENCONTRADO: detail ou 'Isso não existe mais.' (codigo do servidor e lido). 404 com codigo == 'SEM_TURMA' -> alem do erro: registrarTurma(null) (esquece turma, snapshot e lembretes) e navega para /entrar-turma. 409 -> CONFLITO: detail ou 'Alguém editou isso enquanto você editava.' (recarregarRegistro = true, nao usado aqui). 428 -> PRECONDICAO: detail ou 'Recarregue o registro e tente de novo.'. >=500 -> SERVIDOR: 'Deu problema no servidor. Tente de novo.' (podeTentarNovamente). Qualquer outro -> DESCONHECIDO: detail ou 'Não deu para completar a ação.'. detail vem de ProblemDetail (detail, depois title); corpo que nao e JSON (HTML de proxy) cai no default.",
+    "ORDEM DE INTERCEPTORES: auth (Bearer; fora de /auth/*) -> turmaAtiva (X-Turma-Id so para docente; espera a leitura do disco) -> erroHttpInterceptor (traduz) -> timeout (75 s, o mais interno). O tradutor precisa ver o TimeoutError, por isso vem por fora do timeout.",
+    "HEADER X-Turma-Id: so para conta docente (tipoConta != ALUNO); aluno nunca manda; nao vai para hosts fora da API (environment.apiUrl; em dev http://localhost:8080/api/v1).",
+    "Authorization: NUNCA em caminhos /auth/* (login e cadastro rodam sem token).",
+    "Tempo: a espera de qualquer chamada e 75 s (cold start do servidor gratuito leva ate ~46 s medidos). Nao ha retry automatico em nenhuma tela desta area.",
+    "CONFLITO 1 (decidir antes de portar a edicao alheia): AGENTS.md, nao-negociavel 10, diz 'Só o autor edita ou exclui o próprio registro. Nem o líder edita registro alheio — o líder só muda visibilidade.' e o handoff (linha 140) repete. O app edita registro alheio por docente com alcance (Editar + PATCH com If-Match), com base na spec docs/superpowers/specs/2026-10-06-professor-coordenador.md (linhas 16, 19, 43: 'corrige datas (edita evento de outra pessoa na matéria dele)'; 'Professor e coordenador corrigem e ocultam, nunca excluem'). A spec de 06/10 e posterior ao AGENTS. Nao resolvi: confirmar com o dono.",
+    "CONFLITO 2 (decidir antes de portar): resumo por IA. AGENTS.md ('Proibido implementar', linha 61) e HANDOFF-v2 (secao 5, linha 96) proibem 'Resumo por IA'; ainda assim material.repository.ts tem resumir() (POST /materiais/{id}/resumo com X-IA-Key) e os campos resumo/resumoEm. Recomendacao de port: nao portar resumir nem o botao, a menos que o dono decida o contrario.",
+    "CONFLITO 3: lider que tambem e autor ve 'Ocultar da turma' e 'Pedir que apague' no proprio registro (podeModerar = souLider || (alcanca && !souAutor): a primeira parte ignora souAutor). O comentario do codigo diz que o proprio autor nao entra na moderacao. Comportamento observado; decidir se o port reproduz ou corrige.",
+    "CONFLITO 4: qualquer membro ve 'Anexar material' em qualquer evento (sem gate na UI; o servidor decide). Confirmar com a spec se anexar e livre para todos os membros.",
+    "Tela de evento nao recarrega ao voltar: EventoPage e AnexarMaterialPage nao tem ionViewWillEnter (Home, Quadro, Calendario, Materia e Painel tem). Ver armadilha de re-entrada."
+  ],
+  "armadilhas": [
+    "=== EVENTO (evento.page) ===",
+    "1. ID da rota lido UMA vez no construtor (paramMap.snapshot). Se a rota trocar o id com a mesma instancia viva, a tela nao recarrega.",
+    "2. Carga unica no construtor. EventoPage NAO tem ionViewWillEnter. Home, Quadro, Calendario, Materia e Painel tem. Ao voltar de Editar ou Anexar, a instancia de EventoPage que ficou na pilha do Ionic pode mostrar detalhe e lista de materiais antigos. Nao confirmei no aparelho; na port, recarregar sempre ao retornar (await do push/pop).",
+    "3. 404 NAO e erro: e 'sumiu'. Mas o erro 404 com codigo SEM_TURMA dispara, no interceptor, limpeza do vinculo e navegacao para /entrar-turma. Na port, tratar SEM_TURMA antes de qualquer decisao de tela (ver o status 404 de codigo) e nao mostrar 'Isso não existe mais.' nesse caso.",
+    "4. Falha de rede, 5xx e timeout viram ERRO na tela, nunca 'Nenhum material vinculado'. Rotina de classificacao: so NAO_ENCONTRADO vira 'sumiu'; qualquer outra coisa vira erro.",
+    "5. Erro de carregamento que NAO e ErroApi (ex. TypeError ou Error de parse) mostra e.message CRU na tela (texto tecnico possivel). Os erros de HTTP sempre passam pelo mapeamento, entao so o caminho nao-HTTP cai aqui.",
+    "6. Durante o cold start (ate 75 s) a tela so mostra 'Carregando…'. O texto 'Acordando o servidor…' so existe em novo-evento. Nao inventar aviso novo sem decidir.",
+    "7. Ordem do DOM: 'Anexar material' vem ANTES de 'materiais' e ANTES de 'Nenhum material vinculado.'. O botao aparece mesmo sem material, de proposito ('escondido ali, o botao so aparecia para quem ja tinha resolvido o problema'). O bloco de 'Nenhum material' vem por ultimo.",
+    "8. Visibilidade de Apagar: so para souAutor (id do usuario == autoria.autorId). Editar: para autor OU docente com alcance. Docente com alcance NUNCA ve Apagar em registro alheio. Lider comum (nao autor, sem alcance) NAO ve Editar.",
+    "9. Enquanto /turmas/minha nao chega (garantirCarregada nao e aguardado), souLider e alcanca sao falsos: moderacao e Editar de docente somem, e o paragrafo de regra de nao-autor aparece no lugar. Quando a turma chega, o layout muda sozinho. Falha em /turmas/minha e silenciosa nesta tela.",
+    "10. podeModerar = souLider || (alcanca && !souAutor). Lider que e autor ve 'Ocultar da turma' e 'Pedir que apague' no proprio registro (ver conflito 3).",
+    "11. Cadeia de ifs da moderacao: ocultado > ocultando > pedindo > pedidoEnviado > padrao. pedidoEnviado NUNCA volta a false: some tambem o 'Ocultar' e o 'Pedir' do padrao, ate sair da tela.",
+    "12. Janela de desfazer: 8 000 ms; reinicia a cada ocultar. Ao expirar, o botao 'Desfazer' some e o aviso fixo diz para reexibir na turma em 'Ocultados' (tela fora desta area). Dentro da tela, reexibir so funciona durante a janela. Ao fechar a tela, o timer para.",
+    "13. Ocultar NAO navega e NAO relê o evento: o card continua exibido com o estado de antes.",
+    "14. Motivo: lido do DOM (template ref) no clique, nao de modelo. trim(); vazio ou so espacos -> null. maxlength 140 vale so no HTML (nao ha truncamento no codigo).",
+    "15. Erro em ocultar, pedir ou reexibir: o formulario fecha no finally (ocultando/pedindo viram false) e o motivo digitado se perde. O erro aparece no pf-erro do FIM (depois das acoes de autor), nao junto do botao.",
+    "16. Guarda de envio compartilhada: enviandoModeracao protege ocultar, reexibir e pedir. Um toque em Desfazer enquanto 'Ocultar' envia e ignorado sem aviso.",
+    "17. Apagar: confirmacao de dois toques. 'Cancelar' zera sem request. Apos a confirmacao, If-Match usa a version do detalhe CARREGADO na abertura e nunca e relida. Um 409 mostra mensagem, zera a confirmacao, e cada nova tentativa reenvia a MESMA version: o usuario fica preso ate sair da tela. Nenhuma tela desta area chama reload apos 409 (recarregarRegistro existe e nao e lido).",
+    "18. Apagar com sucesso navega para /tabs/home sem mensagem nem sync. O lembrete do evento apagado continua agendado no aparelho ate o proximo GET /sync (Home e resume reagendam, respeitando a janela de 60 s). O mesmo vale para ocultar.",
+    "19. Editar some enquanto a confirmacao de apagar esta aberta (o ramo do autor troca os dois).",
+    "20. Lembrete: suporte = plataforma nativa (plugin presente). Na web, nenhuma leitura de disco e nenhum /sync. Texto fixo 'Lembretes funcionam no app Android.' — a condicao e 'nativo', o texto diz 'Android'. Na port, decidir se o texto vale para iOS.",
+    "21. Estado exato inicia 'granted' (sem aviso) ate o sistema responder. Aviso de atraso ('Sem o alarme no horário exato…') aparece sempre que exato == denied, mesmo sem nenhum lembrete marcado.",
+    "22. Relogio 'agora' e um signal que anda a cada 30 s (setInterval criado fora da zona Angular e limpo no destroy). A previa 'Vai tocar' <-> 'Já passou' muda sozinha, sem interacao. 'Passou' e instante <= agora (o instante exato ja conta como passado). Na port: timer periodico de 30 s que re-renderiza a previa e 'há X'.",
+    "23. Salvar relê o relogio no toque. Se o horario passou entre dois ticks, NAO grava e NAO mostra nada alem da previa, que ja diz 'Esse horário já passou — não vai tocar.' (Salvar fica desabilitado).",
+    "24. gravarAlarme NAO relanca erro. Em falha: erroLembrete = mensagem, relê o disco (a verdade) e, no salvarAlarme, marcando volta a false: o formulario fecha e os valores digitados se perdem. Remover segue o mesmo caminho.",
+    "25. Salvar e Remover disparam GET /sync forcado sem await. O alarme so toca se o evento estiver na lista do /sync (a janela de 60 s e ignorada por forcar). Se o /sync falhar, o alarme fica gravado no aparelho mas a tela ja disse 'Vai tocar' (a falha vai so para o console).",
+    "26. Salvar pode abrir o dialogo de permissao de notificacao do sistema (reagendarAgora pede permissao quando ha o que agendar). Permissao negada = nada agendado, sem aviso na tela.",
+    "27. RELATIVO: horasAntes = n*24 (dias) ou n (horas). n fracionario aceito (min=1 so no HTML, nao validado). Campo vazio -> valueAsNumber = NaN -> previa 'Escolha quando.' e Salvar desabilitado. n <= 0 -> mesmo resultado.",
+    "28. A base do relativo e a data e hora do EVENTO no fuso America/Sao_Paulo (fixo, nao o fuso do aparelho). Sem hora, a base e 07:00 do dia. Na port: usar banco de fuso (timezone), nunca DateTime local.",
+    "29. EXATO: o input 'AAAA-MM-DDTHH:mm' e hora de PAREDE de Sao Paulo, guardado como {modo:'EXATO', data, hora} (strings). A conversao para instante acontece ao exibir e ao agendar. Nunca new Date(valor) (le no fuso da maquina).",
+    "30. Trocar o modo (Antes do evento / Data e hora) mantem os valores dos dois lados. Um alarme por evento: salvar substitui o anterior.",
+    "31. Texto do instante: 'qui, 10 out, 19:00' montado a mao: dias 'dom seg ter qua qui sex sáb', meses 'jan…dez' minusculos, dia sem zero (9 out), hora HH:mm. NAO usar Intl pt-BR (escreve 'sex., 9 de out.').",
+    "32. Data ISO nunca vai a new Date (le UTC e no Brasil mostra o dia anterior). Montar dia/mes por partes de 'AAAA-MM-DD'.",
+    "33. dia exibido e a string 'DD' com zero a esquerda ('09'); mes sai da tabela minuscula. Nao converter para numero.",
+    "34. Hora: servidor manda 'HH:mm:ss'; cortar para 5 chars para exibir. Hora '' ou null -> rotulo 'prova' / 'entrega' (minusculo) no card, NUNCA '00:00' nem vazio.",
+    "35. Autoria relativa ('Nome · há X'): minutos = arredondamento de ms/60000; < 1 (inclui data FUTURA por diferenca de relogio) -> 'agora'; < 60 -> 'há N min'; < 24 h -> 'há N h' (N = arredondamento de minutos/60); senao 'há 1 dia' ou 'há N dias'. Data ilegivel -> so o nome (nunca 'NaN'). Recalcula a cada 30 s.",
+    "36. Selo: prefixo 'Prof. ' / 'Coord. ' tem espaco no fim e vem do selo; sem selo, so o nome. A linha 'editado por' so aparece se editadoPorNome nao for nulo, e leva o SEU selo (editadoPorSelo), nao o da autoria.",
+    "37. Material: url aceita so http(s) sem trim (' https://...' com espaco vira linha sem link). Usa arquivoRef quando nao nulo (hoje sempre nulo) — se um dia houver upload, o link passa a sair do arquivoRef.",
+    "38. Material 'tipo' (rotulo do formato) = extensao em MAIUSCULA da referencia (regex /\\.([a-z0-9]{1,5})(?:$|[?#])/i) ou 'LINK'. ARMADILHA: dominio sem caminho termina em '.com' ou '.br' e vira rotulo 'COM' / 'BR' (ex. 'https://exemplo.com.br' -> 'BR'). A port deve reproduzir ou corrigir de forma deliberada.",
+    "39. daAula ('aula de 2 set') e calculado no MaterialVm e NAO e exibido nesta tela. Nao prometer a data da aula aqui.",
+    "40. 'materiais' (rotulo) so aparece com pelo menos 1 material. 'Nenhum material vinculado.' so quando o detalhe carregou sem erro, nao e 404 e a lista esta vazia.",
+    "41. Cada material com url vira um link inteiro (<a class=abrir>), o que inclui a linha de autoria. Material sem url (ou url nao http) e a mesma linha sem link: a pessoa nao consegue abrir.",
+    "=== NOVO EVENTO (novo-evento) ===",
+    "42. Um componente para criar e editar. Rota com id NAO vazio = editar (paramMap.get('id') || null: string vazia cai em criar). A rota literal 'eventos/novo' PRECISA vir antes de 'eventos/:id' (senao '/tabs/eventos/novo' abre o evento de id 'novo' -> 404 -> 'sumiu').",
+    "43. Edicao: titulo 'Editar' e botao 'Salvar' so depois que o GET do evento chega (editando = original != null). Antes disso o formulario aparece VAZIO com titulo 'O que vai cair' e botao 'Adicionar'. NAO HA indicador de carregamento do evento ('Carregando…' cobre so /materias). Tocar 'Adicionar' nessa janela faz POST /eventos e DUPLICA o evento.",
+    "44. BUG LATENTE: se GET /eventos/{id} falha na edicao, a mensagem aparece, o formulario continua e o botao segue 'Adicionar'. Salvar cai no ramo de criar (original == null), ou seja, CRIA um evento novo com o que esta digitado. O comentario do codigo diz 'Sem o original não dá para editar', mas nada bloqueia o envio. Decidir: desabilitar o envio sem original.",
+    "45. Campos iniciais vem por [value] (bind de propriedade). Os valores enviados sao lidos do DOM no clique (refs do template), nao de um modelo. Se o GET do evento chegar DEPOIS de o usuario ter digitado, o valor inicial sobrescreve o que foi digitado (valorInicial muda). Na port: nao sobrescrever campos ja editados pelo usuario.",
+    "46. Edicao preserva hora e sala do evento: hora cortada para HH:mm (o servidor manda HH:mm:ss; sem o corte o time input devolveria segundos no PATCH). Sala vazia no GET vira '' e vai como null no PATCH; PATCH substitui tudo, entao campo omitido vira null no servidor.",
+    "47. tipo: ?tipo=ENTREGA abre Entrega; QUALQUER outro valor (ou ausencia) abre Prova (nunca um tipo inventado pela URL). Em edicao, o tipo do evento sobrescreve o da URL depois do GET.",
+    "48. materia escolhida = (toque do usuario) ?? (materiaId do evento em edicao, depois do GET) ?? (materiaId da URL se existir na lista) ?? (primeira da lista) ?? null. Antes do GET do evento, a PRIMEIRA materia aparece marcada em edicao (cuidado com a ordem, ver 43).",
+    "49. Matéria da URL inexistente na turma cai na primeira — o POST nao sai com id que o servidor recusa.",
+    "50. Validacao minima: materia nao nula, titulo nao vazio (trim), data nao vazia. Hora e sala NAO validadas. Mensagem unica: 'Escolha a matéria e preencha o que é e quando.' em pf-erro (role=alert) no topo do formulario, sem requisicao.",
+    "51. Limites: titulo maxlength 120 e sala maxlength 40 so no HTML. Nenhum truncamento no codigo.",
+    "52. Envio: guarda dupla (if enviando return + botao disabled). 'Acordando o servidor…' aparece em 4000 ms e so some no finally. Unico lugar do app com esse texto.",
+    "53. Erro de envio mantem o formulario preenchido, nao navega, nao chama /sync.",
+    "54. Criar com sucesso: GET /sync forcado sem await e navigateByUrl para /tabs/eventos/{id}. Se a resposta nao tiver id, navega para '/tabs/eventos/undefined' (sem guarda). Editar com sucesso: /tabs/eventos/{id} (o mesmo id).",
+    "55. Aviso de selo depende de turma carregada. docenteSemSelo exige turma != null: antes de carregar, um docente sem alcance ve o texto padrao de aluno. Textos literais diferem: com selo termina 'Só você pode apagar depois.'; o padrao termina 'Só você pode editar ou apagar depois.'.",
+    "56. Edicao de registro alheio: o aviso de autoria tem prioridade sobre o aviso de selo (o selo nao aparece nesse caso). Chips filtrados por alcance. meuNomeNoCard usa o selo da materia escolhida.",
+    "57. GET /materias roda a cada construcao da tela (sempre rede). O cache do disco NAO aparece: o template mostra 'Carregando…' enquanto carregando. Erro em /materias esconde o formulario, mesmo que exista cache no disco.",
+    "58. Sem materia: nenhum botao de cadastro (o link 'Adicionar matéria' e um <a>, de proposito: o teste exige que nao exista button.botao nesse estado).",
+    "59. Atalhos do Painel: ?tipo=&materiaId= so trazem materiaId quando ha EXATAMENTE uma materia lecionada na turma ativa. A URL pode trazer materiaId que nao existe; cai na primeira.",
+    "60. Aluno nao chama GET /turmas/minha (so se ehDocente). Docente com turma ja carregada nao refaz a chamada (garantirCarregada).",
+    "61. NovoEventoPage injeta HomeRepository e nao usa (sem efeito). Nao portar.",
+    "=== ANEXAR MATERIAL (anexar-material) ===",
+    "62. Duas requisicoes em sequencia: GET /eventos/{id} e depois GET /materias/{materiaId}. Falha na primeira impede a segunda; a tela nao tem a materia.",
+    "63. Lista = materiaisAula seguidos de materiaisAdicionais, na ordem do servidor. Rotulo do item: 'material de aula' (AULA) ou 'material adicional' (ADICIONAL). Nao e o formato (PDF etc.).",
+    "64. Estado inicial 'anexado' = ids de evento.materiais. Material anexado que nao pertence a materia desta prova nao aparece aqui (aparece na tela do evento).",
+    "65. Estado so muda DEPOIS da resposta do servidor (sem otimismo). Erro: pf-erro e o estado de antes. O pf-erro divide o slot do carregamento: erro de acao tambem aparece no lugar da lista.",
+    "66. Sem trava de envio: toques repetidos disparam requisicoes repetidas (o estado so muda depois da resposta). Nao ha 'enviando' nesta tela.",
+    "67. DESANEXAR NAO envia If-Match (todos os outros DELETE do app enviam). Anexar nao manda If-Match (nao tem version no vinculo).",
+    "68. Nenhuma checagem de permissao no cliente para anexar. O servidor decide.",
+    "69. Vazio so quando erro == null e lista vazia. Erro nunca vira vazio ('falhar ao buscar NAO e \"esta matéria não tem material\"').",
+    "70. Link 'Adicionar material' usa materiaId vindo do evento (vazio se o GET do evento falhou; esse caminho nao mostra o link).",
+    "71. Back do header vai para /tabs/eventos/{id} (defaultHref), nao para a pilha: se a EventoPage anterior ainda estiver viva, o usuario volta para uma tela que pode estar desatualizada (ver armadilha 2).",
+    "=== REPOSITORIOS E CONTRATO HTTP ===",
+    "72. PATCH de evento e de material SUBSTITUI o objeto: mandar todos os campos, inclusive hora e sala null. Campo omitido vira null no servidor (hora omitida apagaria o horario).",
+    "73. DELETE de evento e de material leva If-Match: version. DELETE de vinculo (desanexar) NAO leva If-Match. POST de vinculo manda corpo {} (JSON), mesmo sem payload.",
+    "74. ErroApi.recarregarRegistro (409) existe mas nenhuma tela desta area o le. A recarga apos 409 e lacuna conhecida (ver 17).",
+    "75. Mensagens: ErroApi.message ja vem pronta para a tela. mensagemDeErro(e) so troca para 'Não deu para completar a ação. Tente de novo.' quando nao e ErroApi. EventoPage.carregar e a unica excecao: usa e.message cru para Error nao-ErroApi.",
+    "76. Nenhum GET /materias?materia= (despejar a materia inteira em outra tela). Material so chega por detalhe da materia (GET /materias/{id}) ou por detalhe do evento (GET /eventos/{id}). AGENTS nao-negociavel 11.",
+    "77. Interceptor de 401: encerrarSessao() sincrono (zera sessao, cancela lembretes, apaga disco em background), depois navega para /login. A tela que estava aberta recebe o erro AUTH mesmo assim.",
+    "78. Lembretes do aparelho sao cancelados em toda saida de sessao (sair, 401, SEM_TURMA). Um alarme de evento de outra turma nao pode tocar depois de trocar de conta.",
+    "79. ProblemDetail: leitura de detail e depois title (o campo 'codigo' e lido separado; so SEM_TURMA importa aqui)."
+  ],
+  "testes": [
+    "evento.page.spec.ts — 'material nao vinculado nao aparece': so os materiais de GET /eventos/{id} aparecem; nenhum GET /materias.",
+    "evento.page.spec.ts — 'evento sem material vinculado diz isso': nenhuma app-material-linha; .pf-vazio presente; nenhum .pf-aviso.",
+    "evento.page.spec.ts — 'oculto ou excluido responde 404': .pf-sumiu presente com 'Isso não existe mais.'; sem .pf-aviso; sem app-evento-card.",
+    "evento.page.spec.ts — 'falha de rede nao vira evento sem material': .pf-aviso contem 'Sem conexão'; sem .pf-vazio; sem .pf-sumiu.",
+    "evento.page.spec.ts — 'anexar aparece com e sem material': a.anexar presente com href '/tabs/eventos/e1/anexar' (mesmo sem material).",
+    "evento.page.spec.ts — 'a prova em outra sala diz onde e': .sala contem 'A-101'; sem sala, sem .sala.",
+    "evento.page.spec.ts — 'o autor pode editar e apagar': textos 'Editar' e 'Apagar' em .do-autor; a[href='/tabs/eventos/e1/editar'].",
+    "evento.page.spec.ts — 'quem NAO e o autor nao ve editar nem apagar': sem .do-autor.",
+    "evento.page.spec.ts — 'apagar pergunta antes': primeiro toque nao envia; texto 'Apagar mesmo'; 'Sim, apagar' manda DELETE com If-Match '1'.",
+    "evento.page.spec.ts — 'desistir de apagar nao manda nada': Cancelar zera; sem request; sem 'Apagar mesmo'.",
+    "evento.page.spec.ts — 'o lider pode ocultar da turma, com motivo': primeiro toque nao envia; input[name=motivo]='foto indevida'; POST /moderacao/evento/e1/ocultar com body {motivo:'foto indevida'}; texto 'Ocultado. Desfazer'; nao navega.",
+    "evento.page.spec.ts — 'desfazer devolve o evento a turma enquanto a janela esta aberta': POST /moderacao/evento/e1/reexibir; botao 'Ocultar' volta.",
+    "evento.page.spec.ts — 'o Desfazer dura ~8 s; depois o aviso aponta para Ocultados': com jasmine clock: tick 8000 remove o botao Desfazer; .alerta contem 'Ocultados'.",
+    "evento.page.spec.ts — 'quem nao criou descobre a regra ANTES de procurar o botao': texto 'só essa pessoa'; sem 'Editar' em botao ou link.",
+    "evento.page.spec.ts — 'quem nao e lider nao ve ocultar': nenhum botao com 'Ocultar'.",
+    "evento.page.spec.ts (docente) — 'quem alcanca a materia corrige e oculta, e NUNCA ve apagar em post alheio': rotulos contem 'Editar', 'Ocultar da turma', 'Pedir que apague'; nao contem 'Apagar'; a[href=/tabs/eventos/e1/editar]; texto 'editado por'.",
+    "evento.page.spec.ts (docente) — 'materia que ele NAO leciona: aluno, sem editar nem ocultar': sem 'Editar' nem 'Ocultar da turma'; texto 'só essa pessoa'.",
+    "evento.page.spec.ts (docente) — 'o proprio autor com alcance NAO ganha Pedir que apague': autor com alcance tem 'Apagar'; sem 'Ocultar da turma' nem 'Pedir que apague'.",
+    "evento.page.spec.ts (docente) — '403 do servidor vira mensagem': [role=alert] presente; texto sem 'Ocultado.'.",
+    "evento.page.spec.ts — 'autoria com selo mostra Prof. e o selo; editado por outra pessoa vira linha propria': 1o rodape contem 'Prof. Otavio' e 'Professor'; 2o rodape contem 'editado por Coord. Helena' e 'Coordenação'.",
+    "evento.page.spec.ts — 'sem selo e sem correcao, a autoria e so o nome': sem app-selo; 1 rodape; sem 'Prof.' e sem 'editado por'.",
+    "evento.page.spec.ts — 'material com selo e correcao mostra os dois na linha': linha contem 'Coord. Otavio' e 'editado por Prof. Marcos'.",
+    "evento.page.spec.ts — 'motivo em branco ainda oculta': POST ocultar com body {motivo: null}.",
+    "evento.page.spec.ts — 'o lider pode PEDIR que o autor apague, e isso nao apaga nada': POST pedir-exclusao com body {motivo:'duplicado'}; texto 'Pedido enviado'; sem request antes de enviar.",
+    "evento.page.spec.ts (lembrete, web) — 'no site diz que lembrete e coisa do app': texto 'Lembretes funcionam no app Android'; sem 'Marcar um lembrete'.",
+    "evento.page.spec.ts (lembrete) — 'relativo: a tela mostra QUANDO vai tocar': previa 'Vai tocar qui, 10 out, 19:00.' (evento 2030-10-11 19:00); com 36 e horas: 'Vai tocar qui, 10 out, 07:00.'.",
+    "evento.page.spec.ts (lembrete) — 'relativo sem hora conta das 7h': texto 'conta a partir das 7h do dia'; 36 h: 'Vai tocar qua, 9 out, 19:00.'.",
+    "evento.page.spec.ts (lembrete) — 'data e hora exatas: hora de parede de Sao Paulo': '2030-10-09T19:00' -> previa 'Vai tocar qua, 9 out, 19:00.'; salvarAlarme recebe {modo:'EXATO', data:'2030-10-09', hora:'19:00'}; instante = Date.UTC(2030,9,9,22,0).",
+    "evento.page.spec.ts (lembrete) — 'passado nao salva, e a tela diz': '2020-01-01T10:00' -> previa 'Esse horário já passou — não vai tocar.'; Salvar disabled.",
+    "evento.page.spec.ts (lembrete) — 'salvar grava um por evento, e remover apaga': salvarAlarme('e1', {modo:'RELATIVO', horasAntes:36}); alerta 'Vai tocar qui, 10 out, 07:00'; Remover -> salvarAlarme('e1', null); 'Marcar um lembrete' volta.",
+    "evento.page.spec.ts (lembrete) — 'o alarme ja gravado no aparelho aparece ao abrir': 'Vai tocar qua, 9 out, 19:00'.",
+    "evento.page.spec.ts (lembrete) — 'salvar e remover baixam o /sync de novo, forcado': reagendarAvisos(true) chamado uma vez ao salvar e duas no total apos remover.",
+    "evento.page.spec.ts (exato) — 'negado: avisa que o lembrete pode chegar 1 hora depois e oferece o botao': texto 'pode atrasar o lembrete em até 1 hora'; 'Permitir horário exato' chama permitirExato e o aviso some.",
+    "evento.page.spec.ts (exato) — 'permitido: nao avisa nada'.",
+    "evento.page.spec.ts (exato) — 'ao salvar o alarme a tela le o sistema de novo': com estadoExato mudado para granted, o aviso some apos salvar.",
+    "evento.page.spec.ts (relogio) — 'a previa vira ja passou sozinha': apos tick de 30 s com mockDate, previa 'Esse horário já passou — não vai tocar.' e Salvar disabled.",
+    "evento.page.spec.ts (relogio) — 'salvar confere o relogio de novo': com a data avancada entre ticks, Salvar nao chama salvarAlarme e mostra 'já passou'.",
+    "evento.page.spec.ts (relogio) — 'o intervalo sai quando a tela e destruida': clearInterval chamado com o id de setInterval ao destruir.",
+    "novo-evento.page.spec.ts — 'sem materia cadastrada a tela explica e leva para criar materia': sem .chips-pick; sem button.botao; a[href='/tabs/materias/nova'].",
+    "novo-evento.page.spec.ts — 'falha ao buscar as materias NAO vira nenhuma materia': .pf-aviso contem 'Sem conexão'; sem link para materias/nova.",
+    "novo-evento.page.spec.ts — 'hora em branco vai como null': POST /eventos com body {materiaId:'m1', tipo:'PROVA', titulo, data, hora:null, sala:null}.",
+    "novo-evento.page.spec.ts — 'tipo, materia e hora escolhidos vao no corpo': ENTREGA, materia m2, hora '19:30', sala null.",
+    "novo-evento.page.spec.ts — 'titulo ou data em branco nao vira requisicao': sem POST; erro na tela.",
+    "novo-evento.page.spec.ts — 'falha ao cadastrar aparece na tela e a pessoa fica onde esta': erro na tela; sem navegar.",
+    "novo-evento.page.spec.ts — 'depois de adicionar, abre a atividade criada': navegar para '/tabs/eventos/ev-9'.",
+    "novo-evento.page.spec.ts — 'depois de adicionar, baixa o /sync de novo (forcado)': reagendarAvisos(true) chamado UMA vez e ANTES da navegacao.",
+    "novo-evento.page.spec.ts — 'cadastro que falha nao baixa o /sync'.",
+    "novo-evento.page.spec.ts (editar) — 'em modo de edicao carrega o evento, preenche os campos e manda PATCH com If-Match': GET /eventos/e1 preenche titulo, data, hora '19:30' (de '19:30:00'); PATCH com If-Match '3'; body titulo, hora '19:30', sala 'A-101' preservada; navega '/tabs/eventos/e1'; reagendarAvisos(true).",
+    "novo-evento.page.spec.ts (atalhos) — '?tipo=ENTREGA abre com Entrega marcada; sem consulta, Prova'.",
+    "novo-evento.page.spec.ts (atalhos) — 'tipo que a URL inventa e ignorado': 'PEGADINHA' -> Prova.",
+    "novo-evento.page.spec.ts (atalhos) — '?materiaId= pre-escolhe a materia'.",
+    "novo-evento.page.spec.ts (atalhos) — 'materia da URL que nao existe cai na primeira'.",
+    "novo-evento.page.spec.ts (atalhos) — 'a pre-escolha vai no corpo do POST': tipo ENTREGA e materiaId m2 no body.",
+    "novo-evento.page.spec.ts (selo, professor) — 'professor: com selo na materia que leciona, sem selo na que nao leciona': aviso contem 'sem selo' na materia sem alcance; ao tocar a materia com alcance, app-selo contem 'Professor' e o aviso nao contem 'sem selo'.",
+    "novo-evento.page.spec.ts (selo, coordenacao) — 'coordenacao: selo em qualquer materia': app-selo contem 'Coordenação'.",
+    "novo-evento.page.spec.ts (selo, sem poder) — 'conta sem poder (pendente, recusada ou contestada): sem selo, e diz': aviso contem 'sem selo'.",
+    "novo-evento.page.spec.ts (selo, aluno) — 'aluno nao pergunta a turma e le o aviso de sempre': sem GET /turmas/minha; aviso 'Só você pode editar ou apagar depois'; sem app-selo.",
+    "novo-evento.page.spec.ts (editar alheio) — 'corrigir registro ALHEIO: so as materias que alcanca, e o aviso diz quem continua autor': chips = so a materia alcancada; aviso contem 'continua sendo de Otavio' e 'editado por Prof. Marcos'.",
+    "anexar-material.page.spec.ts — 'lista o material da materia, nao o da turma inteira': 2 linhas (aula e adicional) da materia.",
+    "anexar-material.page.spec.ts — 'tocar num material anexa ele a esta prova': POST /eventos/e1/materiais/mat-1; aria-pressed 'true' so depois da resposta.",
+    "anexar-material.page.spec.ts — 'o que ja esta anexado aparece marcado, e tocar desanexa': aria-pressed 'true' inicial; toque manda DELETE; depois 'false'.",
+    "anexar-material.page.spec.ts — 'materia sem material explica e leva para adicionar': sem linhas; a[href='/tabs/materias/m1/material/novo'].",
+    "anexar-material.page.spec.ts — 'falha ao anexar aparece na tela e o estado nao muda': .pf-erro presente; aria-pressed continua 'false'.",
+    "evento-vm.spec.ts — data ISO vira dia e mes no fuso do aparelho, nunca um dia a menos ('2026-08-21' -> dia '21', mes 'ago').",
+    "evento-vm.spec.ts — evento sem hora mostra o tipo ('prova' para PROVA, nunca horario inventado); com hora '19:00'.",
+    "evento-vm.spec.ts — hora com segundos mostra so HH:mm ('19:00:00' -> '19:00'; '07:05:30' -> '07:05'); hora '' com PROVA -> 'prova'.",
+    "evento-vm.spec.ts — autoria sempre aparece: normal contem 'Otávio' e 'h' (5 h); timestamp ilegivel -> so 'Otávio' (sem NaN).",
+    "material-vm.spec.ts — link http(s) vira endereco (preserva caixa: 'HTTP://ex.dev/a' fica igual).",
+    "material-vm.spec.ts — qualquer outro esquema nao vira link: javascript:, data:, intent:, file:, e ex.dev/sem-esquema -> url null."
+  ],
+  "nativo": [
+    "@capacitor/core — Capacitor.isNativePlatform(): decide se o servico de lembretes existe (suportado). Na web, PLUGIN_NOTIFICACOES = null e nada de lembrete e chamado (nem /sync). Equivalente Flutter: Platform.isAndroid (ou plataforma nativa de notificacao).",
+    "@capacitor/local-notifications — uso exato: checkPermissions()/requestPermissions() (display: granted|denied|prompt); checkExactNotificationSetting() ({exact_alarm: granted|denied}); changeExactNotificationSetting() (abre 'Alarmes e lembretes' do Android, so por toque da pessoa); createChannel({id:'lembretes', name:'Lembretes', description:'Provas e entregas da turma', importance:4, vibration:true}) — SEM som customizado; schedule({notifications:[{id, title, body, channelId:'lembretes', isExactNotification, schedule:{at, allowWhileIdle:true}, extra:{tipo}?}]}); getPending(); cancel({notifications:[{id}]}). Equivalente Flutter sugerido: flutter_local_notifications (zonedSchedule; AndroidScheduleMode.exactAllowWhileIdle quando exato, inexactAllowWhileIdle quando nao; canal de importancia alta).",
+    "Identidade do aviso: id = djb2('{eventoId}:{tipo}') % 2_000_000_000 (estavel; tipo entra no hash). Tipos: NO_DIA, VESPERA, UMA_HORA, PERSONALIZADO. O alarme do evento usa PERSONALIZADO; cancelar por id sem consultar a lista. ID 2_000_000_001 reservado ao aviso de teste (nao usado nesta area).",
+    "Conteudo do alarme personalizado (texto literal): titulo 'Lembrete: prova de BD' ou 'Lembrete: entrega de BD' (tipo minusculo + sigla); corpo '<titulo do evento> · sex, 9 out' (com ', 19:00' se houver hora). Horario do disparo: instantePersonalizado() em America/Sao_Paulo.",
+    "allowWhileIdle: true e OBRIGATORIO (sem ele o alarme nao acorda o aparelho em Doze e o Android adia por horas). isExactNotification vem da permissao do sistema lida a cada lote; sem a permissao cai no inexato (atraso de ate 1 hora, texto mostrado ao usuario).",
+    "Limite: ate 400 avisos agendados (LIMITE_AGENDAMENTOS); os mais distantes ficam de fora ate o proximo /sync.",
+    "@capacitor/preferences — chaves usadas nesta area: 'pf.lembretes' (ConfigLembretes em JSON: noDia, vespera, umaHora, personalizados{eventoId: alarme}); 'pf.snapshot' (materias em cache via StorageService.mesclar, lido pelo MateriaRepository). Leitura corrompida: descarta a chave e volta ao padrao (nunca passa lixo por valido). Equivalente Flutter: shared_preferences (ou o storage local que o port ja usa).",
+    "Capacitor (link externo): target=_blank do material abre FORA do app (o Capacitor intercepta o link externo). Equivalente Flutter: url_launcher com LaunchMode.externalApplication (nunca WebView para o material).",
+    "Fuso horario: TIMEZONE_PADRAO = 'America/Sao_Paulo' (fixo; nao o fuso do aparelho). Equivalente Flutter: pacote timezone com tz.getLocation('America/Sao_Paulo'); nunca DateTime local para hora de parede.",
+    "Ionic (nao e plugin, mas o port precisa reproduzir): ion-back-button (defaultHref), ion-header/ion-toolbar/ion-title/ion-content com [fullscreen], ion-buttons. Ion-router-outlet mantem paginas na pilha (base da armadilha de re-entrada)."
+  ]
+}
