@@ -30,6 +30,17 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('BD'), findsOneWidget);
     });
+
+    testWidgets('cor e sigla juntas: fundo é a cor da matéria e o texto é a sigla', (tester) async {
+      await tester.pumpWidget(envolver(const MateriaChip(sigla: 'BD', corHex: '#1D4ED8')));
+      final chip = find.byType(MateriaChip);
+      final caixa = tester.widget<Container>(
+        find.descendant(of: chip, matching: find.byType(Container)),
+      );
+      final decoracao = caixa.decoration as BoxDecoration;
+      expect(decoracao.color, const Color(0xFF1D4ED8));
+      expect(find.descendant(of: chip, matching: find.text('BD')), findsOneWidget);
+    });
   });
 
   group('corDaMateria', () {
@@ -154,5 +165,9 @@ void main() {
 
   test('temaFans(dark) inclui a extensão CoresFans', () {
     expect(temaFans(Brightness.dark).extension<CoresFans>(), isNotNull);
+  });
+
+  test('contorno do tema claro não some: rule com alfa de pelo menos 0x24', () {
+    expect(CoresFans.claro.rule.a, greaterThanOrEqualTo(0x24 / 255));
   });
 }
