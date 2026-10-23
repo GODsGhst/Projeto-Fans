@@ -478,6 +478,135 @@ void main() {
     expect(patches, 1);
   });
 
+  testWidgets('salvar edição: enquanto o PATCH roda, o Salvar mostra spinner', (
+    tester,
+  ) async {
+    final liberar = Completer<void>();
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+      if (req.method == 'PATCH') {
+        await liberar.future;
+        return _json(_detalheJson('u1'));
+      }
+      return http.Response('', 404);
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoFormPage(
+          deps: deps,
+          evento: Evento.fromJson(_detalheJson('u1')),
+        ),
+      ),
+    );
+    await aguardar(tester);
+
+    await tester.ensureVisible(find.text('Salvar'));
+    await tester.tap(find.text('Salvar'));
+    await tester.pump();
+
+    expect(
+      find.descendant(
+        of: find.widgetWithText(FilledButton, 'Salvar'),
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+
+    liberar.complete();
+    await aguardar(tester);
+  });
+
+  testWidgets('marcar feito: enquanto o envio roda, o botão mostra spinner', (
+    tester,
+  ) async {
+    final liberar = Completer<void>();
+    final deps = await montarDeps(tester, (req) async {
+      if (req.method == 'PUT') {
+        await liberar.future;
+        return http.Response('', 204);
+      }
+      if (req.url.path.endsWith('/eventos/e1')) {
+        return _json(_detalheJson('u2'));
+      }
+      return http.Response('', 404);
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+      ),
+    );
+    await aguardar(tester);
+
+    await tester.ensureVisible(find.text('Marcar como feito'));
+    await tester.tap(find.text('Marcar como feito'));
+    // marcarLocal é I/O real: deixa o tempo passar até o PUT ficar preso.
+    await aguardar(tester);
+
+    expect(
+      find.ancestor(
+        of: find.byType(CircularProgressIndicator),
+        matching: find.byType(FilledButton),
+      ),
+      findsOneWidget,
+    );
+
+    liberar.complete();
+    await aguardar(tester);
+  });
+
+  testWidgets('fila: Sincronizar agora mostra spinner enquanto o envio roda', (
+    tester,
+  ) async {
+    final liberar = Completer<void>();
+    final deps = await montarDeps(tester, (req) async {
+      if (req.method == 'POST') {
+        await liberar.future;
+        return http.Response(
+          jsonEncode({'status': 400, 'detail': 'Título inválido'}),
+          400,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      return http.Response('', 404);
+    });
+    await tester.runAsync(
+      () => deps.rascunhos.inserir(
+        RascunhoEvento(
+          materiaId: 'm1',
+          materiaSigla: 'BD',
+          materiaCorHex: '#1D4ED8',
+          tipo: TipoEvento.prova,
+          titulo: 'Prova 3',
+          data: DateTime(2026, 10, 25),
+          criadoEm: DateTime(2026, 10, 20),
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: FilaPage(deps: deps),
+      ),
+    );
+    await aguardar(tester);
+
+    await tester.tap(find.text('Sincronizar agora'));
+    await aguardar(tester);
+
+    expect(
+      find.ancestor(
+        of: find.byType(CircularProgressIndicator),
+        matching: find.byType(FilledButton),
+      ),
+      findsOneWidget,
+    );
+
+    liberar.complete();
+    await aguardar(tester);
+  });
+
   testWidgets('selo do tipo: prova é bloco sólido, entrega é contorno', (
     tester,
   ) async {

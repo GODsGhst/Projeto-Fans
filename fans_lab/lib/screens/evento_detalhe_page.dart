@@ -146,7 +146,7 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
           ],
           FilledButton(
             onPressed: _salvandoFeito ? null : _alternarFeito,
-            child: Text(_feito ? 'Desmarcar feito' : 'Marcar como feito'),
+            child: _filhoFeito(),
           ),
           if (ehAutor) ...[
             const SizedBox(height: 8),
@@ -233,7 +233,7 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
             if (offline) ...[
               OutlinedButton(
                 onPressed: _salvandoFeito ? null : _alternarFeito,
-                child: Text(_feito ? 'Desmarcar feito' : 'Marcar como feito'),
+                child: _filhoFeito(),
               ),
               const SizedBox(height: 8),
             ],
@@ -246,6 +246,21 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
       ),
     );
   }
+
+  /// Texto do botão de feito; mostra spinner enquanto `_alternarFeito` roda.
+  Widget _filhoFeito() => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (_salvandoFeito) ...[
+        const SizedBox.square(
+          dimension: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: 8),
+      ],
+      Text(_feito ? 'Desmarcar feito' : 'Marcar como feito'),
+    ],
+  );
 
   /// Offline-first: grava local primeiro, depois tenta enviar.
   Future<void> _alternarFeito() async {

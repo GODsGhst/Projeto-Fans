@@ -95,7 +95,19 @@ class _FilaPageState extends State<FilaPage> {
         const SizedBox(height: 12),
         FilledButton(
           onPressed: _sincronizando ? null : _sincronizar,
-          child: const Text('Sincronizar agora'),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_sincronizando) ...[
+                const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 8),
+              ],
+              const Text('Sincronizar agora'),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         if (fila.rascunhos.isEmpty) const Text('Nada na fila.'),

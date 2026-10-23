@@ -192,7 +192,19 @@ class _EventoFormPageState extends State<EventoFormPage> {
           ],
           FilledButton(
             onPressed: _salvando ? null : _salvar,
-            child: const Text('Salvar'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_salvando) ...[
+                  const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                const Text('Salvar'),
+              ],
+            ),
           ),
         ],
       ),
