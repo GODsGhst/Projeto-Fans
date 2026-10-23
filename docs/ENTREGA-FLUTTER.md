@@ -319,6 +319,22 @@ class EventoFormPage { const EventoFormPage({super.key, required AppDeps deps, t
 class FilaPage { const FilaPage({super.key, required AppDeps deps}); }
 ```
 
+## 7.2 Loop de correção (swarm de Haiku) — pedido do dono: "use vários haikus … loop engineering com swarm de agentes"
+
+```
+┌─► 1. Revisores (R1 Sonnet + R2 Opus) apontam achados com arquivo:linha
+│   2. Coordenador agrupa os achados POR ARQUIVO → 1 Haiku por grupo, todos em paralelo
+│      (dono exclusivo dos seus arquivos; nunca dois Haiku no mesmo arquivo)
+│   3. Cada Haiku: corrige → escreve/ajusta o teste que falharia sem a correção → analyze + test
+│   4. Coordenador integra: `flutter analyze` + `flutter test` do projeto inteiro (2×)
+│   5. Verificador (Sonnet) confere CADA achado: corrigido / não corrigido / regrediu
+└── 6. Sai do loop se: 0 bloqueantes e 0 importantes abertos E nota do R2 ≥ 9,0 nas duas
+       rubricas — ou após 3 voltas (o que vier primeiro). Achado "menor" não segura o loop.
+```
+Regras de cada volta: correção mínima (o que o achado pede, nada além); nenhum teste é
+apagado, pulado ou enfraquecido para ficar verde; achado que exige decisão do dono (escopo,
+segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
+
 ## 8. Andamento
 
 (atualizado a cada fase)
