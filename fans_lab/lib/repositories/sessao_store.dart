@@ -9,11 +9,20 @@ class SessaoStore {
   static const _temaEscuro = 'temaEscuro';
   static const _ultimaSincronizacao = 'ultimaSincronizacao';
   static const _homeSalvaEm = 'homeSalvaEm';
+  // Dono da última sessão. Sobrevive a limpar(): serve para não enviar a fila de uma conta com a autoria de outra.
+  static const _ultimoUsuarioId = 'ultimoUsuarioId';
 
   Future<void> salvar(Sessao s) async {
     final prefs = await SharedPreferences.getInstance();
     // ponytail: JWT em SharedPreferences é texto puro; trocar por flutter_secure_storage (docs/ENTREGA-FLUTTER.md §9).
     await prefs.setString(_sessao, jsonEncode(s.toJson()));
+    await prefs.setString(_ultimoUsuarioId, s.usuario.id);
+  }
+
+  /// Id de quem entrou por último, ou null se nunca houve sessão neste aparelho.
+  Future<String?> ultimoUsuarioId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_ultimoUsuarioId);
   }
 
   Future<Sessao?> carregar() async {
@@ -34,7 +43,7 @@ class SessaoStore {
     }
   }
 
-  /// Logout. Mantém o tema, que é preferência do aparelho.
+  /// Logout ou sessão expirada. Mantém o tema (preferência do aparelho) e o dono da última sessão.
   Future<void> limpar() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessao);

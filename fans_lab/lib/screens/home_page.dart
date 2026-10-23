@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:fans_lab/app_deps.dart';
+import 'package:fans_lab/models/materia.dart';
 import 'package:fans_lab/screens/configuracoes_page.dart';
 import 'package:fans_lab/screens/evento_detalhe_page.dart';
 import 'package:fans_lab/screens/evento_form_page.dart';
@@ -16,11 +19,14 @@ class HomePage extends StatefulWidget {
     required this.deps,
     required this.aoSair,
     required this.aoMudarTema,
+    this.aoSessaoExpirar,
   });
 
   final AppDeps deps;
   final VoidCallback aoSair;
   final ValueChanged<bool> aoMudarTema;
+  /// Token recusado (401). Sem ele, usa aoSair; o app passa um que preserva a fila offline.
+  final VoidCallback? aoSessaoExpirar;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -30,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   ResultadoHome? _resultado;
   String? _erro;
   bool _carregando = false;
+  bool _sincronizando = false;
   int _pendentes = 0;
 
   @override
@@ -42,6 +49,26 @@ class _HomePageState extends State<HomePage> {
     setState(() => _carregando = true);
     try {
       final resultado = await widget.deps.home.carregar();
+      if (!resultado.offline) {
+        // pré-carga para criar evento offline; se falhar, o formulário busca de novo e mostra o erro
+        unawaited(widget.deps.home.materias().catchError((Object e) {
+          debugPrint('pré-carga de matérias: $e');
+          return <Materia>[];
+        }));
+        final pendentesAntes = await widget.deps.sync.contarPendentes();
+        if (pendentesAntes > 0) {
+          // sincroniza ao reconectar: a Home recarregou online, então a rede voltou
+          try {
+            await widget.deps.sync.sincronizar();
+          } on ApiException catch (e) {
+            if (e.naoAutorizado) {
+              if (mounted) _sessaoExpirou();
+              return;
+            }
+            debugPrint('sincronização ao reconectar: $e');
+          }
+        }
+      }
       final pendentes = await widget.deps.sync.contarPendentes();
       if (!mounted) return;
       setState(() {
@@ -57,12 +84,21 @@ class _HomePageState extends State<HomePage> {
       }
       // Falha nunca vira lista vazia: sem dados, a tela mostra o erro; com dados, mantém a lista e avisa.
       setState(() => _erro = e.mensagem);
+    } catch (e) {
+      debugPrint('$e');
+      if (mounted) {
+        setState(() {
+          _erro = 'Não foi possível ler os dados salvos no aparelho.';
+          _carregando = false;
+        });
+      }
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
   }
 
   Future<void> _sincronizar() async {
+    setState(() => _sincronizando = true);
     try {
       final r = await widget.deps.sync.sincronizar();
       _snack(
@@ -76,13 +112,15 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       _snack(e.mensagem);
+    } finally {
+      if (mounted) setState(() => _sincronizando = false);
     }
     if (mounted) await _carregar();
   }
 
   void _sessaoExpirou() {
     _snack('Sessão expirada. Entre de novo.');
-    widget.aoSair();
+    (widget.aoSessaoExpirar ?? widget.aoSair)();
   }
 
   void _snack(String texto) {
@@ -91,13 +129,13 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Abre uma tela e recarrega ao voltar, se ela devolveu `true` (ou sempre, se pedido).
-  Future<void> _abrirTela(Widget tela, {bool recarregarSempre = false}) async {
-    final mudou = await Navigator.push<bool>(
+  /// Abre uma tela e recarrega ao voltar: detalhe, formulário, fila e configurações podem ter mudado dados.
+  Future<void> _abrirTela(Widget tela) async {
+    await Navigator.push<void>(
       context,
-      MaterialPageRoute(builder: (_) => tela),
+      MaterialPageRoute<void>(builder: (_) => tela),
     );
-    if ((recarregarSempre || mudou == true) && mounted) await _carregar();
+    if (mounted) await _carregar();
   }
 
   @override
@@ -108,12 +146,18 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             tooltip: 'Sincronizar',
-            onPressed: _sincronizar,
-            icon: Badge(
-              isLabelVisible: _pendentes > 0,
-              label: Text('$_pendentes'),
-              child: const Icon(Icons.sync),
-            ),
+            onPressed: _sincronizando ? null : _sincronizar,
+            icon: _sincronizando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Badge(
+                    isLabelVisible: _pendentes > 0,
+                    label: Text('$_pendentes'),
+                    child: const Icon(Icons.sync),
+                  ),
           ),
           IconButton(
             tooltip: 'Configurações',
@@ -158,7 +202,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           if (r.offline)
             _faixa(
-              'Sem conexão — mostrando o que foi salvo às ${_hora(r.salvoEm)}.',
+              'Sem conexão com o servidor — mostrando o que foi salvo às ${_hora(r.salvoEm)}.',
             ),
           if (_erro != null) _faixa('Não foi possível atualizar: $_erro'),
           if (_pendentes > 0)
@@ -166,10 +210,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Expanded(child: Text('$_pendentes aguardando envio')),
                 TextButton(
-                  onPressed: () => _abrirTela(
-                    FilaPage(deps: widget.deps),
-                    recarregarSempre: true,
-                  ),
+                  onPressed: () => _abrirTela(FilaPage(deps: widget.deps)),
                   child: const Text('Ver fila'),
                 ),
               ],

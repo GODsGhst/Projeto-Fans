@@ -44,9 +44,22 @@ class _FansLabAppState extends State<FansLabApp> {
   }
 
   Future<void> _aoEntrar(Sessao s) async {
+    final anterior = await widget.deps.sessao.ultimoUsuarioId();
+    // Rascunhos de outra conta nunca são enviados com a autoria de quem entrou agora (regra §6.1).
+    if (anterior != null && anterior != s.usuario.id) {
+      await AppDatabase.limparTudo(widget.deps.abrirDb);
+    }
     widget.deps.api.token = s.jwt;
     await widget.deps.sessao.salvar(s);
     setState(() => _sessao = s);
+  }
+
+  /// Token recusado (401): sai da conta, mas NÃO apaga a fila. Ela fica no aparelho até a mesma conta
+  /// entrar de novo; se outra conta entrar, _aoEntrar a apaga.
+  Future<void> _sessaoExpirou() async {
+    widget.deps.api.token = null;
+    await widget.deps.sessao.limpar();
+    setState(() => _sessao = null);
   }
 
   Future<void> _aoSair() async {
@@ -75,6 +88,7 @@ class _FansLabAppState extends State<FansLabApp> {
           : HomePage(
               deps: widget.deps,
               aoSair: _aoSair,
+              aoSessaoExpirar: _sessaoExpirou,
               aoMudarTema: _aoMudarTema,
             ),
     );

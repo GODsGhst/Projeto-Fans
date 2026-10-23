@@ -67,6 +67,17 @@ void main() {
     expect(await store.homeSalvaEm(), isNull);
   });
 
+  test('limpar mantém o dono da última sessão (fila não pode trocar de autor)', () async {
+    final store = SessaoStore();
+    expect(await store.ultimoUsuarioId(), isNull);
+
+    await store.salvar(_sessao);
+    await store.limpar();
+
+    expect(await store.carregar(), isNull);
+    expect(await store.ultimoUsuarioId(), 'u1');
+  });
+
   test('tema e datas voltam iguais', () async {
     final store = SessaoStore();
     final sincronizado = DateTime(2026, 10, 22, 19, 5, 30, 123, 456);
