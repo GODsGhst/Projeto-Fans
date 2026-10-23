@@ -331,6 +331,18 @@ class FilaPage { const FilaPage({super.key, required AppDeps deps}); }
 - Dono pediu **"faça cada parte em paralelo"** → escrita a §7.1 (contratos) e disparados H1, H2, H3,
   H4, H5a e H5b ao mesmo tempo (todos Haiku). Custo assumido: divergência de contrato na
   integração, que o coordenador resolve rodando analyze/test e devolvendo o erro ao dono do arquivo.
+- Resultado da integração: **nenhuma divergência de contrato** — os 6 agentes compilaram juntos de
+  primeira. Suíte final: `flutter analyze` sem issues, **97/97 testes**, rodada 2× seguidas (sem
+  flake). Um vermelho intermediário (SnackBar do form offline) foi corrigido pelo próprio H5b com
+  espera pelo texto, sem enfraquecer a asserção.
+- Decisões notáveis dos coders: If-Match vai como número puro (o backend lê `Integer`); 5xx durante a
+  sincronização marca o rascunho com erro mas mantém pendente; "Sair" avisa que a fila não enviada
+  será apagada; a fila distingue "falhou ao ler" de "vazia".
+- Dono: **"rode modelos em paralelo para acelerar tudo"** → em paralelo agora: R1 (Sonnet, revisão
+  das camadas), R2 (Opus, nota pela rubrica + telas + pré-mortem), H6 (Haiku, README + roteiro da
+  apresentação), B1 (Sonnet, perguntas prováveis da banca).
+- Verificado: `dl.google.com` bloqueado neste ambiente → **sem Android SDK, sem APK gerado aqui**.
+  A API do Render também não é alcançável daqui; nada foi testado contra o servidor real.
 
 ## 9. Riscos e pontos cegos
 
