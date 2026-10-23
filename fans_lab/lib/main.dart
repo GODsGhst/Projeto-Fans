@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:fans_lab/app_deps.dart';
 import 'package:fans_lab/database/app_database.dart';
@@ -6,6 +7,12 @@ import 'package:fans_lab/models/sessao.dart';
 import 'package:fans_lab/screens/home_page.dart';
 import 'package:fans_lab/screens/login_page.dart';
 import 'package:fans_lab/widgets/cores.dart';
+
+// Apresentação no Brasil: seletores de data/hora e textos padrão do Material saem em português.
+// Públicas para o teste de localização usar estas mesmas; se saírem do MaterialApp, o teste quebra.
+const localeApp = Locale('pt', 'BR');
+const localesSuportados = [Locale('pt', 'BR')];
+const delegatesLocalizacao = GlobalMaterialLocalizations.delegates;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +53,8 @@ class _FansLabAppState extends State<FansLabApp> {
   Future<void> _aoEntrar(Sessao s) async {
     final anterior = await widget.deps.sessao.ultimoUsuarioId();
     // Rascunhos de outra conta nunca são enviados com a autoria de quem entrou agora (regra §6.1).
-    if (anterior != null && anterior != s.usuario.id) {
+    // Sem dono gravado também limpa: falha fechado (numa instalação nova o banco já está vazio).
+    if (anterior != s.usuario.id) {
       await AppDatabase.limparTudo(widget.deps.abrirDb);
     }
     widget.deps.api.token = s.jwt;
@@ -83,6 +91,9 @@ class _FansLabAppState extends State<FansLabApp> {
       theme: temaFans(Brightness.light),
       darkTheme: temaFans(Brightness.dark),
       themeMode: _temaEscuro ? ThemeMode.dark : ThemeMode.light,
+      locale: localeApp,
+      supportedLocales: localesSuportados,
+      localizationsDelegates: delegatesLocalizacao,
       home: _sessao == null
           ? LoginPage(deps: widget.deps, aoEntrar: _aoEntrar)
           : HomePage(
