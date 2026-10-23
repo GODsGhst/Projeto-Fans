@@ -2460,3 +2460,36 @@ desligado.
 **Critério de aceite:** `./mvnw -q test` (backend, 437 testes, 0 falhas) e `ng test` (app, 537 de 537) verdes; `ng build` ok. Cada correção foi confirmada revertendo-a à mão: o teste dela fica vermelho.
 **Decisões que eu tomei:** (a) a checagem da matéria de destino vem ANTES da de poder (404 antes de 403), senão o professor recebia 403 e só o coordenador/autor 404 — escopo vem antes de poder, como no resto. (b) "turmas criadas" precisava de dado que não existia: a V10 também acrescenta `turma.criada_por` (vínculo não serve, entrar por código também gera vínculo docente); turmas anteriores ficam com NULL e não contam. (c) o teto de criação trava a linha da conta (`FOR UPDATE`) antes de contar, senão criações paralelas passavam todas. (d) a V10 copia para `contestacao_docente` as contestações que já estavam no vínculo. (e) o `/sync` ainda devolve a LÁPIDE de evento oculto/excluído mesmo apontando para matéria torta: ela não carrega matéria nem conteúdo. (f) `desvincular` com material de outra turma também dá 404, então um vínculo cruzado antigo não se desfaz pela API (as telas já o escondem). (g) numerei a pergunta como A27 porque A24–A26 são da spec de professor/coordenador.
 **Travas / dúvidas:** A27 (verificar e-mail de conta docente) fica aberta, sem verificação de verdade ainda.
+
+### [2026-10-23] Fora do plano — app Flutter/Dart `fans_lab` para a disciplina de Aplicações Móveis (Claude)
+**Status:** concluída no código e nos testes; **apresentação em aparelho pendente** (sem Android SDK no ambiente).
+**O que foi feito:** cliente Flutter/Dart do projetoFans que cobre as duas apostilas da disciplina
+(HTTP no Flutter; Persistência local e banco remoto): GET/POST/PUT/PATCH/DELETE contra a API deste
+repo, JSON ↔ model, SQLite (cache da Home, matérias, rascunhos, estado pessoal), SharedPreferences
+(sessão, tema, datas), offline-first com fila e sincronização. Construído por um swarm de agentes Haiku
+em paralelo contra contratos fixos, revisado por Sonnet/Opus em loop de correção com mutação de controle.
+Registro completo, com decisões e histórico das voltas: `docs/ENTREGA-FLUTTER.md`.
+**Arquivos principais:** `fans_lab/lib/{models,database,repositories,services,screens,widgets}/*`,
+`fans_lab/lib/main.dart`, `fans_lab/lib/app_deps.dart`, `fans_lab/android/app/src/{main,debug}/AndroidManifest.xml`,
+`fans_lab/test/*`, `fans_lab/test_e2e/api_real_test.dart`, `docs/ENTREGA-FLUTTER.md`,
+`docs/APRESENTACAO-FLUTTER.md`, `docs/BANCA-PERGUNTAS.md`, `.gitignore`.
+**Critério de aceite:** `cd fans_lab && flutter analyze` → No issues found; `flutter test` → 152/152
+verdes (rodado 2× sem flake); `flutter test test_e2e/api_real_test.dart` contra o backend Spring LOCAL
+(perfil `dev`) → 13/13. Cada correção do loop tem teste que fica vermelho com a correção desfeita.
+**Decisões que eu tomei:**
+- *A entrega é o app da turma, não o "tarefas_http" da apostila* (A28 em `PERGUNTAS-ABERTAS.md`).
+- *O "PUT" da rubrica é `PUT /eventos/{id}/estado-pessoal`*; a edição usa PATCH com If-Match (o
+  desafio da apostila aceita PUT/PATCH); PATCH e DELETE são só online.
+- *`feito` em tabela própria* (`estado_pessoal`) também no SQLite do aparelho (não-negociável 3).
+- *A Home renderiza na ordem do servidor e o cache guarda a posição* (não-negociáveis 4 e 5).
+- *Sessão expirada não apaga a fila; "Sair" apaga com aviso; outra conta apaga antes de entrar*
+  (falha fechado sem dono gravado) — rascunho nunca sai com autoria de outra pessoa (não-negociável 1).
+- *Mensagens de erro são do app*; o `detail` do servidor só aparece em 400.
+- *`.gitignore` da raiz ignorava qualquer `android/`* (era para o Capacitor): o manifest do Flutter,
+  com a permissão INTERNET, nunca tinha entrado no repo. Exceção só para `fans_lab/android/`.
+- *`flutter_localizations` (SDK) entrou* para os seletores de data em pt-BR.
+**Travas / dúvidas:** (1) **A28** — confirmar no enunciado se o app da turma vale como entrega;
+(2) nunca rodou em aparelho: `dl.google.com` bloqueado no ambiente, sem APK gerado aqui;
+(3) Figma do link sem acesso para a conta conectada; o visual seguiu `docs/design/png-figma`;
+(4) limites declarados na §9 do brief: JWT em SharedPreferences, logout não revoga JWT, duplicata
+possível após timeout de POST, release assinado com chave debug.
