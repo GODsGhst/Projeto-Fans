@@ -7,6 +7,7 @@ import 'package:fans_lab/models/material_aula.dart';
 import 'package:fans_lab/models/tipo_evento.dart';
 import 'package:fans_lab/screens/evento_form_page.dart';
 import 'package:fans_lab/services/api_exception.dart';
+import 'package:fans_lab/widgets/cores.dart';
 import 'package:fans_lab/widgets/materia_chip.dart';
 import 'package:fans_lab/widgets/tempo_relativo.dart';
 
@@ -35,6 +36,7 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
   String? _usuarioId;
   late bool _feito;
   bool _salvandoFeito = false;
+  bool _excluindo = false;
   bool _mudou = false;
 
   @override
@@ -73,7 +75,7 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snap.hasError) {
-              return _estadoErro(_mensagem(snap.error!));
+              return _estadoErro(snap.error!);
             }
             return _corpo(snap.requireData);
           },
@@ -136,8 +138,14 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
           ),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () => _excluir(e),
-            child: const Text('Excluir'),
+            onPressed: _excluindo ? null : () => _excluir(e),
+            child: _excluindo
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Excluir'),
           ),
         ],
       ],
@@ -146,19 +154,19 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
 
   /// Prova é bloco sólido; entrega é contorno de 1px. A cor fica com a matéria.
   Widget _tipoBadge(TipoEvento tipo) {
-    final cs = Theme.of(context).colorScheme;
+    final cores = Theme.of(context).extension<CoresFans>()!;
     final prova = tipo == TipoEvento.prova;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: prova ? cs.primary : null,
-        border: prova ? null : Border.all(color: cs.outline),
+        color: prova ? cores.provaBg : null,
+        border: prova ? null : Border.all(color: cores.ink3, width: 1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         prova ? 'Prova' : 'Entrega',
         style: TextStyle(
-          color: prova ? cs.onPrimary : cs.onSurface,
+          color: prova ? cores.provaFg : cores.ink,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -169,28 +177,39 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
     child: ListTile(
       title: Text(m.titulo),
       subtitle: Text(
-        '${m.url ?? m.tipo}\n${m.autoria.autorNome} · '
+        '${m.url ?? _tipoMaterial(m.tipo)}\n${m.autoria.autorNome} · '
         '${tempoRelativo(m.autoria.criadoEm)}',
       ),
     ),
   );
 
-  Widget _estadoErro(String mensagem) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(mensagem, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _recarregar,
-            child: const Text('Tentar de novo'),
-          ),
-        ],
+  Widget _estadoErro(Object erro) {
+    // Offline o detalhe não carrega, mas "feito" é local: dá para marcar mesmo assim.
+    final offline = erro is ApiException && erro.semConexao;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_mensagem(erro), textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            if (offline) ...[
+              OutlinedButton(
+                onPressed: _salvandoFeito ? null : _alternarFeito,
+                child: Text(_feito ? 'Desmarcar feito' : 'Marcar como feito'),
+              ),
+              const SizedBox(height: 8),
+            ],
+            FilledButton(
+              onPressed: _recarregar,
+              child: const Text('Tentar de novo'),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   /// Offline-first: grava local primeiro, depois tenta enviar.
   Future<void> _alternarFeito() async {
@@ -199,6 +218,7 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
     setState(() => _salvandoFeito = true);
     try {
       await widget.deps.estado.marcarLocal(widget.eventoId, novo);
+      if (!mounted) return;
       setState(() {
         _feito = novo;
         _mudou = true;
@@ -253,8 +273,11 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
     if (confirmou != true || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    setState(() => _excluindo = true);
+    var excluiu = false;
     try {
       await widget.deps.api.excluirEvento(e.id, e.version);
+      excluiu = true;
     } on ApiException catch (ex) {
       if (ex.conflito) {
         messenger.showSnackBar(
@@ -272,9 +295,13 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
           ),
         );
       }
-      return;
+    } finally {
+      // Depois de excluir, o botão fica travado até a página sair.
+      if (mounted && !excluiu) setState(() => _excluindo = false);
     }
-    navigator.pop(true);
+    if (excluiu && mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      navigator.pop(true);
+    }
   }
 
   /// "Criado por Ana (professor) · há 2 dias" e linha equivalente para edição.
@@ -287,6 +314,12 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
     'PROFESSOR' => 'professor',
     'COORDENACAO' => 'coordenação',
     _ => selo.toLowerCase(),
+  };
+
+  String _tipoMaterial(String tipo) => switch (tipo) {
+    'AULA' => 'Aula',
+    'ADICIONAL' => 'Material adicional',
+    _ => tipo,
   };
 
   String _mensagem(Object erro) => switch (erro) {

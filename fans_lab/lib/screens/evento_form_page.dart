@@ -90,6 +90,7 @@ class _EventoFormPageState extends State<EventoFormPage> {
 
   Widget _formulario() {
     final materia = _materiaEscolhida();
+    final ev = widget.evento;
     return Form(
       key: _formKey,
       child: ListView(
@@ -106,6 +107,13 @@ class _EventoFormPageState extends State<EventoFormPage> {
             onSelectionChanged: (novo) => setState(() => _tipo = novo.first),
           ),
           const SizedBox(height: 16),
+          if (ev != null && materia == null) ...[
+            Text(
+              'A matéria original (${ev.materiaSigla}) não está mais disponível — escolha outra.',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            const SizedBox(height: 8),
+          ],
           DropdownButtonFormField<String>(
             initialValue: materia?.id,
             isExpanded: true,
@@ -226,6 +234,7 @@ class _EventoFormPageState extends State<EventoFormPage> {
   /// Salva primeiro no aparelho (offline-first) e só depois tenta a rede.
   /// PATCH de evento é online: erro fica na tela para o usuário tentar de novo.
   Future<void> _salvar() async {
+    if (_salvando) return;
     if (!_formKey.currentState!.validate()) return;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -250,7 +259,10 @@ class _EventoFormPageState extends State<EventoFormPage> {
         }
         messenger.showSnackBar(SnackBar(content: Text(await _sincronizar())));
       }
-      navigator.pop(true);
+      // Pode ter voltado enquanto salvava: só fecha se esta ainda é a rota do topo.
+      if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+        navigator.pop(true);
+      }
     } on ApiException catch (e) {
       // Só o PATCH chega aqui: _sincronizar trata os erros da fila.
       messenger.showSnackBar(SnackBar(content: Text(_msgEditar(e))));

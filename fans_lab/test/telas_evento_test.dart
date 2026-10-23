@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:fans_lab/app_deps.dart';
 import 'package:fans_lab/database/app_database.dart';
+import 'package:fans_lab/models/evento.dart';
 import 'package:fans_lab/models/rascunho_evento.dart';
 import 'package:fans_lab/models/sessao.dart';
 import 'package:fans_lab/models/tipo_evento.dart';
@@ -258,5 +260,325 @@ void main() {
 
     expect(find.text('Editar'), findsOneWidget);
     expect(find.text('Excluir'), findsOneWidget);
+  });
+
+  testWidgets(
+    'salvar edição e voltar no meio: a rota de baixo continua na tela',
+    (tester) async {
+      final liberar = Completer<void>();
+      final deps = await montarDeps(tester, (req) async {
+        if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+        if (req.method == 'PATCH') {
+          await liberar.future;
+          return _json(_detalheJson('u1'));
+        }
+        return http.Response('', 404);
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: const Scaffold(body: Center(child: Text('Rota base'))),
+        ),
+      );
+      Navigator.of(tester.element(find.text('Rota base'))).push(
+        MaterialPageRoute(
+          builder: (_) => EventoFormPage(
+            deps: deps,
+            evento: Evento.fromJson(_detalheJson('u1')),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await aguardar(tester);
+
+      await tester.ensureVisible(find.text('Salvar'));
+      await tester.tap(find.text('Salvar'));
+      await tester.pump();
+
+      // Volta com o PATCH ainda no ar; a animação não avança, então a página segue montada.
+      Navigator.of(tester.element(find.byType(EventoFormPage))).pop();
+      await tester.pump();
+      liberar.complete();
+      await aguardar(tester);
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(EventoFormPage), findsNothing);
+      expect(find.text('Rota base'), findsOneWidget);
+    },
+  );
+
+  testWidgets('evento sem rede: o botão de feito aparece e grava no aparelho', (
+    tester,
+  ) async {
+    final deps = await montarDeps(tester, (req) async {
+      throw http.ClientException('sem rede');
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+      ),
+    );
+    await aguardar(tester);
+
+    expect(find.text('Tentar de novo'), findsOneWidget);
+    await tester.tap(find.text('Marcar como feito'));
+    await aguardarTexto(tester, 'Salvo no aparelho');
+
+    final pendentes = await tester.runAsync(() => deps.estado.pendentes());
+    expect(pendentes, hasLength(1));
+    expect(find.text('Desmarcar feito'), findsOneWidget);
+  });
+
+  testWidgets(
+    'excluir: enquanto o DELETE roda, o botão fica travado e não manda outro',
+    (tester) async {
+      final liberar = Completer<void>();
+      var deletes = 0;
+      final deps = await montarDeps(tester, (req) async {
+        if (req.url.path.endsWith('/eventos/e1') && req.method == 'DELETE') {
+          deletes++;
+          await liberar.future;
+          return http.Response('', 204);
+        }
+        if (req.url.path.endsWith('/eventos/e1')) {
+          return _json(_detalheJson('u1'));
+        }
+        return http.Response('', 404);
+      });
+      await tester.runAsync(
+        () => deps.sessao.salvar(
+          Sessao(
+            jwt: 'jwt',
+            usuario: Usuario(id: 'u1', nome: 'Otávio', email: 'o@x.com'),
+            turmaId: 't1',
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+        ),
+      );
+      await aguardar(tester);
+
+      await tester.ensureVisible(find.text('Excluir'));
+      await tester.tap(find.text('Excluir'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Excluir'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final botao = tester.widget<TextButton>(find.byType(TextButton));
+      expect(botao.onPressed, isNull);
+      expect(
+        find.descendant(
+          of: find.byType(TextButton),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+
+      // Toque no botão travado: não abre outra confirmação nem manda outro DELETE.
+      await tester.tap(find.byType(TextButton));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AlertDialog), findsNothing);
+
+      liberar.complete();
+      await aguardar(tester);
+      expect(deletes, 1);
+    },
+  );
+
+  testWidgets(
+    'marcar feito: página fechada no meio do salvamento não dá erro',
+    (tester) async {
+      // O banco abre com atraso de relógio simulado: o salvamento fica pendente
+      // até o teste avançar o tempo, e aí a página já saiu da árvore.
+      SharedPreferences.setMockInitialValues({});
+      final db = (await tester.runAsync(() => AppDatabase.abrirEmMemoria()))!;
+      final deps = AppDeps.padrao(
+        client: MockClient((req) async {
+          if (req.url.path.endsWith('/eventos/e1')) {
+            return _json(_detalheJson('u2'));
+          }
+          if (req.method == 'PUT') return http.Response('', 204);
+          return http.Response('', 404);
+        }),
+        abrirDb: () =>
+            Future.delayed(const Duration(milliseconds: 100), () => db),
+        baseUrl: 'http://api',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+        ),
+      );
+      await aguardar(tester);
+
+      await tester.ensureVisible(find.text('Marcar como feito'));
+      await tester.tap(find.text('Marcar como feito'));
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      await tester.pump(const Duration(milliseconds: 200));
+      await aguardar(tester);
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('editar: dois toques em Salvar mandam um PATCH só', (
+    tester,
+  ) async {
+    final liberar = Completer<void>();
+    var patches = 0;
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+      if (req.method == 'PATCH') {
+        patches++;
+        await liberar.future;
+        return _json(_detalheJson('u1'));
+      }
+      return http.Response('', 404);
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoFormPage(
+          deps: deps,
+          evento: Evento.fromJson(_detalheJson('u1')),
+        ),
+      ),
+    );
+    await aguardar(tester);
+
+    await tester.ensureVisible(find.text('Salvar'));
+    // Sem pump entre os dois toques: o botão ainda não foi redesenhado como desabilitado.
+    await tester.tap(find.text('Salvar'));
+    await tester.tap(find.text('Salvar'));
+    await tester.pump();
+    liberar.complete();
+    await aguardar(tester);
+
+    expect(patches, 1);
+  });
+
+  testWidgets('selo do tipo: prova é bloco sólido, entrega é contorno', (
+    tester,
+  ) async {
+    final cores = CoresFans.claro;
+    BoxDecoration decoracaoDo(WidgetTester t, String texto) {
+      final caixa = find.ancestor(
+        of: find.text(texto),
+        matching: find.byWidgetPredicate(
+          (w) => w is Container && w.decoration is BoxDecoration,
+        ),
+      );
+      return (t.widget<Container>(caixa.first).decoration as BoxDecoration);
+    }
+
+    final depsProva = await montarDeps(
+      tester,
+      (req) async => _json(_detalheJson('u2')),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoDetalhePage(deps: depsProva, eventoId: 'e1'),
+      ),
+    );
+    await aguardar(tester);
+    expect(tester.widget<Text>(find.text('Prova')).style?.color, cores.provaFg);
+    expect(decoracaoDo(tester, 'Prova').color, cores.provaBg);
+
+    await tester.pumpWidget(const SizedBox());
+    final depsEntrega = await montarDeps(
+      tester,
+      (req) async => _json({..._detalheJson('u2'), 'tipo': 'ENTREGA'}),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoDetalhePage(deps: depsEntrega, eventoId: 'e1'),
+      ),
+    );
+    await aguardar(tester);
+    expect(tester.widget<Text>(find.text('Entrega')).style?.color, cores.ink);
+    final contorno = decoracaoDo(tester, 'Entrega');
+    expect(contorno.color, isNull);
+    final lado = (contorno.border as Border).top;
+    expect(lado.color, cores.ink3);
+    expect(lado.width, 1);
+  });
+
+  testWidgets('materiais sem link mostram o tipo em português', (tester) async {
+    Map<String, dynamic> material(String id, String tipo, String titulo) => {
+      'id': id,
+      'tipo': tipo,
+      'titulo': titulo,
+      'url': null,
+      'dataAula': null,
+      'autoria': _autoria('u2'),
+    };
+    final deps = await montarDeps(tester, (req) async {
+      return _json({
+        ..._detalheJson('u2'),
+        'materiais': [
+          material('a1', 'AULA', 'Aula 4'),
+          material('a2', 'ADICIONAL', 'Lista extra'),
+        ],
+      });
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+      ),
+    );
+    await aguardar(tester);
+
+    expect(find.textContaining('Aula\n'), findsOneWidget);
+    expect(find.textContaining('Material adicional\n'), findsOneWidget);
+  });
+
+  testWidgets('editar: matéria que sumiu da lista pede outra escolha', (
+    tester,
+  ) async {
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+      return http.Response('', 404);
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoFormPage(
+          deps: deps,
+          evento: Evento.fromJson({..._detalheJson('u1'), 'materiaId': 'm9'}),
+        ),
+      ),
+    );
+    await aguardar(tester);
+
+    expect(
+      find.text(
+        'A matéria original (BD) não está mais disponível — escolha outra.',
+      ),
+      findsOneWidget,
+    );
+    // A linha de aviso empurra o Salvar para fora da área já construída da lista.
+    await tester.dragUntilVisible(
+      find.text('Salvar'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
+    await tester.tap(find.text('Salvar'));
+    await tester.pump();
+    expect(find.text('Escolha a matéria'), findsOneWidget);
   });
 }
