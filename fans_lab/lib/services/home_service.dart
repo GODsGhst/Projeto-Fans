@@ -68,7 +68,8 @@ class HomeService {
     try {
       final lista = await _api.materias();
       await _materias.substituirTodas(lista);
-      return lista;
+      // Lê do cache, não devolve `lista`: a ordem tem de ser a mesma online e offline (por sigla).
+      return await _materias.listar();
     } on ApiException catch (e) {
       if (e.naoAutorizado || !_semRede(e)) rethrow;
       final cache = await _materias.listar();

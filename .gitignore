@@ -11,6 +11,8 @@ dist/
 # Capacitor nativo
 android/
 ios/
+# ...mas o android/ do app Flutter é código-fonte (manifest com INTERNET, sem backup), não gerado
+!fans_lab/android/
 
 # Segredos — NUNCA commitar
 .env

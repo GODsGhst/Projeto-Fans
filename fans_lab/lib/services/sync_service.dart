@@ -25,14 +25,44 @@ class SyncService {
   final EstadoPessoalRepository _estado;
   final SessaoStore _sessao;
   Future<ResultadoSync>? _emCurso;
+  bool _repetir = false;
 
   SyncService(this._api, this._rascunhos, this._estado, this._sessao);
 
   /// Clique repetido não duplica envio: a chamada concorrente recebe a execução em curso.
-  Future<ResultadoSync> sincronizar() =>
-      _emCurso ??= _executar().whenComplete(() {
-        _emCurso = null;
-      });
+  /// Chamada concorrente também marca `_repetir`: uma rodada extra roda antes de o Future
+  /// completar, para pegar rascunho inserido durante o envio. Sem item novo, não envia nada.
+  Future<ResultadoSync> sincronizar() {
+    final atual = _emCurso;
+    if (atual != null) {
+      _repetir = true;
+      return atual;
+    }
+    return _emCurso = _rodar();
+  }
+
+  Future<ResultadoSync> _rodar() async {
+    var enviados = 0;
+    var comErro = 0;
+    try {
+      late ResultadoSync r;
+      do {
+        _repetir = false;
+        r = await _executar();
+        enviados += r.enviados;
+        comErro += r.comErro;
+      } while (_repetir && !r.semConexao);
+      // Nada de `await` depois do último teste de `_repetir`: quem chegar agora começa do zero.
+      return ResultadoSync(
+        enviados: enviados,
+        comErro: comErro,
+        pendentes: r.pendentes,
+        semConexao: r.semConexao,
+      );
+    } finally {
+      _emCurso = null;
+    }
+  }
 
   Future<int> contarPendentes() async =>
       (await _rascunhos.listarPendentes()).length +
@@ -45,9 +75,10 @@ class SyncService {
 
     for (final r in await _rascunhos.listarPendentes()) {
       try {
-        // ponytail: se o POST chegou ao servidor mas a resposta se perdeu (timeout),
-        // o rascunho continua pendente e pode duplicar no próximo envio.
-        // Correção: chave de idempotência no backend.
+        // ponytail: o POST pode ter chegado ao servidor e a resposta ter se perdido
+        // (queda de rede ou timeout). O rascunho continua pendente e o reenvio duplica.
+        // Mitigação atual: timeout de 90 s no ApiService. Correção real: chave de
+        // idempotência no backend.
         await _api.criarEvento(r.toCriarJson());
         await _rascunhos.marcarSincronizado(r.localId!);
         enviados++;
@@ -81,7 +112,8 @@ class SyncService {
       }
     }
 
-    if (!semConexao) await _sessao.registrarSincronizacao(DateTime.now());
+    // "Última sincronização" só avança quando a rodada toda foi limpa.
+    if (!semConexao && comErro == 0) await _sessao.registrarSincronizacao(DateTime.now());
 
     return ResultadoSync(
       enviados: enviados,

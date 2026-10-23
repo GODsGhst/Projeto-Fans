@@ -5,6 +5,7 @@ import 'package:fans_lab/database/app_database.dart';
 import 'package:fans_lab/models/rascunho_evento.dart';
 import 'package:fans_lab/models/tipo_evento.dart';
 import 'package:fans_lab/services/api_exception.dart';
+import 'package:fans_lab/services/sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -56,6 +57,15 @@ Map<String, dynamic> _problema(int status, String detalhe) => {
   'title': 'Erro',
   'status': status,
   'detail': detalhe,
+};
+
+Map<String, dynamic> _materiaJson(String id, String sigla) => {
+  'id': id,
+  'nome': 'Matéria $sigla',
+  'sigla': sigla,
+  'corHex': '#1D4ED8',
+  'sala': null,
+  'professor': null,
 };
 
 http.Response _json(Object corpo, [int status = 200]) => http.Response.bytes(
@@ -190,6 +200,45 @@ void main() {
         throwsA(isA<ApiException>().having((e) => e.semConexao, 'semConexao', isTrue)),
       );
     });
+
+    test('materias: online e offline devolvem a mesma ordem (por sigla), mesmo se o servidor manda fora de ordem', () async {
+      var online = true;
+      final deps = await _montar((req) async {
+        if (!online) throw http.ClientException('sem rede');
+        return _json([_materiaJson('m1', 'ZZ'), _materiaJson('m2', 'AA')]);
+      });
+
+      final aoVivo = await deps.home.materias();
+      online = false;
+      final offline = await deps.home.materias();
+
+      expect(aoVivo.map((m) => m.sigla), ['AA', 'ZZ']);
+      expect(offline.map((m) => m.sigla), ['AA', 'ZZ']);
+    });
+
+    test('503 depois de um carregar online devolve o cache com offline=true e os mesmos itens', () async {
+      var servidorCaiu = false;
+      final deps = await _montar((req) async {
+        if (servidorCaiu) return _json(_problema(503, 'Servidor indisponível'), 503);
+        return _json([_item('A'), _item('B')]);
+      });
+      await deps.home.carregar();
+      servidorCaiu = true;
+
+      final r = await deps.home.carregar();
+
+      expect(r.offline, isTrue);
+      expect(r.itens.map((i) => i.eventoId), ['A', 'B']);
+    });
+
+    test('503 sem nunca ter carregado lança ApiException com status 503, nunca lista vazia', () async {
+      final deps = await _montar((req) async => _json(_problema(503, 'Servidor indisponível'), 503));
+
+      await expectLater(
+        deps.home.carregar(),
+        throwsA(isA<ApiException>().having((e) => e.status, 'status', 503)),
+      );
+    });
   });
 
   group('SyncService', () {
@@ -298,6 +347,47 @@ void main() {
 
       expect(posts, 2);
       expect(identical(resultados[0], resultados[1]), isTrue);
+    });
+
+    test('503 em tudo: não grava ultimaSincronizacao', () async {
+      final deps = await _montar((req) async => _json(_problema(503, 'Servidor indisponível'), 503));
+      await deps.rascunhos.inserir(_rascunho('P1'));
+      await deps.estado.marcarLocal('e1', true);
+
+      final r = await deps.sync.sincronizar();
+
+      expect(r.comErro, 2);
+      expect(r.semConexao, isFalse);
+      expect(r.pendentes, 2);
+      expect(await deps.sessao.ultimaSincronizacao(), isNull);
+    });
+
+    test('item inserido durante o envio entra na mesma rodada: 2 POSTs, pendentes 0', () async {
+      var posts = 0;
+      late AppDeps deps;
+      Future<ResultadoSync>? segunda;
+      deps = await _montar((req) async {
+        if (req.method == 'POST') {
+          posts++;
+          if (posts == 1) {
+            // Rascunho novo chega enquanto o 1º POST ainda não respondeu; a 2ª chamada pega a execução em curso.
+            await deps.rascunhos.inserir(_rascunho('P2'));
+            segunda = deps.sync.sincronizar();
+          }
+        }
+        return _json(_evento('novo', 'P'), 201);
+      });
+      await deps.rascunhos.inserir(_rascunho('P1'));
+
+      final r = await deps.sync.sincronizar();
+
+      expect(identical(await segunda, r), isTrue);
+      expect(posts, 2);
+      expect(r.enviados, 2);
+      expect(r.pendentes, 0);
+      final todos = await deps.rascunhos.listar();
+      expect(todos, hasLength(2));
+      expect(todos.every((x) => x.sincronizado), isTrue);
     });
   });
 }
