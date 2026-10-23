@@ -163,7 +163,9 @@ class _FilaPageState extends State<FilaPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Excluir este rascunho?'),
-        content: const Text('Ele ainda não foi enviado. Some só deste aparelho.'),
+        content: const Text(
+          'Ele ainda não foi enviado. Some só deste aparelho.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

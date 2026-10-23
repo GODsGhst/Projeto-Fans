@@ -100,19 +100,28 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
         const SizedBox(height: 12),
         Text(e.titulo, style: tema.headlineSmall),
         const SizedBox(height: 4),
-        Text(e.hora == null ? dataCurta(e.data) : '${dataCurta(e.data)} · ${e.hora}',
-            style: tema.bodyLarge),
+        Text(
+          e.hora == null
+              ? dataCurta(e.data)
+              : '${dataCurta(e.data)} · ${e.hora}',
+          style: tema.bodyLarge,
+        ),
         if (e.sala != null) Text('Sala ${e.sala}', style: tema.bodyMedium),
         const SizedBox(height: 12),
         Text(_linha('Criado por', a.autorNome, a.autorSelo, a.criadoEm)),
         if (a.editadoPorNome != null && a.atualizadoEm != null)
-          Text(_linha('Editado por', a.editadoPorNome!, a.editadoPorSelo,
-              a.atualizadoEm!)),
+          Text(
+            _linha(
+              'Editado por',
+              a.editadoPorNome!,
+              a.editadoPorSelo,
+              a.atualizadoEm!,
+            ),
+          ),
         const SizedBox(height: 24),
         Text('Materiais vinculados', style: tema.titleSmall),
         const SizedBox(height: 8),
-        if (detalhe.materiais.isEmpty)
-          const Text('Nenhum material vinculado.'),
+        if (detalhe.materiais.isEmpty) const Text('Nenhum material vinculado.'),
         ...detalhe.materiais.map(_materialCard),
         const SizedBox(height: 24),
         FilledButton(
@@ -281,7 +290,8 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
   };
 
   String _mensagem(Object erro) => switch (erro) {
-    ApiException e when e.naoAutorizado => 'Sessão expirada — volte e entre de novo.',
+    ApiException e when e.naoAutorizado =>
+      'Sessão expirada — volte e entre de novo.',
     ApiException e => e.mensagem,
     _ => 'Algo deu errado. Tente de novo.',
   };

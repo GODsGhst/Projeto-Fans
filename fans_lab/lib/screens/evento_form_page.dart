@@ -126,13 +126,15 @@ class _EventoFormPageState extends State<EventoFormPage> {
                 ),
             ],
             onChanged: (id) => setState(() => _materiaId = id),
-            validator: (_) => _materiaEscolhida() == null ? 'Escolha a matéria' : null,
+            validator: (_) =>
+                _materiaEscolhida() == null ? 'Escolha a matéria' : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _titulo,
             decoration: const InputDecoration(labelText: 'O que é'),
-            validator: (v) => (v ?? '').trim().isEmpty ? 'Informe o título' : null,
+            validator: (v) =>
+                (v ?? '').trim().isEmpty ? 'Informe o título' : null,
           ),
           const SizedBox(height: 8),
           ListTile(
@@ -308,7 +310,8 @@ class _EventoFormPageState extends State<EventoFormPage> {
   }
 
   String _mensagem(Object erro) => switch (erro) {
-    ApiException e when e.naoAutorizado => 'Sessão expirada — volte e entre de novo.',
+    ApiException e when e.naoAutorizado =>
+      'Sessão expirada — volte e entre de novo.',
     ApiException e => e.mensagem,
     _ => 'Algo deu errado. Tente de novo.',
   };
