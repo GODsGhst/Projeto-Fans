@@ -6,6 +6,7 @@ import 'package:fans_lab/models/materia.dart';
 import 'package:fans_lab/models/rascunho_evento.dart';
 import 'package:fans_lab/models/tipo_evento.dart';
 import 'package:fans_lab/services/api_exception.dart';
+import 'package:fans_lab/widgets/cores.dart';
 import 'package:fans_lab/widgets/materia_chip.dart';
 import 'package:fans_lab/widgets/tempo_relativo.dart';
 
@@ -90,6 +91,7 @@ class _EventoFormPageState extends State<EventoFormPage> {
 
   Widget _formulario() {
     final materia = _materiaEscolhida();
+    final cores = Theme.of(context).extension<CoresFans>()!;
     // Evento ou rascunho cuja matéria não está mais na lista: o aviso usa a sigla guardada.
     final siglaOriginal =
         widget.evento?.materiaSigla ?? widget.rascunho?.materiaSigla;
@@ -180,6 +182,14 @@ class _EventoFormPageState extends State<EventoFormPage> {
             decoration: const InputDecoration(labelText: 'Sala (opcional)'),
           ),
           const SizedBox(height: 24),
+          // Autoria é o mecanismo de confiança: o criador precisa saber que o nome vai junto.
+          if (!_editando) ...[
+            Text(
+              'Vai aparecer para a turma toda com o seu nome. Só você pode editar ou apagar depois.',
+              style: TextStyle(color: cores.ink2),
+            ),
+            const SizedBox(height: 12),
+          ],
           FilledButton(
             onPressed: _salvando ? null : _salvar,
             child: const Text('Salvar'),

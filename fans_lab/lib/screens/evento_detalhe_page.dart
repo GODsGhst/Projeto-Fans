@@ -88,6 +88,7 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
     final e = detalhe.evento;
     final a = e.autoria;
     final tema = Theme.of(context).textTheme;
+    final cores = Theme.of(context).extension<CoresFans>()!;
     final ehAutor = _usuarioId != null && a.autorId == _usuarioId;
     // Excluído: o servidor ainda devolve ao autor. Não há o que editar, excluir nem marcar.
     final excluido = e.excluidoEm != null;
@@ -135,6 +136,14 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
         ...detalhe.materiais.map(_materialCard),
         if (!excluido) ...[
           const SizedBox(height: 24),
+          // Só mostra quem edita depois de saber quem é o usuário (evita aviso falso no carregamento).
+          if (_usuarioId != null && !ehAutor) ...[
+            Text(
+              'Só ${a.autorNome} edita ou apaga este registro.',
+              style: tema.bodyMedium?.copyWith(color: cores.ink2),
+            ),
+            const SizedBox(height: 12),
+          ],
           FilledButton(
             onPressed: _salvandoFeito ? null : _alternarFeito,
             child: Text(_feito ? 'Desmarcar feito' : 'Marcar como feito'),
@@ -192,7 +201,7 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cores.rule,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Text(texto),
     );
@@ -209,8 +218,10 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
   );
 
   Widget _estadoErro(Object erro) {
-    // Offline o detalhe não carrega, mas "feito" é local: dá para marcar mesmo assim.
-    final offline = erro is ApiException && erro.semConexao;
+    // Sem rede ou servidor fora do ar (5xx, ex.: Render acordando): o detalhe não carrega,
+    // mas "feito" é local, então dá para marcar mesmo assim. Mesmo critério da Home.
+    final offline =
+        erro is ApiException && (erro.semConexao || (erro.status ?? 0) >= 500);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -282,14 +293,26 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Excluir este evento?'),
-        content: const Text('Ele some para a turma inteira.'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Ele some para a turma inteira.'),
+            SizedBox(height: 8),
+            Text('Não dá para desfazer.'),
+          ],
+        ),
+        // Cancelar é a ação principal; apagar fica secundário, em cor de erro.
         actions: [
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar'),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
             child: const Text('Excluir'),
           ),
         ],

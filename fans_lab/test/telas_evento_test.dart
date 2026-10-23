@@ -138,7 +138,12 @@ void main() {
       find.widgetWithText(TextFormField, 'O que é'),
       'Prova 3',
     );
-    await tester.ensureVisible(find.text('Salvar'));
+    // A nota de autoria empurra o Salvar para fora da área construída da lista.
+    await tester.dragUntilVisible(
+      find.text('Salvar'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
     await tester.tap(find.text('Salvar'));
     await aguardarTexto(tester, 'Salvo no aparelho');
 
@@ -165,7 +170,11 @@ void main() {
     );
     await aguardar(tester);
 
-    await tester.ensureVisible(find.text('Salvar'));
+    await tester.dragUntilVisible(
+      find.text('Salvar'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
     await tester.tap(find.text('Salvar'));
     await tester.pump();
 
@@ -693,6 +702,213 @@ void main() {
       expect(find.text('Editar'), findsOneWidget);
       expect(find.text('Excluir'), findsOneWidget);
       expect(find.text('Marcar como feito'), findsOneWidget);
+    },
+  );
+
+  testWidgets('evento de outra pessoa: diz quem pode editar ou apagar', (
+    tester,
+  ) async {
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/eventos/e1')) {
+        return _json(_detalheJson('u2'));
+      }
+      return http.Response('', 404);
+    });
+    await tester.runAsync(
+      () => deps.sessao.salvar(
+        Sessao(
+          jwt: 'jwt',
+          usuario: Usuario(id: 'u1', nome: 'Otávio', email: 'o@x.com'),
+          turmaId: 't1',
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+      ),
+    );
+    await aguardar(tester);
+
+    expect(find.text('Só Ana edita ou apaga este registro.'), findsOneWidget);
+    expect(find.text('Marcar como feito'), findsOneWidget);
+  });
+
+  testWidgets('evento do próprio usuário: não há aviso de quem edita', (
+    tester,
+  ) async {
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/eventos/e1')) {
+        return _json(_detalheJson('u1'));
+      }
+      return http.Response('', 404);
+    });
+    await tester.runAsync(
+      () => deps.sessao.salvar(
+        Sessao(
+          jwt: 'jwt',
+          usuario: Usuario(id: 'u1', nome: 'Otávio', email: 'o@x.com'),
+          turmaId: 't1',
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+      ),
+    );
+    await aguardar(tester);
+
+    expect(find.text('Editar'), findsOneWidget);
+    expect(find.textContaining('edita ou apaga'), findsNothing);
+  });
+
+  testWidgets(
+    'diálogo de excluir: Cancelar é o principal; Excluir é secundário em cor de erro',
+    (tester) async {
+      final deps = await montarDeps(tester, (req) async {
+        if (req.url.path.endsWith('/eventos/e1')) {
+          return _json(_detalheJson('u1'));
+        }
+        return http.Response('', 404);
+      });
+      await tester.runAsync(
+        () => deps.sessao.salvar(
+          Sessao(
+            jwt: 'jwt',
+            usuario: Usuario(id: 'u1', nome: 'Otávio', email: 'o@x.com'),
+            turmaId: 't1',
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+        ),
+      );
+      await aguardar(tester);
+
+      await tester.ensureVisible(find.text('Excluir'));
+      await tester.tap(find.text('Excluir'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final dialogo = find.byType(AlertDialog);
+      expect(
+        find.descendant(
+          of: dialogo,
+          matching: find.text('Ele some para a turma inteira.'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: dialogo,
+          matching: find.text('Não dá para desfazer.'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: dialogo,
+          matching: find.widgetWithText(FilledButton, 'Cancelar'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: dialogo,
+          matching: find.widgetWithText(FilledButton, 'Excluir'),
+        ),
+        findsNothing,
+      );
+      final excluir = tester.widget<TextButton>(
+        find.descendant(
+          of: dialogo,
+          matching: find.widgetWithText(TextButton, 'Excluir'),
+        ),
+      );
+      expect(
+        excluir.style?.foregroundColor?.resolve({}),
+        temaFans(Brightness.light).colorScheme.error,
+      );
+    },
+  );
+
+  testWidgets(
+    'servidor fora do ar (503) no detalhe: oferece marcar feito offline',
+    (tester) async {
+      final deps = await montarDeps(tester, (req) async {
+        return http.Response('', 503);
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+        ),
+      );
+      await aguardar(tester);
+
+      expect(find.text('Tentar de novo'), findsOneWidget);
+      expect(find.text('Marcar como feito'), findsOneWidget);
+    },
+  );
+
+  testWidgets('formulário novo: a nota de autoria aparece antes de Salvar', (
+    tester,
+  ) async {
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+      return http.Response('', 404);
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoFormPage(deps: deps),
+      ),
+    );
+    await aguardar(tester);
+
+    final nota = find.text(
+      'Vai aparecer para a turma toda com o seu nome. Só você pode editar ou apagar depois.',
+    );
+    await tester.dragUntilVisible(
+      find.text('Salvar'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
+    expect(nota, findsOneWidget);
+    expect(
+      tester.getTopLeft(nota).dy,
+      lessThan(tester.getTopLeft(find.text('Salvar')).dy),
+    );
+  });
+
+  testWidgets(
+    'editar evento: a nota de autoria do formulário novo não aparece',
+    (tester) async {
+      final deps = await montarDeps(tester, (req) async {
+        if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+        return http.Response('', 404);
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoFormPage(
+            deps: deps,
+            evento: Evento.fromJson(_detalheJson('u1')),
+          ),
+        ),
+      );
+      await aguardar(tester);
+
+      expect(find.text('Salvar'), findsOneWidget);
+      expect(
+        find.textContaining('Vai aparecer para a turma toda'),
+        findsNothing,
+      );
     },
   );
 }
