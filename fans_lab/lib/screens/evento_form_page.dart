@@ -90,7 +90,9 @@ class _EventoFormPageState extends State<EventoFormPage> {
 
   Widget _formulario() {
     final materia = _materiaEscolhida();
-    final ev = widget.evento;
+    // Evento ou rascunho cuja matéria não está mais na lista: o aviso usa a sigla guardada.
+    final siglaOriginal =
+        widget.evento?.materiaSigla ?? widget.rascunho?.materiaSigla;
     return Form(
       key: _formKey,
       child: ListView(
@@ -107,9 +109,9 @@ class _EventoFormPageState extends State<EventoFormPage> {
             onSelectionChanged: (novo) => setState(() => _tipo = novo.first),
           ),
           const SizedBox(height: 16),
-          if (ev != null && materia == null) ...[
+          if (siglaOriginal != null && materia == null) ...[
             Text(
-              'A matéria original (${ev.materiaSigla}) não está mais disponível — escolha outra.',
+              'A matéria original ($siglaOriginal) não está mais disponível — escolha outra.',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
             const SizedBox(height: 8),

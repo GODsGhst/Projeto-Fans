@@ -581,4 +581,118 @@ void main() {
     await tester.pump();
     expect(find.text('Escolha a matéria'), findsOneWidget);
   });
+
+  testWidgets(
+    'rascunho com matéria que sumiu: pede outra escolha com a sigla',
+    (tester) async {
+      final deps = await montarDeps(tester, (req) async {
+        if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+        return http.Response('', 404);
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoFormPage(
+            deps: deps,
+            rascunho: RascunhoEvento(
+              materiaId: 'm9',
+              materiaSigla: 'FIS',
+              materiaCorHex: '#B45309',
+              tipo: TipoEvento.entrega,
+              titulo: 'Lista 4',
+              data: DateTime(2026, 10, 25),
+              criadoEm: DateTime(2026, 10, 20),
+            ),
+          ),
+        ),
+      );
+      await aguardar(tester);
+
+      expect(
+        find.text(
+          'A matéria original (FIS) não está mais disponível — escolha outra.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'evento excluído, do próprio autor: avisa e esconde Editar, Excluir e feito',
+    (tester) async {
+      final deps = await montarDeps(tester, (req) async {
+        if (req.url.path.endsWith('/eventos/e1')) {
+          return _json({
+            ..._detalheJson('u1'),
+            'excluidoEm': '2026-10-21T10:00:00Z',
+          });
+        }
+        return http.Response('', 404);
+      });
+      await tester.runAsync(
+        () => deps.sessao.salvar(
+          Sessao(
+            jwt: 'jwt',
+            usuario: Usuario(id: 'u1', nome: 'Otávio', email: 'o@x.com'),
+            turmaId: 't1',
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+        ),
+      );
+      await aguardar(tester);
+
+      expect(find.text('Prova 2'), findsOneWidget);
+      expect(
+        find.text(
+          'Você excluiu este evento — ele não aparece mais para a turma.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Editar'), findsNothing);
+      expect(find.text('Excluir'), findsNothing);
+      expect(find.text('Marcar como feito'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'evento oculto pelo líder: o autor vê o aviso e continua podendo editar',
+    (tester) async {
+      final deps = await montarDeps(tester, (req) async {
+        if (req.url.path.endsWith('/eventos/e1')) {
+          return _json({..._detalheJson('u1'), 'visivelTurma': false});
+        }
+        return http.Response('', 404);
+      });
+      await tester.runAsync(
+        () => deps.sessao.salvar(
+          Sessao(
+            jwt: 'jwt',
+            usuario: Usuario(id: 'u1', nome: 'Otávio', email: 'o@x.com'),
+            turmaId: 't1',
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: temaFans(Brightness.light),
+          home: EventoDetalhePage(deps: deps, eventoId: 'e1'),
+        ),
+      );
+      await aguardar(tester);
+
+      expect(find.text('Prova 2'), findsOneWidget);
+      expect(
+        find.text('Oculto pelo líder da turma — só você está vendo.'),
+        findsOneWidget,
+      );
+      expect(find.text('Editar'), findsOneWidget);
+      expect(find.text('Excluir'), findsOneWidget);
+      expect(find.text('Marcar como feito'), findsOneWidget);
+    },
+  );
 }

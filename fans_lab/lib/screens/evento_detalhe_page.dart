@@ -89,9 +89,17 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
     final a = e.autoria;
     final tema = Theme.of(context).textTheme;
     final ehAutor = _usuarioId != null && a.autorId == _usuarioId;
+    // Excluído: o servidor ainda devolve ao autor. Não há o que editar, excluir nem marcar.
+    final excluido = e.excluidoEm != null;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (excluido)
+          _faixa(
+            'Você excluiu este evento — ele não aparece mais para a turma.',
+          ),
+        if (!e.visivelTurma)
+          _faixa('Oculto pelo líder da turma — só você está vendo.'),
         Row(
           children: [
             MateriaChip(sigla: e.materiaSigla, corHex: e.materiaCorHex),
@@ -125,28 +133,30 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
         const SizedBox(height: 8),
         if (detalhe.materiais.isEmpty) const Text('Nenhum material vinculado.'),
         ...detalhe.materiais.map(_materialCard),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: _salvandoFeito ? null : _alternarFeito,
-          child: Text(_feito ? 'Desmarcar feito' : 'Marcar como feito'),
-        ),
-        if (ehAutor) ...[
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () => _editar(e),
-            child: const Text('Editar'),
+        if (!excluido) ...[
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: _salvandoFeito ? null : _alternarFeito,
+            child: Text(_feito ? 'Desmarcar feito' : 'Marcar como feito'),
           ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _excluindo ? null : () => _excluir(e),
-            child: _excluindo
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Excluir'),
-          ),
+          if (ehAutor) ...[
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => _editar(e),
+              child: const Text('Editar'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _excluindo ? null : () => _excluir(e),
+              child: _excluindo
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Excluir'),
+            ),
+          ],
         ],
       ],
     );
@@ -170,6 +180,21 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+
+  /// Aviso no topo (excluído ou oculto). Texto puro: nada depende só de cor.
+  Widget _faixa(String texto) {
+    final cores = Theme.of(context).extension<CoresFans>()!;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cores.rule,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(texto),
     );
   }
 
