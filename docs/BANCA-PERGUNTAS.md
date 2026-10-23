@@ -30,7 +30,7 @@ Repository (SQLite: home_cache, materias, rascunhos, estado_pessoal)   SessaoSto
   PATCH (editar evento, com `If-Match`), DELETE (excluir evento, com `If-Match`).
 - SharedPreferences: 5 chaves (`sessao`, `temaEscuro`, `ultimaSincronizacao`, `homeSalvaEm`,
   `ultimoUsuarioId`). SQLite: arquivo `fans_lab.db`, 4 tabelas.
-- Verificado na última conferência: `flutter analyze` sem issues e `flutter test` com **152 testes, todos
+- Verificado na última conferência: `flutter analyze` sem issues e `flutter test` com **177 testes, todos
   verdes** (contagem por arquivo na Pergunta 29). Há também 13 testes contra o backend Spring local
   (`test_e2e/`), fora do `flutter test` padrão.
 
@@ -527,7 +527,7 @@ recebem uma função `AbrirDb`, então aceitam esse banco por injeção.
 
 ### 29. O que cada suíte prova, e o que não prova?
 
-**Falar:** São 152 testes em 12 arquivos, todos verdes, e o `flutter analyze` não aponta nada. Eles cobrem as
+**Falar:** São 177 testes em 13 arquivos, todos verdes, e o `flutter analyze` não aponta nada. Eles cobrem as
 camadas isoladamente: models, HTTP com cliente simulado, SQLite em memória, serviços de cache e envio, telas,
 e um roteiro completo com servidor simulado. Não cobrem o aparelho real nem o servidor real.
 
@@ -538,11 +538,12 @@ e um roteiro completo com servidor simulado. Não cobrem o aparelho real nem o s
 | `repositories_test.dart` | 14 | SQL, ordem, transações, regras de pendente, CRUD de rascunhos, `limparTudo` | arquivo real no aparelho, migração |
 | `services_test.dart` | 23 | `HomeService` (cache, offline, 401, 503 com cache, feito pendente) e `SyncService` (envio, 400 por item, 401, PUT, 404, concorrência) | envio automático, duplicação por timeout |
 | `sessao_store_test.dart` | 7 | sessão, tema e datas; JSON corrompido apaga a chave; `limpar` mantém o tema e o dono da última sessão | criptografia (não existe) |
-| `telas_home_test.dart` | 8 | login 401 mostra "E-mail ou senha incorretos."; Home na ordem do servidor; semana vazia; falha sem cache é erro; 401 volta ao login sem apagar a fila; outra conta apaga a fila de quem saiu | o "Sair" manual no aparelho; fechar e reabrir o app |
-| `telas_evento_test.dart` | 16 | formulário offline salva rascunho e avisa; título vazio não grava; fila mostra "aguardando envio"; autor vê Editar, não autor não; feito offline pelo detalhe; aviso de excluído e de oculto; dois toques em Salvar mandam um PATCH | 409 na tela; a confirmação de excluir |
-| `widgets_test.dart` | 20 | `MateriaChip` (sigla e cor inválida), `EventoCard` (prova sólida, entrega em contorno, distinção em cinza, fonte grande em 360 dp), `tempoRelativo` | |
+| `telas_home_test.dart` | 10 | login 401 mostra "E-mail ou senha incorretos."; Home na ordem do servidor; semana vazia; falha sem cache é erro; 401 volta ao login sem apagar a fila; outra conta apaga a fila de quem saiu | o "Sair" manual no aparelho; fechar e reabrir o app |
+| `telas_evento_test.dart` | 22 | formulário offline salva rascunho e avisa; título vazio não grava; fila mostra "aguardando envio"; autor vê Editar, não autor não; feito offline pelo detalhe; aviso de excluído e de oculto; dois toques em Salvar mandam um PATCH | 409 na tela; a confirmação de excluir |
+| `widgets_test.dart` | 25 | `MateriaChip` (sigla e cor inválida), `EventoCard` (prova sólida, entrega em contorno, distinção em cinza, fonte grande em 360 dp), `tempoRelativo` | |
 | `manifest_test.dart` | 4 | permissão de Internet e backup desligado no manifesto release; HTTP em claro só no debug | o APK gerado |
 | `localizacao_test.dart` | 1 | seletor de data sai em português, pelo `FansLabApp` | |
+| `home_regressoes_test.dart` | 12 | Sair não mostra "sessão expirada" falso; evento enviado aparece sem puxar a lista; um toque em sincronizar = uma tentativa; pré-carga de matérias; troca de conta falha fechado | |
 | `mensagem_sync_test.dart` | 4 | envio parcial (1 enviado, depois a rede cai) não diz "nada foi enviado", na Home e na Fila | |
 | `fluxo_demo_test.dart` | 1 | o roteiro da apresentação inteiro (online, modo avião, fila, sincronização), com servidor simulado em memória | o servidor real |
 

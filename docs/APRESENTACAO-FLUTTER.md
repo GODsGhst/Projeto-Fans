@@ -183,7 +183,7 @@ flutter test test/services_test.dart        # sincronização e offline: fila, P
 flutter test test/telas_home_test.dart      # Home: ordem do servidor, semana vazia, falha sem cache, 401 sem apagar a fila
 flutter test test/widgets_test.dart         # prova sólida, entrega com contorno, distinção em escala de cinza
 flutter test test/fluxo_demo_test.dart      # o roteiro inteiro (online, modo avião, fila, sincronização) com servidor simulado em memória
-flutter test                                # tudo: 152 testes (unitários e de tela, sem servidor)
+flutter test                                # tudo: 177 testes (unitários e de tela, sem servidor)
 ```
 
 Para mostrar um teste específico: `flutter test --plain-name "duas chamadas simultâneas"`.
