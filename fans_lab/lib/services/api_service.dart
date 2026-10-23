@@ -115,20 +115,28 @@ class ApiService {
     return r;
   }
 
-  /// Usa `detail`, depois `title` do ProblemDetail; sem nenhum dos dois, a tabela por status.
+  /// Status que o app conhece sai com o texto do app: o do servidor é técnico e às vezes sem acento.
+  /// O ProblemDetail (`detail`, depois `title`) só entra em 400, que diz qual campo está errado,
+  /// e em status fora da tabela. Em 400 o `title` ("Bad Request") não entra.
   ApiException _erroHttp(http.Response r, {required bool login}) {
     final status = r.statusCode;
     // No login, 401 é sempre credencial errada; a mensagem genérica do servidor não serve.
     if (login && status == 401) {
       return const ApiException.http(401, 'E-mail ou senha incorretos.');
     }
+    if (_statusConhecido(status)) return ApiException.http(status, _mensagemPadrao(status));
     final json = _decodificar(r);
     if (json is Map<String, dynamic>) {
-      final detalhe = _textoPreenchido(json['detail']) ?? _textoPreenchido(json['title']);
+      final detalhe = _textoPreenchido(json['detail']) ??
+          (status == 400 ? null : _textoPreenchido(json['title']));
       if (detalhe != null) return ApiException.http(status, detalhe);
     }
     return ApiException.http(status, _mensagemPadrao(status));
   }
+
+  /// Status com linha própria em [_mensagemPadrao], exceto 400, que tem regra à parte.
+  bool _statusConhecido(int status) =>
+      status >= 500 || const {401, 403, 404, 409, 428, 429}.contains(status);
 
   T _ler<T>(http.Response r, T Function(Map<String, dynamic>) fromJson) {
     return _converter(r, _decodificar(r), fromJson);

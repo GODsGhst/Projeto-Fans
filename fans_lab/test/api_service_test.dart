@@ -141,6 +141,15 @@ void main() {
       expect(e.mensagem, 'Sessão expirada. Entre de novo.');
     });
 
+    test('401 com detail do servidor usa a mensagem de sessão expirada do app', () async {
+      final api = _api((_) async => _resp({'status': 401, 'detail': 'Autenticacao necessaria'}, 401));
+
+      final e = await _falha(api.home());
+
+      expect(e.naoAutorizado, isTrue);
+      expect(e.mensagem, 'Sessão expirada. Entre de novo.');
+    });
+
     test('200 com corpo <html> vira respostaInvalida, sem marcar falta de conexão', () async {
       final api = _api((_) async => http.Response('<html>manutenção</html>', 200));
 
@@ -162,7 +171,7 @@ void main() {
   });
 
   group('erros HTTP', () {
-    test('404 com ProblemDetail usa o detail como mensagem', () async {
+    test('404 com ProblemDetail usa a mensagem do app, não o detail', () async {
       final api = _api((_) async => _resp(
             {'type': 'about:blank', 'title': 'Not Found', 'status': 404, 'detail': 'Evento não existe mais'},
             404,
@@ -171,11 +180,19 @@ void main() {
       final e = await _falha(api.evento('e9'));
 
       expect(e.naoEncontrado, isTrue);
-      expect(e.mensagem, 'Evento não existe mais');
+      expect(e.mensagem, 'Não encontrado — pode ter sido excluído.');
     });
 
-    test('ProblemDetail sem detail usa o title', () async {
-      final api = _api((_) async => _resp({'title': 'Requisição recusada', 'status': 400}, 400));
+    test('400 sem detail usa "Dados inválidos.", não o title do servidor', () async {
+      final api = _api((_) async => _resp({'title': 'Bad Request', 'status': 400}, 400));
+
+      final e = await _falha(api.criarEvento({'titulo': ''}));
+
+      expect(e.mensagem, 'Dados inválidos.');
+    });
+
+    test('status fora da tabela sem detail usa o title', () async {
+      final api = _api((_) async => _resp({'title': 'Requisição recusada', 'status': 422}, 422));
 
       final e = await _falha(api.criarEvento({'titulo': ''}));
 
@@ -374,7 +391,22 @@ void main() {
       final e = await _falha(api.atualizarEvento('e1', 2, {'titulo': 'x'}));
 
       expect(e.conflito, isTrue);
-      expect(e.mensagem, 'version divergente');
+      expect(e.mensagem, 'Alguém alterou este evento antes de você. Recarregue e tente de novo.');
+    });
+
+    test('atualizarEvento com 409 e detail técnico do backend usa a mensagem do app', () async {
+      final api = _api((_) async => _resp(
+            {
+              'status': 409,
+              'detail': 'Este registro mudou desde que voce abriu (version 1, voce enviou 0)',
+            },
+            409,
+          ));
+
+      final e = await _falha(api.atualizarEvento('e1', 0, {'titulo': 'x'}));
+
+      expect(e.conflito, isTrue);
+      expect(e.mensagem, 'Alguém alterou este evento antes de você. Recarregue e tente de novo.');
     });
 
     test('excluirEvento faz DELETE com If-Match e aceita 204', () async {
@@ -411,17 +443,17 @@ void main() {
       final api = _api((_) async => http.Response.bytes(
             utf8.encode(jsonEncode({
               'type': 'about:blank',
-              'title': 'Not Found',
-              'status': 404,
-              'detail': 'Evento não encontrado',
+              'title': 'Bad Request',
+              'status': 400,
+              'detail': 'Título não pode ficar em branco',
             })),
-            404,
+            400,
             headers: {'content-type': 'application/problem+json'},
           ));
 
-      final e = await _falha(api.evento('e9'));
+      final e = await _falha(api.criarEvento({'titulo': ''}));
 
-      expect(e.mensagem, 'Evento não encontrado');
+      expect(e.mensagem, 'Título não pode ficar em branco');
     });
   });
 }
