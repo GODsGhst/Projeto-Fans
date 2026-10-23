@@ -2484,7 +2484,8 @@ verdes (rodado 2× sem flake); `flutter test test_e2e/api_real_test.dart` contra
 - *A Home renderiza na ordem do servidor e o cache guarda a posição* (não-negociáveis 4 e 5).
 - *Sessão expirada não apaga a fila; "Sair" apaga com aviso; outra conta apaga antes de entrar*
   (falha fechado sem dono gravado) — rascunho nunca sai com autoria de outra pessoa (não-negociável 1).
-- *Mensagens de erro são do app*; o `detail` do servidor só aparece em 400.
+- *Mensagens de erro são do app* para 401/403/404/409/428/429/5xx; o `detail` do servidor só aparece em 400
+  (explica o campo) e em status fora dessa tabela. URL com esquema inválido vira `ApiException` antes de enviar.
 - *`.gitignore` da raiz ignorava qualquer `android/`* (era para o Capacitor): o manifest do Flutter,
   com a permissão INTERNET, nunca tinha entrado no repo. Exceção só para `fans_lab/android/`.
 - *`flutter_localizations` (SDK) entrou* para os seletores de data em pt-BR.

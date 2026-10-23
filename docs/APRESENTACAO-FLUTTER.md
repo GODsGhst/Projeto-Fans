@@ -185,7 +185,7 @@ flutter test test/repositories_test.dart    # SQLite (sqflite_common_ffi, sem ap
 flutter test test/services_test.dart        # sincronização e offline: fila, POST 201, PUT, duas chamadas simultâneas = 2 POSTs, 503 com cache
 flutter test test/telas_home_test.dart      # Home: ordem do servidor, semana vazia, falha sem cache, 401 sem apagar a fila
 flutter test test/widgets_test.dart         # prova sólida, entrega com contorno, distinção em escala de cinza
-flutter test test/fluxo_demo_test.dart      # o roteiro inteiro (online, modo avião, fila, sincronização) com servidor simulado em memória
+flutter test test/fluxo_demo_test.dart      # o fio principal do roteiro: login, criar online, feito, modo avião, criar offline, fila, sincronizar
 flutter test                                # tudo: 182 testes (unitários e de tela, sem servidor)
 ```
 

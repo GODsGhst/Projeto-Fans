@@ -407,7 +407,14 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
   coordenador, declarada: são itens baratos e dois deles fariam o aluno dizer algo errado na banca.
   Escopo travado na lista do R2′, sem frente nova: L4-A (URL inválida → `ApiException`), L4-B
   (spinner nos botões que esperam até 90 s), L4-C (Home sem turma diz isso), L4-D (roteiro 6.2,
-  checklist real da §24, resposta da banca).
+  checklist real da §24, resposta da banca). Todos com mutação de controle.
+- **V6 (Sonnet), verificação final: PRONTO PARA ENTREGAR.** Os 6 itens do fechamento comprovados por
+  mutação; `flutter analyze` sem issues; **`flutter test` 182/182, 2× seguidas**; repositório limpo
+  (nada de `.orig`, `if (false`, `skip:` ou rascunho); regras da §6 sem regressão. Corrigidas 5
+  imprecisões de documento que ele apontou. Lacunas de teste que ficam (código correto, sem teste que
+  o prenda): spinner do "Marcar como feito" no ramo OFFLINE do detalhe; `uri.host.isEmpty`.
+- **Loop encerrado.** Nota do último avaliador Opus: 18,75/20 (antes do fechamento). Pendências que só
+  o dono resolve: A28 (enunciado), APK + aparelho, limites da §9.
 
 ## 9. Riscos e pontos cegos
 

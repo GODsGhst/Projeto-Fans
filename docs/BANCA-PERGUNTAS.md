@@ -504,7 +504,7 @@ iOS). Não implementei por prazo, e isso está declarado no código e na entrega
 lança uma exceção para simular falha de rede. Assim confiro verbos, URLs, headers e corpo, e simulo 401, 404, 500,
 JSON quebrado e queda de rede, sem servidor.
 
-- **Código:** `test/api_service_test.dart` (29 testes). O `ApiService` aceita `client` e `timeout` no construtor;
+- **Código:** `test/api_service_test.dart` (30 testes). O `ApiService` aceita `client` e `timeout` no construtor;
   `AppDeps.padrao(client:)` repassa o cliente.
 - **Prova:** que o cliente cumpre o contrato (Bearer só com token; `If-Match: 3`; PUT em `estado-pessoal` com
   `{"feito":true}`; ordem da lista preservada; lista vazia é sucesso; `ClientException`, `SocketException` e timeout
@@ -548,7 +548,7 @@ e um roteiro completo com servidor simulado. Não cobrem o aparelho real nem o s
 | `localizacao_test.dart` | 1 | seletor de data sai em português, pelo `FansLabApp` | |
 | `home_regressoes_test.dart` | 12 | Sair não mostra "sessão expirada" falso; evento enviado aparece sem puxar a lista; um toque em sincronizar = uma tentativa; pré-carga de matérias; troca de conta falha fechado | |
 | `mensagem_sync_test.dart` | 4 | envio parcial (1 enviado, depois a rede cai) não diz "nada foi enviado", na Home e na Fila | |
-| `fluxo_demo_test.dart` | 1 | o roteiro da apresentação inteiro (online, modo avião, fila, sincronização), com servidor simulado em memória | o servidor real |
+| `fluxo_demo_test.dart` | 1 | o fio principal do roteiro: login, criar online, marcar feito online, modo avião com a Home do cache, criar offline, fila e sincronizar — com servidor simulado | editar/excluir, tema, editar offline e feito offline pelo detalhe (cobertos em `telas_*` e `home_regressoes_test.dart`); o servidor real |
 
 - **Como rodar para mostrar:** `export PATH=/opt/flutter-sdk/flutter/bin:$PATH && cd fans_lab && flutter analyze && flutter test`.
 - **Nunca foi feito** (diga, se perguntarem): execução em aparelho ou emulador nesta sessão

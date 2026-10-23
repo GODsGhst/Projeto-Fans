@@ -94,6 +94,7 @@ test_e2e/          13 testes contra o backend real (ver "Teste contra o backend 
 - **APK de release sem rede.** A permissão `INTERNET` está em `android/app/src/main/AndroidManifest.xml`. Não a remova.
 - **"Sem conexão com o servidor." com API local em `http://`.** Use o build de debug (`flutter run`) com `--dart-define=API_URL=http://10.0.2.2:8080/api/v1`. O release é só HTTPS e não alcança o backend local. Para apresentar, use a API de produção.
 - **"E-mail ou senha incorretos."** Senha errada no login (401).
+- **"Endereço do servidor inválido. Confira o API_URL."** O `--dart-define=API_URL` está sem `https://` (ou com esquema errado). Nada é enviado.
 - **401 em outras telas (sessão expirada).** O app volta ao login com a mensagem "Sessão expirada. Entre de novo.". Rascunhos e marcações não enviados continuam no aparelho: entre de novo com a mesma conta e eles são enviados. Entrar com outra conta apaga os dados locais da conta anterior, para não enviar evento com a autoria errada.
 - **Zerar dados.** Configurações → Sair (pede confirmação; apaga rascunhos e marcações não enviados e mantém o tema) ou desinstalar o app (apaga tudo).
 
