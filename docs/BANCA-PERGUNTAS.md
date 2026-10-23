@@ -28,15 +28,17 @@ Repository (SQLite: home_cache, materias, rascunhos, estado_pessoal)   SessaoSto
 
 - 5 verbos: GET (home, matérias, detalhe), POST (login, criar evento), PUT (marcar feito),
   PATCH (editar evento, com `If-Match`), DELETE (excluir evento, com `If-Match`).
-- SharedPreferences: 4 chaves (`sessao`, `temaEscuro`, `ultimaSincronizacao`, `homeSalvaEm`).
-  SQLite: arquivo `fans_lab.db`, 4 tabelas.
-- Verificado agora: `flutter analyze` sem issues; `flutter test` com **97 testes, todos verdes**
-  (api 20, models 19, repositories 13, services 14, sessao_store 6, telas_evento 5, telas_home 4, widgets 16).
+- SharedPreferences: 5 chaves (`sessao`, `temaEscuro`, `ultimaSincronizacao`, `homeSalvaEm`,
+  `ultimoUsuarioId`). SQLite: arquivo `fans_lab.db`, 4 tabelas.
+- Verificado na última conferência: `flutter analyze` sem issues e `flutter test` com **152 testes, todos
+  verdes** (contagem por arquivo na Pergunta 29). Há também 13 testes contra o backend Spring local
+  (`test_e2e/`), fora do `flutter test` padrão.
 
 ## Antes de entrar na sala
 
 1. Acorde a API: `curl https://projetofans-api.onrender.com/api/v1/saude`. O plano gratuito do Render dorme e a
-   primeira chamada pode levar cerca de 50 s (`docs/ENTREGA-FLUTTER.md` §5 e §9). A tela de login avisa isso.
+   primeira chamada pode levar cerca de 50 s (`docs/ENTREGA-FLUTTER.md` §5 e §9). O app espera até 90 s. A tela de
+   login avisa que a primeira entrada pode levar até 1 minuto.
 2. Ensaie no aparelho o roteiro offline (Pergunta 11). A entrega diz que nenhum APK foi gerado nem testado em
    aparelho na sessão de desenvolvimento (`docs/ENTREGA-FLUTTER.md` §9). Se você já rodou, diga o que viu.
 3. Leia as 5 armadilhas no fim. São as perguntas em que dá para se enrolar.
@@ -79,9 +81,11 @@ problema do pedido (401 sem autenticação, 403 sem permissão, 404 não existe)
 
 - **Apostila:** HTTP §4.3 lista 200, 201, 400, 401, 403, 404 e 500.
 - **Projeto:** 204, 409 (versão divergente), 428 (faltou `If-Match`) e 429 (muitas tentativas de login) não estão
-  na apostila; vêm do contrato da API (`docs/ENTREGA-FLUTTER.md` §5).
-- **Código:** `lib/services/api_service.dart: _enviar(esperado:)` (linha 111: `if (r.statusCode != esperado)`)
-  e `_erroHttp`.
+  na apostila; vêm do contrato da API (`docs/ENTREGA-FLUTTER.md` §5). As mensagens desses status são do app, não
+  do servidor: o texto técnico do ProblemDetail só aparece em 400 (onde diz qual campo está errado) e em status
+  que o app não conhece.
+- **Código:** `lib/services/api_service.dart: _enviar(esperado:)` (a comparação `r.statusCode != esperado`) e
+  `_erroHttp`.
 - **Limitação:** a comparação é de igualdade. Um 200 onde se esperava 201 também vira erro ("Erro HTTP 200.").
 
 ### 4. Como o JSON vira objeto Dart, e o caminho de volta?
@@ -94,7 +98,8 @@ respondeu num formato inesperado". Decodifico os bytes como UTF-8 de propósito.
 - **Apostila:** HTTP §8 (Model com `fromJson` e `jsonDecode`); Persistência §7 (`toMap`/`fromMap` para o SQLite).
 - **Projeto:** `campo<T>()` e `campoOpcional<T>()` não aceitam valor padrão em silêncio; `lerData` recusa
   `2026-02-30`, que o `DateTime.parse` rolaria para março. `utf8.decode(r.bodyBytes)` porque o `response.body`
-  do pacote `http` cai em Latin-1 quando o header não traz charset (documentado no `http` 1.6.0); há o teste "UTF-8".
+  do pacote `http` cai em Latin-1 quando o header não traz charset (documentado no `http` 1.6.0); há o grupo de
+  testes "UTF-8".
 - **Código:** `lib/models/formatos.dart: campo`, `lerData`; `lib/models/item_home.dart: ItemHome.fromJson,
   toMap, fromMap`; `lib/services/api_service.dart: _decodificar, _converter, _lerLista`;
   `lib/models/rascunho_evento.dart: toCriarJson`.
@@ -152,9 +157,10 @@ nenhuma tela importa `package:http` nem `sqflite`: só o `ApiService` fala HTTP 
 
 - **Apostila:** HTTP §13.3 (a tela cuida da interface, o Model representa dados, o Service concentra a API,
   fica mais fácil de testar e manter, a mesma API serve várias telas).
-- **Prova:** os 97 testes trocam o cliente HTTP e o banco por `AppDeps.padrao(client:, abrirDb:)`.
+- **Prova:** os testes trocam o cliente HTTP e o banco por `AppDeps.padrao(client:, abrirDb:)`.
 - **Código:** a classe `ApiService` se descreve como "Único ponto de HTTP do app".
-  A única exceção de camada é `lib/main.dart`, que chama `AppDatabase.limparTudo` no logout.
+  A exceção de camada é `lib/main.dart`, que chama `AppDatabase.limparTudo` no logout e também quando alguém entra
+  com outra conta (para não enviar a fila de um com a autoria de outro).
 
 ### 9. Como as dependências chegam às telas? Por que setState e não Provider ou Bloc?
 
@@ -164,8 +170,11 @@ Provider ou Bloc seria dependência a mais sem necessidade. O custo é que toda 
 global (sessão, tema) sobe por callbacks até o `FansLabApp`.
 
 - **Apostila:** HTTP §3 (pré-requisito: "gerenciamento de estado com setState").
-- **Projeto:** a entrega proíbe dependência além de `http`, `shared_preferences`, `sqflite`, `path` (e
-  `sqflite_common_ffi` nos testes). Ver `pubspec.yaml`.
+- **Projeto:** a regra da entrega é não adicionar dependência além de `http`, `shared_preferences`, `sqflite` e
+  `path`, com `sqflite_common_ffi` nos testes (`docs/ENTREGA-FLUTTER.md` §4). Duas coisas aparecem no `pubspec.yaml`
+  além disso, e você deve dizer isso se perguntarem: `flutter_localizations` (pacote do próprio SDK do Flutter,
+  adicionado na volta 2 para datas e seletores em português) e as dependências que vêm do template `flutter create`
+  (`cupertino_icons`, `flutter_lints`).
 - **Código:** `lib/main.dart: main, FansLabApp` (callbacks `_aoEntrar`, `_aoSair`, `_aoMudarTema`);
   `lib/app_deps.dart`.
 
@@ -183,7 +192,8 @@ não.
 - **Apostila:** Persistência §5 (tabela: memória não permanece; SharedPreferences, SQLite e banco remoto
   permanecem), §2 e §14 (o banco remoto não fica dentro do app).
 - **Projeto:** SharedPreferences: `sessao` (JSON com jwt, usuário e turmaId), `temaEscuro`, `ultimaSincronizacao`,
-  `homeSalvaEm`. SQLite: `home_cache`, `materias`, `rascunhos`, `estado_pessoal`. Remoto: Postgres atrás da API.
+  `homeSalvaEm` e `ultimoUsuarioId` (dono da última sessão, para a regra de troca de conta). SQLite: `home_cache`,
+  `materias`, `rascunhos`, `estado_pessoal`. Remoto: Postgres atrás da API.
 - **Código:** `lib/repositories/sessao_store.dart: SessaoStore`; `lib/database/app_database.dart: _esquema`.
 
 ### 11. O que sobrevive a fechar o app? Como você provou?
@@ -191,7 +201,7 @@ não.
 **Falar:** Ao fechar, perde-se o que está só em memória: a lista na tela, o `api.token`, o estado dos botões.
 Permanecem a sessão e o tema (SharedPreferences) e o cache da Home, as matérias, os rascunhos e o estado pessoal
 (SQLite). Ao abrir, o `main()` lê a sessão e recoloca o token no `ApiService`; a Home tenta a API e, sem rede, cai
-no cache. Logout apaga tudo isso, menos o tema.
+no cache. Logout apaga tudo isso, menos o tema. Uma sessão expirada (401) também não apaga a fila.
 
 - **Código:** `lib/main.dart: main()` (`carregar()` e `api.token = sessao?.jwt`);
   `lib/database/app_database.dart: AppDatabase.abrir` (arquivo `fans_lab.db` em `getDatabasesPath()`);
@@ -239,12 +249,13 @@ servidor disser.
 **Falar:** Salvo primeiro no SQLite com `sincronizado = 0` e só então tento a API. Se der certo, marco
 `sincronizado = 1`. Se falhar por falta de rede, o item continua pendente para o próximo envio. Se o servidor
 recusar (400, por exemplo), guardo a mensagem em `ultimo_erro` e mostro na fila. "Marcar feito" segue o mesmo
-caminho: grava local e depois faz o PUT.
+caminho: grava local e depois faz o PUT. Além dos botões, a Home também envia a fila quando carrega com rede
+(Pergunta 30).
 
 - **Apostila:** Persistência §17 (salvar no SQLite, tentar enviar; sucesso = sincronizada, erro = pendente;
   `sincronizado` 0 ou 1), §18 e §19 (loop sobre os pendentes).
 - **Projeto:** vai além do loop da apostila: ordem de criação (`local_id ASC`); erro por item (um rascunho com 400
-  não trava os outros); 401 interrompe e sobe; falta de rede interrompe o loop.
+  não trava os outros); 401 interrompe e sobe, sem apagar nada; falta de rede interrompe o loop.
 - **Código:** `lib/screens/evento_form_page.dart: _salvar` (`rascunhos.inserir` e depois `_sincronizar`);
   `lib/services/sync_service.dart: SyncService._executar`; `rascunho_repository.dart: listarPendentes,
   marcarSincronizado, registrarErro`; `evento_detalhe_page.dart: _alternarFeito` (`estado.marcarLocal` e depois
@@ -252,24 +263,27 @@ caminho: grava local e depois faz o PUT.
 
 ### 15. O que acontece sem rede, tela por tela?
 
-**Falar:** Criar evento e marcar feito funcionam: ficam no aparelho e o app avisa "Salvo no aparelho, será enviado
-quando houver conexão". A Home mostra o último cache com a faixa "Sem conexão, mostrando o que foi salvo às
-HH:mm". O que precisa de internet é editar, excluir, abrir o detalhe de um evento e entrar (login).
+**Falar:** Criar evento e marcar feito funcionam: ficam no aparelho e o app avisa "Salvo no aparelho — será enviado
+quando houver conexão". A Home mostra o último cache com a faixa "Sem conexão com o servidor — mostrando o que foi
+salvo às HH:mm". Editar e excluir precisam de internet, e abrir o detalhe também: sem rede, o detalhe mostra o
+erro, mas ainda deixa marcar feito. Entrar precisa de internet.
 
 | Tela / ação | Sem rede |
 |---|---|
-| Criar evento | Salva rascunho, `sincronizado = 0`, mensagem "Salvo no aparelho" |
-| Marcar feito | Grava em `estado_pessoal` (pendente), mesma mensagem |
-| Home | Cache com `offline: true` e a faixa; se nunca carregou, erro com "Tentar de novo" |
-| Matérias do formulário | Cache se existir; senão erro |
-| Detalhe do evento | Sem cache: erro com "Tentar de novo" |
+| Criar evento | Salva rascunho, `sincronizado = 0`, mensagem "Salvo no aparelho — será enviado quando houver conexão." |
+| Marcar feito | Grava em `estado_pessoal` (pendente), mesma mensagem. Funciona também no detalhe sem rede |
+| Home | Cache com `offline: true` e a faixa "Sem conexão com o servidor — mostrando o que foi salvo às HH:mm."; se nunca carregou, erro com "Tentar de novo" |
+| Matérias do formulário | Cache se existir (a Home grava as matérias quando carrega online); senão erro com "Tentar de novo" |
+| Detalhe do evento | "Sem conexão com o servidor." com "Marcar como feito" e "Tentar de novo" |
 | Editar / excluir evento | "Editar precisa de internet." / "Excluir precisa de internet." |
-| Login | Erro "Sem conexão com o servidor." |
+| Sincronizar (Home ou Fila) | "Sem conexão — nada foi enviado." |
+| Login | "Sem conexão com o servidor." |
 
 - **Código:** `lib/services/home_service.dart: carregar` (`salvoEm == null` relança), `materias`;
   `lib/screens/home_page.dart: _corpo` (faixa offline); `evento_form_page.dart: _msgEditar`;
-  `evento_detalhe_page.dart: _excluir` e `build` (chama `api.evento` direto, sem cache).
-- **Limitação:** offline de verdade são três coisas: criar, marcar feito e reler a Home. O detalhe não tem cache.
+  `evento_detalhe_page.dart: _estadoErro` (botão de feito offline) e `_excluir`.
+- **Limitação:** offline de verdade são três coisas: criar, marcar feito e reler a Home. O detalhe não tem cache:
+  sem rede, ele só oferece marcar feito.
 
 ### 16. E se o usuário clicar várias vezes? Duplica?
 
@@ -280,23 +294,25 @@ depois de enviado, o rascunho vira `sincronizado = 1` e não entra mais na fila.
 
 - **Apostila:** HTTP §15 lista "usuário clicando repetidamente no botão de envio" entre os cenários a testar.
 - **Código:** `lib/screens/login_page.dart: _entrar` (`if (_enviando ...) return`); `evento_form_page.dart: _salvar`;
-  `lib/services/sync_service.dart: sincronizar` (`_emCurso ??= _executar().whenComplete(...)`).
+  `lib/services/sync_service.dart: sincronizar` (`_emCurso`, com rodada extra quando há chamada concorrente).
 - **Teste:** `services_test.dart` "duas chamadas simultâneas de sincronizar() fazem exatamente 2 POSTs"
   (2 rascunhos, 2 POSTs, e os dois resultados são o mesmo objeto).
-- **Limitação:** o desabilitar dos botões não tem teste de widget. O ícone de sincronizar da Home não é
-  desabilitado; ele depende do `_emCurso`. Caso de borda: um item que entra na fila quando uma execução em curso
-  já leu a fila só sai no próximo envio, e a mensagem "Enviado para a turma." do formulário não consulta `pendentes`.
+- **Limitação:** o desabilitar dos botões não tem teste de widget. O ícone de sincronizar da Home fica desabilitado
+  enquanto o próprio toque roda (`_sincronizando`), mas a sincronização que a Home dispara ao carregar com rede não
+  passa por essa flag: quem impede envio duplicado nesse caso é o `_emCurso`. Caso de borda: um item que entra na
+  fila quando uma execução em curso já leu a fila só sai no próximo envio, e a mensagem "Enviado para a turma." do
+  formulário não consulta `pendentes`.
 
 ### 17. Então nunca duplica? E se o POST chegar ao servidor mas a resposta se perder?
 
 **Falar:** Esse caso pode duplicar, e está documentado no código. O POST chega, o servidor cria o evento, a
-resposta não volta (timeout de 60 s). O app trata como "sem conexão", o rascunho continua pendente e o próximo
+resposta não volta (o timeout é de 90 s). O app trata como "sem conexão", o rascunho continua pendente e o próximo
 envio cria outro evento. O mesmo vale se o app morrer entre o 201 e o `marcarSincronizado`. A correção é uma chave
 de idempotência: o cliente manda um UUID por rascunho e o servidor ignora repetições. Não está implementada, nem
 no app nem no servidor. O PUT do "feito" não tem esse problema, porque repetir dá o mesmo resultado.
 
-- **Código:** `lib/services/sync_service.dart: _executar` (comentário `ponytail:` nas linhas 48 a 50, depois
-  `await _api.criarEvento(...)` e `await _rascunhos.marcarSincronizado(...)`); `api_service.dart: _enviar`
+- **Código:** `lib/services/sync_service.dart: _executar` (comentário `ponytail:` antes do `await _api.criarEvento(...)`,
+  que explica o reenvio duplicado e aponta a chave de idempotência); `api_service.dart: _enviar`
   (`TimeoutException` vira `semConexao`).
 - **Limitação:** assuma isso em voz alta; é uma limitação conhecida, não um bug escondido.
 
@@ -304,8 +320,8 @@ no app nem no servidor. O PUT do "feito" não tem esse problema, porque repetir 
 
 **Falar:** Todo evento tem um número de versão. Ao editar ou excluir, o app manda `If-Match` com a versão que ele
 leu. Se outro aluno salvou antes, a versão no servidor mudou e ele responde 409 Conflict, sem sobrescrever. Sem o
-header, responde 428. Na tela de edição o app avisa "Alguém alterou este evento antes de você, volte e abra de
-novo"; na exclusão avisa "Recarregando" e busca o evento de novo, já com a versão nova.
+header, responde 428. Na edição, o app avisa "Alguém alterou este evento antes de você. Volte e abra de novo."; na
+exclusão, avisa "Alguém alterou este evento antes. Recarregando…" e busca o evento de novo, já com a versão nova.
 
 - **Apostila:** não cobre isso. É decisão do projeto, para não perder em silêncio a edição de outra pessoa
   (conceito geral de concorrência otimista).
@@ -313,7 +329,8 @@ novo"; na exclusão avisa "Recarregando" e busca o evento de novo, já com a ver
   `lib/screens/evento_form_page.dart: _salvar, _msgEditar`; `lib/screens/evento_detalhe_page.dart: _excluir`.
 - **Código (servidor):** `backend/src/main/java/com/projetofans/service/EventoService.java: exigirVersao`
   (lança `ConflitoVersaoException`, 409) e `erro/IfMatchAusenteException.java` (428).
-- **Testes:** `api_service_test.dart`: "PATCH com If-Match: 3", "409 vira conflito", "DELETE com If-Match".
+- **Testes:** `api_service_test.dart`: "atualizarEvento faz PATCH com If-Match: 3, envia o corpo e devolve o Evento",
+  "atualizarEvento com 409 vira conflito", "excluirEvento faz DELETE com If-Match e aceita 204".
 - **Limitação:** não há merge nem comparação: a pessoa refaz a edição. Editar e excluir são só online (não entram na
   fila), então não existe conflito esperando na fila. O formato é do projeto: `If-Match: 3` (inteiro puro, não um ETag entre
   aspas) e 409 no lugar do 412 que a RFC 9110 usaria. O fluxo de conflito na tela não tem teste de widget.
@@ -328,9 +345,9 @@ X": repetir dá o mesmo resultado (idempotente), e como não mexe no evento comp
 - **Apostila:** HTTP §11 (PUT atualiza); Persistência §23 aceita "PUT/PATCH". Decisão P3 em
   `docs/ENTREGA-FLUTTER.md` §2.
 - **Código:** `lib/services/api_service.dart: marcarFeito` e `atualizarEvento`;
-  `backend/src/main/java/com/projetofans/web/controller/QuadroController.java: marcar` (o comentário explica por
-  que é PUT e sem `If-Match`) e `EventoController` (só há PATCH e DELETE em `/eventos/{id}`).
-  Teste: `api_service_test.dart` "marcarFeito faz PUT em estado-pessoal".
+  `backend/src/main/java/com/projetofans/web/controller/QuadroController.java` (o comentário explica por que o
+  "feito" é PUT e sem `If-Match`) e `EventoController`, que não tem PUT: a edição é `@PatchMapping("/{id}")`.
+  Teste: `api_service_test.dart` "marcarFeito faz PUT em estado-pessoal com {"feito":true} e aceita 204".
 - **Limitação (honesta):** o PATCH do app envia o objeto inteiro (`toCriarJson`, como o servidor espera), então na
   prática é uma substituição completa com o verbo PATCH. O verbo é ditado pelo contrato do servidor. O servidor
   não oferece PUT para editar evento.
@@ -342,30 +359,33 @@ X": repetir dá o mesmo resultado (idempotente), e como não mexe no evento comp
 ### 20. O que cada status vira na tela?
 
 **Falar:** Todo erro de rede ou HTTP sai do `ApiService` como uma única `ApiException` com mensagem pronta em
-português. A mensagem é o `detail` do ProblemDetail do servidor; se não houver, o `title`; se não houver, uma
-tabela por status. As telas têm os três estados (carregando, sucesso, erro) e usam SnackBar ou botão "Tentar de
-novo".
+português. Para 401, 403, 404, 409, 428, 429 e 5xx, a mensagem é do app. O texto técnico do servidor (`detail`) só
+aparece em 400, onde explica o campo errado, e em status que o app não conhece. Por isso a tela não mostra texto
+cru do servidor. As telas têm os três estados (carregando, sucesso, erro) e usam SnackBar ou botão "Tentar de novo".
 
 | Situação | Mensagem | O que o app faz |
 |---|---|---|
-| Sem rede, timeout, TLS | "Sem conexão com o servidor." | Home vai para o cache; criar e feito vão para a fila |
+| Sem rede, TLS | "Sem conexão com o servidor." | Home vai para o cache; criar e feito vão para a fila |
+| Timeout (90 s) | "O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes." | Igual à falta de rede: Home vai para o cache; criar e feito vão para a fila |
 | 400 | `detail` do servidor ou "Dados inválidos." | No envio: grava `ultimo_erro` no rascunho; aparece na fila |
 | 401 no login | "E-mail ou senha incorretos." | Fica no login |
-| 401 depois | "Sessão expirada. Entre de novo." | Home faz logout; outras telas só avisam |
+| 401 nas outras chamadas | "Sessão expirada. Entre de novo." (Home) ou "Sessão expirada — volte e entre de novo." (demais telas) | Volta ao login. A fila fica no aparelho |
 | 403 | "Você não tem permissão para isso." | Botões Editar e Excluir só aparecem ao autor |
-| 404 | "Não encontrado, pode ter sido excluído." | No envio de "feito": tira da fila |
-| 409 | "Alguém alterou este evento antes..." | Recarrega (excluir) ou pede para reabrir (editar) |
+| 404 | "Não encontrado — pode ter sido excluído." | No envio de "feito": sai da fila |
+| 409 | Edição: "Alguém alterou este evento antes de você. Volte e abra de novo." Exclusão: "Alguém alterou este evento antes. Recarregando…" | Exclusão recarrega o evento; edição pede para reabrir |
 | 428 | "Faltou a versão do registro." | O app sempre manda `If-Match`; só apareceria por bug |
 | 429 | "Muitas tentativas. Espere alguns minutos." | Limite de tentativas de login do servidor |
-| 5xx | "Erro no servidor. Tente de novo em instantes." | Home e matérias caem no cache (ver armadilha 3) |
+| 5xx | "Erro no servidor. Tente de novo em instantes." | Home e matérias caem no cache (ver Pergunta 32); no envio, o item fica pendente com esse erro |
 | 200 com JSON quebrado | "O servidor respondeu num formato inesperado." | Não é tratado como "sem conexão" |
 
 - **Apostila:** HTTP §15 (cenários: sem conexão, 404, 500, JSON inesperado) e Persistência §21.
-- **Código:** `lib/services/api_service.dart: _erroHttp` (linha 116), `_mensagemPadrao` (linha 165);
+- **Código:** `lib/services/api_service.dart: _erroHttp` e `_mensagemPadrao` (a tabela de mensagens do app);
   `lib/services/api_exception.dart: ApiException` (`semConexao`, `naoAutorizado`, `conflito`, `naoEncontrado`).
   Telas: `home_page.dart`, `evento_detalhe_page.dart`, `evento_form_page.dart`, `fila_page.dart`, `login_page.dart`.
-- **Testes:** `api_service_test.dart` grupos "erros HTTP" e "sem conexão" (404 com ProblemDetail, só `title`, 500,
-  400/403/428/429, `ClientException`, `SocketException`, timeout).
+- **Testes:** `api_service_test.dart` grupos "erros HTTP" e "sem conexão": "404 com ProblemDetail usa a mensagem do
+  app, não o detail", "400 sem detail usa \"Dados inválidos.\", não o title do servidor", "status fora da tabela sem
+  detail usa o title", "timeout vira semConexao com mensagem de servidor acordando", "CertificateException (TLS) vira
+  semConexao".
 
 ### 21. Por que uma falha não vira lista vazia?
 
@@ -378,25 +398,30 @@ servidor respondeu 200 com `[]`, e aí o texto é "Nada nos próximos 14 dias."
   null é `SessaoStore.carregar`, para sessão salva corrompida (`FormatException`), e o efeito é pedir novo login.
 - **Código:** `lib/services/home_service.dart: carregar` (`if (salvoEm == null) rethrow;`) e `materias`
   (`if (cache.isEmpty) rethrow;`); `lib/screens/home_page.dart: _corpo` (erro com botão) e `_carregar` (com lista
-  já carregada, mantém a lista e mostra a faixa "Não foi possível atualizar").
+  já carregada, mantém a lista e mostra a faixa "Não foi possível atualizar: <motivo>").
 - **Testes:** `telas_home_test.dart` "falha sem cache mostra Tentar de novo, nunca lista vazia" e "home com lista
   vazia mostra o texto de semana vazia"; `services_test.dart` "sem conexão sem nunca ter carregado lança
-  semConexao, nunca lista vazia".
+  semConexao, nunca lista vazia" e "503 sem nunca ter carregado lança ApiException com status 503, nunca lista vazia".
 
 ### 22. E o timeout, o servidor dormindo e uma URL incorreta?
 
-**Falar:** O timeout é de 60 s porque o servidor gratuito do Render dorme e a primeira chamada pode levar cerca de
-50 s; a tela de login avisa isso. Timeout, DNS que não resolve e falha de TLS viram `semConexao`. URL com host
-errado cai aí; caminho errado volta 404. A URL vem de `--dart-define=API_URL`, não está fixa no código.
+**Falar:** O timeout é de 90 s porque o servidor gratuito do Render dorme e a primeira chamada pode levar cerca de
+50 s; a tela de login avisa que a primeira entrada pode levar até 1 minuto. Quando o tempo estoura, a tela mostra
+"O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes.". DNS que não resolve e
+falha de TLS aparecem como "Sem conexão com o servidor.". URL com host errado cai aí; caminho errado volta 404. A
+URL vem de `--dart-define=API_URL`, não está fixa no código.
 
 - **Apostila:** HTTP §15 lista "URL incorreta" e "sem conexão" como cenários.
-- **Código:** `lib/services/api_service.dart: ApiService` (`timeout = Duration(seconds: 60)`) e `_enviar`
-  (captura `SocketException`, `http.ClientException`, `TimeoutException`, `HandshakeException`);
-  `lib/screens/login_page.dart` (texto "pode levar até 1 minuto"); `lib/config.dart`.
-- **Limitação:** timeout e "sem rede" ficam na mesma mensagem; o app não distingue servidor lento de aparelho
-  offline. E só essas quatro exceções são convertidas: uma `API_URL` malformada a ponto de fazer `Uri.parse`
-  lançar `FormatException` escaparia como exceção que não é `ApiException`, e as telas só capturam
-  `ApiException`. Então "toda falha sai como ApiException" é o objetivo do contrato, não uma garantia total.
+- **Código:** `lib/services/api_service.dart: ApiService` (`timeout = Duration(seconds: 90)`) e `_enviar`
+  (captura `SocketException`, `http.ClientException`, `TimeoutException` e `TlsException`; `HandshakeException` e
+  `CertificateException` são subclasses de `TlsException`); `lib/screens/login_page.dart` (texto "pode levar até 1
+  minuto"); `lib/config.dart`.
+- **Limitação:** a mensagem de timeout só aparece quando o servidor não responde em 90 s. Um aparelho sem rede
+  recebe "Sem conexão com o servidor.", então as duas situações têm textos diferentes. Mesmo assim, o app não
+  consegue afirmar com certeza se o problema é o servidor lento ou a internet quando o pedido estoura o tempo. E só
+  essas exceções de rede são convertidas: uma `API_URL` malformada a ponto de fazer `Uri.parse` lançar
+  `FormatException` escaparia como exceção que não é `ApiException`, e as telas só capturam `ApiException`. Então
+  "toda falha sai como ApiException" é o objetivo do contrato, não uma garantia total.
 
 ---
 
@@ -428,14 +453,16 @@ Quando o token expira, a pessoa digita a senha de novo.
   `lib/repositories/sessao_store.dart` (doc: "A senha nunca passa por aqui");
   `backend/src/main/java/com/projetofans/config/SegurancaConfig.java: passwordEncoder` (BCrypt).
 - **Limitação:** nenhum teste afirma "a senha não é salva"; isso vale pela ausência do campo no modelo. A URL padrão
-  é HTTPS, e o app não registra nada em log (não há `print` em `lib/`).
+  é HTTPS. O app não grava token nem senha em log: as únicas saídas de console são `debugPrint` de erros em
+  `home_page.dart`.
 
 ### 25. Qual o limite de guardar o JWT em SharedPreferences? Qual a alternativa?
 
 **Falar:** SharedPreferences não é criptografado. O JWT fica em texto no armazenamento do app, protegido só pelo
-isolamento do Android. Quem tiver acesso ao arquivo (aparelho com root, backup, malware com privilégio) pode usar o
-token como se fosse a pessoa, até ele expirar. A alternativa é o pacote `flutter_secure_storage`, que guarda cifrado
-(Keystore no Android, Keychain no iOS). Não implementei por prazo, e isso está declarado no código e na entrega.
+isolamento do Android. Quem tiver acesso ao arquivo (aparelho com root, malware com privilégio) pode usar o
+token como se fosse a pessoa, até ele expirar. O backup do Android está desligado, então o arquivo não sai por
+backup. A alternativa é o pacote `flutter_secure_storage`, que guarda cifrado (Keystore no Android, Keychain no
+iOS). Não implementei por prazo, e isso está declarado no código e na entrega.
 
 - **Apostila:** HTTP §16, caixa "Atenção": credenciais devem usar "mecanismos apropriados de configuração e
   armazenamento seguro". A apostila não cita o pacote; o nome é conhecimento adicional. Persistência trata o
@@ -443,20 +470,25 @@ token como se fosse a pessoa, até ele expirar. A alternativa é o pacote `flutt
 - **Código:** `lib/repositories/sessao_store.dart: SessaoStore.salvar` (comentário `ponytail:` apontando
   `flutter_secure_storage`); `docs/ENTREGA-FLUTTER.md` §9. O pacote não está no `pubspec.yaml`.
 - **Projeto:** a troca é pequena: só o jwt iria para o armazenamento seguro, e o tema continuaria no
-  SharedPreferences. O que existe hoje: logout apaga a sessão, o padrão é HTTPS, o token expira no servidor.
-  O manifesto Android não define `android:allowBackup`, então vale o padrão do sistema; não afirme que o arquivo
-  fica fora de backup.
+  SharedPreferences. O que existe hoje: logout apaga a sessão, o padrão é HTTPS, o token expira no servidor, e o
+  manifesto Android define `android:allowBackup="false"` e `android:fullBackupContent="false"`
+  (`android/app/src/main/AndroidManifest.xml`; o teste `manifest_test.dart` confere isso). O logout não revoga o
+  token no servidor, porque não existe endpoint de revogação.
 
 ### 26. Como o app percebe que o token expirou?
 
 **Falar:** Ele não lê a data de dentro do JWT. Só descobre quando o servidor responde 401. Na Home, o 401 mostra
-"Sessão expirada. Entre de novo." e faz logout, voltando ao login. Nas outras telas aparece a mensagem "Sessão
-expirada, volte e entre de novo". No login, 401 significa credencial errada e a mensagem é outra.
+"Sessão expirada. Entre de novo." e volta ao login, sem apagar a fila. Nas outras telas aparece a mensagem
+"Sessão expirada — volte e entre de novo.". No login, 401 significa credencial errada e a mensagem é outra.
 
 - **Código:** `lib/services/api_service.dart: _erroHttp` (`login && status == 401`);
-  `lib/screens/home_page.dart: _carregar`, `_sincronizar`, `_sessaoExpirou` (linha 83);
-  `lib/main.dart: _aoSair` (linhas 52 a 58).
-- **Limitação:** veja a armadilha 4: esse logout automático apaga a fila offline.
+  `lib/screens/home_page.dart: _carregar`, `_sincronizar`, `_sessaoExpirou` (chama `aoSessaoExpirar`);
+  `lib/main.dart: _sessaoExpirou` (limpa a sessão e mantém o banco), `_aoEntrar` (apaga o banco só se a conta mudou)
+  e `_aoSair` (apaga tudo, usado pelo "Sair" manual).
+- **Testes:** `telas_home_test.dart` "401 na app volta ao login e não apaga a fila" e "entrar com outra conta apaga a
+  fila de quem saiu".
+- **Limitação:** esses testes passam pelo `FansLabApp` com HTTP simulado. Não cobrem o aparelho real nem o caso de
+  fechar e reabrir o app depois do 401.
 
 ---
 
@@ -469,12 +501,14 @@ expirada, volte e entre de novo". No login, 401 significa credencial errada e a 
 lança uma exceção para simular falha de rede. Assim confiro verbos, URLs, headers e corpo, e simulo 401, 404, 500,
 JSON quebrado e queda de rede, sem servidor.
 
-- **Código:** `test/api_service_test.dart` (20 testes). O `ApiService` aceita `client` e `timeout` no construtor;
+- **Código:** `test/api_service_test.dart` (29 testes). O `ApiService` aceita `client` e `timeout` no construtor;
   `AppDeps.padrao(client:)` repassa o cliente.
 - **Prova:** que o cliente cumpre o contrato (Bearer só com token; `If-Match: 3`; PUT em `estado-pessoal` com
   `{"feito":true}`; ordem da lista preservada; lista vazia é sucesso; `ClientException`, `SocketException` e timeout
-  viram `semConexao`; corpo `<html>` ou item sem `titulo` viram `respostaInvalida`).
-- **Não prova:** que o servidor real responde assim, nem TLS, nem comportamento em Android.
+  viram `semConexao`; corpo `<html>` ou item sem `titulo` viram `respostaInvalida`; mensagens do app no lugar do
+  `detail` do servidor).
+- **Não prova:** que o servidor real responde assim, nem TLS real, nem comportamento em Android. O contrato com o
+  backend Spring local está em `test_e2e/api_real_test.dart` (13 testes), que roda à parte.
 
 ### 28. Por que sqflite_common_ffi? O que ele prova?
 
@@ -483,7 +517,7 @@ computador. O `sqflite_common_ffi` traz um SQLite real por FFI. Nos testes eu ch
 `databaseFactory` e uso `AppDatabase.abrirEmMemoria()`, que dá um banco novo e vazio a cada teste. Os repositórios
 recebem uma função `AbrirDb`, então aceitam esse banco por injeção.
 
-- **Código:** `test/repositories_test.dart` (13 testes), `test/services_test.dart` (14), usando
+- **Código:** `test/repositories_test.dart` (14 testes), `test/services_test.dart` (23), usando
   `lib/database/app_database.dart: abrirEmMemoria` (`singleInstance: false`) e o `typedef AbrirDb`.
 - **Prova:** o SQL de verdade: ordem por `posicao`, `LEFT JOIN` do feito, `substituir` em transação, regras de
   pendente e `limparTudo` esvaziando as 4 tabelas.
@@ -493,24 +527,29 @@ recebem uma função `AbrirDb`, então aceitam esse banco por injeção.
 
 ### 29. O que cada suíte prova, e o que não prova?
 
-**Falar:** São 97 testes em 8 arquivos, todos verdes, e o `flutter analyze` não aponta nada. Eles cobrem as
-camadas isoladamente: models, HTTP com cliente simulado, SQLite em memória, serviços de cache e envio, e algumas
-telas. Não cobrem o aparelho real nem o servidor real.
+**Falar:** São 152 testes em 12 arquivos, todos verdes, e o `flutter analyze` não aponta nada. Eles cobrem as
+camadas isoladamente: models, HTTP com cliente simulado, SQLite em memória, serviços de cache e envio, telas,
+e um roteiro completo com servidor simulado. Não cobrem o aparelho real nem o servidor real.
 
 | Arquivo | Testes | O que prova | O que não prova |
 |---|---|---|---|
-| `api_service_test.dart` | 20 | contrato HTTP do cliente, status para `ApiException`, sem conexão, JSON inválido, UTF-8 | servidor real |
-| `models_test.dart` | 19 | `fromJson`, `toMap`/`fromMap` de ida e volta, `lerData`, `FormatException` | |
-| `repositories_test.dart` | 13 | SQL, ordem, transações, regras de pendente, CRUD de rascunhos, `limparTudo` | arquivo real no aparelho, migração |
-| `services_test.dart` | 14 | `HomeService` (cache, offline, 401, feito pendente) e `SyncService` (envio, 400 por item, 401, PUT, 404, concorrência) | 5xx na Home, envio automático, duplicação por timeout |
-| `sessao_store_test.dart` | 6 | sessão, tema e datas; JSON corrompido apaga a chave; `limpar` mantém o tema | criptografia (não existe) |
-| `telas_home_test.dart` | 4 | login 401 mostra mensagem; Home na ordem do servidor; lista vazia; falha sem cache é erro | 401 vira logout (`aoSair` é `() {}` nos testes); faixa offline |
-| `telas_evento_test.dart` | 5 | formulário offline salva rascunho e avisa; título vazio não grava; fila mostra "aguardando envio"; autor vê Editar, não autor não | 409 na tela, excluir, envio bem-sucedido pelo botão Sincronizar |
-| `widgets_test.dart` | 16 | `MateriaChip` (sigla e cor inválida), `EventoCard` (prova sólida, entrega em contorno), `tempoRelativo` | |
+| `api_service_test.dart` | 29 | contrato HTTP do cliente, verbos e If-Match, mensagens do app para 401/404/409 etc., sem conexão e timeout, JSON inválido, UTF-8 | servidor real |
+| `models_test.dart` | 25 | `fromJson`, `toMap`/`fromMap` de ida e volta, `lerData`, `FormatException`, chaves ausentes | |
+| `repositories_test.dart` | 14 | SQL, ordem, transações, regras de pendente, CRUD de rascunhos, `limparTudo` | arquivo real no aparelho, migração |
+| `services_test.dart` | 23 | `HomeService` (cache, offline, 401, 503 com cache, feito pendente) e `SyncService` (envio, 400 por item, 401, PUT, 404, concorrência) | envio automático, duplicação por timeout |
+| `sessao_store_test.dart` | 7 | sessão, tema e datas; JSON corrompido apaga a chave; `limpar` mantém o tema e o dono da última sessão | criptografia (não existe) |
+| `telas_home_test.dart` | 8 | login 401 mostra "E-mail ou senha incorretos."; Home na ordem do servidor; semana vazia; falha sem cache é erro; 401 volta ao login sem apagar a fila; outra conta apaga a fila de quem saiu | o "Sair" manual no aparelho; fechar e reabrir o app |
+| `telas_evento_test.dart` | 16 | formulário offline salva rascunho e avisa; título vazio não grava; fila mostra "aguardando envio"; autor vê Editar, não autor não; feito offline pelo detalhe; aviso de excluído e de oculto; dois toques em Salvar mandam um PATCH | 409 na tela; a confirmação de excluir |
+| `widgets_test.dart` | 20 | `MateriaChip` (sigla e cor inválida), `EventoCard` (prova sólida, entrega em contorno, distinção em cinza, fonte grande em 360 dp), `tempoRelativo` | |
+| `manifest_test.dart` | 4 | permissão de Internet e backup desligado no manifesto release; HTTP em claro só no debug | o APK gerado |
+| `localizacao_test.dart` | 1 | seletor de data sai em português, pelo `FansLabApp` | |
+| `mensagem_sync_test.dart` | 4 | envio parcial (1 enviado, depois a rede cai) não diz "nada foi enviado", na Home e na Fila | |
+| `fluxo_demo_test.dart` | 1 | o roteiro da apresentação inteiro (online, modo avião, fila, sincronização), com servidor simulado em memória | o servidor real |
 
 - **Como rodar para mostrar:** `export PATH=/opt/flutter-sdk/flutter/bin:$PATH && cd fans_lab && flutter analyze && flutter test`.
-- **Nunca foi feito** (diga, se perguntarem): teste de integração contra a API real; execução em aparelho nesta
-  sessão (`docs/ENTREGA-FLUTTER.md` §9).
+- **Nunca foi feito** (diga, se perguntarem): execução em aparelho ou emulador nesta sessão
+  (`docs/ENTREGA-FLUTTER.md` §9). Os 13 testes de `test_e2e/` rodam contra o backend Spring local, não contra o
+  Render.
 
 ---
 
@@ -520,24 +559,26 @@ telas. Não cobrem o aparelho real nem o servidor real.
 
 **Por que enrola:** a tabela da entrega fala em "fila" e "sincronização", e dá vontade de responder "automático".
 
-**Resposta segura:** "Não. O app é offline-first para criar evento e marcar feito: nada se perde sem rede, tudo
-fica na fila. Mas o envio é disparado por ação: o ícone de sincronizar da Home, o botão 'Sincronizar agora' da fila,
-ou ao salvar um evento ou marcar feito (cada um tenta enviar a fila toda). Não escuto a conectividade nem tenho
-envio em segundo plano. O próximo passo seria sincronizar ao voltar a rede ou ao abrir o app." Complete: editar,
-excluir, abrir o detalhe e entrar precisam de internet.
+**Resposta segura:** "Não sozinho, em segundo plano. O app é offline-first para criar evento e marcar feito: nada
+se perde sem rede, tudo fica na fila. O envio acontece por ação, e também quando eu abro ou recarrego a Home com
+rede: a Home envia a fila sozinha nesse momento. Os outros gatilhos são o ícone de sincronizar, o botão 'Sincronizar
+agora' da fila e salvar um evento ou marcar feito. Não há serviço em segundo plano nem escuta de conectividade: se a
+rede voltar com o app fechado, nada é enviado até eu abrir o app." Complete: editar, excluir, abrir o detalhe e
+entrar precisam de internet.
 
-- **Onde:** `sincronizar()` só é chamado em `home_page.dart: _sincronizar`, `fila_page.dart: _sincronizar`,
-  `evento_form_page.dart: _sincronizar`, `evento_detalhe_page.dart: _alternarFeito`. A Home ao abrir só chama
-  `contarPendentes()`. Não há `Timer`, listener de conectividade nem WorkManager em `lib/`.
+- **Onde:** `sincronizar()` é chamado em `home_page.dart: _carregar` (quando a Home carrega online com pendentes)
+  e `_sincronizar`, `fila_page.dart: _sincronizar`, `evento_form_page.dart: _sincronizar`,
+  `evento_detalhe_page.dart: _alternarFeito`. Não há `Timer`, listener de conectividade nem WorkManager em `lib/`.
 
-### 31. "Os 97 testes passam, então o app funciona no celular?"
+### 31. "Os testes passam, então o app funciona no celular?"
 
 **Por que enrola:** teste verde passa sensação de "está provado".
 
 **Resposta segura:** "Os testes provam as camadas isoladas: contrato HTTP com cliente simulado, SQL com SQLite
-em memória, regras de cache e de fila. Não provam o aparelho nem o servidor real. A demonstração ao vivo é a
-prova de ponta a ponta." Se você ensaiou no Android, conte o que viu; se não ensaiou, diga que não. A entrega
-registra que nenhum APK foi testado em aparelho na sessão de desenvolvimento.
+em memória, regras de cache e de fila, e o roteiro da demo com servidor simulado. Não provam o aparelho nem o
+servidor real. Há 13 testes contra o backend Spring local, que provam o contrato com o servidor de verdade, mas não
+o Render. A demonstração ao vivo é a prova de ponta a ponta." Se você ensaiou no Android, conte o que viu; se não
+ensaiou, diga que não. A entrega registra que nenhum APK foi testado em aparelho na sessão de desenvolvimento.
 
 - **Onde:** Pergunta 29; `docs/ENTREGA-FLUTTER.md` §2 (P5) e §9.
 
@@ -546,27 +587,31 @@ registra que nenhum APK foi testado em aparelho na sessão de desenvolvimento.
 **Por que enrola:** a resposta natural é "sim", mas o código diz outra coisa.
 
 **Resposta segura:** "Não só. Na Home e nas matérias, o erro 5xx do servidor também cai no cache, com a mesma
-faixa 'Sem conexão, mostrando o que foi salvo'. A intenção é que servidor fora do ar, como o Render dormindo ou
-caindo, não deixe a tela em branco. A frase é imprecisa para o caso 5xx. No envio da fila a regra é outra: 5xx
-conta como erro do item e ele fica pendente. Esse caso 5xx não tem teste."
+faixa 'Sem conexão com o servidor — mostrando o que foi salvo às HH:mm'. A intenção é que servidor fora do ar, como o
+Render dormindo ou caindo, não deixe a tela em branco. A frase é imprecisa para o caso 5xx: o aparelho pode ter
+internet, quem falhou foi o servidor. No envio da fila a regra é outra: 5xx conta como erro do item, que fica
+pendente com a mensagem guardada. Esses casos têm teste: a Home com 503 depois de um carregar online devolve o cache,
+e o envio com 503 em tudo não grava a data da sincronização."
 
-- **Onde:** `lib/services/home_service.dart: _semRede` (linha 81: `e.semConexao || (e.status ?? 0) >= 500`);
+- **Onde:** `lib/services/home_service.dart: _semRede` (`e.semConexao || (e.status ?? 0) >= 500`);
   `lib/screens/home_page.dart: _corpo` (texto da faixa); `lib/services/sync_service.dart: _executar` (só
-  `semConexao` interrompe).
+  `semConexao` interrompe o loop).
 
 ### 33. "Se o token expirar e eu tiver evento ainda não enviado, o que acontece?"
 
-**Por que enrola:** o aluno pensa na mensagem "Sessão expirada" e não nas consequências.
+**Por que enrola:** o aluno pensa na mensagem "Sessão expirada" e acha que a fila foi junto.
 
-**Resposta segura:** "Hoje, a fila é apagada. Na Home, o 401 chama o logout, e o logout chama
-`AppDatabase.limparTudo`, que esvazia rascunhos e marcações pendentes, sem pedir confirmação. O aviso de confirmação
-existe só no 'Sair' manual das configurações. O token vale 30 dias no servidor e também deixaria de valer se for
-inválido, então é raro, mas é perda de dado real. A correção é não apagar a fila em 401: manter os dados, pedir novo
-login e enviar depois. Não está feita."
+**Resposta segura:** "A fila é preservada. Na Home, o 401 leva ao login com a mensagem 'Sessão expirada. Entre de
+novo.', mas não apaga rascunhos nem marcações pendentes. Se a mesma conta entrar de novo, a fila é enviada
+normalmente. Se outra conta entrar, os dados locais da conta anterior são apagados antes, para não enviar evento com
+a autoria errada. Só o 'Sair' manual das configurações apaga a fila de propósito, e ele pede confirmação. O token vale
+30 dias no servidor. Se ele expirar com a fila cheia, o que está no aparelho espera o novo login."
 
-- **Onde:** `lib/screens/home_page.dart: _sessaoExpirou` (linha 83) chama `widget.aoSair()`; `lib/main.dart:
-  _aoSair` (linhas 52 a 58) chama `AppDatabase.limparTudo`; confirmação só em
-  `lib/screens/configuracoes_page.dart: _confirmarSair`. Nenhum teste cobre o caminho (nos testes `aoSair` é `() {}`).
+- **Testes:** `telas_home_test.dart` "401 na app volta ao login e não apaga a fila" e "entrar com outra conta apaga a
+  fila de quem saiu". Esses testes passam pelo `FansLabApp`, mas não cobrem fechar e reabrir o app.
+- **Onde:** `lib/main.dart: _sessaoExpirou` (limpa a sessão, mantém o banco), `_aoEntrar` (apaga o banco se o dono
+  mudou) e `_aoSair` (apaga tudo); `lib/screens/home_page.dart: _sessaoExpirou` (chama `aoSessaoExpirar`);
+  confirmação só em `lib/screens/configuracoes_page.dart: _confirmarSair`.
 
 ### 34. "Isso não é o app que a apostila pediu (tarefas, Catálogo de Jogos)."
 
@@ -585,8 +630,9 @@ sincronização, com loading, erro e sucesso em todas as telas." Não diga que o
 
 ## Frases para não dizer
 
-- "Sincroniza automaticamente quando volta a internet." (Pergunta 30)
+- "Sincroniza sozinho quando a rede volta." (Pergunta 30: só sincroniza quando a Home carrega com rede ou quando você age)
 - "Nunca duplica." (Pergunta 17)
 - "O token está seguro no aparelho." (Pergunta 25)
 - "Os testes provam que funciona no celular." (Pergunta 31)
 - "Offline funciona em tudo." (Pergunta 15: são criar, marcar feito e reler a Home)
+- "O 401 apaga a fila." (Pergunta 33: não apaga; só o "Sair" manual apaga)

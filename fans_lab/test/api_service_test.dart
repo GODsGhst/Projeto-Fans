@@ -326,6 +326,14 @@ void main() {
     });
   });
 
+  group('timeout', () {
+    // O servidor pode demorar a acordar (ver a mensagem de timeout em _enviar): o padrão não pode encurtar.
+    test('padrão é 90 s', () {
+      final api = ApiService(client: MockClient((_) async => _resp(<Object>[], 200)));
+      expect(api.timeout, const Duration(seconds: 90));
+    });
+  });
+
   group('baseUrl', () {
     test('com barra no fim não gera //', () async {
       late http.Request enviado;

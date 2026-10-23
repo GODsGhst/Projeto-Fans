@@ -190,9 +190,11 @@ class _FilaPageState extends State<FilaPage> {
     try {
       final r = await widget.deps.sync.sincronizar();
       if (r.enviados > 0) _mudou = true;
-      final texto = r.semConexao
-          ? 'Sem conexão — nada foi enviado.'
-          : 'Enviados: ${r.enviados} · Com erro: ${r.comErro} · Pendentes: ${r.pendentes}';
+      final texto = r.semConexao && r.enviados > 0
+          ? 'Enviados: ${r.enviados} · a conexão caiu antes do resto.'
+          : r.semConexao
+              ? 'Sem conexão — nada foi enviado.'
+              : 'Enviados: ${r.enviados} · Com erro: ${r.comErro} · Pendentes: ${r.pendentes}';
       messenger.showSnackBar(SnackBar(content: Text(texto)));
     } on ApiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(_mensagem(e))));

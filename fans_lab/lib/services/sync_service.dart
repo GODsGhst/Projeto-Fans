@@ -43,19 +43,19 @@ class SyncService {
 
   Future<ResultadoSync> _rodar() async {
     var enviados = 0;
-    var comErro = 0;
     try {
       late ResultadoSync r;
       do {
         _repetir = false;
         r = await _executar();
         enviados += r.enviados;
-        comErro += r.comErro;
       } while (_repetir && !r.semConexao);
+      // enviados é soma (itens enviados são distintos). comErro e pendentes são da última
+      // rodada: a rodada extra reenvia o rascunho que já falhou, e somar contaria o mesmo erro duas vezes.
       // Nada de `await` depois do último teste de `_repetir`: quem chegar agora começa do zero.
       return ResultadoSync(
         enviados: enviados,
-        comErro: comErro,
+        comErro: r.comErro,
         pendentes: r.pendentes,
         semConexao: r.semConexao,
       );

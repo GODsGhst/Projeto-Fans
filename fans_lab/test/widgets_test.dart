@@ -85,6 +85,7 @@ void main() {
       final decoracao = container.decoration as BoxDecoration;
       expect(decoracao.color, CoresFans.claro.surface);
       expect((decoracao.border as Border).top.width, 1);
+      expect((decoracao.border as Border).top.color, CoresFans.claro.rule);
     });
 
     test('regra §6.4: prova e entrega distinguíveis em escala de cinza nos dois temas', () {
@@ -189,5 +190,9 @@ void main() {
 
   test('contorno do tema claro não some: rule com alfa de pelo menos 0x24', () {
     expect(CoresFans.claro.rule.a, greaterThanOrEqualTo(0x24 / 255));
+  });
+
+  test('contorno do tema escuro não some: rule com alfa de pelo menos 0x29', () {
+    expect(CoresFans.escuro.rule.a, greaterThanOrEqualTo(0x29 / 255));
   });
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:fans_lab/app_deps.dart';
@@ -201,6 +202,20 @@ void main() {
       );
     });
 
+    test('materias com 503 depois de um carregamento online devolve o cache', () async {
+      var servidorCaiu = false;
+      final deps = await _montar((req) async {
+        if (servidorCaiu) return _json(_problema(503, 'Servidor indisponível'), 503);
+        return _json([_materiaJson('m1', 'BD')]);
+      });
+      await deps.home.materias();
+      servidorCaiu = true;
+
+      final lista = await deps.home.materias();
+
+      expect(lista.single.sigla, 'BD');
+    });
+
     test('materias: online e offline devolvem a mesma ordem (por sigla), mesmo se o servidor manda fora de ordem', () async {
       var online = true;
       final deps = await _montar((req) async {
@@ -389,5 +404,51 @@ void main() {
       expect(todos, hasLength(2));
       expect(todos.every((x) => x.sincronizado), isTrue);
     });
+
+    test('rascunho que sempre dá 400 + chamada concorrente: comErro conta 1, não 2 (vale a última rodada)', () async {
+      var posts = 0;
+      late AppDeps deps;
+      Future<ResultadoSync>? segunda;
+      deps = await _montar((req) async {
+        if (req.method == 'POST') {
+          posts++;
+          // A 2ª chamada entra enquanto a 1ª ainda envia: isso pede a rodada extra.
+          if (posts == 1) segunda = deps.sync.sincronizar();
+        }
+        return _json(_problema(400, 'Título inválido'), 400);
+      });
+      await deps.rascunhos.inserir(_rascunho('P1'));
+
+      final r = await deps.sync.sincronizar();
+
+      expect(identical(await segunda, r), isTrue);
+      expect(posts, 2);
+      expect(r.comErro, 1);
+      expect(r.enviados, 0);
+      expect(r.pendentes, 1);
+    });
+
+    for (final (nome, erro) in <(String, Exception)>[
+      ('TIMEOUT', TimeoutException('servidor demorou para responder')),
+      ('ClientException', http.ClientException('sem rede')),
+    ]) {
+      test('chamada concorrente com POST em $nome: 1 POST só, semConexao, sem ultimaSincronizacao', () async {
+        var posts = 0;
+        final deps = await _montar((req) async {
+          if (req.method == 'POST') posts++;
+          throw erro;
+        });
+        await deps.rascunhos.inserir(_rascunho('P1'));
+
+        final resultados = await Future.wait([
+          deps.sync.sincronizar(),
+          deps.sync.sincronizar(),
+        ]);
+
+        expect(posts, 1);
+        expect(resultados.every((r) => r.semConexao), isTrue);
+        expect(await deps.sessao.ultimaSincronizacao(), isNull);
+      });
+    }
   });
 }
