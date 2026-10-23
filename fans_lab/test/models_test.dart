@@ -1,3 +1,4 @@
+import 'package:fans_lab/models/autoria.dart';
 import 'package:fans_lab/models/evento.dart';
 import 'package:fans_lab/models/evento_detalhe.dart';
 import 'package:fans_lab/models/formatos.dart';
@@ -81,6 +82,44 @@ void main() {
     });
   });
 
+  group('Autoria', () {
+    test('ida e volta por toJson preserva selo, edição e nomes', () {
+      final original = Autoria.fromJson({
+        'autorId': 'a0000000-0000-4000-8000-000000000003',
+        'autorNome': 'Marcos',
+        'autorSelo': 'PROFESSOR',
+        'criadoEm': '2026-10-20T13:00:00Z',
+        'atualizadoEm': '2026-10-21T09:30:00Z',
+        'editadoPorNome': 'Prof. Marcos',
+        'editadoPorSelo': 'PROFESSOR',
+      });
+      final volta = Autoria.fromJson(original.toJson());
+
+      expect(volta.autorId, 'a0000000-0000-4000-8000-000000000003');
+      expect(volta.autorNome, 'Marcos');
+      expect(volta.autorSelo, 'PROFESSOR');
+      expect(volta.criadoEm, DateTime.utc(2026, 10, 20, 13));
+      expect(volta.atualizadoEm, DateTime.utc(2026, 10, 21, 9, 30));
+      expect(volta.editadoPorNome, 'Prof. Marcos');
+      expect(volta.editadoPorSelo, 'PROFESSOR');
+    });
+
+    test('chaves ausentes (o servidor omite null) viram null', () {
+      final json = Map<String, dynamic>.from(_autoria)
+        ..remove('autorSelo')
+        ..remove('atualizadoEm')
+        ..remove('editadoPorNome')
+        ..remove('editadoPorSelo');
+      final a = Autoria.fromJson(json);
+
+      expect(a.autorNome, 'Ana');
+      expect(a.autorSelo, isNull);
+      expect(a.atualizadoEm, isNull);
+      expect(a.editadoPorNome, isNull);
+      expect(a.editadoPorSelo, isNull);
+    });
+  });
+
   group('ItemHome', () {
     test('fromJson lê todos os campos', () {
       final item = ItemHome.fromJson(_itemHomeJson);
@@ -98,6 +137,13 @@ void main() {
 
     test('hora null continua null', () {
       final item = ItemHome.fromJson({..._itemHomeJson, 'hora': null});
+      expect(item.hora, isNull);
+    });
+
+    test('chave hora ausente (o servidor omite null) parseia como null', () {
+      final json = Map<String, dynamic>.from(_itemHomeJson)..remove('hora');
+      final item = ItemHome.fromJson(json);
+      expect(item.titulo, 'Prova 2');
       expect(item.hora, isNull);
     });
 
@@ -189,6 +235,38 @@ void main() {
       expect(mat.url, 'https://exemplo.com/slides-3');
       expect(mat.dataAula, DateTime(2026, 10, 10));
     });
+
+    test('chaves ausentes em Evento (o servidor omite null) viram null', () {
+      final json = Map<String, dynamic>.from(_eventoJson)
+        ..remove('hora')
+        ..remove('sala')
+        ..remove('excluidoEm');
+      final ev = Evento.fromJson(json);
+
+      expect(ev.titulo, 'Lista 3');
+      expect(ev.hora, isNull);
+      expect(ev.sala, isNull);
+      expect(ev.excluidoEm, isNull);
+    });
+
+    test('material sem url e sem dataAula parseia com null', () {
+      final det = EventoDetalhe.fromJson({
+        ..._eventoJson,
+        'materiais': [
+          {
+            'id': 'mt0000000-0000-4000-8000-000000000002',
+            'tipo': 'AULA',
+            'titulo': 'Slides aula 4',
+            'autoria': _autoria,
+          },
+        ],
+      });
+      final mat = det.materiais.single;
+
+      expect(mat.titulo, 'Slides aula 4');
+      expect(mat.url, isNull);
+      expect(mat.dataAula, isNull);
+    });
   });
 
   group('Sessao', () {
@@ -212,6 +290,21 @@ void main() {
       expect(volta.jwt, 'eyJ.payload.sig');
       expect(volta.usuario.email, 'o@x.com');
       expect(volta.turmaId, isNull);
+    });
+
+    test('chaves ausentes: turmaId e usuario.docenteStatus', () {
+      final s = Sessao.fromJson({
+        'jwt': 'eyJ.payload.sig',
+        'usuario': {
+          'id': 'u1',
+          'nome': 'Otávio',
+          'email': 'o@x.com',
+          'tipoConta': 'ALUNO',
+        },
+      });
+      expect(s.jwt, 'eyJ.payload.sig');
+      expect(s.usuario.nome, 'Otávio');
+      expect(s.turmaId, isNull);
     });
   });
 

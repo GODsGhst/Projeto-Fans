@@ -82,6 +82,23 @@ void main() {
       },
     );
 
+    test(
+      'listar ordena pela posicao gravada, não pela ordem de inserção',
+      () async {
+        final db = await AppDatabase.abrirEmMemoria();
+        final repo = HomeCacheRepository(() async => db);
+
+        // Gravado direto no banco, com as posições fora da ordem de inserção.
+        // Sem o ORDER BY, a leitura sai na ordem do rowid (2, 0, 1) e este teste falha.
+        await db.insert('home_cache', _item('e2', '2026-10-27').toMap(2));
+        await db.insert('home_cache', _item('e0', '2026-10-25').toMap(0));
+        await db.insert('home_cache', _item('e1', '2026-10-26').toMap(1));
+
+        final lista = await repo.listar();
+        expect(lista.map((i) => i.eventoId), ['e0', 'e1', 'e2']);
+      },
+    );
+
     test('substituir troca o snapshot inteiro', () async {
       final db = await AppDatabase.abrirEmMemoria();
       final repo = HomeCacheRepository(() async => db);
