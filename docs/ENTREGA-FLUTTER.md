@@ -407,5 +407,8 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
   token já copiado vale até expirar (720 h). O app limpa tudo localmente.
 - (V5) **O APK de release é assinado com a chave debug** (TODO do template Flutter). Serve para
   entregar ao professor; não serve para loja.
+- (V2) **Entrar com outra conta apaga, sem aviso, a fila não enviada de quem saiu.** É de propósito:
+  rascunho nunca sai com a autoria de outra pessoa (regra §6.1). Avisar exigiria um
+  `scaffoldMessengerKey` global — ficou de fora.
 - (V5) HTTP em claro só no build **debug**: apontar o debug para um IP da rede local manda senha e JWT
   sem criptografia. Para o emulador (`10.0.2.2`) é loopback e não há risco.
