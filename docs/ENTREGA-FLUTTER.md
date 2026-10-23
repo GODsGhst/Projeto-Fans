@@ -90,7 +90,10 @@ para acordar o servidor → timeout de 60 s). Todas as rotas exceto `/auth/*` ex
 | PUT | `/eventos/{id}/estado-pessoal` | `{"feito": true}` | 204 |
 
 JSON (chaves exatas; datas `"2026-10-25"`, horas `"19:00:00"` ou `"19:00"`, instantes ISO-8601 UTC;
-ids são UUID string; enums em MAIÚSCULAS):
+ids são UUID string; enums em MAIÚSCULAS). **O servidor OMITE chaves nulas** (Jackson `non_null`):
+`null` nos exemplos abaixo quer dizer "a chave pode não vir". `autoria.atualizadoEm` vem preenchido já
+na criação (≈ `criadoEm`); "foi editado" é `editadoPorNome != null`. Formatos conferidos contra o
+backend real pelo V3 (13/13 em `fans_lab/test_e2e/api_real_test.dart`):
 
 ```jsonc
 // AuthResponse
@@ -107,7 +110,7 @@ ids são UUID string; enums em MAIÚSCULAS):
 {"id":"uuid","tipo":"PROVA","titulo":"...","data":"2026-10-25","hora":null,"sala":null,"materiaId":"uuid",
  "materiaSigla":"BD","materiaCorHex":"#1D4ED8","autoria":{...},"version":3,"visivelTurma":true,"excluidoEm":null}
 // EventoDetalhe = campos de Evento no MESMO nível + "materiais"
-{ ...campos de Evento..., "materiais":[{"id":"uuid","tipo":"LINK","titulo":"Slides aula 3","url":"https://..."|null,
+{ ...campos de Evento..., "materiais":[{"id":"uuid","tipo":"AULA"|"ADICIONAL","titulo":"Slides aula 3","url":"https://..."|null,
   "dataAula":"2026-10-10"|null,"autoria":{...}}]}
 // CriarEvento (POST e PATCH)
 {"materiaId":"uuid","tipo":"PROVA","titulo":"...","data":"2026-10-25","hora":"19:00"|null,"sala":null|"B-10"}
@@ -369,7 +372,14 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
   datas em português (`flutter_localizations`) fica para a volta 2, porque mexe no `pubspec.yaml`,
   que está com outro agente.
 - Verificado: `dl.google.com` bloqueado neste ambiente → **sem Android SDK, sem APK gerado aqui**.
-  A API do Render também não é alcançável daqui; nada foi testado contra o servidor real.
+  A API do Render também não é alcançável daqui.
+- **V3 (Sonnet) subiu o backend Spring LOCAL** (perfil `dev`, Postgres embutido) e rodou o
+  `ApiService` e o `SyncService` reais contra ele: **13/13 verdes, nenhuma incompatibilidade de
+  contrato**. Teste em `fans_lab/test_e2e/api_real_test.dart` (fora de `test/`, precisa de servidor).
+  Como subir: `cd backend && sh ./mvnw -DskipTests spring-boot:run -Dspring-boot.run.profiles=dev`
+  (o `mvnw` está sem bit de execução, por isso o `sh`). Seed de dev: `ana@exemplo.dev` /
+  `otavio@exemplo.dev`, senha `senha123`, turma `TURMA01`.
+- V5 (Sonnet, segurança): nenhum ALTO; riscos baixos registrados na §9.
 
 ## 9. Riscos e pontos cegos
 
