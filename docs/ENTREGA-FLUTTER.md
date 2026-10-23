@@ -45,7 +45,7 @@ Interface 1,0 · Organização 1,0 · Tratamento de erros 0,5 · Apresentação 
 | Dados após fechar o app | cache da Home e rascunhos no SQLite; sessão e tema no SharedPreferences |
 | Offline | Home cai para o cache com aviso "sem conexão — mostrando o que foi salvo em HH:mm"; criar evento e marcar feito funcionam offline (fila) |
 | Sincronização | `SyncService.sincronizar()` envia rascunhos (POST) e feitos (PUT) pendentes; tela mostra pendente / enviado / erro |
-| Loading / erro / sucesso | todas as telas têm os 3 estados; SnackBar de sucesso e de erro |
+| Loading / erro / sucesso | Home, detalhe, formulário e fila têm os 3 estados (Configurações só lê preferências locais); SnackBar de sucesso e de erro |
 | Organização | `models / database / repositories / services / screens / widgets` (apostila §20) |
 
 ## 4. Arquitetura
@@ -370,3 +370,8 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
   armazenamento seguro para credenciais; o caminho é `flutter_secure_storage`. Ficou fora por
   prazo — está declarado aqui e no código.
 - Sem Android SDK aqui: **nenhum APK foi gerado nem testado em aparelho nesta sessão.**
+- **POST duplicado após timeout** (achado do R1, provado): se o POST chega ao servidor mas a
+  resposta passa do timeout, o rascunho fica pendente e o próximo envio cria o evento de novo.
+  Mitigação: timeout de 90 s e API acordada antes. Correção real: chave de idempotência no backend.
+- Sem tela para criar material: "Materiais vinculados" mostra o que já existe no servidor.
+- PATCH e DELETE são só online (precisam da `version` atual); não entram na fila offline.
