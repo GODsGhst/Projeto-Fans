@@ -386,3 +386,9 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
   Mitigação: timeout de 90 s e API acordada antes. Correção real: chave de idempotência no backend.
 - Sem tela para criar material: "Materiais vinculados" mostra o que já existe no servidor.
 - PATCH e DELETE são só online (precisam da `version` atual); não entram na fila offline.
+- (V5, segurança) **Logout não revoga o JWT no servidor** — não existe endpoint de revogação; um
+  token já copiado vale até expirar (720 h). O app limpa tudo localmente.
+- (V5) **O APK de release é assinado com a chave debug** (TODO do template Flutter). Serve para
+  entregar ao professor; não serve para loja.
+- (V5) HTTP em claro só no build **debug**: apontar o debug para um IP da rede local manda senha e JWT
+  sem criptografia. Para o emulador (`10.0.2.2`) é loopback e não há risco.
