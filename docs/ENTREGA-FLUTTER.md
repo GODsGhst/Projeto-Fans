@@ -74,7 +74,7 @@ Rodar: `export PATH=/opt/flutter-sdk/flutter/bin:$PATH && cd /home/user/Projeto-
 ## 5. Contrato da API (fonte: `backend/src/main/java/com/projetofans/web`)
 
 Base: `https://projetofans-api.onrender.com/api/v1` (Render free: a 1ª chamada pode levar ~50 s
-para acordar o servidor → timeout de 60 s). Todas as rotas exceto `/auth/*` exigem
+para acordar o servidor → timeout de 90 s, com mensagem própria de "servidor acordando"). Todas as rotas exceto `/auth/*` exigem
 `Authorization: Bearer <jwt>`. Erros saem como ProblemDetail (RFC 7807):
 `{"type","title","status","detail"}` — use `detail` (ou `title`) como mensagem quando houver.
 
@@ -222,7 +222,7 @@ class ApiException implements Exception {
   @override String toString() => mensagem;
 }
 class ApiService {
-  ApiService({http.Client? client, String baseUrl = apiUrl, Duration timeout = const Duration(seconds: 60)});
+  ApiService({http.Client? client, String baseUrl = apiUrl, Duration timeout = const Duration(seconds: 90)});
   String? token;                                   // jwt; quando não-nulo vai em Authorization: Bearer
   Future<Sessao> login(String email, String senha);              // POST /auth/login 200
   Future<List<ItemHome>> home();                                 // GET /home 200, ordem preservada
@@ -380,6 +380,13 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
   (o `mvnw` está sem bit de execução, por isso o `sh`). Seed de dev: `ana@exemplo.dev` /
   `otavio@exemplo.dev`, senha `senha123`, turma `TURMA01`.
 - V5 (Sonnet, segurança): nenhum ALTO; riscos baixos registrados na §9.
+- **Volta 2.** V1 (Sonnet) verificou os 12 achados do R1 com mutação numa cópia: **10 corrigidos,
+  2 parciais (código certo, faltava teste), 0 regressões**; provou que o laço `_repetir` não duplica
+  POST nem roda para sempre. Achou 2 bugs menores introduzidos na volta 1 (contagem de erro em
+  dobro; "nada foi enviado" quando 1 foi). Em paralelo: L2-A (mensagens do app no lugar do detail
+  cru do servidor), H8 (pt-BR), L2-B (evento excluído/oculto, rascunho órfão), L2-C (os 2 bugs do
+  V1 + 5 testes que faltavam), H9 (teste do roteiro da demo), H7 (docs), V2 (telas), V4 (a11y/design).
+  Coordenador: a troca de conta passou a falhar fechado (achado do V5).
 
 ## 9. Riscos e pontos cegos
 
