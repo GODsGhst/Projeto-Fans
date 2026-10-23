@@ -123,7 +123,9 @@ class EventoCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            runSpacing: 4,
                             children: [
                               MateriaChip(sigla: materiaSigla, corHex: materiaCorHex),
                               const SizedBox(width: 8),

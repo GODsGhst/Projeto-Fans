@@ -126,6 +126,26 @@ void main() {
       expect(find.text('Ana · há 2 h'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
+
+    testWidgets('prova com sigla longa, feito e fonte 2x não estoura em 360 dp', (tester) async {
+      await tester.pumpWidget(envolver(MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+        child: SizedBox(
+          width: 360,
+          child: EventoCard(
+            tipo: TipoEvento.prova,
+            titulo: 'Prova 2',
+            data: DateTime(2026, 10, 25),
+            hora: '19:00',
+            materiaSigla: 'ABCDEFGHIJKL',
+            materiaCorHex: '#1D4ED8',
+            autoriaTexto: 'Ana · há 2 dias',
+            feito: true,
+          ),
+        ),
+      )));
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('tempoRelativo', () {
