@@ -9,7 +9,7 @@ Textos entre aspas são os da tela, conferidos com grep no código. Teste no apa
 ## Antes da banca (preparação, 10 min antes)
 
 1. **Acorde a API.** `curl https://projetofans-api.onrender.com/api/v1/saude` (ou abra a URL no navegador). Deve responder `{"status":"ok",...}`. Se der 502 ou demorar, repita até responder. Ela volta a dormir se ficar parada, então acorde perto da hora, não horas antes.
-2. **Entre uma vez** no app com sua conta, com rede. A Home precisa carregar uma vez com rede: isso grava o cache da Home e as matérias. Sem isso, a Home não mostra nada sem rede e o formulário não abre.
+2. **Entre uma vez** no app com sua conta, com rede. A Home precisa carregar uma vez com rede: isso grava o cache da Home e as matérias. Sem isso, a Home não mostra nada sem rede e o formulário não abre. Se a Home mostrar **"Sua conta ainda não está em nenhuma turma. Entre numa turma pelo app da turma e tente de novo."**, a conta não tem turma e a Home não mostra a lista: o fans_lab não tem tela para entrar em turma, então use a conta que já está na turma.
 3. **Confira a Home.** Precisa ter:
    - uma **prova** e uma **entrega** nos próximos 14 dias (para a comparação visual aparecer);
    - um **evento da turma com material vinculado** (chamado **S** aqui). O app não tem tela para criar material: se S não tiver material no servidor, a seção mostra "Nenhum material vinculado.". Diga isso se perguntarem;
@@ -110,22 +110,25 @@ Observação de ordem: **editar e excluir só funcionam com rede.** O detalhe n�
 
 ### Passo 6 — Modo avião (4:20 a 5:50)
 
-Ligue o modo avião **só depois** de cada ponto indicado.
+Ligue o modo avião no ponto indicado em 6.1 e deixe-o ligado até o passo 7.
 
-**6.1 Editar sem internet.** Com rede, abra **Teste B — apresentação** (o detalhe precisa estar carregado) e toque **Editar**. Com a tela de edição aberta, ligue o modo avião e toque **Salvar** → **"Editar precisa de internet."**. A tela continua aberta com o que você digitou. Toque na seta de voltar, sem salvar.
+**6.1 Editar sem internet.** Com rede, abra **Teste B — apresentação** (o detalhe precisa estar carregado) e toque **Editar**. Com a tela de edição aberta, ligue o modo avião e toque **Salvar** → **"Editar precisa de internet."**. A tela continua aberta com o que você digitou. Toque na seta de voltar, sem salvar: você volta ao detalhe. Toque na seta de voltar de novo: você volta à Home, que continua em modo avião.
 - *Critério:* PATCH sem rede não vai para a fila; o erro aparece na tela (Tratamento de erros).
 - *Código:* `lib/screens/evento_form_page.dart`: `_msgEditar`, `_salvar` (ramo `ev != null`).
 
-**6.2 Marcar feito offline, pelo detalhe.** Desligue o modo avião, abra **Teste B — apresentação** e ligue o modo avião de novo. Sem rede, o detalhe mostra "Sem conexão com o servidor." e, logo abaixo, o botão **Marcar como feito**. Toque nele → **"Salvo no aparelho — será enviado quando houver conexão."**. O botão vira **Desmarcar feito**.
-- *Critério:* a marcação vai para o SQLite (`estado_pessoal`, `sincronizado = 0`) e é enviada depois (offline-first, Sincronização). Marcar feito funciona offline também a partir do detalhe, sem o detalhe ter sido carregado com rede.
-- *Código:* `lib/screens/evento_detalhe_page.dart`: `_alternarFeito`, `_estadoErro` (botão offline); `lib/repositories/estado_pessoal_repository.dart`: `marcarLocal`; `lib/database/app_database.dart`: tabela `estado_pessoal`.
-
-**6.3 Home do cache.** Toque na seta de voltar. A Home recarrega sozinha ao voltar de qualquer tela; sem rede, mostra a faixa **"Sem conexão com o servidor — mostrando o que foi salvo às HH:mm."**. Os cartões continuam na ordem salva. O Teste B aparece com ✓ e título riscado.
+**6.2 Home do cache.** Você está na Home, ainda em modo avião. A Home recarrega sozinha ao voltar de qualquer tela; sem rede, mostra a faixa **"Sem conexão com o servidor — mostrando o que foi salvo às HH:mm."**. Os cartões continuam na ordem salva. O Teste B aparece sem ✓, porque a marcação de feito ainda não foi feita.
 - *Critério:* cache da Home (SQLite, `home_cache`, coluna `posicao`) quando a API não responde. O "feito" vem de `estado_pessoal` (LEFT JOIN), não do cache.
 - *Código:*
   - `lib/services/home_service.dart`: `HomeService.carregar` (cai no cache com `semConexao` ou 5xx)
   - `lib/repositories/home_cache_repository.dart`: `HomeCacheRepository.listar` (ORDER BY posicao)
   - `lib/screens/home_page.dart`: `_corpo` (faixa offline), `_abrirTela` (recarrega ao voltar)
+
+**6.3 Marcar feito offline, pelo detalhe.** Ainda em modo avião, toque em **Teste B — apresentação**. O detalhe não tem cache: aparece **"Sem conexão com o servidor."** e, logo abaixo, o botão **Marcar como feito** (e **Tentar de novo**). Toque em **Marcar como feito** → **"Salvo no aparelho — será enviado quando houver conexão."**. O botão vira **Desmarcar feito**. Toque na seta de voltar: na Home, o Teste B aparece com ✓ e título riscado.
+- *Critério:* a marcação vai para o SQLite (`estado_pessoal`, `sincronizado = 0`) e é enviada depois (offline-first, Sincronização). Marcar feito funciona offline também a partir do detalhe, sem o detalhe ter sido carregado com rede.
+- *Código:*
+  - `lib/screens/evento_detalhe_page.dart`: `_alternarFeito`, `_estadoErro` (botão offline)
+  - `lib/repositories/estado_pessoal_repository.dart`: `marcarLocal`
+  - `lib/database/app_database.dart`: tabela `estado_pessoal`
 
 **6.4 Criar evento offline.** Toque **+ Adicionar prova ou entrega** → "O que é": `Teste offline — apresentação` → data → **Salvar** → **"Salvo no aparelho — será enviado quando houver conexão."**. A Home mostra "1 aguardando envio" com o botão **Ver fila**.
 - *Critério:* CRUD local (inserir) na tabela `rascunhos`; offline-first.
@@ -145,7 +148,7 @@ Ligue o modo avião **só depois** de cada ponto indicado.
 ### Passo 7 — Religar e sincronizar (5:50 a 6:30)
 
 - **Toque:** desligue o modo avião. Abra **Ver fila** e toque **Sincronizar agora**. Não puxe a Home para atualizar antes disso: a Home também envia a fila ao carregar com rede, e o contador da fila sairia zerado.
-- **A banca vê:** o snack **"Enviados: 2 · Com erro: 0 · Pendentes: 0"** (2 se só o rascunho do 6.4 e a marcação do 6.2 estavam pendentes). O rascunho passa a **"você · enviado ✓"** e a linha de marcações diz "Nenhuma marcação de feito pendente.". Ao voltar à Home, a faixa offline some e o "Teste offline — apresentação" aparece, com a autoria vinda do servidor.
+- **A banca vê:** o snack **"Enviados: 2 · Com erro: 0 · Pendentes: 0"** (2 se só o rascunho do 6.4 e a marcação do 6.3 estavam pendentes). O rascunho passa a **"você · enviado ✓"** e a linha de marcações diz "Nenhuma marcação de feito pendente.". Ao voltar à Home, a faixa offline some e o "Teste offline — apresentação" aparece, com a autoria vinda do servidor.
 - *Critério:* Sincronização. O POST (201) do rascunho e o PUT (204) do feito são enviados; a fila zera; a data da sincronização é gravada; a Home volta a vir da API.
 - *Código:*
   - `lib/services/sync_service.dart`: `SyncService.sincronizar`, `_executar` (rascunhos → `criarEvento`; feitos → `marcarFeito`)
@@ -183,7 +186,7 @@ flutter test test/services_test.dart        # sincronização e offline: fila, P
 flutter test test/telas_home_test.dart      # Home: ordem do servidor, semana vazia, falha sem cache, 401 sem apagar a fila
 flutter test test/widgets_test.dart         # prova sólida, entrega com contorno, distinção em escala de cinza
 flutter test test/fluxo_demo_test.dart      # o roteiro inteiro (online, modo avião, fila, sincronização) com servidor simulado em memória
-flutter test                                # tudo: 177 testes (unitários e de tela, sem servidor)
+flutter test                                # tudo: 182 testes (unitários e de tela, sem servidor)
 ```
 
 Para mostrar um teste específico: `flutter test --plain-name "duas chamadas simultâneas"`.
@@ -202,7 +205,22 @@ Para mostrar um teste específico: `flutter test --plain-name "duas chamadas sim
 
 ## Checklist final (critérios das rubricas)
 
-A apostila de Persistência não está neste repositório, então esta lista segue os critérios de `docs/ENTREGA-FLUTTER.md` §3. O pedido fala em §24 e o documento em §25: confira o texto da apostila antes da banca e ajuste os nomes dos itens.
+Os 10 itens são os da §24 da apostila de Persistência. O PDF da apostila não está no repositório: confira os nomes com o impresso antes da banca.
+
+| # | Item | Arquivo ou teste que comprova | Como mostrar |
+|---|---|---|---|
+| 1 | SQLite funcionando | `lib/database/app_database.dart`: `AppDatabase.abrir` (arquivo `fans_lab.db`) e `_esquema` (4 tabelas); `test/repositories_test.dart` roda SQLite com `sqflite_common_ffi` | passo 6.2 (cache da Home) |
+| 2 | CRUD local | `lib/repositories/rascunho_repository.dart`: `inserir`, `listar`, `atualizar`, `excluir`; `test/repositories_test.dart`: "inserir, listar, atualizar e excluir" | passos 6.4 (criar) e 6.5 (editar e excluir na fila) |
+| 3 | Dados permanecem após fechar | `lib/database/app_database.dart` (grava em `fans_lab.db`, no aparelho) e `lib/repositories/sessao_store.dart` (SharedPreferences: sessão, tema, datas). **Honesto:** os testes usam banco em memória (`AppDatabase.abrirEmMemoria`) e SharedPreferences simulado; nenhum teste prova a persistência. A prova é no aparelho, e só vale se você tiver rodado lá | passos 5 e 6.6: fechar o app pelos recentes e abrir de novo |
+| 4 | GET funcionando | `lib/services/api_service.dart`: `home`, `materias`, `evento` (esperam 200); `test/api_service_test.dart`: "200 preserva a ordem recebida e envia Bearer quando há token" | passos 2 e 4 |
+| 5 | POST funcionando | `lib/services/api_service.dart`: `criarEvento` (espera 201) e `login` (espera 200); `test/api_service_test.dart`: "criarEvento faz POST com o corpo recebido e devolve Evento do 201" | passos 1 e 3 |
+| 6 | Tratamento de erro | `lib/services/api_service.dart`: `_enviar`, `_erroHttp`, `_mensagemPadrao`; `lib/services/api_exception.dart`: `ApiException`; `test/api_service_test.dart`: "401 vira \"E-mail ou senha incorretos.\" mesmo com detail do servidor" e "atualizarEvento com 409 vira conflito" | passos 1, 6.1 e 8 |
+| 7 | Modo offline | `lib/services/home_service.dart`: `HomeService.carregar` (cai no cache com `semConexao` ou 5xx); `test/services_test.dart`: "sem conexão depois de um carregar online devolve o cache com offline=true" | passos 6.2, 6.3 e 6.4 |
+| 8 | Sincronização | `lib/services/sync_service.dart`: `SyncService.sincronizar`, `_executar` (POST dos rascunhos, PUT dos feitos); `test/services_test.dart`: "sincronizar envia 2 rascunhos (201), zera pendentes e grava ultimaSincronizacao" e "duas chamadas simultâneas de sincronizar() fazem exatamente 2 POSTs" | passo 7 |
+| 9 | Arquitetura organizada | `fans_lab/lib/` separado por responsabilidade: `models/`, `database/`, `repositories/`, `services/`, `screens/`, `widgets/`. `HomeService` junta `ApiService` (rede) e `HomeCacheRepository` (SQLite). Seção "Estrutura" do `README.md` | mostrar a árvore de `lib/` e `HomeService.carregar` |
+| 10 | Apresentação | Este roteiro (`docs/APRESENTACAO-FLUTTER.md`) e a demo no aparelho. Plano B com `flutter test`, na seção "Plano B" | passos 1 a 8 no aparelho, ensaiados antes. Se não ensaiou, não afirme que o APK funciona (ver "O que não afirmar") |
+
+O mapa completo por critério (ENTREGA-FLUTTER §3) fica abaixo.
 
 | Critério | Onde está (arquivo: classe/método) | Como mostrar |
 |---|---|---|
@@ -217,11 +235,11 @@ A apostila de Persistência não está neste repositório, então esta lista seg
 | Interface: carregando, erro, sucesso | `lib/screens/home_page.dart`: `_corpo` (spinner, "Tentar de novo", SnackBar) | passos 2 e 8 |
 | Organização em pastas | `lib/`: models, database, repositories, services, screens, widgets | README, seção Estrutura |
 | **Persistência** | | |
-| SQLite com esquema | `lib/database/app_database.dart`: `_esquema`, `AppDatabase.abrir` | passo 6.3; `repositories_test.dart` |
+| SQLite com esquema | `lib/database/app_database.dart`: `_esquema`, `AppDatabase.abrir` | passo 6.2; `repositories_test.dart` |
 | CRUD local | `lib/repositories/rascunho_repository.dart`: `inserir`, `listar`, `atualizar`, `excluir` | passos 6.4 e 6.5; "inserir, listar, atualizar e excluir" |
 | SharedPreferences | `lib/repositories/sessao_store.dart`: `SessaoStore` | passo 5; `sessao_store_test.dart`: "tema e datas voltam iguais" |
 | Dados após fechar o app | SQLite (`rascunhos`, `home_cache`) e SharedPreferences (`sessao`) | passos 5 e 6.6 |
-| Cache offline | `lib/services/home_service.dart`: `HomeService.carregar` | passo 6.3; "sem conexão depois de um carregar online devolve o cache com offline=true" |
+| Cache offline | `lib/services/home_service.dart`: `HomeService.carregar` | passo 6.2; "sem conexão depois de um carregar online devolve o cache com offline=true" |
 | Sincronização | `lib/services/sync_service.dart`: `SyncService.sincronizar`, `_executar` | passo 7; "sincronizar envia 2 rascunhos (201), zera pendentes e grava ultimaSincronizacao" |
 | Sincronização sem duplicar execução concorrente | `lib/services/sync_service.dart`: `_emCurso` | "duas chamadas simultâneas de sincronizar() fazem exatamente 2 POSTs" |
 | Erro distinto de lista vazia | `lib/services/home_service.dart` (relança sem cache); `lib/screens/home_page.dart` | passo 8; "falha sem cache mostra Tentar de novo, nunca lista vazia" |

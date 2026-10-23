@@ -30,7 +30,7 @@ Repository (SQLite: home_cache, materias, rascunhos, estado_pessoal)   SessaoSto
   PATCH (editar evento, com `If-Match`), DELETE (excluir evento, com `If-Match`).
 - SharedPreferences: 5 chaves (`sessao`, `temaEscuro`, `ultimaSincronizacao`, `homeSalvaEm`,
   `ultimoUsuarioId`). SQLite: arquivo `fans_lab.db`, 4 tabelas.
-- Verificado na última conferência: `flutter analyze` sem issues e `flutter test` com **177 testes, todos
+- Verificado na última conferência: `flutter analyze` sem issues e `flutter test` com **182 testes, todos
   verdes** (contagem por arquivo na Pergunta 29). Há também 13 testes contra o backend Spring local
   (`test_e2e/`), fora do `flutter test` padrão.
 
@@ -371,7 +371,7 @@ cru do servidor. As telas têm os três estados (carregando, sucesso, erro) e us
 | 401 no login | "E-mail ou senha incorretos." | Fica no login |
 | 401 nas outras chamadas | "Sessão expirada. Entre de novo." (Home) ou "Sessão expirada — volte e entre de novo." (demais telas) | Volta ao login. A fila fica no aparelho |
 | 403 | "Você não tem permissão para isso." | Botões Editar e Excluir só aparecem ao autor |
-| 404 | "Não encontrado — pode ter sido excluído." | No envio de "feito": sai da fila |
+| 404 | "Não encontrado — pode ter sido excluído." (telas de evento). Na Home (`/home`): "Sua conta ainda não está em nenhuma turma. Entre numa turma pelo app da turma e tente de novo." | No envio de "feito": sai da fila |
 | 409 | Edição: "Alguém alterou este evento antes de você. Volte e abra de novo." Exclusão: "Alguém alterou este evento antes. Recarregando…" | Exclusão recarrega o evento; edição pede para reabrir |
 | 428 | "Faltou a versão do registro." | O app sempre manda `If-Match`; só apareceria por bug |
 | 429 | "Muitas tentativas. Espere alguns minutos." | Limite de tentativas de login do servidor |
@@ -405,23 +405,26 @@ servidor respondeu 200 com `[]`, e aí o texto é "Nada nos próximos 14 dias."
 
 ### 22. E o timeout, o servidor dormindo e uma URL incorreta?
 
-**Falar:** O timeout é de 90 s porque o servidor gratuito do Render dorme e a primeira chamada pode levar cerca de
-50 s; a tela de login avisa que a primeira entrada pode levar até 1 minuto. Quando o tempo estoura, a tela mostra
-"O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes.". DNS que não resolve e
-falha de TLS aparecem como "Sem conexão com o servidor.". URL com host errado cai aí; caminho errado volta 404. A
-URL vem de `--dart-define=API_URL`, não está fixa no código.
+**Falar:** Depende do erro, e cada um tem texto próprio. `API_URL` com esquema errado ou ausente (`htps://`) mostra
+"Endereço do servidor inválido. Confira o API_URL.". Host que não resolve ou recusa a conexão mostra "Sem conexão
+com o servidor.". Caminho errado no login (por exemplo, `/api` sem `/v1`) volta 401 e aparece "E-mail ou senha
+incorretos.": é um limite conhecido, porque no login todo 401 vira essa frase. O timeout de 90 s existe porque o
+Render gratuito dorme; estourado o tempo, aparece "O servidor demorou para responder — ele pode estar acordando.
+Tente de novo em instantes.". A URL vem de `--dart-define=API_URL`, não está fixa no código.
 
 - **Apostila:** HTTP §15 lista "URL incorreta" e "sem conexão" como cenários.
 - **Código:** `lib/services/api_service.dart: ApiService` (`timeout = Duration(seconds: 90)`) e `_enviar`
-  (captura `SocketException`, `http.ClientException`, `TimeoutException` e `TlsException`; `HandshakeException` e
+  (valida esquema e host com `Uri.tryParse`; captura `SocketException`, `http.ClientException`, `TimeoutException` e `TlsException`; `HandshakeException` e
   `CertificateException` são subclasses de `TlsException`); `lib/screens/login_page.dart` (texto "pode levar até 1
   minuto"); `lib/config.dart`.
-- **Limitação:** a mensagem de timeout só aparece quando o servidor não responde em 90 s. Um aparelho sem rede
-  recebe "Sem conexão com o servidor.", então as duas situações têm textos diferentes. Mesmo assim, o app não
-  consegue afirmar com certeza se o problema é o servidor lento ou a internet quando o pedido estoura o tempo. E só
-  essas exceções de rede são convertidas: uma `API_URL` malformada a ponto de fazer `Uri.parse` lançar
-  `FormatException` escaparia como exceção que não é `ApiException`, e as telas só capturam `ApiException`. Então
-  "toda falha sai como ApiException" é o objetivo do contrato, não uma garantia total.
+- **Testes:** `api_service_test.dart`: "esquema errado ou ausente falha antes de enviar, como ApiException de conexão"
+  (`htps://` e URL sem esquema).
+- **Limitação:** a mensagem de timeout só aparece quando o servidor não responde em 90 s. Sem rede, o texto é "Sem
+  conexão com o servidor.", então as duas situações têm textos diferentes, mas o app não consegue afirmar com certeza
+  se a demora é do servidor ou da internet. Com a sessão aberta, uma rota errada tende a dar 404 (ou 401, se o token
+  não passar), conforme a rota; isso não foi verificado rodando. A mensagem de 404, "Não encontrado — pode ter sido
+  excluído.", também não diz que o caminho está errado. A checagem em `_enviar` só olha esquema e host: não testa se a
+  URL responde. Então "toda falha sai como ApiException" é o objetivo do contrato, não uma garantia total.
 
 ---
 
@@ -527,19 +530,19 @@ recebem uma função `AbrirDb`, então aceitam esse banco por injeção.
 
 ### 29. O que cada suíte prova, e o que não prova?
 
-**Falar:** São 177 testes em 13 arquivos, todos verdes, e o `flutter analyze` não aponta nada. Eles cobrem as
+**Falar:** São 182 testes em 13 arquivos, todos verdes, e o `flutter analyze` não aponta nada. Eles cobrem as
 camadas isoladamente: models, HTTP com cliente simulado, SQLite em memória, serviços de cache e envio, telas,
 e um roteiro completo com servidor simulado. Não cobrem o aparelho real nem o servidor real.
 
 | Arquivo | Testes | O que prova | O que não prova |
 |---|---|---|---|
-| `api_service_test.dart` | 29 | contrato HTTP do cliente, verbos e If-Match, mensagens do app para 401/404/409 etc., sem conexão e timeout, JSON inválido, UTF-8 | servidor real |
+| `api_service_test.dart` | 30 | contrato HTTP do cliente, verbos e If-Match, mensagens do app para 401/404/409 etc., sem conexão e timeout, JSON inválido, UTF-8 | servidor real |
 | `models_test.dart` | 25 | `fromJson`, `toMap`/`fromMap` de ida e volta, `lerData`, `FormatException`, chaves ausentes | |
 | `repositories_test.dart` | 14 | SQL, ordem, transações, regras de pendente, CRUD de rascunhos, `limparTudo` | arquivo real no aparelho, migração |
 | `services_test.dart` | 23 | `HomeService` (cache, offline, 401, 503 com cache, feito pendente) e `SyncService` (envio, 400 por item, 401, PUT, 404, concorrência) | envio automático, duplicação por timeout |
 | `sessao_store_test.dart` | 7 | sessão, tema e datas; JSON corrompido apaga a chave; `limpar` mantém o tema e o dono da última sessão | criptografia (não existe) |
-| `telas_home_test.dart` | 10 | login 401 mostra "E-mail ou senha incorretos."; Home na ordem do servidor; semana vazia; falha sem cache é erro; 401 volta ao login sem apagar a fila; outra conta apaga a fila de quem saiu | o "Sair" manual no aparelho; fechar e reabrir o app |
-| `telas_evento_test.dart` | 22 | formulário offline salva rascunho e avisa; título vazio não grava; fila mostra "aguardando envio"; autor vê Editar, não autor não; feito offline pelo detalhe; aviso de excluído e de oculto; dois toques em Salvar mandam um PATCH | 409 na tela; a confirmação de excluir |
+| `telas_home_test.dart` | 11 | login 401 mostra "E-mail ou senha incorretos."; Home na ordem do servidor; semana vazia; falha sem cache é erro; 401 volta ao login sem apagar a fila; outra conta apaga a fila de quem saiu | o "Sair" manual no aparelho; fechar e reabrir o app |
+| `telas_evento_test.dart` | 25 | formulário offline salva rascunho e avisa; título vazio não grava; fila mostra "aguardando envio"; autor vê Editar, não autor não; feito offline pelo detalhe; aviso de excluído e de oculto; dois toques em Salvar mandam um PATCH | 409 na tela; a confirmação de excluir |
 | `widgets_test.dart` | 25 | `MateriaChip` (sigla e cor inválida), `EventoCard` (prova sólida, entrega em contorno, distinção em cinza, fonte grande em 360 dp), `tempoRelativo` | |
 | `manifest_test.dart` | 4 | permissão de Internet e backup desligado no manifesto release; HTTP em claro só no debug | o APK gerado |
 | `localizacao_test.dart` | 1 | seletor de data sai em português, pelo `FansLabApp` | |

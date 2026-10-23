@@ -23,7 +23,7 @@ Fora do escopo: edição e exclusão offline, cache do detalhe de evento, armaze
 flutter pub get
 flutter run                                                    # API de produção
 flutter run --dart-define=API_URL=http://10.0.2.2:8080/api/v1  # API local (backend na porta 8080 do PC)
-flutter test                                                   # 177 testes, no PC, sem aparelho e sem backend
+flutter test                                                   # 182 testes, no PC, sem aparelho e sem backend
 flutter build apk --release                                    # APK em build/app/outputs/flutter-apk/app-release.apk
 ```
 
@@ -83,7 +83,7 @@ lib/
   services/        ApiService (HTTP), ApiException, HomeService (API ou cache), SyncService (fila)
   screens/         login, Home, detalhe, formulário, fila de envio, configurações
   widgets/         MateriaChip, EventoCard, tema (CoresFans), tempo_relativo
-test/              177 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
+test/              182 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
 test_e2e/          13 testes contra o backend real (ver "Teste contra o backend real")
 ```
 

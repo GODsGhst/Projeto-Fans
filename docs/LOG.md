@@ -2473,7 +2473,7 @@ Registro completo, com decisões e histórico das voltas: `docs/ENTREGA-FLUTTER.
 `fans_lab/lib/main.dart`, `fans_lab/lib/app_deps.dart`, `fans_lab/android/app/src/{main,debug}/AndroidManifest.xml`,
 `fans_lab/test/*`, `fans_lab/test_e2e/api_real_test.dart`, `docs/ENTREGA-FLUTTER.md`,
 `docs/APRESENTACAO-FLUTTER.md`, `docs/BANCA-PERGUNTAS.md`, `.gitignore`.
-**Critério de aceite:** `cd fans_lab && flutter analyze` → No issues found; `flutter test` → 177/177
+**Critério de aceite:** `cd fans_lab && flutter analyze` → No issues found; `flutter test` → 182/182
 verdes (rodado 2× sem flake); `flutter test test_e2e/api_real_test.dart` contra o backend Spring LOCAL
 (perfil `dev`) → 13/13. Cada correção do loop tem teste que fica vermelho com a correção desfeita.
 **Decisões que eu tomei:**
