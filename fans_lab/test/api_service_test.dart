@@ -17,7 +17,7 @@ http.Response _resp(Object? corpo, int status) => http.Response.bytes(
     );
 
 ApiService _api(Future<http.Response> Function(http.Request) handler,
-        {Duration timeout = const Duration(seconds: 60)}) =>
+        {Duration timeout = const Duration(seconds: 90)}) =>
     ApiService(baseUrl: _base, client: MockClient(handler), timeout: timeout);
 
 /// Devolve a ApiException lançada; se a chamada tiver sucesso, o teste falha.
@@ -94,6 +94,7 @@ void main() {
       expect(sessao.jwt, 'abc');
       expect(sessao.usuario.nome, 'Otávio');
       expect(enviado.method, 'POST');
+      expect(enviado.url.toString(), '$_base/auth/login');
       expect(jsonDecode(enviado.body), {'email': 'o@x.com', 'senha': '123'});
       expect(enviado.headers.containsKey('Authorization'), isFalse);
     });
@@ -239,6 +240,90 @@ void main() {
 
       expect(e.semConexao, isTrue);
     });
+    test('timeout vira semConexao com mensagem de servidor acordando', () async {
+      final api = _api(
+        (_) async {
+          await Future<void>.delayed(const Duration(seconds: 1));
+          return _resp(_authJson, 200);
+        },
+        timeout: const Duration(milliseconds: 20),
+      );
+
+      final e = await _falha(api.home());
+
+      expect(e.semConexao, isTrue);
+      expect(e.mensagem, contains('acordando'));
+    });
+
+    test('CertificateException (TLS) vira semConexao', () async {
+      final api = _api((_) async => throw CertificateException('certificado inválido'));
+
+      final e = await _falha(api.home());
+
+      expect(e.semConexao, isTrue);
+    });
+  });
+
+  group('leitura', () {
+    test('materias faz GET /materias e devolve a lista', () async {
+      late http.Request enviado;
+      final api = _api((req) async {
+        enviado = req;
+        return _resp([
+          {'id': 'm1', 'nome': 'Banco de Dados', 'sigla': 'BD', 'corHex': '#1D4ED8', 'sala': null, 'professor': null},
+        ], 200);
+      });
+
+      final materias = await api.materias();
+
+      expect(enviado.method, 'GET');
+      expect(enviado.url.toString(), '$_base/materias');
+      expect(materias.single.sigla, 'BD');
+    });
+
+    test('evento 200 faz GET /eventos/{id} e lê campos achatados mais materiais', () async {
+      late http.Request enviado;
+      final api = _api((req) async {
+        enviado = req;
+        return _resp({
+          ..._evento(id: 'e1'),
+          'materiais': [
+            {
+              'id': 'a1',
+              'tipo': 'LINK',
+              'titulo': 'Slides aula 3',
+              'url': 'https://x.test/s',
+              'dataAula': '2026-10-10',
+              'autoria': _autoria(),
+            },
+          ],
+        }, 200);
+      });
+
+      final detalhe = await api.evento('e1');
+
+      expect(enviado.method, 'GET');
+      expect(enviado.url.toString(), '$_base/eventos/e1');
+      expect(detalhe.evento.titulo, 'Prova 2');
+      expect(detalhe.materiais.single.titulo, 'Slides aula 3');
+    });
+  });
+
+  group('baseUrl', () {
+    test('com barra no fim não gera //', () async {
+      late http.Request enviado;
+      final api = ApiService(
+        baseUrl: 'http://api/',
+        client: MockClient((req) async {
+          enviado = req;
+          return _resp(<Object>[], 200);
+        }),
+      );
+
+      await api.home();
+
+      expect(enviado.url.toString(), 'http://api/home');
+    });
   });
 
   group('escrita', () {
@@ -266,17 +351,20 @@ void main() {
       expect(evento.version, 3);
     });
 
-    test('atualizarEvento faz PATCH com If-Match: 3 e devolve o Evento', () async {
+    test('atualizarEvento faz PATCH com If-Match: 3, envia o corpo e devolve o Evento', () async {
       late http.Request enviado;
+      final corpo = {'titulo': 'Nova'};
       final api = _api((req) async {
         enviado = req;
         return _resp(_evento(version: 4), 200);
       });
 
-      final evento = await api.atualizarEvento('e1', 3, {'titulo': 'Nova'});
+      final evento = await api.atualizarEvento('e1', 3, corpo);
 
       expect(enviado.method, 'PATCH');
+      expect(enviado.url.toString(), '$_base/eventos/e1');
       expect(enviado.headers['If-Match'], '3');
+      expect(jsonDecode(enviado.body), corpo);
       expect(evento.version, 4);
     });
 
@@ -319,18 +407,21 @@ void main() {
   });
 
   group('UTF-8', () {
-    test('corpo em bytes UTF-8 sem charset no content-type é lido certo', () async {
+    test('detail de ProblemDetail em application/problem+json sem charset é lido em UTF-8', () async {
       final api = _api((_) async => http.Response.bytes(
-            utf8.encode(jsonEncode([
-              {'id': 'm1', 'nome': 'Otávio', 'sigla': 'BD', 'corHex': '#1D4ED8', 'sala': null, 'professor': null},
-            ])),
-            200,
-            headers: {'content-type': 'application/json'},
+            utf8.encode(jsonEncode({
+              'type': 'about:blank',
+              'title': 'Not Found',
+              'status': 404,
+              'detail': 'Evento não encontrado',
+            })),
+            404,
+            headers: {'content-type': 'application/problem+json'},
           ));
 
-      final materias = await api.materias();
+      final e = await _falha(api.evento('e9'));
 
-      expect(materias.single.nome, 'Otávio');
+      expect(e.mensagem, 'Evento não encontrado');
     });
   });
 }

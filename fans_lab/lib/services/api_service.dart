@@ -16,10 +16,12 @@ import 'package:fans_lab/services/api_exception.dart';
 class ApiService {
   ApiService({
     http.Client? client,
-    this.baseUrl = apiUrl,
-    this.timeout = const Duration(seconds: 60),
-  }) : _client = client ?? http.Client();
+    String baseUrl = apiUrl,
+    this.timeout = const Duration(seconds: 90),
+  })  : baseUrl = baseUrl.replaceAll(RegExp(r'/+$'), ''),
+        _client = client ?? http.Client();
 
+  /// Sem `/` no fim: cada rota já começa com `/`.
   final String baseUrl;
   final Duration timeout;
   final http.Client _client;
@@ -103,8 +105,9 @@ class ApiService {
     } on http.ClientException {
       throw const ApiException.semConexao();
     } on TimeoutException {
-      throw const ApiException.semConexao();
-    } on HandshakeException {
+      throw const ApiException.semConexao(
+          'O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes.');
+    } on TlsException {
       throw const ApiException.semConexao();
     }
 
