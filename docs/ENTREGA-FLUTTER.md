@@ -357,6 +357,17 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
 - Dono: **"rode modelos em paralelo para acelerar tudo"** → em paralelo agora: R1 (Sonnet, revisão
   das camadas), R2 (Opus, nota pela rubrica + telas + pré-mortem), H6 (Haiku, README + roteiro da
   apresentação), B1 (Sonnet, perguntas prováveis da banca).
+- **Loop, volta 1.** R1 (Sonnet): 0 bloqueantes, 5 importantes, 7 testes fracos — todos provados por
+  mutação numa cópia. R2 (Opus): **nota 16,95/20 (HTTP 8,55 · Persistência 8,4)**; 14 bugs de tela,
+  3 deles quebram a demo offline (criar offline em instalação nova, marcar feito offline, voltar
+  durante o salvar). O 401 que apaga a fila foi achado por R1, R2 e H6 de forma independente.
+  Swarm da volta 1: 7 Haiku em paralelo, cada um dono de arquivos disjuntos — L1-A (HTTP), L1-B
+  (sync/home), L1-D (contorno + teste do chip), L1-E (testes fracos), L1-C1 (401/Home/sessão),
+  L1-C2 (detalhe/formulário), L1-C3 (overflow + HTTP local no debug). Cada correção exige o teste que
+  fica vermelho sem ela (mutação de controle no relatório).
+  Decisões do coordenador: duplicata após timeout fica como limite documentado (timeout 90 s);
+  datas em português (`flutter_localizations`) fica para a volta 2, porque mexe no `pubspec.yaml`,
+  que está com outro agente.
 - Verificado: `dl.google.com` bloqueado neste ambiente → **sem Android SDK, sem APK gerado aqui**.
   A API do Render também não é alcançável daqui; nada foi testado contra o servidor real.
 
