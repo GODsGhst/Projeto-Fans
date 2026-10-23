@@ -607,6 +607,23 @@ só avisa o admin e encarece o abuso.
 
 **Levantada em 2026-10-07**, na revisão de segurança de professor/coordenador (achado MEDIUM).
 
+### A28. A entrega Flutter da disciplina pode ser o app da turma, ou tem de ser o "tarefas" da apostila?
+
+As duas apostilas do Lab. de Aplicações Móveis (HTTP e Persistência) pedem, na atividade prática,
+um app de tarefas (`tarefas_http`, "Minhas Tarefas") e, no desafio, um "Catálogo de Jogos". A nota
+didática da apostila HTTP diz: "em um projeto real da disciplina, substitua os endpoints pelos
+endpoints do servidor/API desenvolvidos pela turma". O Figma enviado é do "Fans Lab".
+
+**Default aplicado:** o app `fans_lab/` é um cliente Flutter **do projetoFans**, contra a API deste
+repositório, e cobre os critérios das duas rubricas (mapa em `docs/ENTREGA-FLUTTER.md` §3).
+Confiança média-alta.
+
+**Se o enunciado exigir o app de tarefas literalmente:** a arquitetura é a mesma (models /
+database / repositories / services / screens). Trocar o domínio é renomear o model e a tela, não
+reescrever a camada HTTP/SQLite/sync. Mas é retrabalho: confirme com o enunciado antes de apresentar.
+
+**Levantada em 2026-10-22**, na sessão da entrega Flutter (premissa P1 de `docs/ENTREGA-FLUTTER.md`).
+
 
 
 ---
