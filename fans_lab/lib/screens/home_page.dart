@@ -147,7 +147,9 @@ class _HomePageState extends State<HomePage> {
         title: Text(diaExtenso(DateTime.now())),
         actions: [
           IconButton(
-            tooltip: 'Sincronizar',
+            tooltip: _pendentes > 0
+                ? 'Sincronizar ($_pendentes aguardando envio)'
+                : 'Sincronizar',
             onPressed: _sincronizando ? null : _sincronizar,
             icon: _sincronizando
                 ? const SizedBox(
@@ -230,22 +232,24 @@ class _HomePageState extends State<HomePage> {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text('Nada nos próximos 14 dias.', textAlign: TextAlign.center),
             ),
+          // O EventoCard já tem margem vertical de 6: sem Padding extra, o espaço fica em ~12.
           for (final item in r.itens)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: EventoCard.deItem(
-                item,
-                onTap: () => _abrirTela(
-                  EventoDetalhePage(
-                    deps: widget.deps,
-                    eventoId: item.eventoId,
-                    feito: item.feitoPeloUsuario,
-                  ),
+            EventoCard.deItem(
+              item,
+              onTap: () => _abrirTela(
+                EventoDetalhePage(
+                  deps: widget.deps,
+                  eventoId: item.eventoId,
+                  feito: item.feitoPeloUsuario,
                 ),
               ),
             ),
           const SizedBox(height: 8),
           OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
             onPressed: () => _abrirTela(EventoFormPage(deps: widget.deps)),
             child: const Text('+ Adicionar prova ou entrega'),
           ),

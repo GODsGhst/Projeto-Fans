@@ -237,4 +237,50 @@ void main() {
     expect(find.text(erro), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
+
+  testWidgets('login com fonte 2x em 360 dp: título sem quebra e sem exceção', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final deps = await montarDeps(tester, (_) async => json({}, 200));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(2.0)),
+          child: child!,
+        ),
+        home: LoginPage(deps: deps, aoEntrar: (_) {}),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('projetoFans'), findsOneWidget);
+    // Sem FittedBox acima, o título quebra em duas linhas ("projetoFan" / "s").
+    expect(
+      find.ancestor(of: find.text('projetoFans'), matching: find.byType(FittedBox)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('home com 1 pendente: sincronizar diz quantos aguardam envio', (tester) async {
+    final deps = await montarDeps(tester, (req) async {
+      // Sem rede no envio: o rascunho continua pendente e a contagem fica em 1.
+      if (req.method == 'POST') throw http.ClientException('sem rede');
+      return json([], 200);
+    });
+    await tester.runAsync(() => deps.rascunhos.inserir(rascunho()));
+    await tester.pumpWidget(
+      app(HomePage(deps: deps, aoSair: () {}, aoMudarTema: (_) {})),
+    );
+    await esperarAparecer(
+      tester,
+      find.byTooltip('Sincronizar (1 aguardando envio)'),
+    );
+
+    expect(find.byTooltip('Sincronizar (1 aguardando envio)'), findsOneWidget);
+    expect(find.byTooltip('Sincronizar'), findsNothing);
+  });
 }

@@ -126,11 +126,11 @@ class _FilaPageState extends State<FilaPage> {
               children: [
                 TextButton(
                   onPressed: () => _editar(r),
-                  child: const Text('Editar'),
+                  child: Text('Editar', semanticsLabel: 'Editar ${r.titulo}'),
                 ),
                 TextButton(
                   onPressed: () => _excluir(r),
-                  child: const Text('Excluir'),
+                  child: Text('Excluir', semanticsLabel: 'Excluir ${r.titulo}'),
                 ),
               ],
             ),

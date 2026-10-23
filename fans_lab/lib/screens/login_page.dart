@@ -63,10 +63,15 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'projetoFans',
-                      style: tema.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                    // Com fonte grande, o título reduz para caber em vez de quebrar no meio da palavra.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'projetoFans',
+                        style: tema.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
