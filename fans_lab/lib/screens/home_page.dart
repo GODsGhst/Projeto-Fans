@@ -85,7 +85,9 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       // Falha nunca vira lista vazia: sem dados, a tela mostra o erro; com dados, mantém a lista e avisa.
-      setState(() => _erro = e.mensagem);
+      setState(() => _erro = e.naoEncontrado
+          ? 'Sua conta ainda não está em nenhuma turma. Entre numa turma pelo app da turma e tente de novo.'
+          : e.mensagem);
     } catch (e) {
       debugPrint('$e');
       if (mounted) {

@@ -283,4 +283,27 @@ void main() {
     expect(find.byTooltip('Sincronizar (1 aguardando envio)'), findsOneWidget);
     expect(find.byTooltip('Sincronizar'), findsNothing);
   });
+
+  testWidgets('conta sem turma (404 SEM_TURMA) explica o que fazer, nunca lista vazia', (tester) async {
+    const texto = 'Sua conta ainda não está em nenhuma turma. Entre numa turma pelo app da turma e tente de novo.';
+    final deps = await montarDeps(tester, (req) async {
+      if (!req.url.path.endsWith('/home')) return json({'status': 404}, 404);
+      return json({
+        'type': 'about:blank',
+        'title': 'Not Found',
+        'status': 404,
+        'detail': 'Sem turma.',
+        'codigo': 'SEM_TURMA',
+      }, 404);
+    });
+    await tester.pumpWidget(
+      app(HomePage(deps: deps, aoSair: () {}, aoMudarTema: (_) {})),
+    );
+    await esperarAparecer(tester, find.text(texto));
+
+    expect(find.text(texto), findsOneWidget);
+    expect(find.text('Não encontrado — pode ter sido excluído.'), findsNothing);
+    expect(find.text('Tentar de novo'), findsOneWidget);
+    expect(find.text('Nada nos próximos 14 dias.'), findsNothing);
+  });
 }
