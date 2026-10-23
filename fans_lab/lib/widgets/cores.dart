@@ -106,6 +106,10 @@ class CoresFans extends ThemeExtension<CoresFans> {
 
 ThemeData temaFans(Brightness brilho) {
   final cores = brilho == Brightness.dark ? CoresFans.escuro : CoresFans.claro;
+  final bordaCampo = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(14),
+    borderSide: BorderSide(color: cores.rule),
+  );
   return ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: cores.paper,
@@ -119,6 +123,18 @@ ThemeData temaFans(Brightness brilho) {
       elevation: 0,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
+    ),
+    // Diálogo com surface: o padrão do M3 (#E3EAE7) deixa 'Cancelar' em 4,48:1, abaixo do AA (4,5:1).
+    dialogTheme: DialogThemeData(backgroundColor: cores.surface),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: cores.surface,
+      border: bordaCampo,
+      enabledBorder: bordaCampo,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: cores.accent, width: 2),
+      ),
     ),
     extensions: [cores],
   );

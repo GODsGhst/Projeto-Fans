@@ -147,6 +147,93 @@ void main() {
       )));
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('TalkBack aciona o toque do card (a ação não some com excludeSemantics)', (tester) async {
+      final semantica = tester.ensureSemantics();
+      var toques = 0;
+      await tester.pumpWidget(envolver(EventoCard(
+        tipo: TipoEvento.prova,
+        titulo: 'Prova 2',
+        data: DateTime(2026, 10, 25),
+        hora: '19:00',
+        materiaSigla: 'BD',
+        materiaCorHex: '#1D4ED8',
+        autoriaTexto: 'Ana · há 2 dias',
+        onTap: () => toques++,
+      )));
+      tester.semantics.tap(find.semantics.byLabel(RegExp('Prova de BD')));
+      expect(toques, 1);
+      semantica.dispose();
+    });
+
+    testWidgets('rótulo falado inclui a hora quando há', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await tester.pumpWidget(envolver(EventoCard(
+        tipo: TipoEvento.prova,
+        titulo: 'Prova 2',
+        data: DateTime(2026, 10, 25),
+        hora: '19:00',
+        materiaSigla: 'BD',
+        materiaCorHex: '#1D4ED8',
+        autoriaTexto: 'Ana · há 2 dias',
+      )));
+      expect(find.bySemanticsLabel(RegExp('às 19:00')), findsOneWidget);
+      semantica.dispose();
+    });
+
+    testWidgets('dia 23 com fonte 2x em 360 dp ocupa uma linha só, sem quebrar em 2/3', (tester) async {
+      await tester.pumpWidget(envolver(MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+        child: SizedBox(
+          width: 360,
+          child: Column(
+            children: [
+              EventoCard(
+                tipo: TipoEvento.entrega,
+                titulo: 'Lista 4',
+                data: DateTime(2026, 10, 23),
+                materiaSigla: 'BD',
+                materiaCorHex: '#1D4ED8',
+                autoriaTexto: 'Ana · há 2 dias',
+              ),
+              // Referência: o mesmo '23' sem nenhuma restrição de largura, numa linha só.
+              const Text(
+                '23',
+                key: ValueKey('ref-dia'),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      )));
+      final dia = find.descendant(of: find.byType(EventoCard), matching: find.text('23'));
+      expect(tester.getSize(dia), tester.getSize(find.byKey(const ValueKey('ref-dia'))));
+    });
+  });
+
+  group('temaFans', () {
+    testWidgets('diálogo: "Cancelar" no tema claro passa contraste de texto WCAG', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await tester.pumpWidget(envolver(AlertDialog(
+        title: const Text('Sair?'),
+        actions: [TextButton(onPressed: () {}, child: const Text('Cancelar'))],
+      )));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      semantica.dispose();
+    });
+
+    test('campos de texto: preenchidos com surface, contorno rule e foco accent 2px nos dois temas', () {
+      for (final brilho in [Brightness.light, Brightness.dark]) {
+        final cores = brilho == Brightness.dark ? CoresFans.escuro : CoresFans.claro;
+        final campo = temaFans(brilho).inputDecorationTheme;
+        expect(campo.filled, isTrue);
+        expect(campo.fillColor, cores.surface);
+        expect((campo.enabledBorder as OutlineInputBorder).borderSide.color, cores.rule);
+        final foco = campo.focusedBorder as OutlineInputBorder;
+        expect(foco.borderSide.color, cores.accent);
+        expect(foco.borderSide.width, 2);
+      }
+    });
   });
 
   group('tempoRelativo', () {

@@ -52,7 +52,8 @@ class EventoCard extends StatelessWidget {
     final corSecundaria = ehProva ? cores.provaFg2 : cores.ink3;
     final tipoRotulo = ehProva ? 'Prova' : 'Entrega';
     final rotulo = '$tipoRotulo de $materiaSigla: $titulo, '
-        '${data.day} de ${mesAbrev(data.month).toLowerCase()}, $autoriaTexto'
+        '${data.day} de ${mesAbrev(data.month).toLowerCase()}'
+        '${hora != null ? ', às $hora' : ''}, $autoriaTexto'
         '${feito ? ', feito' : ''}';
 
     final marcador = ehProva
@@ -70,9 +71,11 @@ class EventoCard extends StatelessWidget {
             ),
           );
 
+    // excludeSemantics descarta a ação do InkWell: o onTap precisa vir aqui para o TalkBack acionar.
     return Semantics(
       label: rotulo,
       button: onTap != null,
+      onTap: onTap,
       excludeSemantics: true,
       child: Container(
         key: ValueKey('evento-card-${tipo.name}'),
@@ -94,8 +97,8 @@ class EventoCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: 48,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 48),
                       child: Column(
                         children: [
                           Text(

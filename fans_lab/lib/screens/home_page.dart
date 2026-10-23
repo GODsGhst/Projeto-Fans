@@ -37,6 +37,7 @@ class _HomePageState extends State<HomePage> {
   String? _erro;
   bool _carregando = false;
   bool _sincronizando = false;
+  bool _saindo = false; // Sair fecha a Home: recarregar agora viraria um 401 falso
   int _pendentes = 0;
 
   @override
@@ -45,21 +46,22 @@ class _HomePageState extends State<HomePage> {
     _carregar();
   }
 
-  Future<void> _carregar() async {
+  Future<void> _carregar({bool sincronizar = true}) async {
     setState(() => _carregando = true);
     try {
-      final resultado = await widget.deps.home.carregar();
+      var resultado = await widget.deps.home.carregar();
       if (!resultado.offline) {
         // pré-carga para criar evento offline; se falhar, o formulário busca de novo e mostra o erro
         unawaited(widget.deps.home.materias().catchError((Object e) {
           debugPrint('pré-carga de matérias: $e');
           return <Materia>[];
         }));
-        final pendentesAntes = await widget.deps.sync.contarPendentes();
-        if (pendentesAntes > 0) {
+        if (sincronizar && await widget.deps.sync.contarPendentes() > 0) {
           // sincroniza ao reconectar: a Home recarregou online, então a rede voltou
           try {
-            await widget.deps.sync.sincronizar();
+            final r = await widget.deps.sync.sincronizar();
+            // a lista veio antes do envio: se algo subiu, busca de novo para o evento aparecer
+            if (r.enviados > 0) resultado = await widget.deps.home.carregar();
           } on ApiException catch (e) {
             if (e.naoAutorizado) {
               if (mounted) _sessaoExpirou();
@@ -117,7 +119,7 @@ class _HomePageState extends State<HomePage> {
     } finally {
       if (mounted) setState(() => _sincronizando = false);
     }
-    if (mounted) await _carregar();
+    if (mounted) await _carregar(sincronizar: false);
   }
 
   void _sessaoExpirou() {
@@ -137,7 +139,7 @@ class _HomePageState extends State<HomePage> {
       context,
       MaterialPageRoute<void>(builder: (_) => tela),
     );
-    if (mounted) await _carregar();
+    if (mounted && !_saindo) await _carregar();
   }
 
   @override
@@ -170,7 +172,10 @@ class _HomePageState extends State<HomePage> {
               ConfiguracoesPage(
                 deps: widget.deps,
                 aoMudarTema: widget.aoMudarTema,
-                aoSair: widget.aoSair,
+                aoSair: () {
+                  _saindo = true;
+                  widget.aoSair();
+                },
               ),
             ),
           ),
