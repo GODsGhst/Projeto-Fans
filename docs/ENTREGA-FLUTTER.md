@@ -387,6 +387,17 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
   cru do servidor), H8 (pt-BR), L2-B (evento excluído/oculto, rascunho órfão), L2-C (os 2 bugs do
   V1 + 5 testes que faltavam), H9 (teste do roteiro da demo), H7 (docs), V2 (telas), V4 (a11y/design).
   Coordenador: a troca de conta passou a falhar fechado (achado do V5).
+- V2 (Sonnet) confirmou todas as correções de tela, mas achou **2 regressões criadas na volta 1**:
+  "Sair" mostrava "Sessão expirada" falso (a Home recarregava sem token) e o evento enviado pela
+  sincronização ao abrir só aparecia depois de puxar a lista; e provou que um toque em sincronizar
+  gerava 2 POSTs. Patch dele aplicado pelo coordenador, com 12 testes (3 ficam vermelhos sem o patch).
+- V4 (Sonnet) renderizou 132 telas (2 temas, fonte 1× e 2×) e rodou os guidelines de a11y: prova ×
+  entrega passa em cinza; nenhum alvo < 48 dp. Achou: card sem ação de toque no TalkBack, "Cancelar"
+  do diálogo a 4,48:1, dia "2/3" e título do login quebrados a 200%, campos sublinhados (Figma usa
+  preenchidos), diálogo de excluir com o destaque invertido. Nota estimada de Interface: 1,2 → ~1,35.
+- **Volta 3**: L3-A (tema, card acessível, contraste), L3-B (Home, login, fila), L3-C (detalhe e
+  formulário dizem as regras: "Só X edita ou apaga", nota de autoria ao criar) — todos com mutação de
+  controle. Suíte: **177/177**, 2× seguidas.
 
 ## 9. Riscos e pontos cegos
 
