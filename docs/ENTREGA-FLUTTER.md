@@ -398,6 +398,16 @@ segurança) não é "corrigido" por Haiku — vai para a §9 e para o dono.
 - **Volta 3**: L3-A (tema, card acessível, contraste), L3-B (Home, login, fila), L3-C (detalhe e
   formulário dizem as regras: "Só X edita ou apaga", nota de autoria ao criar) — todos com mutação de
   controle. Suíte: **177/177**, 2× seguidas.
+- **R2′ (Opus), reavaliação: 18,75/20 — HTTP 9,40 (+0,85) · Persistência 9,35 (+0,95).** As duas
+  rubricas passam de 9,0; os 8 itens do top-8 anterior estão resolvidos. Ainda abertos: 1 importante
+  de código (URL com esquema errado escapava como `ArgumentError`, falha silenciosa no login — cenário
+  "URL incorreta" da §15 da apostila) e 2 importantes de documento (passo 6.2 do roteiro descrevia uma
+  tela que nunca aparece; resposta da banca sobre "URL incorreta" estava errada).
+- **Fechamento (4ª volta, acima do limite de 3 que o próprio protocolo da §7.2 fixou).** Decisão do
+  coordenador, declarada: são itens baratos e dois deles fariam o aluno dizer algo errado na banca.
+  Escopo travado na lista do R2′, sem frente nova: L4-A (URL inválida → `ApiException`), L4-B
+  (spinner nos botões que esperam até 90 s), L4-C (Home sem turma diz isso), L4-D (roteiro 6.2,
+  checklist real da §24, resposta da banca).
 
 ## 9. Riscos e pontos cegos
 
