@@ -349,6 +349,20 @@ void main() {
 
       expect(enviado.url.toString(), 'http://api/home');
     });
+
+    test('esquema errado ou ausente falha antes de enviar, como ApiException de conexão', () async {
+      for (final url in ['htps://x.test/api/v1', 'x.test/api/v1']) {
+        final api = ApiService(
+          baseUrl: url,
+          client: MockClient((_) async => fail('não deveria enviar')),
+        );
+
+        final e = await _falha(api.home());
+
+        expect(e.semConexao, isTrue, reason: url);
+        expect(e.mensagem, contains('Endereço do servidor inválido'), reason: url);
+      }
+    });
   });
 
   group('escrita', () {

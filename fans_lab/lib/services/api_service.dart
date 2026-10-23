@@ -80,7 +80,10 @@ class ApiService {
     int? versao,
     bool login = false,
   }) async {
-    final uri = Uri.parse('$baseUrl$caminho');
+    final uri = Uri.tryParse('$baseUrl$caminho');
+    if (uri == null || !(uri.isScheme('http') || uri.isScheme('https')) || uri.host.isEmpty) {
+      throw const ApiException.semConexao('Endereço do servidor inválido. Confira o API_URL.');
+    }
     final cabecalhos = <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json',
