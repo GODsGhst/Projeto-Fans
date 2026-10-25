@@ -5,6 +5,8 @@ O que cai na semana e o que foi dado em cada aula, mantido pela turma.
 **Entrega da disciplina Aplicações Móveis e Distribuídas (Flutter): a pasta [`fans_lab/`](fans_lab/).**
 O app roda no Android e no navegador. Como rodar, o que ele cobre e onde está cada requisito: [`fans_lab/README.md`](fans_lab/README.md).
 
+**APK pronto para Android:** [Releases → entrega-etapa2](https://github.com/GODsGhst/Projeto-Fans/releases/tag/entrega-etapa2). No primeiro acesso: **Criar conta** → código da turma.
+
 | Pasta | O que é |
 |---|---|
 | `fans_lab/` | app Flutter (Android e navegador): HTTP, SQLite, offline e sincronização |
