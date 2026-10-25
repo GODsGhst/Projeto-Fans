@@ -10,9 +10,14 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:fans_lab/app_deps.dart';
 import 'package:fans_lab/database/app_database.dart';
 import 'package:fans_lab/main.dart' as fans;
+import 'package:fans_lab/models/rascunho_evento.dart';
+import 'package:fans_lab/models/sessao.dart';
+import 'package:fans_lab/models/tipo_evento.dart';
+import 'package:fans_lab/models/usuario.dart';
 import 'package:fans_lab/screens/cadastro_page.dart';
 import 'package:fans_lab/screens/entrar_turma_page.dart';
 import 'package:fans_lab/screens/home_page.dart';
+import 'package:fans_lab/screens/login_page.dart';
 import 'package:fans_lab/widgets/cores.dart';
 
 void main() {
@@ -116,6 +121,39 @@ void main() {
     expect(caminhos.first, 'POST /auth/registrar');
     final salva = await tester.runAsync(deps.sessao.carregar);
     expect(salva!.turmaId, 't1', reason: 'reabrir o app vai direto para a Home');
+  });
+
+  test('validarEmail recusa o que o @Email do servidor recusa', () {
+    expect(validarEmail('prof@gmail.com'), isNull);
+    expect(validarEmail('a.b-c+d@sub.exemplo.com.br'), isNull);
+    for (final ruim in ['prof@gmail.com.', 'prof@gmail..com', 'prof@gmail.com,', 'prof@gmail', 'prof gmail.com']) {
+      expect(validarEmail(ruim), 'E-mail inválido.', reason: ruim);
+    }
+  });
+
+  testWidgets('sair da tela da turma não apaga a fila do aparelho', (tester) async {
+    final deps = await montarDeps(tester, (_) async => json({'status': 404}, 404));
+    await tester.runAsync(() => deps.rascunhos.inserir(RascunhoEvento(
+      materiaId: 'm1',
+      materiaSigla: 'BD',
+      materiaCorHex: '#1D4ED8',
+      tipo: TipoEvento.prova,
+      titulo: 'Pendente',
+      data: DateTime(2026, 11, 5),
+      criadoEm: DateTime(2026, 10, 25),
+    )));
+    final semTurma = Sessao(
+      jwt: 'jwt',
+      usuario: Usuario(id: 'u9', nome: 'Prof', email: 'prof@x.com'),
+    );
+    await tester.pumpWidget(fans.FansLabApp(deps: deps, sessaoInicial: semTurma));
+    await esperarAparecer(tester, find.byType(EntrarTurmaPage));
+
+    await tester.tap(find.text('Sair'));
+    await esperarAparecer(tester, find.text('Não tem conta? Criar conta'));
+
+    final fila = await tester.runAsync(deps.rascunhos.listarPendentes);
+    expect(fila, hasLength(1));
   });
 
   testWidgets('código errado: mostra a mensagem e continua na tela', (tester) async {

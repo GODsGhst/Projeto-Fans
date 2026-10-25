@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MaxLengthEnforcement;
 
 import 'package:fans_lab/app_deps.dart';
 import 'package:fans_lab/models/sessao.dart';
@@ -99,11 +100,16 @@ class _CadastroPageState extends State<CadastroPage> {
                     TextFormField(
                       controller: _senha,
                       obscureText: true,
+                      // Contador sem cortar: senha colada mais longa não pode virar outra senha.
                       maxLength: 100,
+                      maxLengthEnforcement: MaxLengthEnforcement.none,
                       decoration: const InputDecoration(labelText: 'Senha'),
-                      validator: (v) => (v ?? '').length < 8
-                          ? 'A senha precisa de pelo menos 8 caracteres.'
-                          : null,
+                      validator: (v) {
+                        final n = (v ?? '').length;
+                        if (n < 8) return 'A senha precisa de pelo menos 8 caracteres.';
+                        if (n > 100) return 'A senha pode ter até 100 caracteres.';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 8),
                     TextFormField(

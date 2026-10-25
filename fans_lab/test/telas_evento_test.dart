@@ -223,6 +223,38 @@ void main() {
     expect(todos, isEmpty);
   });
 
+  testWidgets('título acima de 120: não corta o texto e bloqueia o envio', (
+    tester,
+  ) async {
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+      return http.Response('', 404);
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoFormPage(deps: deps),
+      ),
+    );
+    await aguardar(tester);
+
+    await escolherMateria(tester);
+    final longo = 'x' * 130;
+    await tester.enterText(find.widgetWithText(TextFormField, 'O que é'), longo);
+    await tester.dragUntilVisible(
+      find.text('Salvar'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
+    await tester.tap(find.text('Salvar'));
+    await tester.pump();
+
+    expect(find.text(longo), findsOneWidget, reason: 'o texto continua inteiro');
+    expect(find.text('Até 120 caracteres'), findsOneWidget);
+    final todos = await tester.runAsync(() => deps.rascunhos.listar());
+    expect(todos, isEmpty);
+  });
+
   testWidgets('fila mostra o rascunho aguardando envio', (tester) async {
     final deps = await montarDeps(tester, (req) async {
       return http.Response('', 404);

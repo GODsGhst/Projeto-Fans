@@ -9,7 +9,11 @@ import 'package:fans_lab/services/api_exception.dart';
 String? validarEmail(String? v) {
   final email = v?.trim() ?? '';
   if (email.isEmpty) return 'Informe o e-mail.';
-  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) return 'E-mail inválido.';
+  // Domínio em rótulos de letras, números e hífen: o @Email do servidor recusa ponto duplo,
+  // ponto no fim e vírgula, e o erro dele vem em inglês.
+  if (!RegExp(r'^[^@\s,]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$').hasMatch(email)) {
+    return 'E-mail inválido.';
+  }
   return null;
 }
 

@@ -46,7 +46,7 @@ flutter run -d chrome                                          # navegador, API 
 flutter run                                                    # Android, API de produção
 flutter run --dart-define=API_URL=http://10.0.2.2:8080/api/v1  # Android, API local (backend na porta 8080 do PC)
 flutter run -d chrome --dart-define=API_URL=http://localhost:8080/api/v1  # navegador, API local
-flutter test                                                   # 191 testes, no PC, sem aparelho e sem backend
+flutter test                                                   # 195 testes, no PC, sem aparelho e sem backend
 flutter build apk --release                                    # APK em build/app/outputs/flutter-apk/app-release.apk
 flutter build web                                              # site em build/web (sirva em http://localhost:8100)
 ```
@@ -108,7 +108,7 @@ lib/
   services/        ApiService (HTTP), ApiException, HomeService (API ou cache), SyncService (fila)
   screens/         login, criar conta, entrar na turma, Home, detalhe, formulário, fila de envio, configurações
   widgets/         MateriaChip, EventoCard, tema (CoresFans), tempo_relativo
-test/              191 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
+test/              195 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
 test_e2e/          13 testes contra o backend real (ver "Teste contra o backend real")
 ```
 

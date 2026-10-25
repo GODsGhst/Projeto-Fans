@@ -98,11 +98,12 @@ class _FansLabAppState extends State<FansLabApp> {
       home: switch (_sessao) {
         null => LoginPage(deps: widget.deps, aoEntrar: _aoEntrar),
         // Conta recém-criada (ou que saiu da turma): sem turma, a Home não tem o que mostrar.
+        // Sair daqui não apaga o banco local: se outra conta entrar, _aoEntrar apaga.
         final s when s.turmaId == null => EntrarTurmaPage(
           deps: widget.deps,
           sessao: s,
           aoEntrar: _aoEntrar,
-          aoSair: _aoSair,
+          aoSair: _sessaoExpirou,
         ),
         _ => HomePage(
           deps: widget.deps,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MaxLengthEnforcement;
 
 import 'package:fans_lab/app_deps.dart';
 import 'package:fans_lab/models/evento.dart';
@@ -144,10 +145,16 @@ class _EventoFormPageState extends State<EventoFormPage> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _titulo,
+            // Mostra o contador sem cortar: um título antigo mais longo não some ao editar.
             maxLength: 120,
+            maxLengthEnforcement: MaxLengthEnforcement.none,
             decoration: const InputDecoration(labelText: 'O que é'),
-            validator: (v) =>
-                (v ?? '').trim().isEmpty ? 'Informe o título' : null,
+            validator: (v) {
+              final t = (v ?? '').trim();
+              if (t.isEmpty) return 'Informe o título';
+              if (t.length > 120) return 'Até 120 caracteres';
+              return null;
+            },
           ),
           const SizedBox(height: 8),
           ListTile(

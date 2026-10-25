@@ -505,7 +505,15 @@ void main() {
 
       final e = await _falha(api.registrar('Prof', 'prof@x.com', 'senha-longa'));
 
-      expect(e.mensagem, 'Já existe conta com este e-mail.');
+      expect(e.mensagem, 'Já existe conta com este e-mail. Volte e entre com ela.');
+    });
+
+    test('registrar recusado (400 genérico do Spring, em inglês) sai em português', () async {
+      final api = _api((_) async => _resp({'status': 400, 'detail': 'Invalid request content.'}, 400));
+
+      final e = await _falha(api.registrar('Prof', 'prof@x.com', 'senha-longa'));
+
+      expect(e.mensagem, 'Dados recusados pelo servidor. Confira o e-mail e a senha.');
     });
 
     test('entrarNaTurma manda o código e devolve o turmaId', () async {

@@ -43,7 +43,14 @@ class ApiService {
           esperado: 200, corpo: {'nome': nome, 'email': email, 'senha': senha});
       return _ler<Sessao>(r, Sessao.fromJson);
     } on ApiException catch (e) {
-      if (e.conflito) throw const ApiException.http(409, 'Já existe conta com este e-mail.');
+      // Também é o caso de quem criou a conta mas não recebeu a resposta (timeout, servidor acordando).
+      if (e.conflito) {
+        throw const ApiException.http(409, 'Já existe conta com este e-mail. Volte e entre com ela.');
+      }
+      // O texto do 400 vem do Spring, em inglês. A tela já valida os mesmos campos.
+      if (e.status == 400) {
+        throw const ApiException.http(400, 'Dados recusados pelo servidor. Confira o e-mail e a senha.');
+      }
       rethrow;
     }
   }
