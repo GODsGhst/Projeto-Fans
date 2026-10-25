@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:fans_lab/app_deps.dart';
 import 'package:fans_lab/database/app_database.dart';
 import 'package:fans_lab/models/sessao.dart';
+import 'package:fans_lab/screens/entrar_turma_page.dart';
 import 'package:fans_lab/screens/home_page.dart';
 import 'package:fans_lab/screens/login_page.dart';
 import 'package:fans_lab/widgets/cores.dart';
@@ -86,7 +87,7 @@ class _FansLabAppState extends State<FansLabApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Fans Lab',
+      title: 'projetoFans',
       debugShowCheckedModeBanner: false,
       theme: temaFans(Brightness.light),
       darkTheme: temaFans(Brightness.dark),
@@ -94,14 +95,22 @@ class _FansLabAppState extends State<FansLabApp> {
       locale: localeApp,
       supportedLocales: localesSuportados,
       localizationsDelegates: delegatesLocalizacao,
-      home: _sessao == null
-          ? LoginPage(deps: widget.deps, aoEntrar: _aoEntrar)
-          : HomePage(
-              deps: widget.deps,
-              aoSair: _aoSair,
-              aoSessaoExpirar: _sessaoExpirou,
-              aoMudarTema: _aoMudarTema,
-            ),
+      home: switch (_sessao) {
+        null => LoginPage(deps: widget.deps, aoEntrar: _aoEntrar),
+        // Conta recém-criada (ou que saiu da turma): sem turma, a Home não tem o que mostrar.
+        final s when s.turmaId == null => EntrarTurmaPage(
+          deps: widget.deps,
+          sessao: s,
+          aoEntrar: _aoEntrar,
+          aoSair: _aoSair,
+        ),
+        _ => HomePage(
+          deps: widget.deps,
+          aoSair: _aoSair,
+          aoSessaoExpirar: _sessaoExpirou,
+          aoMudarTema: _aoMudarTema,
+        ),
+      },
     );
   }
 }

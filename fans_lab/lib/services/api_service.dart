@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:fans_lab/config.dart';
 import 'package:fans_lab/models/evento.dart';
 import 'package:fans_lab/models/evento_detalhe.dart';
+import 'package:fans_lab/models/formatos.dart';
 import 'package:fans_lab/models/item_home.dart';
 import 'package:fans_lab/models/materia.dart';
 import 'package:fans_lab/models/sessao.dart';
@@ -33,6 +34,32 @@ class ApiService {
     final r = await _enviar('POST', '/auth/login',
         esperado: 200, corpo: {'email': email, 'senha': senha}, login: true);
     return _ler(r, Sessao.fromJson);
+  }
+
+  /// Cria conta de aluno. A sessão volta sem turma: o próximo passo é [entrarNaTurma].
+  Future<Sessao> registrar(String nome, String email, String senha) async {
+    try {
+      final r = await _enviar('POST', '/auth/registrar',
+          esperado: 200, corpo: {'nome': nome, 'email': email, 'senha': senha});
+      return _ler<Sessao>(r, Sessao.fromJson);
+    } on ApiException catch (e) {
+      if (e.conflito) throw const ApiException.http(409, 'Já existe conta com este e-mail.');
+      rethrow;
+    }
+  }
+
+  /// Entra na turma pelo código de convite e devolve o id dela.
+  Future<String> entrarNaTurma(String codigo) async {
+    try {
+      final r = await _enviar('POST', '/turmas/entrar',
+          esperado: 200, corpo: {'codigoConvite': codigo});
+      return _ler<String>(r, (json) => campo<String>(json, 'turmaId'));
+    } on ApiException catch (e) {
+      // O servidor responde 404 para código que não existe, sem dizer mais nada (de propósito).
+      if (e.naoEncontrado) throw const ApiException.http(404, 'Código de turma não encontrado.');
+      if (e.conflito) throw const ApiException.http(409, 'Sua conta já está em outra turma.');
+      rethrow;
+    }
   }
 
   /// Devolve a lista exatamente na ordem recebida: ordem e teto são regra do servidor.

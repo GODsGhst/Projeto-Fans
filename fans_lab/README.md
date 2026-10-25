@@ -10,10 +10,10 @@ App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma
 | Comunicação HTTP com serviço/API | GET, POST, PUT, PATCH e DELETE na API REST | `lib/services/api_service.dart` |
 | Acesso real a banco de dados | a API grava e lê no PostgreSQL do servidor; nada é fictício nem fica só em memória | `../backend` |
 | Consulta | Home e detalhe vêm do banco por GET | `ApiService.home`, `ApiService.evento` |
-| Cadastro | formulário envia POST; aparece para a turma com autor e hora | `lib/screens/evento_form_page.dart` |
+| Cadastro | criar conta (POST `/auth/registrar`), entrar na turma pelo código (POST `/turmas/entrar`) e cadastrar prova ou entrega (POST `/eventos`), que aparece para a turma com autor e hora | `cadastro_page.dart`, `entrar_turma_page.dart`, `evento_form_page.dart` |
 | Persistência após fechar e abrir | sessão e tema em SharedPreferences; cache, rascunhos e "feito" em SQLite (no navegador, o mesmo SQLite em WebAssembly, gravando no IndexedDB) | `lib/repositories/`, `lib/database/app_database.dart` |
 | Atualização da interface | a Home recarrega ao voltar de qualquer tela e depois de salvar, editar, excluir ou sincronizar | `lib/screens/home_page.dart` |
-| Validação | matéria e título obrigatórios, sala até 40 caracteres, e-mail e senha no login; o envio fica bloqueado até corrigir | `evento_form_page.dart`, `login_page.dart` |
+| Validação | e-mail com formato válido; senha de 8 a 100 caracteres, repetida igual; nome e código obrigatórios; matéria e título obrigatórios, título até 120 e sala até 40 caracteres; data de hoje em diante. O envio fica bloqueado até corrigir | `cadastro_page.dart`, `login_page.dart`, `evento_form_page.dart` |
 | Tratamento de erros | sem conexão, servidor fora do ar, 401, 404, 409, 5xx e JSON inesperado viram mensagem na tela; falha nunca aparece como lista vazia | `ApiService._enviar`, `_erroHttp`, `HomeService.carregar` |
 | Organização | Model, Database, Repository, Service e Screen em pastas separadas | ver "Estrutura" |
 
@@ -27,6 +27,10 @@ App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma
 - **Navegador**: o SQLite roda em WebAssembly (`sqflite_common_ffi_web`; `web/sqlite3.wasm` e `web/sqflite_sw.js` vêm de `dart run sqflite_common_ffi_web:setup`). A API só aceita chamadas de navegador vindas de `http://localhost:8100` (CORS), por isso o `web_dev_config.yaml` fixa essa porta no `flutter run`.
 
 Fora do escopo: edição e exclusão offline, cache do detalhe de evento, armazenamento seguro do token (ver "Limites conhecidos").
+
+## Primeiro acesso
+
+Na tela de login, **Não tem conta? Criar conta** → nome, e-mail e senha → código de convite da turma. Depois disso o app abre direto na Home, também ao fechar e abrir de novo. O código de convite é de quem criou a turma; no backend local, a turma de exemplo é `TURMA01`.
 
 ## Pré-requisitos
 
@@ -42,7 +46,7 @@ flutter run -d chrome                                          # navegador, API 
 flutter run                                                    # Android, API de produção
 flutter run --dart-define=API_URL=http://10.0.2.2:8080/api/v1  # Android, API local (backend na porta 8080 do PC)
 flutter run -d chrome --dart-define=API_URL=http://localhost:8080/api/v1  # navegador, API local
-flutter test                                                   # 183 testes, no PC, sem aparelho e sem backend
+flutter test                                                   # 191 testes, no PC, sem aparelho e sem backend
 flutter build apk --release                                    # APK em build/app/outputs/flutter-apk/app-release.apk
 flutter build web                                              # site em build/web (sirva em http://localhost:8100)
 ```
@@ -102,9 +106,9 @@ lib/
   database/        AppDatabase: SQLite (sqflite; no navegador, sqflite_common_ffi_web), esquema versão 1
   repositories/    CRUD local (cache, matérias, rascunhos, estado pessoal) e SessaoStore
   services/        ApiService (HTTP), ApiException, HomeService (API ou cache), SyncService (fila)
-  screens/         login, Home, detalhe, formulário, fila de envio, configurações
+  screens/         login, criar conta, entrar na turma, Home, detalhe, formulário, fila de envio, configurações
   widgets/         MateriaChip, EventoCard, tema (CoresFans), tempo_relativo
-test/              183 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
+test/              191 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
 test_e2e/          13 testes contra o backend real (ver "Teste contra o backend real")
 ```
 

@@ -302,7 +302,7 @@ void main() {
   });
 
   testWidgets('conta sem turma (404 SEM_TURMA) explica o que fazer, nunca lista vazia', (tester) async {
-    const texto = 'Sua conta ainda não está em nenhuma turma. Entre numa turma pelo app da turma e tente de novo.';
+    const texto = 'Sua conta não está em nenhuma turma. Saia (⚙ → Sair) e entre de novo para informar o código da turma.';
     final deps = await montarDeps(tester, (req) async {
       if (!req.url.path.endsWith('/home')) return json({'status': 404}, 404);
       return json({

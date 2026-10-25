@@ -478,4 +478,56 @@ void main() {
       expect(e.mensagem, 'Título não pode ficar em branco');
     });
   });
+
+  group('cadastro e turma', () {
+    test('registrar faz POST em /auth/registrar e devolve a sessão sem turma', () async {
+      late http.Request pedido;
+      final api = _api((req) async {
+        pedido = req;
+        return _resp({
+          'jwt': 'jwt-novo',
+          'usuario': {'id': 'u9', 'nome': 'Prof', 'email': 'prof@x.com'},
+          'turmaId': null,
+        }, 200);
+      });
+
+      final s = await api.registrar('Prof', 'prof@x.com', 'senha-longa');
+
+      expect(pedido.method, 'POST');
+      expect(pedido.url.path, '/api/v1/auth/registrar');
+      expect(jsonDecode(pedido.body), {'nome': 'Prof', 'email': 'prof@x.com', 'senha': 'senha-longa'});
+      expect(s.jwt, 'jwt-novo');
+      expect(s.turmaId, isNull);
+    });
+
+    test('registrar com e-mail já usado (409) diz isso, não fala de evento', () async {
+      final api = _api((_) async => _resp({'status': 409, 'detail': 'Ja existe conta com este e-mail'}, 409));
+
+      final e = await _falha(api.registrar('Prof', 'prof@x.com', 'senha-longa'));
+
+      expect(e.mensagem, 'Já existe conta com este e-mail.');
+    });
+
+    test('entrarNaTurma manda o código e devolve o turmaId', () async {
+      late http.Request pedido;
+      final api = _api((req) async {
+        pedido = req;
+        return _resp({'id': 'm1', 'turmaId': 't7', 'papel': 'ALUNO'}, 200);
+      });
+
+      final turmaId = await api.entrarNaTurma('TURMA01');
+
+      expect(pedido.url.path, '/api/v1/turmas/entrar');
+      expect(jsonDecode(pedido.body), {'codigoConvite': 'TURMA01'});
+      expect(turmaId, 't7');
+    });
+
+    test('entrarNaTurma com código que não existe (404) diz isso', () async {
+      final api = _api((_) async => _resp({'status': 404}, 404));
+
+      final e = await _falha(api.entrarNaTurma('ERRADO'));
+
+      expect(e.mensagem, 'Código de turma não encontrado.');
+    });
+  });
 }

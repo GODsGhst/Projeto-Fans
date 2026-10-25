@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'package:fans_lab/app_deps.dart';
 import 'package:fans_lab/models/sessao.dart';
+import 'package:fans_lab/screens/cadastro_page.dart';
 import 'package:fans_lab/services/api_exception.dart';
+
+/// Validação de e-mail do login e do cadastro.
+String? validarEmail(String? v) {
+  final email = v?.trim() ?? '';
+  if (email.isEmpty) return 'Informe o e-mail.';
+  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) return 'E-mail inválido.';
+  return null;
+}
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.deps, required this.aoEntrar});
@@ -87,14 +96,7 @@ class _LoginPageState extends State<LoginPage> {
                         labelText: 'E-mail',
                         hintText: 'você@exemplo.com',
                       ),
-                      validator: (v) {
-                        final email = v?.trim() ?? '';
-                        if (email.isEmpty) return 'Informe o e-mail.';
-                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                          return 'E-mail inválido.';
-                        }
-                        return null;
-                      },
+                      validator: validarEmail,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -124,7 +126,19 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(color: tema.colorScheme.error),
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _enviando
+                          ? null
+                          : () => Navigator.of(context).push(MaterialPageRoute<void>(
+                                builder: (_) => CadastroPage(
+                                  deps: widget.deps,
+                                  aoEntrar: widget.aoEntrar,
+                                ),
+                              )),
+                      child: const Text('Não tem conta? Criar conta'),
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       'A primeira entrada pode levar até 1 minuto: o servidor gratuito precisa acordar.',
                       style: tema.textTheme.bodySmall,

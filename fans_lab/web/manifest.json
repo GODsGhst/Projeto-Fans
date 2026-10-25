@@ -1,11 +1,11 @@
 {
-    "name": "fans_lab",
-    "short_name": "fans_lab",
+    "name": "projetoFans",
+    "short_name": "projetoFans",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "O que cai na semana e o que foi dado em cada aula, mantido pela turma.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

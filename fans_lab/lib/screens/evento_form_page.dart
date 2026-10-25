@@ -144,6 +144,7 @@ class _EventoFormPageState extends State<EventoFormPage> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _titulo,
+            maxLength: 120,
             decoration: const InputDecoration(labelText: 'O que é'),
             validator: (v) =>
                 (v ?? '').trim().isEmpty ? 'Informe o título' : null,
@@ -234,10 +235,12 @@ class _EventoFormPageState extends State<EventoFormPage> {
   );
 
   Future<void> _escolherData() async {
+    final hoje = DateUtils.dateOnly(DateTime.now());
     final escolhida = await showDatePicker(
       context: context,
       initialDate: _data,
-      firstDate: DateTime(2000),
+      // Prova ou entrega é do futuro. Editando um evento que já passou, a data dele continua valendo.
+      firstDate: _data.isBefore(hoje) ? _data : hoje,
       lastDate: DateTime(2100),
     );
     if (escolhida != null && mounted) setState(() => _data = escolhida);
@@ -281,7 +284,7 @@ class _EventoFormPageState extends State<EventoFormPage> {
         } else {
           await widget.deps.rascunhos.atualizar(dados);
         }
-        messenger.showSnackBar(SnackBar(content: Text(await _sincronizar())));
+        messenger.showSnackBar(SnackBar(content: Text(await _sincronizar(dados.data))));
       }
       // Pode ter voltado enquanto salvava: só fecha se esta ainda é a rota do topo.
       if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
@@ -295,7 +298,7 @@ class _EventoFormPageState extends State<EventoFormPage> {
     }
   }
 
-  Future<String> _sincronizar() async {
+  Future<String> _sincronizar(DateTime data) async {
     try {
       final r = await widget.deps.sync.sincronizar();
       if (r.semConexao) {
@@ -303,6 +306,13 @@ class _EventoFormPageState extends State<EventoFormPage> {
       }
       if (r.comErro > 0) {
         return 'Salvo no aparelho, mas o servidor recusou. Veja a fila de envio.';
+      }
+      // A Home do servidor mostra de hoje até hoje+14: sem este aviso, o evento parece ter sumido.
+      final janela = DateUtils.dateOnly(DateTime.now()).add(const Duration(days: 14));
+      if (data.isAfter(janela)) {
+        final aparece = data.subtract(const Duration(days: 14));
+        return 'Enviado para a turma. A Home mostra os próximos 14 dias: '
+            'ele aparece lá a partir de ${dataCurta(aparece)}.';
       }
       return 'Enviado para a turma.';
     } on ApiException catch (e) {

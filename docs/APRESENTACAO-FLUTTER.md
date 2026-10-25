@@ -9,7 +9,7 @@ Textos entre aspas são os da tela, conferidos com grep no código. Teste no apa
 ## Antes da banca (preparação, 10 min antes)
 
 1. **Acorde a API.** `curl https://projetofans-api.onrender.com/api/v1/saude` (ou abra a URL no navegador). Deve responder `{"status":"ok",...}`. Se der 502 ou demorar, repita até responder. Ela volta a dormir se ficar parada, então acorde perto da hora, não horas antes.
-2. **Entre uma vez** no app com sua conta, com rede. A Home precisa carregar uma vez com rede: isso grava o cache da Home e as matérias. Sem isso, a Home não mostra nada sem rede e o formulário não abre. Se a Home mostrar **"Sua conta ainda não está em nenhuma turma. Entre numa turma pelo app da turma e tente de novo."**, a conta não tem turma e a Home não mostra a lista: o fans_lab não tem tela para entrar em turma, então use a conta que já está na turma.
+2. **Entre uma vez** no app com sua conta, com rede. A Home precisa carregar uma vez com rede: isso grava o cache da Home e as matérias. Sem isso, a Home não mostra nada sem rede e o formulário não abre. Conta sem turma abre a tela **Entrar na turma**: digite o código de convite da turma.
 3. **Confira a Home.** Precisa ter:
    - uma **prova** e uma **entrega** nos próximos 14 dias (para a comparação visual aparecer);
    - um **evento da turma com material vinculado** (chamado **S** aqui). O app não tem tela para criar material: se S não tiver material no servidor, a seção mostra "Nenhum material vinculado.". Diga isso se perguntarem;
@@ -187,7 +187,7 @@ flutter test test/services_test.dart        # sincronização e offline: fila, P
 flutter test test/telas_home_test.dart      # Home: ordem do servidor, semana vazia, falha sem cache, 401 sem apagar a fila
 flutter test test/widgets_test.dart         # prova sólida, entrega com contorno, distinção em escala de cinza
 flutter test test/fluxo_demo_test.dart      # o fio principal do roteiro: login, criar online, feito, modo avião, criar offline, fila, sincronizar
-flutter test                                # tudo: 183 testes (unitários e de tela, sem servidor)
+flutter test                                # tudo: 191 testes (unitários e de tela, sem servidor)
 ```
 
 Para mostrar um teste específico: `flutter test --plain-name "duas chamadas simultâneas"`.

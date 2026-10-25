@@ -155,6 +155,46 @@ void main() {
     expect(find.textContaining('Salvo no aparelho'), findsOneWidget);
   });
 
+  testWidgets('evento além dos 14 dias: avisa quando ele aparece na Home', (
+    tester,
+  ) async {
+    final deps = await montarDeps(tester, (req) async {
+      if (req.url.path.endsWith('/materias')) return _json([_materiaJson]);
+      if (req.method == 'POST') {
+        return http.Response(jsonEncode(_detalheJson('u1')), 201,
+            headers: {'content-type': 'application/json; charset=utf-8'});
+      }
+      return http.Response('', 404);
+    });
+    final hoje = DateUtils.dateOnly(DateTime.now());
+    final data = hoje.add(const Duration(days: 30));
+    final r = RascunhoEvento(
+      materiaId: 'm1',
+      materiaSigla: 'BD',
+      materiaCorHex: '#1D4ED8',
+      tipo: TipoEvento.prova,
+      titulo: 'Prova final',
+      data: data,
+      criadoEm: DateTime.now(),
+    );
+    final id = (await tester.runAsync(() => deps.rascunhos.inserir(r)))!;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaFans(Brightness.light),
+        home: EventoFormPage(deps: deps, rascunho: r.copyWith(localId: id)),
+      ),
+    );
+    await aguardar(tester);
+
+    await tester.tap(find.text('Salvar'));
+    await aguardarTexto(tester, 'aparece lá a partir de');
+
+    final aparece = data.subtract(const Duration(days: 14));
+    final dd = aparece.day.toString().padLeft(2, '0');
+    final mm = aparece.month.toString().padLeft(2, '0');
+    expect(find.textContaining('a partir de $dd/$mm/${aparece.year}'), findsOneWidget);
+  });
+
   testWidgets('novo evento sem título: pede o título e não grava nada', (
     tester,
   ) async {
