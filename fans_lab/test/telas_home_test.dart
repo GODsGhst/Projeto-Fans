@@ -108,6 +108,23 @@ void main() {
     expect(find.text('E-mail ou senha incorretos.'), findsOneWidget);
   });
 
+  testWidgets('login com e-mail inválido não chama a API', (tester) async {
+    var chamadas = 0;
+    final deps = await montarDeps(tester, (_) async {
+      chamadas++;
+      return json({'status': 500}, 500);
+    });
+    await tester.pumpWidget(app(LoginPage(deps: deps, aoEntrar: (_) {})));
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'ana-sem-arroba');
+    await tester.enterText(find.byType(TextFormField).at(1), 'qualquer');
+    await tester.tap(find.text('Entrar'));
+    await tester.pump();
+
+    expect(find.text('E-mail inválido.'), findsOneWidget);
+    expect(chamadas, 0);
+  });
+
   testWidgets('home mostra os itens na ordem que o servidor mandou', (tester) async {
     final deps = await montarDeps(tester, (req) async {
       if (!req.url.path.endsWith('/home')) return json({'status': 404}, 404);

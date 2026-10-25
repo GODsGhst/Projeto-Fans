@@ -1,0 +1,5 @@
+# A API só aceita chamadas de navegador vindas de http://localhost:8100 (CORS, SegurancaConfig).
+# Com este arquivo, `flutter run -d chrome` sobe sempre nessa origem.
+server:
+  host: localhost
+  port: 8100

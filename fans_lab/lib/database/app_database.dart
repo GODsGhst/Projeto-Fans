@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 /// Quem abre o banco. Os repositórios recebem isto para os testes trocarem por um banco em memória.
 typedef AbrirDb = Future<Database> Function();
@@ -47,12 +49,17 @@ const _tabelas = ['home_cache', 'materias', 'rascunhos', 'estado_pessoal'];
 class AppDatabase {
   static Database? _db;
 
-  /// Banco do aparelho (singleton). Arquivo fans_lab.db.
+  /// Banco do aparelho (singleton). Arquivo fans_lab.db. No navegador é o mesmo SQLite, compilado
+  /// para WebAssembly (web/sqlite3.wasm), gravando no IndexedDB: as tabelas e o SQL são os mesmos.
   static Future<Database> abrir() async {
     final existente = _db;
     if (existente != null) return existente;
+    final opcoes = OpenDatabaseOptions(version: 1, onCreate: _criar);
+    if (kIsWeb) {
+      return _db = await databaseFactoryFfiWeb.openDatabase('fans_lab.db', options: opcoes);
+    }
     final caminho = join(await getDatabasesPath(), 'fans_lab.db');
-    return _db = await openDatabase(caminho, version: 1, onCreate: _criar);
+    return _db = await databaseFactory.openDatabase(caminho, options: opcoes);
   }
 
   /// Só para testes: cada chamada devolve um banco NOVO, vazio.

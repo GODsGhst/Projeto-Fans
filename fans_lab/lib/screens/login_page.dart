@@ -87,8 +87,14 @@ class _LoginPageState extends State<LoginPage> {
                         labelText: 'E-mail',
                         hintText: 'você@exemplo.com',
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Informe o e-mail.' : null,
+                      validator: (v) {
+                        final email = v?.trim() ?? '';
+                        if (email.isEmpty) return 'Informe o e-mail.';
+                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+                          return 'E-mail inválido.';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

@@ -1,6 +1,21 @@
 # fans_lab
 
-App Flutter do projetoFans. Consome a API da turma (backend Spring em `../backend`) e cobre as duas apostilas da disciplina Aplicações Móveis e Distribuídas: **Protocolo HTTP** e **Persistência local com sincronização**.
+App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma (backend Spring em `../backend`, Postgres) e cobre as duas apostilas da disciplina Aplicações Móveis e Distribuídas: **Protocolo HTTP** e **Persistência local com sincronização**.
+
+## Requisitos da Etapa 2 → onde estão
+
+| Requisito do enunciado | Como o app atende | Onde |
+|---|---|---|
+| Multiplataforma: Android e navegador | o mesmo código roda nos dois; testado em emulador Android 15 e no Chrome | `android/`, `web/`, `web_dev_config.yaml` |
+| Comunicação HTTP com serviço/API | GET, POST, PUT, PATCH e DELETE na API REST | `lib/services/api_service.dart` |
+| Acesso real a banco de dados | a API grava e lê no PostgreSQL do servidor; nada é fictício nem fica só em memória | `../backend` |
+| Consulta | Home e detalhe vêm do banco por GET | `ApiService.home`, `ApiService.evento` |
+| Cadastro | formulário envia POST; aparece para a turma com autor e hora | `lib/screens/evento_form_page.dart` |
+| Persistência após fechar e abrir | sessão e tema em SharedPreferences; cache, rascunhos e "feito" em SQLite (no navegador, o mesmo SQLite em WebAssembly, gravando no IndexedDB) | `lib/repositories/`, `lib/database/app_database.dart` |
+| Atualização da interface | a Home recarrega ao voltar de qualquer tela e depois de salvar, editar, excluir ou sincronizar | `lib/screens/home_page.dart` |
+| Validação | matéria e título obrigatórios, sala até 40 caracteres, e-mail e senha no login; o envio fica bloqueado até corrigir | `evento_form_page.dart`, `login_page.dart` |
+| Tratamento de erros | sem conexão, servidor fora do ar, 401, 404, 409, 5xx e JSON inesperado viram mensagem na tela; falha nunca aparece como lista vazia | `ApiService._enviar`, `_erroHttp`, `HomeService.carregar` |
+| Organização | Model, Database, Repository, Service e Screen em pastas separadas | ver "Estrutura" |
 
 ## O que cobre
 
@@ -9,27 +24,33 @@ App Flutter do projetoFans. Consome a API da turma (backend Spring em `../backen
 - **SQLite** (`lib/database/app_database.dart`, `lib/repositories/`): cache da Home, matérias, rascunhos (CRUD local) e estado pessoal ("feito").
 - **SharedPreferences** (`lib/repositories/sessao_store.dart`): sessão, tema escuro, datas de sincronização e o dono da última sessão.
 - **Offline e sincronização** (`lib/services/home_service.dart`, `lib/services/sync_service.dart`): sem rede, a Home vem do cache. Criar evento e marcar feito (inclusive pelo detalhe, sem rede) vão para uma fila e são enviados depois. A Home envia a fila sozinha quando carrega com rede. Não há serviço em segundo plano.
+- **Navegador**: o SQLite roda em WebAssembly (`sqflite_common_ffi_web`; `web/sqlite3.wasm` e `web/sqflite_sw.js` vêm de `dart run sqflite_common_ffi_web:setup`). A API só aceita chamadas de navegador vindas de `http://localhost:8100` (CORS), por isso o `web_dev_config.yaml` fixa essa porta no `flutter run`.
 
 Fora do escopo: edição e exclusão offline, cache do detalhe de evento, armazenamento seguro do token (ver "Limites conhecidos").
 
 ## Pré-requisitos
 
 - Flutter **3.47.7** e Dart **3.13.5** (confira com `flutter --version`).
-- Android SDK e um emulador ou aparelho com depuração USB. O projeto tem só a plataforma Android.
+- Android: Android SDK e um emulador ou aparelho com depuração USB.
+- Navegador: Google Chrome (ou Edge).
 
 ## Como rodar
 
 ```bash
 flutter pub get
-flutter run                                                    # API de produção
-flutter run --dart-define=API_URL=http://10.0.2.2:8080/api/v1  # API local (backend na porta 8080 do PC)
-flutter test                                                   # 182 testes, no PC, sem aparelho e sem backend
+flutter run -d chrome                                          # navegador, API de produção (sobe em http://localhost:8100)
+flutter run                                                    # Android, API de produção
+flutter run --dart-define=API_URL=http://10.0.2.2:8080/api/v1  # Android, API local (backend na porta 8080 do PC)
+flutter run -d chrome --dart-define=API_URL=http://localhost:8080/api/v1  # navegador, API local
+flutter test                                                   # 183 testes, no PC, sem aparelho e sem backend
 flutter build apk --release                                    # APK em build/app/outputs/flutter-apk/app-release.apk
+flutter build web                                              # site em build/web (sirva em http://localhost:8100)
 ```
 
 - `10.0.2.2` é o `localhost` do PC visto pelo emulador Android.
 - A URL padrão fica em `lib/config.dart`.
-- Nenhum APK vem pronto no repositório. O comando acima gera o arquivo no caminho indicado. Nenhum APK foi testado em aparelho ou emulador nesta fase: o ambiente de desenvolvimento não tem Android SDK.
+- Nenhum APK vem pronto no repositório. O comando acima gera o arquivo no caminho indicado.
+- Verificado em 24/10/2026, no emulador Android 15 (API 35) e no Chrome, contra o backend local: login, consulta, cadastro com validação, fechar e reabrir, sem conexão (modo avião no Android, servidor desligado no navegador), cadastro offline e sincronização. O APK de release abre no emulador.
 
 ## Rodar contra o backend local
 
@@ -52,7 +73,7 @@ flutter run --dart-define=API_URL=http://10.0.2.2:8080/api/v1
 ```
 
 - HTTP sem TLS só é liberado no build de debug (`android/app/src/debug/AndroidManifest.xml`). Por isso o `flutter run` (debug) alcança o backend local e o build de release não.
-- Esse caminho não foi testado em emulador nesta fase, pelo mesmo motivo do Android SDK.
+- No navegador: `flutter run -d chrome --dart-define=API_URL=http://localhost:8080/api/v1`. O backend local aceita a mesma origem `http://localhost:8100`.
 
 ## Teste contra o backend real
 
@@ -78,12 +99,12 @@ lib/
   config.dart      API_URL (--dart-define)
   app_deps.dart    monta as dependências (AppDeps.padrao)
   models/          dados puros: fromJson/toJson, toMap/fromMap; sem Flutter
-  database/        AppDatabase: SQLite (sqflite), esquema versão 1
+  database/        AppDatabase: SQLite (sqflite; no navegador, sqflite_common_ffi_web), esquema versão 1
   repositories/    CRUD local (cache, matérias, rascunhos, estado pessoal) e SessaoStore
   services/        ApiService (HTTP), ApiException, HomeService (API ou cache), SyncService (fila)
   screens/         login, Home, detalhe, formulário, fila de envio, configurações
   widgets/         MateriaChip, EventoCard, tema (CoresFans), tempo_relativo
-test/              182 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
+test/              183 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
 test_e2e/          13 testes contra o backend real (ver "Teste contra o backend real")
 ```
 
@@ -93,6 +114,7 @@ test_e2e/          13 testes contra o backend real (ver "Teste contra o backend 
 - **Timeout de 90 s.** Se o servidor não responder nesse tempo, aparece "O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes."
 - **APK de release sem rede.** A permissão `INTERNET` está em `android/app/src/main/AndroidManifest.xml`. Não a remova.
 - **"Sem conexão com o servidor." com API local em `http://`.** Use o build de debug (`flutter run`) com `--dart-define=API_URL=http://10.0.2.2:8080/api/v1`. O release é só HTTPS e não alcança o backend local. Para apresentar, use a API de produção.
+- **No navegador, "Sem conexão com o servidor." logo no login.** O app subiu numa porta diferente de 8100 e a API recusou a origem (CORS). Rode com `flutter run -d chrome` dentro de `fans_lab/` (lê `web_dev_config.yaml`) ou passe `--web-port 8100`.
 - **"E-mail ou senha incorretos."** Senha errada no login (401).
 - **"Endereço do servidor inválido. Confira o API_URL."** O `--dart-define=API_URL` está sem `https://` (ou com esquema errado). Nada é enviado.
 - **401 em outras telas (sessão expirada).** O app volta ao login com a mensagem "Sessão expirada. Entre de novo.". Rascunhos e marcações não enviados continuam no aparelho: entre de novo com a mesma conta e eles são enviados. Entrar com outra conta apaga os dados locais da conta anterior, para não enviar evento com a autoria errada.

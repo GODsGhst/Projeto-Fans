@@ -18,6 +18,7 @@ Textos entre aspas são os da tela, conferidos com grep no código. Teste no apa
 5. **Esvazie a fila.** Configurações → Fila de envio → **Sincronizar agora**, se houver algo pendente. Ao carregar a Home com rede, ela também envia sozinha o que estiver pendente.
 6. **Modo avião desligado.** Tema claro. Terminal aberto em `fans_lab/`, com o `flutter` no PATH (para o plano B).
 7. Os eventos de teste vão para a turma real. Use os títulos indicados e apague tudo no passo 8.
+8. **Saia da conta por último:** ⚙ Configurações → **Sair** → **Sair**. Com a sessão salva o app abre direto na Home, e o passo 1 precisa da tela de login. Sair apaga o cache do aparelho; o passo 2 grava de novo.
 
 ---
 
@@ -130,11 +131,11 @@ Ligue o modo avião no ponto indicado em 6.1 e deixe-o ligado até o passo 7.
   - `lib/repositories/estado_pessoal_repository.dart`: `marcarLocal`
   - `lib/database/app_database.dart`: tabela `estado_pessoal`
 
-**6.4 Criar evento offline.** Toque **+ Adicionar prova ou entrega** → "O que é": `Teste offline — apresentação` → data → **Salvar** → **"Salvo no aparelho — será enviado quando houver conexão."**. A Home mostra "1 aguardando envio" com o botão **Ver fila**.
+**6.4 Criar evento offline.** Toque **+ Adicionar prova ou entrega** → Tipo → Matéria → "O que é": `Teste offline — apresentação` → data → **Salvar** → **"Salvo no aparelho — será enviado quando houver conexão."**. A Home mostra "2 aguardando envio" (este rascunho e a marcação de feito do 6.3) com o botão **Ver fila**.
 - *Critério:* CRUD local (inserir) na tabela `rascunhos`; offline-first.
 - *Código:* `lib/screens/evento_form_page.dart`: `_salvar` (ramo sem `evento`: `rascunhos.inserir`); `lib/repositories/rascunho_repository.dart`: `RascunhoRepository.inserir`.
 
-**6.5 Fila de envio e edição local.** Toque **Ver fila**. A banca vê o rascunho com **"você · aguardando envio"** e a linha "Marcações de feito pendentes: 1". Toque **Editar** no rascunho, troque o título, toque **Salvar** (ainda offline, mesmo snack do 6.4).
+**6.5 Fila de envio e edição local.** Toque **Ver fila**. A banca vê o rascunho com **"você · aguardando envio"** e a linha "Marcações de feito pendentes: 1". Toque **Editar** no rascunho, troque o título para `Teste offline editado`, toque **Salvar** (ainda offline, mesmo snack do 6.4). A fila também mostra o **Teste A — apresentação** com **"você · enviado ✓"**: ela guarda o estado de envio de tudo que foi criado neste aparelho, com o título da criação, mesmo depois de editado ou excluído no servidor.
 - *Critério:* Read e Update locais; o estado de envio aparece por item (pendente, enviado ✓ ou erro).
 - *Código:*
   - `lib/screens/fila_page.dart`: `_FilaPageState._conteudo`, `_status`, `_editar`
@@ -148,7 +149,7 @@ Ligue o modo avião no ponto indicado em 6.1 e deixe-o ligado até o passo 7.
 ### Passo 7 — Religar e sincronizar (5:50 a 6:30)
 
 - **Toque:** desligue o modo avião. Abra **Ver fila** e toque **Sincronizar agora**. Não puxe a Home para atualizar antes disso: a Home também envia a fila ao carregar com rede, e o contador da fila sairia zerado.
-- **A banca vê:** o snack **"Enviados: 2 · Com erro: 0 · Pendentes: 0"** (2 se só o rascunho do 6.4 e a marcação do 6.3 estavam pendentes). O rascunho passa a **"você · enviado ✓"** e a linha de marcações diz "Nenhuma marcação de feito pendente.". Ao voltar à Home, a faixa offline some e o "Teste offline — apresentação" aparece, com a autoria vinda do servidor.
+- **A banca vê:** o snack **"Enviados: 2 · Com erro: 0 · Pendentes: 0"** (2 se só o rascunho do 6.4 e a marcação do 6.3 estavam pendentes). O rascunho passa a **"você · enviado ✓"** e a linha de marcações diz "Nenhuma marcação de feito pendente.". Ao voltar à Home, a faixa offline some e o "Teste offline editado" aparece, com a autoria vinda do servidor.
 - *Critério:* Sincronização. O POST (201) do rascunho e o PUT (204) do feito são enviados; a fila zera; a data da sincronização é gravada; a Home volta a vir da API.
 - *Código:*
   - `lib/services/sync_service.dart`: `SyncService.sincronizar`, `_executar` (rascunhos → `criarEvento`; feitos → `marcarFeito`)
@@ -168,7 +169,7 @@ Mostre de novo, sem refazer, o que já passou:
 - semana vazia → **"Nada nos próximos 14 dias."**; falha sem cache → a mensagem de erro com **Tentar de novo**. Falha nunca aparece como lista vazia.
 - *Código:* `lib/services/api_service.dart`: `_enviar` (traduz `SocketException`, `ClientException`, `TimeoutException` e `TlsException` em `ApiException.semConexao`), `_erroHttp`; `lib/services/api_exception.dart`: `ApiException`; `lib/services/home_service.dart`: `carregar` (sem cache, relança); `lib/screens/home_page.dart`: `_carregar`.
 
-**Limpeza (com rede):** abra **Teste B — apresentação** → **Excluir** → **Excluir**. Depois abra **Teste offline — apresentação** → **Excluir** → **Excluir**. Não deixe eventos de teste na turma.
+**Limpeza (com rede):** abra **Teste B — apresentação** → **Excluir** → **Excluir**. Depois abra **Teste offline editado** → **Excluir** → **Excluir**. Não deixe eventos de teste na turma.
 
 ---
 
@@ -186,7 +187,7 @@ flutter test test/services_test.dart        # sincronização e offline: fila, P
 flutter test test/telas_home_test.dart      # Home: ordem do servidor, semana vazia, falha sem cache, 401 sem apagar a fila
 flutter test test/widgets_test.dart         # prova sólida, entrega com contorno, distinção em escala de cinza
 flutter test test/fluxo_demo_test.dart      # o fio principal do roteiro: login, criar online, feito, modo avião, criar offline, fila, sincronizar
-flutter test                                # tudo: 182 testes (unitários e de tela, sem servidor)
+flutter test                                # tudo: 183 testes (unitários e de tela, sem servidor)
 ```
 
 Para mostrar um teste específico: `flutter test --plain-name "duas chamadas simultâneas"`.
@@ -260,7 +261,7 @@ O mapa completo por critério (ENTREGA-FLUTTER §3) fica abaixo.
 
 ## O que não afirmar
 
-- Não diga que o APK foi testado em aparelho ou emulador. Nesta versão, não foi.
+- O app foi testado no emulador Android 15 e no Chrome contra o backend local (24/10/2026). Contra a API de produção, só vale afirmar o que você mesmo rodou com a sua conta.
 - Não diga que editar ou excluir funciona sem rede. Mostra erro, e a mensagem diz isso.
 - Não diga que o detalhe de evento abre offline. Sem rede ele mostra o erro; só o botão "Marcar como feito" funciona.
 - Não diga que a sincronização garante envio único. Pode duplicar no caso de timeout (ver acima).
