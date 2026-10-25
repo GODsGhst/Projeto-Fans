@@ -1,0 +1,65 @@
+{
+  "rotas_sem_especificacao": [],
+  "arquivos_nao_cobertos": [
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/features/material-vm.ts",
+      "faz": "materialVm(): monta a linha de material usada por evento.page, materia.page e quadro.page. Traz as regras de negócio: link só para http(s), rótulo de formato pela extensão (LINK quando não dá para saber), 'aula de D mes' sem new Date para não recuar um dia em fuso negativo, e temResumo como booleano. Usa assinatura() de evento-vm. É a lacuna de maior impacto: três áreas dependem dele e nenhuma o lista."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/environments/environment.ts",
+      "faz": "Configuração de desenvolvimento: apiUrl http://localhost:8080/api/v1 e recuperacaoPorEmail=false, que faz a tela de recuperar avisar que nenhum e-mail chega. Portar como flavor de build. Os consumidores (api.service, turma-ativa.interceptor, recuperar.page, main.ts) foram lidos, mas o arquivo com os valores não."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/environments/environment.prod.ts",
+      "faz": "Configuração de produção, trocada no build por fileReplacements (angular.json): apiUrl https://projetofans-api.onrender.com/api/v1 e recuperacaoPorEmail=true. O valor da flag decide se a recuperação promete e-mail na UI."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/index.html",
+      "faz": "Casca web: lang pt-BR, title 'projetoFans', base href '/', viewport sem bloqueio de zoom, color-scheme light dark, favicon assets/icon/favicon.png e metas de web app para iOS. Não há manifest nem link de fonte."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/angular.json (e ionic.config.json)",
+      "faz": "Configuração de build: styles na ordem global.scss e depois theme/variables.scss; copia src/assets e os SVG do ionicons para /svg; budgets de produção (aviso em 2mb, erro em 5mb; 2kb/4kb por estilo de componente); fileReplacements de environment. Não há serviceWorker nem localize. ionic.config.json só declara type angular e a integração capacitor."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/core/.claude-flow/policy/state.json",
+      "faz": "Recibo de hook do Claude-Flow (session-end) gravado dentro de app/src/app/core. Não é código do app; não deve ser copiado para o port."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/assets/shapes.svg",
+      "faz": "Asset que nenhum .ts, .html ou .scss referencia. Asset morto; não portar."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/app/app.component.scss",
+      "faz": "Arquivo vazio (0 bytes). Nada a portar."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/polyfills.ts",
+      "faz": "Carrega zone.js e importa zone-flags. Específico do Angular, sem comportamento de produto a portar."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/zone-flags.ts",
+      "faz": "Define __Zone_disable_customElements para o zone.js. Existe só por causa do Angular; ignorar no port."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/src/test.ts",
+      "faz": "Bootstrap do Karma (initTestEnvironment). Só teste; não portar."
+    },
+    {
+      "arquivo": "C:/Users/gh0st/Projeto Fans/app/android/app/src/main/AndroidManifest.xml",
+      "faz": "Manifesto-fonte: só o LAUNCHER, a permissão INTERNET e launchMode singleTask. Não tem intent-filter de link (App Links) nem permissão de notificação. POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM e RECEIVE_BOOT_COMPLETED aparecem só no manifesto mesclado em android/app/build/ e vêm dos plugins Capacitor. O port precisa declará-las."
+    }
+  ],
+  "globais_faltando": [
+    "Ciclo de vida Ionic: 9 páginas definem ionViewWillEnter (admin, calendario, home, materias, materia, painel, perfil, quadro, turma) para recarregar ao voltar à aba. Junto com IonicRouteStrategy (provideIonicAngular em main.ts), a pilha de cada aba fica viva. O port precisa recarregar ao reentrar na rota e manter o estado de cada aba.",
+    "Botão voltar com destino explícito: 16 usos de ion-back-button com [defaultHref] (materia, resumo, editar-material, nova-materia e outras). Sem histórico, o voltar cai num caminho fixo. O port precisa do mesmo fallback.",
+    "Rota coringa ausente: nem app.routes.ts nem tabs.routes.ts definem path '**'. Uma URL desconhecida cai no erro do Router, sem tela de 404. Definir fallback no port.",
+    "Fontes: --ui é Roboto e --mono é 'Roboto Mono' (theme/variables.scss, linhas 91-92), sem @font-face, sem link do Google Fonts e sem arquivo de fonte em src/assets. O app depende da fonte do sistema. O port precisa decidir se empacota Roboto ou aceita a padrão.",
+    "i18n: não há. Sem LOCALE_ID, sem @angular/localize, sem ngx-translate; os textos são fixos em pt-BR. Datas por toLocaleDateString, toLocaleTimeString e Intl.DateTimeFormat('pt-BR') aparecem em pelo menos 6 arquivos (home, admin, transferir, turma, resumo, e nova-materia com localeCompare). notifications/reagendador.ts monta datas pt-BR à mão com Intl en-US. O port precisa de initializeDateFormatting('pt_BR') e de um formatador único.",
+    "Service worker: não há (sem ngsw, sem provideServiceWorker, sem serviceWorker no angular.json). O offline depende de snapshot no Capacitor Preferences (storage.service, home.repository). Não há SW a portar.",
+    "Persistência web fora do Preferences: tabs.page.ts grava o estado de menu recolhido em localStorage (CHAVE_RECOLHIDO, funções alternar e lerRecolhido). Está dentro de arquivo já lido, mas o briefing de estilos não menciona esse comportamento. No port, é uma preferência local por aparelho.",
+    "Plugins Capacitor declarados e não usados: @capacitor/haptics, @capacitor/keyboard e @capacitor/status-bar estão no package.json, mas nenhum import em src (checado com grep sem diferenciar maiúsculas). Decidir antes de portar; não há comportamento a copiar.",
+    "Iconografia: ionicons em estilo outline, registrados com addIcons (tabs.page.ts e páginas). São pelo menos 14 nomes kebab-case (calendar, grid, library, checkbox, hourglass, flag, people, list, forward, back, ellipse, circle, checkmark, text e document-text-outline) e chevron-back/forward em camelCase. O port precisa mapear cada um.",
+    "Contexto do port: mobile/ (untracked) já é um projeto Flutter, mas lib/main.dart ainda é o contador padrão. mobile/docs/spec/ tem JSON só para auth, calendario, docente-painel-admin, home, materias, notas-e-quadro, perfil-e-ajustes e turma. Não há spec para evento, nucleo-http-e-navegacao, notificacoes-e-sync nem design-system, então essas áreas precisam de levantamento antes de virar código."
+  ]
+}

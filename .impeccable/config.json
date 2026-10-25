@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "all-caps-body",
+        "value": "*",
+        "files": [
+          "docs/apresentacao/documento-abnt.html"
+        ],
+        "createdAt": "2026-10-18T19:48:54.986Z",
+        "reason": "ABNT NBR 14724 exige titulo de secao primaria em caixa alta; capa e folha de rosto usam maiusculas para instituicao, autor e titulo. Norma academica, nao escolha de estilo."
+      },
+      {
+        "rule": "justified-text",
+        "value": "*",
+        "files": [
+          "docs/apresentacao/documento-abnt.html"
+        ],
+        "createdAt": "2026-10-18T19:48:55.054Z",
+        "reason": "ABNT NBR 14724 exige corpo de texto justificado em trabalho academico."
+      },
+      {
+        "rule": "tight-leading",
+        "value": "*",
+        "files": [
+          "docs/apresentacao/documento-abnt.html"
+        ],
+        "createdAt": "2026-10-18T19:48:55.122Z",
+        "reason": "NBR 6023 e NBR 10520 exigem espaco simples em referencias e citacoes longas; sumario em 1,3 porque com 1,5 passava para duas paginas e deslocava a numeracao de todas as secoes."
+      }
+    ]
+  }
+}

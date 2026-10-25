@@ -1,0 +1,534 @@
+{
+  "unidade": "nucleo-http-e-navegacao: app/src/app/core (http-error.interceptor.ts, timeout.interceptor.ts, turma-ativa.interceptor.ts, interceptores.ts, turma-ativa.service.ts, janela-desfazer.ts; apoio lido: api.service.ts, auth.service.ts, auth.interceptor.ts, auth.guard.ts, docente.guard.ts, storage.service.ts), app/src/app/data/models.ts (+ docente.models.ts e shared/tipos.ts, que ele importa), app/src/main.ts, app/src/app/app.routes.ts, app/src/app/app.component.ts, app/src/app/tabs/ (tabs.page.ts e tabs.routes.ts; tabs.page.html e um scaffold NAO usado; tabs.page.scss esta vazio). Ambientes: environment.ts e environment.prod.ts. Specs lidos: http-error.interceptor.spec, interceptores.spec, janela-desfazer.spec, turma-ativa.interceptor.spec, turma-ativa.service.spec, tabs.page.spec, app.routes.spec. Visual das abas em global.scss (linhas 340-583). Backend lido apenas para confirmar o contrato de erro e de X-Turma-Id (ProblemDetailHandler, TurmaScopeResolverJpa, SegurancaConfig, AuthService.java:92, AcessoNegadoException, SemTurmaException).",
+  "telas": [
+    {
+      "rota": "/tabs (casca das abas; filhos em /tabs/*)",
+      "arquivo": "app/src/app/tabs/tabs.page.ts (template inline; sem templateUrl/styleUrls)",
+      "proposito": "Barra de abas inferior no celular e menu lateral no PC (min-width 768px). As abas dependem do TIPO da conta, nunca do status. A casca nao tem dados proprios: le AuthService.usuario (signal) e o estado 'recolhido'.",
+      "estados": [
+        "aluno (tipoConta ausente ou 'ALUNO'): 5 abas Home, Calendário, Matérias, Meu quadro, Perfil",
+        "docente (tipoConta 'PROFESSOR' ou 'COORDENADOR', QUALQUER docenteStatus, inclusive PENDENTE e RECUSADO): 5 abas Painel, Calendário, Matérias, Turma, Perfil",
+        "menu expandido (padrao) ou recolhido (so existe no PC; preferencia guardada)",
+        "troca de tipo da conta por GET /eu em segundo plano: o conjunto de abas muda ao vivo, mas a rota atual NAO e redirecionada (soAluno/soDocente rodam so na ativacao)",
+        "usuario nulo (logout ou 401 em andamento, antes da navegacao chegar): trata como aluno, inicial '?', nome e e-mail vazios"
+      ],
+      "elementos": [
+        "[PC] botao de recolher, canto superior direito da barra (top 20px, right 10px; centralizado quando recolhido). aria-label e title = 'Recolher menu' (expandido) ou 'Expandir menu' (recolhido). aria-expanded = !recolhido. Icone chevron-back-outline (expandido) ou chevron-forward-outline (recolhido). No celular: display none.",
+        "[PC] cabecalho da barra: texto 'projetoFans' vindo de CSS ::before da ion-tab-bar (NAO esta no template). Recolhido: vira espaco nao-quebravel.",
+        "Aba 1, aluno: icone list-outline, rotulo 'Home', href /tabs/home, title 'Home'. Docente: icone grid-outline, rotulo 'Painel', href /tabs/painel, title 'Painel'.",
+        "Aba 2 (ambos): icone calendar-outline, rotulo 'Calendário', href /tabs/calendario, title 'Calendário'.",
+        "Aba 3 (ambos): icone library-outline, rotulo 'Matérias', href /tabs/materias, title 'Matérias'.",
+        "Aba 4, aluno: icone checkbox-outline, rotulo 'Meu quadro', href /tabs/quadro, title 'Meu quadro'. Docente: icone people-outline, rotulo 'Turma', href /tabs/turma, title 'Turma'.",
+        "Aba 5 (sempre a ultima; classe pf-aba-perfil): href /tabs/perfil, title 'Perfil'. Conteudo: avatar circular aria-hidden com a inicial do nome em maiuscula (classe pf-avatar); rotulo com tres partes: span pf-perfil-curto = 'Perfil'; span pf-perfil-nome = nome; span pf-perfil-email = e-mail.",
+        "Celular (max-width 767.98px): barra inferior com as 5 abas; no Perfil aparecem o avatar e a palavra 'Perfil'; nome e e-mail ficam display none; nao ha botao de recolher.",
+        "PC (min-width 768px): coluna a esquerda, largura clamp(200px, 14vw, 260px), borda direita de 1px; abas empilhadas com altura 44px; Perfil (altura 56px) no rodape, separado por fio de 1px. Recolhida: largura 68px, so icones; 'Perfil', nome e e-mail viram recorte visual (clip, continuam para leitor de tela); o avatar continua visivel."
+      ],
+      "acoes": [
+        "toque numa aba: navega para o href. A aba ativa recebe a classe tab-selected (no PC, fundo surface-2). Cada aba mantem a propria pilha (IonicRouteStrategy).",
+        "toque no botao de recolher: inverte o estado e grava '1' (recolhido) ou '0' (expandido) em localStorage na chave 'pf.menuRecolhido'. Falha de storage e ignorada em silencio: o menu so nao lembra a escolha.",
+        "ao montar: le 'pf.menuRecolhido'. So o valor exato '1' significa recolhido; qualquer outro valor, ou erro de leitura, = expandido.",
+        "icones registrados no construtor com addIcons: listOutline, calendarOutline, libraryOutline, checkboxOutline, chevronBackOutline, chevronForwardOutline, gridOutline, peopleOutline."
+      ],
+      "navegacao": [
+        "entra por /tabs (filho '' redireciona para rotaInicial()) ou por qualquer filho de /tabs/*",
+        "a barra nao aparece nas telas de entrada (/login, /cadastro, /entrar-turma, /recuperar, /senha/reset), que ficam fora de /tabs"
+      ]
+    },
+    {
+      "rota": "/ (redirect de entrada)",
+      "arquivo": "app/src/app/app.routes.ts (rota '' com canActivate guardaSessao e loadChildren de tabs.routes) + app/src/app/tabs/tabs.routes.ts (duas rotas '' com redirectTo rotaInicial e pathMatch full: uma dentro de 'tabs' e outra no topo)",
+      "proposito": "Entrada padrao do app. Nao tem tela: so redireciona.",
+      "estados": [
+        "sem sessao (autenticado false, mesmo depois de restaurar): guardaSessao manda para /login",
+        "sessao sem turma (temTurma false): manda para /entrar-turma e NUNCA para as abas, mesmo com token",
+        "sessao com turma, aluno: /tabs/home",
+        "sessao com turma, docente (qualquer status): /tabs/painel"
+      ],
+      "elementos": [],
+      "acoes": [
+        "guardaSessao (async): se nao autenticado, chama auth.restaurar() (idempotente) antes de decidir; depois devolve true se temTurma, senao UrlTree para /entrar-turma; sem sessao, UrlTree para /login.",
+        "rotaInicial() e uma funcao (contexto de injecao) que le auth.usuario() NO INSTANTE do redirect: 'docente' via ehContaDocente -> /tabs/painel, senao /tabs/home."
+      ],
+      "navegacao": [
+        "'' -> guardaSessao -> children de tabs.routes -> '' redirectTo rotaInicial",
+        "/tabs -> children '' -> redirectTo rotaInicial (pathMatch full)"
+      ]
+    },
+    {
+      "rota": "/login | /cadastro | /entrar-turma | /senha/reset | /recuperar (rotas fora das abas, sem guarda)",
+      "arquivo": "app/src/app/app.routes.ts (loadComponent; telas em features/auth/*; so o roteamento e desta area)",
+      "proposito": "Telas de entrada, FORA das abas. Ficam fora porque quem nao tem vinculo de turma recebe 404 em toda rota protegida, e uma barra de abas ofereceria telas que so sabem dizer que nada existe. /senha/reset NAO e escolha livre: e o caminho que o backend escreve no e-mail (app.reset-senha-url-base). /login e o destino do 401 (ROTA_LOGIN), que antes nao existia.",
+      "estados": [
+        "sem guarda: acessiveis com ou sem sessao (o app nao redireciona quem ja esta logado para as abas)"
+      ],
+      "elementos": [
+        "(conteudo das telas em features/auth: fora desta area)"
+      ],
+      "acoes": [
+        "navegacao direta por URL ou por navigateByUrl; nenhum returnUrl e preservado quando a guarda manda para /login"
+      ],
+      "navegacao": [
+        "/login -> LoginPage (features/auth/login.page.ts), sem guarda; destino de ROTA_LOGIN e do 401",
+        "/cadastro -> CadastroPage (features/auth/cadastro.page.ts), sem guarda; depois do cadastro vai para /entrar-turma",
+        "/entrar-turma -> EntrarTurmaPage (features/auth/entrar-turma.page.ts), sem guarda; destino de SEM_TURMA e de sessao sem turma",
+        "/senha/reset -> RedefinirPage (features/auth/redefinir.page.ts), sem guarda; caminho FIXO (link do e-mail do backend)",
+        "/recuperar -> RecuperarPage (features/auth/recuperar.page.ts), sem guarda; o texto de e-mail depende de environment.recuperacaoPorEmail"
+      ]
+    },
+    {
+      "rota": "/tabs/* (23 rotas filhas de 'tabs'; todas com loadComponent, exceto o redirect)",
+      "arquivo": "app/src/app/tabs/tabs.routes.ts (TabsPage importado estatico; telas lazy)",
+      "proposito": "Tabela de rotas autenticadas com turma. A ORDEM importa (o Angular usa a primeira que casa). Guardas: soDocente (painel), soAluno (home, quadro). As demais nao tem guarda: a API responde 404 a quem nao pode.",
+      "estados": [
+        "guarda soDocente em painel: aluno e redirecionado para /tabs/home",
+        "guarda soAluno em home e quadro: docente e redirecionado para /tabs/painel",
+        "demais rotas: sem guarda local; as guardas do '' pai (sessao + turma) ja rodaram antes"
+      ],
+      "elementos": [
+        "(telas de destino: fora desta area; ver a respectiva area)"
+      ],
+      "acoes": [
+        "Ordem obrigatoria: 'materias/nova' antes de 'materias/:id'; 'eventos/novo' antes de 'eventos/:id' (ambos tem 2 segmentos e colidem). O comentario de tabs.routes diz que 'materiais/:id/resumo' tambem precisa vir antes de 'materias/:id', mas os prefixos diferem ('materiais' x 'materias'): essa ordem nao e necessaria."
+      ],
+      "navegacao": [
+        "painel -> PainelPage (features/painel/painel.page) [soDocente]",
+        "admin -> AdminPage (features/admin/admin.page) [sem guarda; NAO esta na barra; nao-admin recebe 404 da API]",
+        "home -> HomePage (features/home/home.page) [soAluno]",
+        "calendario -> CalendarioPage (features/calendario/calendario.page)",
+        "materias -> MateriasPage (features/materias/materias.page)",
+        "materias/nova -> NovaMateriaPage (features/materias/nova-materia.page) [antes de materias/:id]",
+        "materiais/:id/resumo -> ResumoPage (features/materias/resumo.page)",
+        "perfil -> PerfilPage (features/perfil/perfil.page)",
+        "ajustes -> AjustesPage (features/ajustes/ajustes.page)",
+        "materiais/:id/editar -> EditarMaterialPage (features/materias/editar-material.page)",
+        "materias/:id/material/novo -> NovoMaterialPage (features/materias/novo-material.page)",
+        "materias/:id/editar -> NovaMateriaPage (mesma tela de criar; o id liga o modo edicao; so o lider)",
+        "materias/:id -> MateriaPage (features/materias/materia.page)",
+        "eventos/novo -> NovoEventoPage (features/evento/novo-evento.page) [antes de eventos/:id]",
+        "eventos/:id/editar -> NovoEventoPage (mesma tela; o id liga a edicao)",
+        "eventos/:id/anexar -> AnexarMaterialPage (features/evento/anexar-material.page)",
+        "eventos/:id -> EventoPage (features/evento/evento.page)",
+        "notas/nova -> NovaNotaPage (features/notas/nova-nota.page)",
+        "notas/:id/editar -> NovaNotaPage (mesma tela)",
+        "quadro -> QuadroPage (features/quadro/quadro.page) [soAluno]",
+        "turma/editar -> EditarTurmaPage (features/turma/editar-turma.page)",
+        "turma/transferir -> TransferirPage (features/turma/transferir.page)",
+        "turma -> TurmaPage (features/turma/turma.page)",
+        "'' -> redirectTo rotaInicial() (pathMatch full)"
+      ]
+    },
+    {
+      "rota": "(raiz do app; <app-root>, sem rota propria)",
+      "arquivo": "app/src/app/app.component.ts",
+      "proposito": "Casca: <ion-app> com <ion-router-outlet>. Nao tem texto visivel. Unico comportamento: no aparelho, ouve o evento 'resume' do app e reagenda os lembretes.",
+      "estados": [
+        "web: nenhum listener (Capacitor.isNativePlatform() falso; no navegador nao ha 'resume' nem o que agendar)",
+        "nativo: listener 'resume' registrado UMA vez no construtor, nunca removido"
+      ],
+      "elementos": [
+        "<ion-app>",
+        "<ion-router-outlet>"
+      ],
+      "acoes": [
+        "resume: se auth.temTurma() for verdadeiro, dispara void sync.reagendarAvisos() (SEM forcar, SEM await). Sem turma nao chama (o /sync daria 404, ou 401 sem sessao).",
+        "o listener nao propaga erro: reagendarAvisos nunca lanca (ver SyncRepository)"
+      ],
+      "navegacao": []
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "TODOS (pipeline de HttpClient via ApiService e interceptores)",
+      "caminho": "{apiUrl}{rota}. apiUrl: dev 'http://localhost:8080/api/v1' (environment.ts); prod 'https://projetofans-api.onrender.com/api/v1' (environment.prod.ts, trocado no build por fileReplacements). ApiService captura environment.apiUrl no construtor.",
+      "quando": "toda chamada do app ao servidor. Ordem de INTERCEPTORES (usada no main.ts): authInterceptor, turmaAtivaInterceptor, erroHttpInterceptor, timeoutInterceptor. O PRIMEIRO e o mais EXTERNO: ve a requisicao primeiro e a resposta por ultimo.",
+      "corpo": "JSON. ApiService.get(rota, params): cada parametro vira String(valor), sem tratar undefined (vira o texto 'undefined'). ApiService.post(rota, corpo): corpo ausente vira {} (nunca corpo vazio). ApiService.put(rota, corpo): corpo ausente vira {}. ApiService.patch(rota, corpo, version?): envia o corpo exato. ApiService.delete(rota, version?): sem corpo. Campos nulos de requisicao devem ir como null explicito (PATCH substitui tudo, ver AtualizarEventoRequest).",
+      "headers": "Authorization: 'Bearer <jwt>' se houver token E a URL NAO contiver a substring '/auth/' (qualquer host; nao checa apiUrl). X-Turma-Id: <turmaAtiva.turmaId> SOMENTE se (1) a conta for docente (tipoConta definido e diferente de 'ALUNO'), checado no instante da chamada; (2) a URL comecar com environment.apiUrl (prefixo textual); (3) a requisicao esperar TurmaAtivaService.pronto (leitura do disco); (4) turmaId nao for nulo. Sem turma ativa, sem o cabecalho. If-Match: String(version) em patch e delete SOMENTE quando o chamador passa version (turma nao tem version; sem If-Match o servidor responde 428). Content-Type application/json nos corpos.",
+      "resposta": "corpo JSON do recurso, tipado pelo chamador. Sucesso nao passa por transformacao nos interceptores.",
+      "erros": "Todo erro vira ErroApi (ver modelos). Ordem de traducao no erroHttpInterceptor: TimeoutError -> DEMOROU; erro que nao e HttpErrorResponse passa cru; status 0 -> OFFLINE; 401 -> AUTH (+ encerrarSessao e navegacao para /login); 403 -> PROIBIDO; 404 -> NAO_ENCONTRADO (com codigo; se codigo for SEM_TURMA tambem esquece a turma e navega para /entrar-turma); 409 -> CONFLITO (recarregarRegistro=true); 428 -> PRECONDICAO; >= 500 -> SERVIDOR; resto -> DESCONHECIDO. Timeout: 75 000 ms desde a assinatura (ja sem contar a espera do disco). Nenhum retry automatico. Nenhum interceptor engole erro."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "{apiUrl}/saude",
+      "quando": "no boot (main.ts, provideAppInitializer), disparado SEM await e sem bloquear o app. Serve para acordar o host gratuito (Render dorme; cold start medido: 184 s em 2026-09-25 segundo o comentario de main.ts; 45,6 s em GET /saude num servidor dormindo, segundo o comentario de timeout.interceptor.ts). Usa fetch NATIVO, nao HttpClient.",
+      "corpo": "nenhum",
+      "headers": "nenhum: sem Authorization, sem X-Turma-Id (nao passa pelos interceptores).",
+      "resposta": "ignorada.",
+      "erros": "fetch(...).catch(() => undefined): qualquer falha e descartada. Sem teto de 75 s, sem ErroApi. O servidor permite anonimo (permitAll em /api/v1/saude)."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/eu (via ApiService.get<Perfil>)",
+      "quando": "AuthService.restaurar() dispara atualizarTipoDaSessao() em segundo plano (void, sem await) logo apos ler a sessao gravada. Objetivo: atualizar tipoConta e docenteStatus, que o admin pode mudar com o app fechado.",
+      "corpo": "nenhum",
+      "headers": "Authorization (token gravado); X-Turma-Id conforme a regra do pipeline (o servidor ignora o cabecalho no /eu).",
+      "resposta": "Perfil: id, nome, email, tipoConta?, docenteStatus?, adminPlataforma, temSenha. Se tipoConta ou docenteStatus diferirem dos gravados, renovarSessao(jwt, {...atual, tipoConta, docenteStatus}) regrava pf.sessao. Se o token mudou durante a ida, nada e gravado (evita ressuscitar sessao encerrada).",
+      "erros": "401: o erroHttpInterceptor executa encerrarSessao() e navega para /login ANTES do catch local; o catch local so loga '[auth] nao atualizei o tipo da conta; fica o gravado'. Demais erros: so console.warn; a sessao gravada continua valendo. Nenhum erro chega a tela (o chamador e void)."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/eu (AuthService.atualizarNome)",
+      "quando": "tela de perfil, ao renomear. Usado para trocar o nome.",
+      "corpo": "{ nome: String }",
+      "headers": "Authorization; sem If-Match (o recurso /eu nao e versionado no ApiService).",
+      "resposta": "AtualizarNomeResponse: { jwt: String, perfil: Perfil }. So grava se o token nao mudou durante a chamada: usuario = perfil sem adminPlataforma e sem temSenha; renovarSessao(r.jwt, usuario), que mantem a turma. Retorna o perfil.",
+      "erros": "sem tratamento local: o erroHttpInterceptor traduz e a tela recebe ErroApi."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/eu/senha (AuthService.trocarSenha)",
+      "quando": "tela de trocar senha.",
+      "corpo": "{ senhaAtual: String, novaSenha: String }",
+      "headers": "Authorization (a URL nao contem '/auth/', entao o Bearer vai).",
+      "resposta": "{ jwt: String }. Se o token nao mudou durante a chamada e houver usuario: renovarSessao(r.jwt, usuario). O servidor derruba TODO token anterior, inclusive o desta sessao, e devolve um novo.",
+      "erros": "senha atual errada volta 400, de proposito (nunca 401: 401 passaria pelo interceptor como sessao expirada e deslogaria quem so errou a senha). Demais: ErroApi do interceptor."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/auth/registrar (AuthService.registrar)",
+      "quando": "tela de cadastro. Parametros: nome, email, senha, tipoConta = 'ALUNO' (default).",
+      "corpo": "{ nome, email, senha } e, SOMENTE se tipoConta diferente de 'ALUNO', tambem tipoConta. Docente nasce PENDENTE no servidor; o app nao escolhe o status.",
+      "headers": "sem Authorization (URL com '/auth/'); X-Turma-Id nao vai (usuario ainda nulo, ou aluno).",
+      "resposta": "SessaoResponse: { jwt, usuario, turmaId? }. aplicar(): definirSessao(...) e gravarSessao(jwt, usuario, turmaId). turmaId AUSENTE/null e estado normal (cadastro ja tem token sem turma).",
+      "erros": "ErroApi do interceptor. Se gravarSessao falhar depois de definirSessao, a sessao fica ativa em memoria e a chamada rejeita (a tela mostra erro, mas o usuario ja esta logado em memoria)."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/auth/login (AuthService.entrar)",
+      "quando": "tela de login.",
+      "corpo": "{ email, senha }",
+      "headers": "sem Authorization.",
+      "resposta": "SessaoResponse; aplicar() como no cadastro.",
+      "erros": "senha ou e-mail errados: o servidor responde 401 com detail 'E-mail ou senha invalidos' (AuthService.java:92). O interceptor classifica como AUTH e mostra esse detail, MAS tambem executa o ramo 401 (encerrarSessao: limpa memoria, cancela lembretes e apaga pf.sessao; navega para /login, que ja e a tela atual). Nao tratar 401 de login como 'sessao expirou'."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/auth/google (AuthService.entrarComGoogle)",
+      "quando": "login com Google (idToken).",
+      "corpo": "{ idToken: String }",
+      "headers": "sem Authorization.",
+      "resposta": "SessaoResponse; aplicar().",
+      "erros": "ErroApi do interceptor. Sem tratamento local."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/auth/senha/esqueci (AuthService.esqueciSenha)",
+      "quando": "tela de recuperar senha.",
+      "corpo": "{ email: String }",
+      "headers": "sem Authorization.",
+      "resposta": "204 sem corpo, SEMPRE, inclusive para e-mail inexistente (a lista de contas nao e enumeravel). Retorno void.",
+      "erros": "ErroApi do interceptor."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/auth/senha/reset (AuthService.resetarSenha)",
+      "quando": "tela /senha/reset, com o token que veio no e-mail.",
+      "corpo": "{ token: String, novaSenha: String }",
+      "headers": "sem Authorization.",
+      "resposta": "void.",
+      "erros": "ErroApi do interceptor."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/turmas/entrar (AuthService.entrarNaTurma)",
+      "quando": "tela de entrar na turma, com codigo de convite.",
+      "corpo": "{ codigoConvite: String }",
+      "headers": "Authorization; X-Turma-Id conforme a regra do pipeline (para docente com turma ativa, o cabecalho vai).",
+      "resposta": "Membro: { id, usuarioId, turmaId, papel, entrouEm }. Depois: registrarTurma(membro.turmaId).",
+      "erros": "409 (ja tem turma) e tratado pela tela de entrar na turma (curarSeJaTemTurma: le /turmas/minha e registra o vinculo), fora desta area. Demais: ErroApi do interceptor."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/sync (SyncRepository.reagendarAvisos; fora desta area, chamado pelo AppComponent no resume e pelas telas Home e Painel)",
+      "quando": "resume do app, com turma; sem forcar, a janela de 60 s dentro do SyncRepository decide se vai ao servidor.",
+      "corpo": "nenhum",
+      "headers": "Authorization e X-Turma-Id conforme o pipeline.",
+      "resposta": "{ eventosAlterados: [...] } com itens completos ou lapides (so id, visivelTurma, excluidoEm).",
+      "erros": "nao lanca: o erro vai para console.error e os avisos ja agendados continuam valendo. Um 404 SEM codigo nao apaga turma."
+    }
+  ],
+  "modelos": [
+    {
+      "nome": "ErroApi (classe de erro do app; extends Error, name 'ErroApi')",
+      "campos": "classe: ClasseErro (enum: DEMOROU | AUTH | PROIBIDO | NAO_ENCONTRADO | PRECONDICAO | CONFLITO | SERVIDOR | OFFLINE | DESCONHECIDO)\nstatus: int (0 em OFFLINE e DEMOROU; status HTTP nos demais)\nmensagem: String (texto pronto para a tela; pode vir do detail do servidor)\npodeTentarNovamente: bool (default false; true em OFFLINE, DEMOROU e SERVIDOR)\nrecarregarRegistro: bool (default false; true SO em CONFLITO)\ncodigo: String? (default null; preenchido SO com ProblemDetail.codigo de um 404)"
+    },
+    {
+      "nome": "ProblemDetail (corpo de erro do servidor, RFC 7807; campos que o app le)",
+      "campos": "detail: String? (lido primeiro)\ntitle: String? (fallback, usado cru quando nao ha detail)\ncodigo: String? (propriedade RAIZ do JSON; so 'SEM_TURMA' e tratado)\nstatus, type, instance: nao lidos\nO backend usa default-property-inclusion non_null: campo nulo nao vem no JSON (chega AUSENTE, nao null). O app deve tratar ausente como null em TODO campo anulavel."
+    },
+    {
+      "nome": "ClasseErro / CODIGO_SEM_TURMA",
+      "campos": "ClasseErro: string literal (lista acima)\nCODIGO_SEM_TURMA = 'SEM_TURMA' (o unico codigo que o app trata; so vale em 404)"
+    },
+    {
+      "nome": "Usuario",
+      "campos": "id: String\nnome: String\nemail: String\ntipoConta: TipoConta? (ausente = ALUNO; sessao gravada antes da onda docente nao tem o campo)\ndocenteStatus: DocenteStatus? (so docente; ausente = null)"
+    },
+    {
+      "nome": "TipoConta / DocenteStatus / PapelMembro / PapelDocente / Selo / TipoEvento / TipoMaterial (enums string)",
+      "campos": "TipoConta: ALUNO | PROFESSOR | COORDENADOR (definido em models.ts e de novo em docente.models.ts)\nDocenteStatus: PENDENTE | APROVADO | RECUSADO\nPapelMembro: ALUNO | LIDER | PROFESSOR | COORDENADOR\nPapelDocente (docente.models.ts): PROFESSOR | COORDENADOR (docente nunca e LIDER)\nSelo (shared/tipos.ts, reexportado por models.ts): PROFESSOR | COORDENACAO (COORDENACAO, nao COORDENADOR: o selo nomeia a funcao)\nTipoEvento (shared/tipos.ts): PROVA | ENTREGA\nTipoMaterial: AULA | ADICIONAL\nAlcanceNota e EstadoQuadro existem em shared/tipos.ts (fora desta area)"
+    },
+    {
+      "nome": "Perfil (GET /eu; extends Usuario)",
+      "campos": "(herda id, nome, email, tipoConta?, docenteStatus?)\nadminPlataforma: bool\ntemSenha: bool (false = conta so Google, sem senha_hash; a tela de perfil nao oferece trocar senha)"
+    },
+    {
+      "nome": "AtualizarNomeResponse / SessaoResponse",
+      "campos": "AtualizarNomeResponse: jwt: String; perfil: Perfil\nSessaoResponse: jwt: String; usuario: Usuario; turmaId: String? (ausente ou null = sem turma; estado normal de quem acabou de se cadastrar)"
+    },
+    {
+      "nome": "Autoria (presente em todo evento, material e item da Home)",
+      "campos": "autorId: String\nautorNome: String\ncriadoEm: String (ISO)\natualizadoEm: String (ISO)\nautorSelo: Selo? (ausente = sem poder)\neditadoPorNome: String? (ausente = nunca editado por outro)\neditadoPorSelo: Selo?"
+    },
+    {
+      "nome": "Membro",
+      "campos": "id: String\nusuarioId: String\nturmaId: String\npapel: PapelMembro\nentrouEm: String"
+    },
+    {
+      "nome": "Materia (espelho de DTO; corHex vem do servidor, nunca digitado)",
+      "campos": "id: String\nnome: String\nsigla: String\ncorHex: String (uma das 12 hues da paleta)\nsala: String? (ausente = null)\nprofessor: String? (ausente = null)"
+    },
+    {
+      "nome": "ItemHome (GET /home e campo aFazer/feito do quadro; ja vem ordenado, dentro da janela de 14 dias e cortado em 6, pelo servidor)",
+      "campos": "eventoId: String\ntipo: TipoEvento\ntitulo: String\ndata: String ('AAAA-MM-DD')\nhora: String? ('HH:mm:ss' na resposta; o app corta para HH:mm na exibicao)\nmateriaSigla: String\nmateriaCorHex: String\nautoria: Autoria\nfeitoPeloUsuario: bool (vem de estado_pessoal, nunca de coluna em evento)\n(sem version: nao entra em If-Match)"
+    },
+    {
+      "nome": "Evento",
+      "campos": "id: String\ntipo: TipoEvento\ntitulo: String\ndata: String ('AAAA-MM-DD')\nhora: String? ('HH:mm:ss')\nmateriaId: String\nmateriaSigla: String\nmateriaCorHex: String\nautoria: Autoria\nversion: int (usado em If-Match de PATCH e DELETE; sem ele o servidor responde 428)\nvisivelTurma: bool\nexcluidoEm: String? (ISO; exclusao e sempre logica)\nsala: String? (ausente = na sala da materia; preenchido so na excecao do dia)"
+    },
+    {
+      "nome": "Material",
+      "campos": "id: String\ntipo: TipoMaterial\ntitulo: String\nurl: String?\narquivoRef: String? (MVP: sempre null; arquivo entra na Task 15)\nmateriaId: String\nautoria: Autoria\nversion: int\nvisivelTurma: bool\nexcluidoEm: String?\ndataAula: String? ('AAAA-MM-DD'; ausente = nao se aplica)\nresumo: String? (resumo por IA, gerado por alguem da turma e visivel para TODOS: compartilhado de proposito, custa dinheiro da chave de quem pediu)\nresumoEm: String?"
+    },
+    {
+      "nome": "EventoDetalhe (extends Evento) / MateriaDetalhe / MeuQuadro / NaoListados",
+      "campos": "EventoDetalhe: + materiais: Material[] (SOMENTE os materiais vinculados a este evento)\nMateriaDetalhe: materia: Materia; materiaisAula: Material[]; materiaisAdicionais: Material[]; eventos: Evento[]\nMeuQuadro: aFazer: ItemHome[]; feito: ItemHome[]\nNaoListados: eventos: Evento[]; materiais: Material[] (ocultos ou excluidos do proprio autor)"
+    },
+    {
+      "nome": "CriarEventoRequest (= AtualizarEventoRequest; PATCH SUBSTITUI todos os campos, nao e merge)",
+      "campos": "materiaId: String\ntipo: TipoEvento\ntitulo: String\ndata: String ('AAAA-MM-DD')\nhora: String? ('HH:mm', formato do input type=time; null = sem horario; ENVIAR null explicito para apagar a hora)\nsala: String? (null = sala de sempre)"
+    },
+    {
+      "nome": "CriarMaterialRequest (= AtualizarMaterialRequest)",
+      "campos": "materiaId: String\ntipo: TipoMaterial\ntitulo: String\nurl: String (OBRIGATORIA no MVP)\ndataAula: String? ('AAAA-MM-DD'; null = nao e de uma aula)"
+    },
+    {
+      "nome": "CriarMateriaRequest",
+      "campos": "nome: String\nsigla: String\ncorHex: String\nsala: String? (null enviado explicito; opcional de fato: quem cadastra nem sempre sabe)\nprofessor: String? (texto livre)\nprofessorId: String? (OMITIVEL: quando presente liga a conta do professor da turma a materia; ausente ou nulo = so o texto livre)"
+    },
+    {
+      "nome": "SnapshotLocal (chave Preferences 'pf.snapshot'; UM por aparelho, nao por usuario nem por turma)",
+      "campos": "eventos: ItemHome[]\nmaterias: Materia[]\nultimoSync: String (ISO; 'dados de 09:15' em vez de dizer que o dado e fresco)"
+    },
+    {
+      "nome": "SessaoLocal (chave 'pf.sessao')",
+      "campos": "jwt: String\nusuario: Usuario\nturmaId: String? (sempre gravado; null quando nao ha turma)"
+    },
+    {
+      "nome": "Ativa (chave 'pf.turmaAtiva'; JSON; turma ativa do DOCENTE)",
+      "campos": "usuarioId: String (dono: a turma so vale se o dono for o usuario logado)\nturmaId: String\nnome: String\n(valor com algum campo ausente ou de tipo errado e ignorado em silencio na leitura)"
+    },
+    {
+      "nome": "TurmaRef (parametro de escolher e conciliar)",
+      "campos": "turmaId: String\nnome: String"
+    },
+    {
+      "nome": "TurmaDoPainel / Painel (docente.models.ts; so o painel usa, fora desta area; listado porque ehContaDocente vem do mesmo arquivo)",
+      "campos": "TurmaDoPainel: turmaId: String; nome: String; semestre: String?; papel: PapelDocente; selo: Selo?; contestado: bool; lecionadas: MateriaLecionada[] {materiaId, sigla, corHex}; proximos: ItemHome[] (ja filtrado, ordenado e cortado pelo servidor: 14 dias, teto 6; quem renderiza NAO reordena nem corta)\nPainel: turmas: TurmaDoPainel[]"
+    },
+    {
+      "nome": "ContaNaSessao (leitura de docente.models.ts)",
+      "campos": "tipoConta?: TipoConta\ndocenteStatus?: DocenteStatus | null\nehContaDocente(u) = tipoConta definido E diferente de 'ALUNO' (status NAO entra: pendente e docente)\nstatusDocente(u) = docenteStatus ?? null\ntipoDaConta(u) = tipoConta (undefined quando ausente)"
+    },
+    {
+      "nome": "JanelaDesfazer (estado)",
+      "campos": "aberta: bool (signal; false no inicio)\nduracao: 8000 ms (JANELA_DESFAZER_MS; parametro do construtor, sobrescrevivel em teste)"
+    }
+  ],
+  "servicos_e_estado": [
+    "ApiService (root): unico ponto que conhece a URL. get<T>(rota, params?), post<T>(rota, corpo?, headers?), put<T>(rota, corpo?), patch<T>(rota, corpo, version?) (envia If-Match so com version), delete<T>(rota, version?). Todos devolvem Promise via firstValueFrom. NAO trata erro: o erro sobe ao chamador ja traduzido pelo interceptor. Nenhum metodo devolve lista vazia em caso de falha.",
+    "AuthService (root). Signals privados _token, _usuario, _turmaId. Publicos readonly: token (string|null), usuario (Usuario|null), turmaId (string|null). Computed: autenticado = token !== null; temTurma = turmaId !== null; ehDocente = tipoConta definido e diferente de 'ALUNO' (mesma regra de ehContaDocente). Depende de ApiService, StorageService e NotificacoesService (lembretes; so chama esquecer(), nunca o plugin direto).",
+    "AuthService.restaurar(): le pf.sessao (await) e seta token, usuario e turmaId (ausente -> null). Dispara atualizarTipoDaSessao() sem await. Chamado pelo provideAppInitializer (bloqueia o boot ate ler o disco) e pela guardaSessao (idempotente).",
+    "AuthService.registrarTurma(turmaId|null): (1) seta _turmaId ANTES do primeiro await (memoria primeiro); (2) se houver token e usuario, await storage.gravarSessao(jwt, usuario, turmaId); (3) SO se turmaId for null: esquecerLembretes() (sem await) e await storage.limpar() (apaga pf.snapshot). ATENCAO: (2) falhando (exceto por ausencia de token/usuario) pula (3). Quem registra turma nova (entrar, criar) usa registrarTurma(id); registrarTurma(null) e o caminho do SEM_TURMA.",
+    "AuthService.sair(): zera memoria (token, usuario, turma), esquecerLembretes(), await limparSessao(), await limpar() (pf.snapshot). Nao apaga pf.turmaAtiva (a chave ja e por usuario). Quem chama navega para /login.",
+    "AuthService.encerrarSessao() (sincrono, usado no 401): zera memoria, esquecerLembretes() sem await, storage.limparSessao() com .catch que loga. NAO chama storage.limpar(): pf.snapshot continua no aparelho. Diferenca intencional em relacao a sair() (o comentario diz que o 401 nao espera disco).",
+    "AuthService.definirSessao(jwt, usuario, turmaId?): seta os tres signals; turmaId ausente vira null (zera a turma). AuthService.renovarSessao(jwt, usuario): troca token e usuario MANTENDO a turma (usado por renomear, trocar senha e pelo atualizarTipoDaSessao); grava pf.sessao via storage.",
+    "AuthService.atualizarNome / trocarSenha / entrarNaTurma / registrar / entrar / entrarComGoogle / esqueciSenha / resetarSenha / obterPerfil: os endpoints estao em 'endpoints'. Os que trocam sessao so gravam se o token NAO mudou durante a chamada (anti-ressurreicao de sessao encerrada).",
+    "StorageService (root): Preferences (disco do aparelho). ler()/gravar(s)/limpar() do snapshot 'pf.snapshot'. mesclar(parcial): le o atual e grava com eventos e materias do parcial (ou os atuais) e ultimoSync = agora (Home e Materias gravam partes diferentes do mesmo snapshot). lerSessao()/gravarSessao(jwt, usuario, turmaId?) (grava turmaId ?? null)/limparSessao() em 'pf.sessao'. lerJson: JSON invalido -> console.error, Preferences.remove da chave (aqui SIM remove) e devolve null. Falha do plugin (nao de JSON) NAO e tratada e propaga.",
+    "TurmaAtivaService (root; so docente usa). Signals privados _ativa: Ativa | null. Publicos: turmaId (computed: ativa.turmaId SE ativa.usuarioId === auth.usuario().id, senao null), nome (computed, mesma regra). pronto: Promise<void> criada na CONSTRUCAO do servico (lerDoDisco de 'pf.turmaAtiva'; nunca rejeita: try/catch interno).",
+    "TurmaAtivaService.escolher(turma): await pronto; se turma.turmaId for igual a turmaId() -> retorna sem nada (nem atualiza o nome). Senao: havia = turmaId() !== null; await gravar(turma); se havia -> RECARREGAR_APP(). Primeira escolha (sem ativa antes): grava, limpa snapshot, NAO recarrega.",
+    "TurmaAtivaService.conciliar(turmas: TurmaRef[]): await pronto; atual = turmaId(); nova = turmas.find(id === atual) ?? turmas[0] ?? null. Se nova null: zera memoria e apaga pf.turmaAtiva. Senao, se nova.turmaId !== atual OU nova.nome !== nome(): await gravar(nova). Chamado pelo painel (ionViewWillEnter, so com painel que chegou sem erro). NAO recarrega o app.",
+    "TurmaAtivaService.gravar(turma) (privado): sem usuario logado -> return. trocou = turmaId() !== turma.turmaId. Seta _ativa ANTES do disco. Dentro de try: se trocou -> await storage.limpar() (apaga pf.snapshot); depois Preferences.set('pf.turmaAtiva', JSON). catch: console.error('[turma-ativa] falha ao gravar a turma ativa', e). Ordem fixa: limpar antes de gravar.",
+    "RECARREGAR_APP (InjectionToken<() => void>, providedIn root): default () => location.reload(). Em teste e substituido por um spy. No port Flutter: reiniciar o estado em memoria de TODOS os servicos e repositorios com dado de turma (ver armadilhas).",
+    "JanelaDesfazer (classe, NAO root; instanciada como campo de componente): aberta: signal<boolean> (false). abrir(): fechar() antes, depois aberta = true e agenda setTimeout(fechar, ms) FORA da zona do Angular. fechar(): cancela o timer, aberta = false. Ao destruir o componente (DestroyRef.onDestroy) chama fechar(). Nao executa o desfazer: quem usa a janela executa a acao e depois chama fechar().",
+    "Guardas (core/docente.guard.ts e core/auth.guard.ts): guardaSessao (CanActivateFn async: restaura se preciso; sem sessao -> /login; sem turma -> /entrar-turma; senao true). rotaInicial() (funcao de redirect: docente -> /tabs/painel, senao /tabs/home). soAluno (CanActivate: docente -> UrlTree /tabs/painel; senao true). soDocente (CanActivate: docente -> true; senao UrlTree /tabs/home).",
+    "Constantes: ROTA_LOGIN = '/login'; ROTA_ENTRAR_TURMA = '/entrar-turma'; ROTA_HOME = '/tabs/home'; ROTA_PAINEL = '/tabs/painel'; CODIGO_SEM_TURMA = 'SEM_TURMA'; CABECALHO_TURMA = 'X-Turma-Id'; TETO_DE_ESPERA_MS = 75000; JANELA_DESFAZER_MS = 8000; CHAVE_TURMA_ATIVA = 'pf.turmaAtiva'; CHAVE_RECOLHIDO = 'pf.menuRecolhido' (localStorage, so web); chaves do StorageService: 'pf.snapshot', 'pf.sessao'; chave de lembretes 'pf.lembretes' (notificacoes, fora desta area).",
+    "INTERCEPTORES (core/interceptores.ts): array [authInterceptor, turmaAtivaInterceptor, erroHttpInterceptor, timeoutInterceptor]. Mora num arquivo proprio para o teste usar a lista real. Ordem = fonte de verdade (ver armadilhas).",
+    "SyncRepository (data/sync.repository.ts; fora desta area, citado pelo AppComponent e pelas telas): reagendarAvisos(forcar = false): nunca lanca; sem notificacoes suportadas, nao faz nada; janela de 60 s depois de um /sync bem-sucedido; um voo por vez; so a ultima ida vale (sequencia); epoca invalida respostas de conta que ja saiu.",
+    "TurmaRepository (data/turma.repository.ts; fora desta area, mas e o unico ponto que zera a turma em memoria no SEM_TURMA): effect em AuthService: se usuario() === null ou turmaId() === null, limpar() (turma = null, erro = null).",
+    "Sequencia de boot (main.ts): (1) providers: RouteReuseStrategy = IonicRouteStrategy, provideIonicAngular(), provideRouter(routes, withPreloading(PreloadAllModules)), provideHttpClient(withInterceptors(INTERCEPTORES)); (2) initializer A: await AuthService.restaurar() (so le o disco; NAO espera /eu); (3) initializer B: fetch /saude sem await; (4) roteamento inicial: '' -> guardaSessao -> abas -> '' -> rotaInicial(); (5) TabsPage monta e le pf.menuRecolhido; (6) primeira chamada HTTP de docente injeta TurmaAtivaService (dispara a leitura de pf.turmaAtiva e espera o pronto); (7) bootstrapApplication(...).catch(err => console.error(err)): nenhuma tela de erro de boot.",
+    "AppComponent (app.component.ts): sem estado proprio. Construtor: se Capacitor.isNativePlatform(), App.addListener('resume', ...) (void). Nunca remove o listener (vive com o app)."
+  ],
+  "regras": [
+    "AGENTS 'Todo erro de HTTP passa pelo interceptor central': um unico tradutor (erroHttpInterceptor). Nenhuma tela le status cru; a tela recebe ErroApi com mensagem pronta.",
+    "AGENTS 'Erro sai como ProblemDetail (RFC 7807)': o app le detail, title e a propriedade raiz codigo, nesta ordem de precedencia para a mensagem. Um parser so.",
+    "AGENTS 'Proibido catch vazio ou catch que devolve lista vazia como sucesso': todo interceptor RELANCA; nenhum servico desta area engole erro de rede. Falha de disco tem console.error e segue (sem mentir sobre sucesso); falha de rede nunca vira 'nao ha nada'.",
+    "AGENTS 'Acesso a registro de outra turma = 404, nao 403': o app trata 404 sem codigo como NAO_ENCONTRADO e nunca como 'voce saiu da turma'. Quem decide sair e so o codigo SEM_TURMA do servidor, nunca o status (proxy, Render acordando e portal cativo tambem dao 404).",
+    "AGENTS 'PATCH exige If-Match; ausente = 428; divergente = 409; nunca sobrescrever em silencio': ApiService envia If-Match quando recebe version; 409 marca recarregarRegistro=true para a tela reler antes de insistir; 428 vira PRECONDICAO.",
+    "AGENTS 'Notificacao sempre via a interface Notifier, nunca o SDK direto num service': AuthService e SyncRepository falam com NotificacoesService, que e o unico que toca o plugin de notificacoes (PLUGIN_NOTIFICACOES, null fora do aparelho).",
+    "AGENTS 'turma_id nunca e filtrado a mao num controller' (regra do backend): no cliente, o unico mecanismo e o cabecalho X-Turma-Id, e so para docente. O cliente nao filtra dados por turma.",
+    "AGENTS 'Suporte a multiplas turmas e proibido; a API resolve UMA turma por usuario e nao existe seletor de turma na UI': CONFLITO A CONFIRMAR COM O DONO. O codigo tem o painel do docente, que lista varias turmas e tem escolher() (TurmaAtivaService.escolher, chamado em painel.page.ts) e manda X-Turma-Id para a turma escolhida. Os comentarios citam a spec 2.8. Nao li docs/HANDOFF-v2.md para decidir qual regra vale; o AGENTS diz que o handoff ganha em regra de negocio.",
+    "Spec 2.8 (citada em turma-ativa.interceptor.ts): X-Turma-Id so para conta docente e so para a API da propria aplicacao. Vazaria o id de uma turma para terceiros e forcaria preflight que o terceiro nao espera.",
+    "Spec 2.9 (citada em tabs.page.ts, docente.guard.ts e docente.models.ts): a INTERFACE sai do TIPO da conta (aluno ou docente); o PODER sai do STATUS e o servidor confere a cada requisicao. Docente PENDENTE usa a interface de docente (painel e varias turmas). Nenhum cliente decide poder.",
+    "Aluno NUNCA manda X-Turma-Id, mesmo com pf.turmaAtiva gravado (o app do aluno nao muda: teste explicito).",
+    "Sessao NAO e turma: quem tem token e nao tem turma nunca entra nas abas (guardaSessao). Cadastro grava sessao sem turma de proposito; o beco sem saida foi fechado por teste.",
+    "Teto de espera de 75 s e OBRIGATORIO com mensagem propria (DEMOROU). Timeout mudo e proibido pelo proprio comentario: deixa a pessoa achando que o app travou.",
+    "Troca de turma (escolher com havia ativa) RECARREGA o app, depois de gravar. Motivo do comentario: sem recarregar, o titulo diria 'ADS 3B' sobre as provas da 3A. Dado de uma turma nunca aparece sob o nome de outra.",
+    "Snapshot offline (pf.snapshot) e apagado NA TROCA de turma e NO SEM_TURMA; nunca no simples renomear a mesma turma (apagar perderia o cache offline de todos).",
+    "Lembretes agendados sao da conta que saiu: sair(), encerrarSessao() (401) e registrarTurma(null) (SEM_TURMA) cancelam os avisos pendentes. Sem isso, o alarme toca por semanas para quem ja saiu da turma.",
+    "conciliar() so roda com painel que CHEGOU: falha de rede nao e 'zero turmas' e nao pode esquecer a turma ativa.",
+    "Semana vazia mostra pouca coisa (AGENTS): lista vazia e resposta correta. Nada nesta area preenche lista com sugestao ou skeleton permanente."
+  ],
+  "armadilhas": [
+    "ORDEM DOS INTERCEPTORES: [authInterceptor, turmaAtivaInterceptor, erroHttpInterceptor, timeoutInterceptor]; o primeiro e o mais externo. O erro PRECISA envolver o timeout para enxergar o TimeoutError. Historico: ate 2026-09-25 a lista era [auth, timeout, erro] e o TimeoutError escapava cru, sem a mensagem 'O servidor demorou demais'. No port, a traducao de erro e a camada externa ao teto.",
+    "TETO REAL: ao estourar 75 000 ms, a requisicao e CANCELADA (o teste verifica pendente.cancelled) e o erro vira ErroApi DEMOROU (status 0, podeTentarNovamente true, mensagem 'O servidor demorou demais para responder. Tente de novo.'). No Dart: Future.timeout(75 s) MAIS cancelar a requisicao (CancelToken do Dio ou equivalente); senao a resposta tardia continua mexendo no estado.",
+    "rxjs timeout(n) com numero equivale a { each: n } (intervalo sem emissao), conforme RxJS 7. Como HttpClient emite uma vez, na pratica e o tempo total desde a assinatura. O port deve usar o total (um teto por requisicao), nao por pedaco de transferencia.",
+    "A espera pelo disco do TurmaAtivaService (pronto) fica FORA do teto: o timer comeca na assinatura do next(req), que so acontece depois do switchMap. Nao contar a espera do disco no teto.",
+    "O teto NAO vale para o GET /saude (fetch nativo, fora dos interceptores). Esse fetch nao tem Authorization, nao tem X-Turma-Id e erros sao descartados.",
+    "DEMOROU e OFFLINE em ESCRITA (POST, PATCH, DELETE) sao ambiguos: o servidor pode ter gravado mesmo sem resposta. O app so oferece 'Tente de novo' (sem retry automatico), mas repetir um POST de criacao pode duplicar o registro. Nao ha chave de idempotencia nesta area. Anotar isso para as telas de escrita.",
+    "Status 0 vira OFFLINE ('Sem conexão.'). O navegador tambem reporta status 0 quando o CORS bloqueia. No Flutter, mapear SocketException, HandshakeException e erro de rede para OFFLINE; nunca para DESCONHECIDO. A checagem de TimeoutError vem ANTES da checagem de status 0 (senao o timeout cairia em OFFLINE).",
+    "Erro que nao e HttpErrorResponse nem TimeoutError passa CRU (throwError(() => resposta)): a tela pode receber um Error comum ou um erro de programa. TurmaRepository cai no texto 'Não deu para carregar a turma.' quando o erro nao e ErroApi. No port, o tipo que a tela recebe deve ser sempre ErroApi (ou um erro generico tratado).",
+    "O que chega a tela e ErroApi (que estende Error), NUNCA HttpErrorResponse. Codigo que testa instanceof HttpErrorResponse depois do interceptor sempre da falso.",
+    "A MENSAGEM mostrada na MAIORIA dos casos e o detail do servidor, nao o texto local: o texto local so vale quando nao ha detail. Exemplos reais: 404 de outra turma mostra 'Registro nao encontrado' (sem acento, do servidor); 403 de nao-autor mostra 'Somente o autor edita ou exclui o proprio registro'; 403 de nao-lider mostra 'Somente o lider da turma modera'; 428 sem If-Match mostra 'Header If-Match com a version e obrigatorio' (texto tecnico); 401 de token vencido mostra 'Autenticacao necessaria'. Port: manter a precedencia detail > fallback.",
+    "detail vazio ('') NAO cai no fallback (o operador ?? so troca null e undefined): a mensagem sai vazia. Decidir no port: tratar '' como ausente (divergencia consciente, recomendada) ou replicar.",
+    "Sem detail, o campo title e usado CRU. Se o servidor mandar title em ingles (ex.: 'Not Found'), ele aparece na tela. O ProblemDetailHandler monta com forStatusAndDetail (detail + status), mas erros do proprio Spring MVC podem trazer title. Nao confiar que title e em portugues.",
+    "5xx IGNORA o detail do servidor e mostra SEMPRE 'Deu problema no servidor. Tente de novo.' (podeTentarNovamente true). Por desenho do backend, o 500 nao vaza mensagem de banco.",
+    "403 e lido pelo app como 'voce nao e o autor' (comentario do SegurancaConfig: por isso o backend manda 401, e nunca 403, para quem nao se identificou). Nao devolver 403 por falta de login, senao a mensagem fica errada.",
+    "401 faz TRES coisas, nesta ordem: (1) encerrarSessao() zera token, usuario e turma em memoria de forma SINCRONA, cancela lembretes e apaga pf.sessao sem await; (2) navega para /login (sem await, com .catch que loga); (3) so depois traduz e relanca. NAO apaga pf.snapshot nem pf.turmaAtiva (ao contrario de sair()). No port, decidir se replica (o snapshot da turma fica no aparelho depois de expirar a sessao).",
+    "401 tambem dispara no POST /auth/login com senha errada (servidor: 'E-mail ou senha invalidos'): a tela recebe ErroApi AUTH com esse detail, MAS o efeito colateral acontece mesmo assim (encerrarSessao, cancelar lembretes, navegar para /login). Nao interpretar 401 de login como 'sessao expirou'.",
+    "Cada 401 que chega em paralelo (varias telas com requisicao no ar) repete encerrarSessao e a navegacao para /login. E idempotente, mas no port convem um flag para nao empilhar navegacoes.",
+    "SEM_TURMA: a propriedade raiz codigo === 'SEM_TURMA' e o UNICO sinal. Status 404 sozinho NUNCA esquece a turma: 404 de proxy, do Render acordando, de portal cativo ou corpo HTML nao derrubam o vinculo (teste com tres corpos ruins: vinculo continua e nada e navegado).",
+    "O servidor so manda SEM_TURMA quando a pessoa tem ZERO vinculos (SemTurmaException). Quem tem outra turma e pediu uma alheia recebe 404 SEM codigo ('Registro nao encontrado'), que NAO esquece a turma, de proposito (um 404 qualquer nao pode mandar apagar a turma local).",
+    "SEM_TURMA de QUALQUER rota dispara: registrarTurma(null) (memoria primeiro: temTurma passa a false ANTES do primeiro await), esquecer lembretes, limpar snapshot, navegar para /entrar-turma. Continua autenticado (token mantido). Testado em /home, /sync e /materias.",
+    "SEM_TURMA com falha ao gravar a sessao em disco: registrarTurma(null) rejeita em 'await gravarSessao' e PULA esquecerLembretes() e storage.limpar(). Ou seja, lembretes e snapshot da turma antiga FICAM no aparelho. O teste de 'disco cheio' so verifica console.error e a navegacao. No port: limpar lembretes e snapshot mesmo se a gravacao da sessao falhar (correcao a confirmar).",
+    "SEM_TURMA NAO limpa TurmaAtivaService (pf.turmaAtiva). So TurmaRepository zera (effect em auth). Um docente removido continua mandando X-Turma-Id da turma antiga. Se ele entrar em OUTRA turma antes de o painel conciliar, as chamadas com escopo de turma recebem 404 SEM codigo ('Registro nao encontrado' pelo servidor) ate o painel rodar conciliar(). Pela leitura do TurmaScopeResolverJpa, e o comportamento esperado; nao testado de ponta a ponta. Decidir no port se limpa a turma ativa no mesmo ponto do registrarTurma(null) (divergencia recomendada).",
+    "A navegacao para /entrar-turma acontece AO MESMO TEMPO em que a tela que fez a chamada recebe o ErroApi (que pode mostrar 'Registro nao encontrado' por um instante). Nao transformar isso em tela de erro persistente nem bloquear a navegacao por causa do erro.",
+    "conciliar() troca a turma ativa SEM recarregar o app (so escolher() recarrega). Se a turma ativa sumiu e o painel cai na primeira turma restante, os repositorios em memoria (calendario, materias, turma, eventos, notas) continuam com os dados da turma antiga ate a proxima carga. O comentario do servico admite o risco. Port: decidir se a troca automatica tambem reinicia o estado.",
+    "escolher() com o MESMO id da ativa e no-op total: nao regrava o nome e nao limpa nada. Renomear a turma so acontece via conciliar().",
+    "Primeira escolha (sem ativa antes) grava, LIMPA pf.snapshot e NAO recarrega. conciliar() com primeira adocao tambem limpa (porque trocou = atual null !== id).",
+    "Trocar de turma (havia ativa) faz, NESTA ordem: (1) memoria; (2) storage.limpar() apaga pf.snapshot; (3) Preferences.set de pf.turmaAtiva; (4) recarregar. Recarregar antes de gravar reabriria a turma antiga. Preservar a ordem.",
+    "Se storage.limpar() LANCAR dentro de gravar(), o catch so loga e o Preferences.set de pf.turmaAtiva NAO roda: a turma nova vive so em memoria e a antiga volta na proxima abertura. Preservar ou corrigir conscientemente.",
+    "Renomear a MESMA turma (conciliar com nome novo e id igual) NAO limpa o snapshot: a condicao de limpar e a troca de id (trocou). Isso e intencional.",
+    "pf.turmaAtiva e por usuario: usuarioId e comparado com auth.usuario().id A CADA leitura (daSessao). Outro docente no mesmo aparelho recebe turmaId null e nao herda o id. O valor NAO e apagado do disco: volta quando o primeiro docente entrar de novo (teste explicito).",
+    "pf.snapshot NAO e por usuario nem por turma: um unico por aparelho. Sair (sair()) apaga; 401 (encerrarSessao) nao apaga; SEM_TURMA apaga. Um docente que ja usou o aparelho pode deixar dados que o proximo usuario ve offline. Decidir no port.",
+    "lerDoDisco: JSON invalido loga '[turma-ativa] turma ativa ilegivel, descartando' mas NAO remove a chave: o valor corrompido e relido em toda abertura e so e sobrescrito no proximo gravar. Objeto com campo de tipo errado e ignorado em silencio, sem log. No port, o 'descartando' do log so e verdade se a chave for apagada de fato.",
+    "pronto e uma Promise criada na CONSTRUCAO do TurmaAtivaService. O interceptor injeta o servico em TODA requisicao (inclusive de aluno, porque o inject roda antes do teste de docente), entao a leitura do disco dispara na primeira chamada HTTP se nada antes a injetou. No port, iniciar a leitura no boot e aguardar antes de qualquer requisicao de docente.",
+    "O interceptor decide 'docente?' ANTES de esperar o pronto (com auth.usuario() do momento da chamada) e so le o turmaId DEPOIS. Uma requisicao disparada com usuario ainda nulo nao recebe o cabecalho, mesmo que o usuario apareca depois. Sem isto, as primeiras chamadas do app saem sem cabecalho e o servidor responde pela turma mais recente (dado de OUTRA turma, sem erro): e o motivo do pronto.",
+    "Docente com tipoConta ausente (sessao antiga) e tratado como ALUNO: nenhum cabecalho. Docente PENDENTE, RECUSADO e COORDENADOR TAMBEM mandam o cabecalho (o tipo decide, nao o status).",
+    "X-Turma-Id so vai para URL que COMECA com environment.apiUrl (prefixo textual). Qualquer outro host nao recebe (vazamento e preflight). No port, a mesma checagem de host, nao 'nao e localhost'.",
+    "Docente sem turma ativa ainda: sem cabecalho; o servidor escolhe o vinculo mais recente (e registra aviso no log quando ha mais de um). Nao e erro.",
+    "Authorization vai para QUALQUER host: authInterceptor NAO checa apiUrl. Exclui apenas URLs que CONTEM '/auth/' em qualquer posicao (substring, nao prefixo). Consequencia: '/eu/senha' RECEBE Bearer (nao contem '/auth/'). Hoje o token viaja para qualquer URL que o HttpClient chamar. Port: decidir se restringe a API.",
+    "Token null -> nenhum header Authorization. Token e usuario mudam juntos em definirSessao, renovarSessao e encerrarSessao; nunca um sem o outro.",
+    "CORS (so se o port for Flutter Web): o backend lista em allowedHeaders Authorization, Content-Type, If-Match, X-IA-Key e X-Turma-Id. Sem X-Turma-Id nessa lista, toda requisicao de docente morre no preflight. No app nativo nao ha CORS.",
+    "restaurar() bloqueia o boot ate LER o disco, mas NAO espera GET /eu. O app abre com o ultimo tipo conhecido; a atualizacao chega depois e pode trocar o conjunto de abas AO VIVO sem redirecionar a rota atual (soAluno e soDocente rodam so na ativacao).",
+    "Se lerSessao() LANCAR (falha do plugin Preferences, NAO JSON invalido), o initializer rejeita: bootstrapApplication().catch so loga e o app nao abre (tela em branco, sem nada na tela). JSON corrompido de pf.sessao e tratado (remove e devolve null); falha de plataforma nao e tratada. Port: tratar o erro de leitura com um estado de sessao vazia e uma mensagem, nao tela em branco.",
+    "guardaSessao chama restaurar() de novo se nao estiver autenticado (idempotente): fecha a corrida entre o initializer e a primeira navegacao. Com token e sem turma, manda para /entrar-turma, nunca para as abas.",
+    "pf.sessao e gravado ANTES de existir turma (cadastro, renovarSessao, aplicar): e estado normal (turmaId null), nao corrupcao. Fechar o app entre o cadastro e a entrada na turma volta autenticado e sem turma: a guarda manda para /entrar-turma.",
+    "Rota desconhecida (ex.: /xyz) nao tem wildcard em app.routes nem em tabs.routes: a navegacao falha e so aparece no console. Nao existe tela 404 do app. Decidir no port se ha uma tela de fallback.",
+    "Deep link para rota de abas sem sessao: guardaSessao manda para /login SEM guardar a URL de destino (nao ha returnUrl). Quem loga cai na entrada padrao, nao no destino original.",
+    "PreloadAllModules: apos o boot o Angular pre-carrega TODAS as rotas lazy em segundo plano. No port, nao carregar todas as telas na abertura.",
+    "'/senha/reset' e um caminho FIXO: e o link que o backend escreve no e-mail (app.reset-senha-url-base). Renomear quebra todos os e-mails ja enviados.",
+    "environment.recuperacaoPorEmail: dev false, prod true. A tela de recuperar muda o texto conforme o flag (o servidor de prod manda e-mail de verdade; dev nao). Configuracao de build, nao do usuario.",
+    "Cold start do host gratuito: o teto de 75 s NAO cobre o pior caso medido (184 s). O aquecimento do main.ts (GET /saude sem await) existe para isso. Mesmo assim, o login pode estourar DEMOROU se o servidor levar mais de 75 s; a mensagem e o botao 'Tente de novo' sao o plano B.",
+    "tabs.page.html NAO e usado: e o scaffold padrao do Ionic (Tab 1, Tab 2, Tab 3, icones triangle/ellipse/square). TabsPage tem template INLINE e nao tem styleUrls. tabs.page.scss esta vazio: o visual vem de global.scss (ion-tabs.pf-abas, .pf-recolher, .pf-aba-perfil, .pf-abas--recolhida, .pf-perfil-*). Nao portar o scaffold.",
+    "Abas pelo TIPO da conta, nunca pelo status: docente PENDENTE ve Painel e Turma (spec 2.9). Trocar por docenteStatus quebra o teste 'em qualquer status'.",
+    "NO PC o nome e o e-mail ficam VISIVEIS e o que e recortado (clip) e o rotulo 'Perfil'. NO CELULAR e o contrario: 'Perfil' fica visivel e nome/e-mail ficam display none. Nao inverter ao portar.",
+    "Inicial do avatar: primeiro CODE POINT (espalhar string em JS, [...nome]), NAO grapheme. '🎓 Formanda' -> '🎓'. Em Dart usar runes.first (ou equivalente), NAO characters.first: emoji com ZWJ ou bandeira tem varios code points, e a inicial mudaria. Nome vazio ou so espacos -> '?'. Trim antes de pegar a inicial. toUpperCase depois do corte ('é' -> 'É').",
+    "Menu recolhido e preferencia POR APARELHO (localStorage 'pf.menuRecolhido' = '1'/'0'), nao por conta. Storage bloqueado: ignora em silencio. No celular o botao fica oculto mas o valor salvo continua valendo quando o app volta a ser aberto no PC.",
+    "Desktop: a barra vira coluna LATERAL (order -1, flex-direction row no ion-tabs.pf-abas). Breakpoint 768 px (min-width 768 / max-width 767.98: pelo CSS, o celular vai ate 767.98). Nao usar 768 nos dois lados.",
+    "Cada aba mantem a propria pilha (IonicRouteStrategy): voltar para uma aba mostra a tela onde ela estava. A Painel recarrega em ionViewWillEnter a cada entrada (ponto de conciliar e de reagendar lembretes para o docente). No port, preservar a pilha de cada aba (ex.: IndexedStack ou um navigator por aba).",
+    "/tabs/admin NAO esta na barra e NAO tem guarda: quem nao e admin recebe 404 da API (spec 8). Nao criar guarda local.",
+    "A aba 'Turma' substitui 'Meu quadro' para o docente (kanban de 'feito' e so de quem tem prova para fazer). Calendário e Matérias sao as mesmas telas para os dois.",
+    "Ordem das abas e FIXA: [Home ou Painel], Calendário, Matérias, [Meu quadro ou Turma], Perfil. Perfil por ultimo de proposito (no PC vai para o rodape; no celular e a quinta aba).",
+    "Ordem de casamento: 'materias/nova' ANTES de 'materias/:id' e 'eventos/novo' ANTES de 'eventos/:id' (ambos com 2 segmentos). Sem isso, /tabs/materias/nova abre o detalhe com id='nova' e pede ao servidor uma materia que nao existe.",
+    "Grafia mista: 'materiais/:id/resumo' e 'materiais/:id/editar' (com 'materiais') convivem com 'materias/:id/material/novo' e 'materias/:id/editar' (com 'materias'). Manter as duas grafias exatamente: links, notificacoes e e-mails dependem delas.",
+    "As rotas /:id/editar reusam a tela de criar (NovaMateriaPage, NovoEventoPage, NovaNotaPage): o parametro id liga o modo de edicao (e so o lider edita materia). No port, uma tela com parametro opcional, nao duas telas.",
+    "soAluno e soDocente sao guardas de ATIVACAO: trocar de tipo com a tela aberta NAO redireciona. A checagem so acontece na proxima navegacao para a rota.",
+    "rotaInicial() le o usuario no instante do redirect. O guardaSessao (no pai '') roda ANTES e garante a restauracao da sessao, entao o tipo ja esta disponivel.",
+    "A barra de abas nao aparece nas telas de entrada (/login, /cadastro, /entrar-turma, /recuperar, /senha/reset), porque elas ficam fora de /tabs.",
+    "JanelaDesfazer: duracao exata de 8000 ms. Teste: aberta em t=7999 e fechada em t=8000.",
+    "abrir() de novo REINICIA o relogio do zero (ocultar duas coisas seguidas nao encurta a segunda). Teste: abrir em t=0, reabrir em t=7000: aberta em t=14999 e fechada em t=15000.",
+    "O relogio roda FORA da zona do Angular (runOutsideAngular), de proposito: nao segura whenStable. No Flutter nao ha equivalente; o Timer deve ser cancelado no dispose() do State, senao chama setState depois de a tela sair.",
+    "JanelaDesfazer e criada como campo de componente porque pede DestroyRef: sair da tela cancela o timer (teste: fixture.destroy() deixa aberta=false). No Flutter: cancelar o Timer no dispose().",
+    "fechar() zera aberta mas NAO executa o desfazer. A acao (reexibir, restaurar) e do chamador. Depois do tempo, o caminho de volta continua na secao 'Ocultados' da Turma (o aviso so sai da frente).",
+    "Textos que a janela mostra ficam nas telas que a usam (fora desta area): 'Ocultado.' seguido do botao de desfazer, em evento.page, calendario.page e materia.page.",
+    "Mensagem de 401 sem detail: 'Sua sessão expirou. Entre de novo.'. Com o SegurancaConfig, o 401 de token vencido TEM detail ('Autenticacao necessaria') e esse texto e o que aparece.",
+    "Ordem das ifs na traducao importa: status 0 (OFFLINE) antes de tudo; depois 401, 403, 404, 409, 428, >= 500 e, por fim, DESCONHECIDO. Qualquer outro status (400, 422 etc.) vira DESCONHECIDO com detail ou 'Não deu para completar a ação.'. Erro de validacao 400 aparece com o detail do servidor.",
+    "409 = CONFLITO com recarregarRegistro=true: a tela deve reler o registro antes de nova tentativa. O interceptor NAO reenvia nada. Nunca sobrescrever em silencio (regra do AGENTS).",
+    "428 (sem If-Match) e erro do CLIENTE. A mensagem local 'Recarregue o registro e tente de novo.' so aparece se o servidor nao mandar detail; na pratica o servidor manda ('Header If-Match com a version e obrigatorio').",
+    "PATCH sem version nao manda If-Match e o servidor responde 428. ApiService.patch e delete so mandam If-Match quando o chamador passa version (a turma nao tem version).",
+    "ApiService.get com params: boolean e number viram texto ('true', '5'); undefined vira 'undefined'. O chamador precisa filtrar nulos antes.",
+    "Nenhum retry automatico em lugar nenhum desta area: 'Tente de novo' e decisao da tela.",
+    "Nao existe 'catch que devolve lista vazia' nesta area: ApiService e os interceptores sempre relancam. Quem trata e a tela. Por isso um erro de rede NUNCA vira 'nenhum evento'.",
+    "main.ts: os dois provideAppInitializer nao se encadeiam. restaurar() e aguardado; o fetch de /saude e disparado sem await e nao bloqueia. O fetch nao passa por interceptor nenhum (sem Authorization, sem timeout, sem ErroApi).",
+    "bootstrapApplication(...).catch(err => console.error(err)): erro de bootstrap nao tem tela de erro; o app fica em branco.",
+    "AppComponent: listener 'resume' registrado UMA vez no construtor e NUNCA removido; so no nativo. A chamada e sem forcar (a janela de 60 s do SyncRepository decide) e sem await (void): o resume nao espera o resultado.",
+    "AppComponent.resume so reagenda com auth.temTurma(). Docente sem turma ativa, mas com turma no servidor: o /sync vai sem cabecalho e o servidor escolhe o vinculo mais recente. Sem nenhuma turma o app nao chama.",
+    "restaurar() dispara atualizarTipoDaSessao sem await. Um 401 nessa chamada DESLOGA (o interceptor executa encerrarSessao antes do catch local). O comentario do catch ('fica o gravado') vale apenas para outros erros.",
+    "renovarSessao mantem turmaId (usa a turma em memoria); definirSessao ZERA a turma quando o parametro vem ausente. Trocar nome ou senha usa renovarSessao para nao expulsar a pessoa da turma.",
+    "atualizarNome e trocarSenha so gravam a nova sessao se o token NAO mudou durante a requisicao (senao ressuscitariam uma sessao encerrada, por exemplo num PC compartilhado).",
+    "sair() apaga pf.sessao E pf.snapshot, mas NAO pf.turmaAtiva (chave por usuario). encerrarSessao() (401) nao apaga pf.snapshot. Diferenca intencional em relacao a sair(); decidir no port.",
+    "registrarTurma(id) (entrar ou criar turma) NAO limpa pf.snapshot. So registrarTurma(null) limpa. Um docente que entra em outra turma por essa via mantem o snapshot da antiga ate o painel conciliar (que limpa, por trocou)."
+  ],
+  "testes": [
+    "http-error.spec: 401 -> classe AUTH, token e usuario zerados, navegacao para '/login' (ROTA_LOGIN).",
+    "http-error.spec: 409 -> classe CONFLITO, status 409, recarregarRegistro true.",
+    "http-error.spec: 404 com corpo {detail, codigo:'SEM_TURMA'} -> ErroApi com codigo 'SEM_TURMA' e classe NAO_ENCONTRADO.",
+    "http-error.spec: SEM_TURMA de '/home', '/sync' e '/materias' (qualquer rota): temTurma vira false, autenticado continua true, navegacao para '/entrar-turma'.",
+    "http-error.spec: 404 SEM codigo (corpo HTML '<html>502 Bad Gateway</html>', corpo {detail} sem codigo, e corpo null): status 404, codigo null, vinculo PRESERVADO, nenhuma navegacao.",
+    "http-error.spec: falha ao gravar a sessao no SEM_TURMA (registrarTurma rejeita): console.error chamado e navegacao para '/entrar-turma' mesmo assim.",
+    "interceptores.spec (lista real INTERCEPTORES): estouro do teto (75 000 ms) cancela a requisicao (pendente.cancelled) e entrega ErroApi com classe DEMOROU e podeTentarNovamente true (nao TimeoutError cru).",
+    "janela-desfazer.spec: abre, e se fecha sozinha depois de 8 s (aberta em 7999 ms, fechada em 8000 ms).",
+    "janela-desfazer.spec: abrir de novo recomeca a contagem (ocultar duas vezes nao encurta a segunda).",
+    "janela-desfazer.spec: fechar() cancela o relogio imediatamente (sem timer pendente).",
+    "janela-desfazer.spec: sair da tela (fixture.destroy) cancela o relogio e deixa aberta=false.",
+    "turma-ativa.interceptor.spec: docente recebe X-Turma-Id com a turma ativa do disco, MESMO quando o disco ainda nao respondeu (espera de 20 ms antes de olhar a requisicao).",
+    "turma-ativa.interceptor.spec: aluno NUNCA manda o cabecalho, mesmo com turma ativa gravada no aparelho.",
+    "turma-ativa.interceptor.spec: sessao sem tipoConta (antiga) conta como aluno: sem cabecalho.",
+    "turma-ativa.interceptor.spec: URL fora de environment.apiUrl (https://terceiro.exemplo/...) nao recebe o cabecalho.",
+    "turma-ativa.interceptor.spec: docente sem turma ativa (disco vazio): sem cabecalho.",
+    "turma-ativa.interceptor.spec: a lista INTERCEPTORES (a do main.ts) tem o turmaAtivaInterceptor registrado; a requisicao leva X-Turma-Id 't9' e Authorization 'Bearer jwt' juntos.",
+    "turma-ativa.service.spec: a primeira escolha grava, limpa o snapshot e NAO recarrega.",
+    "turma-ativa.service.spec: trocar de turma limpa o snapshot da antiga e recarrega com a nova ja gravada (o id na hora da recarga e 't3b'); sobrevive a fechar o app.",
+    "turma-ativa.service.spec: escolher a que ja e a ativa nao apaga nem recarrega nada.",
+    "turma-ativa.service.spec: a turma ativa e de quem escolheu: outro usuario no mesmo aparelho recebe turmaId null; o primeiro, ao voltar, recupera a turma.",
+    "turma-ativa.service.spec conciliar: sem ativa, adota a primeira turma do painel e nao recarrega.",
+    "turma-ativa.service.spec conciliar: a ativa que continua valendo nao muda e nao limpa o snapshot.",
+    "turma-ativa.service.spec conciliar: turma ativa removida cai para outra da lista (nao manda um id que daria 404).",
+    "turma-ativa.service.spec conciliar: turma renomeada atualiza o nome SEM apagar o cache offline (snapshot nao limpo).",
+    "turma-ativa.service.spec conciliar: painel sem turma nenhuma esquece a ativa, inclusive do disco.",
+    "turma-ativa.service.spec: disco ilegivel (JSON invalido) vira 'sem turma ativa', nao erro.",
+    "tabs.page.spec: o item de perfil mostra avatar 'O', nome 'Otavio' e e-mail 'voce@exemplo.com'; o rotulo curto 'Perfil' continua no DOM (recortado no PC, nao removido).",
+    "tabs.page.spec: renomear troca a sessao e o menu acompanha, sem GET /eu ('É' e 'Éster').",
+    "tabs.page.spec: nome que comeca com emoji vira a inicial inteira ('🎓').",
+    "tabs.page.spec: aluno tem as abas ['home','calendario','materias','quadro','perfil'], inclusive sessao sem tipoConta.",
+    "tabs.page.spec: docente tem ['painel','calendario','materias','turma','perfil'] em qualquer docenteStatus (APROVADO, PENDENTE, e COORDENADOR com RECUSADO).",
+    "app.routes.spec: sem sessao, /tabs/home vai para /login.",
+    "app.routes.spec: sessao restaurada com turma -> /tabs/home (nao expulsa no boot).",
+    "app.routes.spec: sessao sem turma -> /entrar-turma, nunca as abas.",
+    "app.routes.spec: /login, /cadastro, /entrar-turma e /recuperar nao exigem sessao.",
+    "app.routes.spec: rotas 'materias/nova', 'eventos/novo', 'turma' e 'perfil' estao registradas (ausencia nao pode passar em silencio).",
+    "app.routes.spec: rotas de criar ('materias/nova', 'eventos/novo') vem ANTES das de parametro ('materias/:id', 'eventos/:id')."
+  ],
+  "nativo": [
+    "@capacitor/preferences: disco do aparelho por chave. Chaves desta area: 'pf.sessao' (JSON: jwt, usuario, turmaId), 'pf.snapshot' (JSON: eventos, materias, ultimoSync), 'pf.turmaAtiva' (JSON: usuarioId, turmaId, nome). Usado por StorageService e TurmaAtivaService.",
+    "@capacitor/app: App.addListener('resume', ...) em AppComponent, so no nativo. Dispara o reagendamento dos lembretes ao voltar do fundo.",
+    "@capacitor/core: Capacitor.isNativePlatform() decide se AppComponent registra o listener. Tambem usado por PLUGIN_NOTIFICACOES (fora da area).",
+    "@capacitor/local-notifications (indireto, via NotificacoesService): AuthService chama esquecer() em sair, encerrarSessao e registrarTurma(null) para cancelar avisos e apagar alarmes personalizados da conta que saiu. Plugin tratado pela area de notificacoes.",
+    "@ionic/angular/standalone: provideIonicAngular(); RouteReuseStrategy = IonicRouteStrategy (preserva a pilha de cada aba); componentes IonApp, IonRouterOutlet, IonTabs (classe pf-abas), IonTabBar (slot bottom), IonTabButton (atributos tab e href, title, classe pf-aba-perfil), IonIcon (name), IonLabel.",
+    "ionicons: addIcons no TabsPage com listOutline, calendarOutline, libraryOutline, checkboxOutline, chevronBackOutline, chevronForwardOutline, gridOutline, peopleOutline (nomes de exibicao: list-outline, calendar-outline, library-outline, checkbox-outline, chevron-back-outline, chevron-forward-outline, grid-outline, people-outline).",
+    "localStorage (web; no WebView do Capacitor tambem): chave 'pf.menuRecolhido' ('1' recolhido, '0' expandido). Lido no construtor do TabsPage e gravado no clique do recolher. Excecoes engolidas (storage bloqueado).",
+    "location.reload() (default de RECARREGAR_APP): recarrega o app na troca de turma. Web. No Flutter, reiniciar o estado em memoria (nao ha equivalente de reload).",
+    "fetch nativo (API do navegador): usado SO no GET /saude do main.ts, fora de HttpClient e dos interceptores, sem teto e com erros descartados.",
+    "Angular: provideAppInitializer (restaurar e o fetch de /saude), withPreloading(PreloadAllModules), withInterceptors, provideRouter. Sem plugin nativo extra, mas o port precisa de equivalentes: disco (SharedPreferences ou Hive), cliente HTTP com interceptor (Dio), navegacao com guardas (GoRouter redirect), ciclo de vida (AppLifecycleState.resumed)."
+  ]
+}

@@ -1,0 +1,452 @@
+{
+  "unidade": "calendario: features/calendario/{calendario.page.ts, mes.ts} e data/{evento.repository.ts, nota.repository.ts, moderacao.repository.ts}. Dependencias lidas: core/api.service, core/interceptores (auth, turma-ativa, http-error, timeout), core/janela-desfazer, core/turma-ativa.service, data/turma.repository, data/models, features/evento-vm, features/auth/erro, shared/evento-card, shared/nota, shared/selo, shared/materia-chip, shared/tipos, global.scss. Backend conferido em EventoController, NotaController, ModeracaoController, NotaService, ModeracaoService, queries JPA de EventoRepository/NotaRepository, DTOs, ProblemDetailHandler, excecoes em erro/ e application.yml (non_null).",
+  "telas": [
+    {
+      "rota": "/tabs/calendario (aba 'Calendário' da barra de abas, href /tabs/calendario, icone calendar-outline; mesma tela para aluno e docente)",
+      "arquivo": "app/src/app/features/calendario/calendario.page.ts (logica pura da grade em app/src/app/features/calendario/mes.ts)",
+      "proposito": "Consulta do mes, nao entrada: grade mensal (responde 'o que tem no dia 12?'), painel do dia tocado, lista corrida de todos os eventos do mes e lista das anotacoes do mes, com moderacao (ocultar/desfazer) de anotacao da turma para lider ou coordenacao. Nao tem botao de criar prova/entrega, nao tem pull-to-refresh, nao destaca 'hoje'. Renderiza GET /eventos e GET /notas NA ORDEM EM QUE VIERAM, sem reordenar, filtrar ou cortar; o unico filtro no cliente e por dia (painel e marcas da grade).",
+      "estados": [
+        "ANTES DA PRIMEIRA CARGA: carregando=false, erro=null, eventos=[] satisfaz a formula de 'vazio'. No Ionic nao aparece porque ionViewWillEnter dispara a carga antes de a tela ser mostrada. No Flutter, marcar carregando=true antes do primeiro frame (ou tratar 'nunca carregou' como carregando), senao pisca 'Nada marcado em X.'.",
+        "CARREGANDO (EventoRepository.carregando=true): paragrafo de aviso tracejado (.pf-aviso, sem role) 'Carregando…' (U+2026) no topo. Barra do mes e GRADE continuam desenhadas com as marcas do que ja estava em memoria; lista 'tudo de {Mês}' e anotacoes em memoria continuam. Bloco vazio nunca aparece enquanto carrega. Anotacoes NAO tem indicador de carregamento proprio.",
+        "ERRO DOS EVENTOS (GET /eventos falhou): no topo, .pf-aviso (sem role) com a mensagem do ErroApi: 'Sem conexão.' (status 0), 'Deu problema no servidor. Tente de novo.' (5xx), 'O servidor demorou demais para responder. Tente de novo.' (timeout 75 s), ou detail do servidor. A lista de eventos NAO e limpa (o que havia continua, inclusive de OUTRO mes se a falha veio de troca de mes). Bloco vazio NAO aparece. Sem botao 'tentar de novo': nova tentativa = reentrar na aba ou trocar de mes. 'Carregando…' e erro sao if/else-if: nunca os dois.",
+        "ERRO DAS ANOTACOES (GET /notas falhou): sob o rotulo 'anotações', .pf-aviso com role=alert e a mensagem. As anotacoes em memoria continuam; eventos nao sao afetados; nao mexe no estado vazio.",
+        "ERRO DA TURMA (GET /turmas/minha falhou): silencioso nesta tela. Efeito: souLider=false e alcanca(null)=false, logo 'Ocultar da turma' nao aparece. Tenta de novo na proxima entrada (turma continua null).",
+        "VAZIO (carregando=false E erro dos eventos=null E eventos.length===0): bloco .pf-vazio NO FIM da pagina (depois da secao de anotacoes): negrito 'Nada marcado em {Mês}.' + 'Prova ou entrega que a turma adicionar aparece aqui, no dia dela.'. Olha SO eventos: mes so com anotacoes mostra as anotacoes E o bloco vazio. Sem dica, sugestao, card promocional ou skeleton.",
+        "CONTEUDO: grade com marcas + (se ha eventos em memoria) rotulo 'tudo de {Mês}' e cards na ordem do servidor + secao de anotacoes.",
+        "DIA ABERTO: painel (cartao com borda) logo abaixo da grade: titulo '{d} de {mês minúsculo}', eventos do dia (links), anotacoes do dia, ou 'Nada marcado neste dia.' (texto cinza, NAO e aviso de falha), e o link 'Anotar neste dia'. A celula aberta tem outline 2px accent (aria-pressed=true).",
+        "MODERANDO (ocultar em voo, incluindo a recarga de anotacoes que o segue): todos os 'Ocultar da turma' desabilitados (opacity 0.45, visiveis).",
+        "JANELA DE DESFAZER ABERTA (8000 ms apos ocultar com sucesso): alerta role=status 'Ocultado.' + botao 'Desfazer' (vira 'Desfazendo…' e desabilita durante o reexibir). Some sozinho aos 8000 ms.",
+        "ERRO DE MODERACAO: caixa solida .pf-erro role=alert com a mensagem (ex.: 'Somente o lider da turma modera', 'Registro nao encontrado', 'Sem permissao nesta materia', 'Sem conexão.'), entre 'Anotar alguma coisa' e o alerta de desfazer. Persiste ate o inicio da proxima tentativa de ocultar/desfazer (sobrevive a troca de mes e reentrada).",
+        "OFFLINE: nao ha cache/snapshot nesta tela. Sem rede = ERRO DOS EVENTOS 'Sem conexão.' + aviso das anotacoes 'Sem conexão.'.",
+        "SESSAO/TURMA PERDIDA (global): 401 em qualquer chamada encerra a sessao e navega /login; 404 com corpo codigo='SEM_TURMA' esquece a turma e navega /entrar-turma."
+      ],
+      "elementos": [
+        "1. Cabecalho (ion-header translucido, ion-toolbar) com titulo: nome da turma ativa do docente (TurmaAtivaService.nome(), reativo) ou, se nulo (aluno sempre), o literal 'Calendário'.",
+        "2. Conteudo em pilha vertical (.pf-pilha: padding 12px 16px 16px, gap 8px), na ordem abaixo.",
+        "2a. Se carregando: <p class=pf-aviso>'Carregando…'</p>; senao, se erro dos eventos: <p class=pf-aviso>{mensagem}</p>.",
+        "2b. Barra do mes (linha, space-between, gap 8): botao pilula de contorno 36x36, glifo '‹' (font 20px), aria-label 'Mês anterior'; texto '{Nome do mês} {ano}' (15px, peso 700, letter-spacing -0.01em), ex.: 'Setembro 2026' (nomes: Janeiro, Fevereiro, Março, Abril, Maio, Junho, Julho, Agosto, Setembro, Outubro, Novembro, Dezembro); botao '›', aria-label 'Próximo mês'.",
+        "2c. Grade de 7 colunas iguais, gap 3px. Primeira linha: 7 cabecalhos 'D','S','T','Q','Q','S','S' (10.5px, peso 600, ink-3, centralizados, padding-bottom 4px) — semana comeca no DOMINGO. Depois N celulas vazias quadradas, N = dia da semana do dia 1 (domingo=0 => nenhuma). Depois um botao quadrado (aspect-ratio 1) por dia 1..ultimo dia. Sem celulas de preenchimento no fim, sem dias de meses vizinhos.",
+        "2c-i. Botao de dia: numero (13px) e, abaixo, linha de marcas de 4px de altura (gap 2px): um ponto redondo 4x4 por COR distinta das materias dos eventos do dia (ordem da 1a ocorrencia na resposta; cores vazias ignoradas) e, se ha anotacao no dia, um ponto VAZADO (contorno interno 1px ink-3; em dia com prova o contorno usa prova-fg-2). Estilo: dia com PROVA = fundo prova-bg, texto prova-fg, peso 700, sombra e1; dia so com ENTREGA = contorno interno 1px rule, sem fundo; prova+entrega = estilo de prova. Raio r-sm. Dia aberto e foco = outline 2px accent offset 1px. Toque: escala var(--press-forte). aria-label: 'Dia {n}' sem marcas, ou 'Dia {n}, com {lista}' com, nesta ordem fixa, os presentes entre 'prova', 'entrega', 'anotação' unidos por ' e ' (ex.: 'Dia 12, com prova e entrega e anotação'). aria-pressed = (data da celula === dia aberto).",
+        "2d. Se ha dia aberto, painel (fundo surface, borda 1px rule, raio md, sombra e1, padding 12, coluna gap 10): (1) rotulo .pf-rotulo '{dia sem zero} de {nome do mês minúsculo}', ex.: '12 de setembro'; (2) para cada evento com data === dia aberto, ordem do servidor: link /tabs/eventos/{id} envolvendo um EventoCard; (3) para cada anotacao com data === dia aberto, ordem do servidor: componente Nota (SEM rotulo de dia, SEM link de editar, SEM botao de ocultar, SEM aviso de oculta); (4) se nao ha evento nem anotacao: <p class=dia-vazio>'Nada marcado neste dia.'</p> (13px, ink-3); (5) link estilo .botao.botao--fantasma (largura cheia, contorno 1px rule, padding 14, 14.5px peso 700) 'Anotar neste dia' para /tabs/notas/nova?dia={AAAA-MM-DD do dia aberto}.",
+        "2e. Se a lista de eventos em memoria nao e vazia: rotulo .pf-rotulo 'tudo de {Nome do mês em foco}' (texto-fonte 'tudo de Setembro'; o CSS deixa MAIUSCULO, mono 11px, ink-3, regua de 1px preenchendo o resto da linha) e, para cada evento na ordem do servidor, link /tabs/eventos/{id} envolvendo um EventoCard.",
+        "2f. Rotulo .pf-rotulo 'anotações' (sempre presente).",
+        "2g. Se erro das anotacoes: <p class=pf-aviso role=alert>{mensagem}</p>.",
+        "2h. Link .botao.botao--fantasma 'Anotar alguma coisa' para /tabs/notas/nova (sem query).",
+        "2i. Se erro de moderacao: <p class=pf-erro role=alert>{mensagem}</p>.",
+        "2j. Se janela de desfazer aberta E ha nota ocultada: .alerta.alerta--desfazer role=status, em linha (space-between): '<span>Ocultado.</span>' e botao pilula de contorno 'Desfazer' (ou 'Desfazendo…' e disabled quando desfazendo).",
+        "2k. Para cada anotacao (ordem do servidor: data asc, criadoEm asc). SE 'minha' (minha = autorNome ausente/null/''): link /tabs/notas/{id}/editar contendo [rotulo de dia .dia-nota, ex.: '12 set' (mono 11px, maiusculo via CSS, ink-3, margin-bottom 2) + componente Nota]; e, se visivelTurma === false, logo abaixo (fora do link) <p class=nota-oculta>'O líder tirou esta anotação da lista da turma. Só você ainda vê.'</p> (12px, ink-2, fundo rule-soft, regua esquerda 3px rule, padding 7x10). SENAO: rotulo de dia '12 set' + componente Nota (nao tocavel) + se ((souLider OU alcanca(null)) E alcance === 'TURMA'): botao pilula de contorno pequeno (12px, padding 5x10, alinhado a esquerda) 'Ocultar da turma', desabilitado enquanto moderando.",
+        "2l. Se vazio: .pf-vazio (padding 26px 4px) com <b>'Nada marcado em {Nome do mês}.'</b> (16px peso 600, ink) e <span>'Prova ou entrega que a turma adicionar aparece aqui, no dia dela.'</span> (15px, ink-3).",
+        "3. EventoCard (shared, nao alterar): grade [44px | resto], gap 14, padding 12x14, raio md. PROVA = bloco solido prova-bg/prova-fg, titulo peso 700, glifo quadrado cheio; ENTREGA = contorno 1px rule, fundo transparente, titulo peso 600, glifo circular vazado. Coluna data: dia (20px bold; pedaco do ISO COM zero a esquerda, ex.: '03') e mes ('jan'..'dez'; mono 10px MAIUSCULO, opacity .62). Corpo: topo = MateriaChip (sigla MAIUSCULA, texto branco, fundo materiaCorHex, raio 4, 11px 700) + tipo (mono 10px maiusculo ink-3: glifo + texto so para leitor de tela 'Prova —'/'Entrega —' + quando = 'HH:mm' ou 'prova'/'entrega'); titulo 16px (quebra palavra longa); rodape 13px ink-3: '{prefixo}{assinatura}' (prefixo 'Prof. ' | 'Coord. ' | ''; assinatura 'Nome · há 5 h') + selo (retangulo vazado: capelo + 'Professor', ou escudo cheio + 'Coordenação'); se editadoPor: 2a linha com icone de lapis + 'editado por {prefixo do selo do editor}{nome}' + selo do editor. Dentro de prova o selo inverte (prof = prova-fg; coord = #5fd3c7 claro / #0b5f58 escuro). Sala NAO e mostrada no calendario.",
+        "4. Nota (shared, nao alterar): coluna gap 4, padding 9x12, raio sm. TURMA = regua esquerda SOLIDA 3px accent + fundo rule-soft, cabeca 'da turma · todos veem' em accent, texto ink; PESSOAL = regua esquerda TRACEJADA 3px ink-3, cabeca 'pessoal · só você' em ink-3, texto ink-2. Cabeca mono 10px MAIUSCULO via CSS; texto 14px. Se autoria: linha 11px ink-3 '{prefixo do selo}{assinatura}' + selo."
+      ],
+      "acoes": [
+        "Aba aparece (ionViewWillEnter: 1a entrada E toda volta — trocar de aba, voltar da tela do evento, voltar da anotacao) -> carregarMes(): de/ate do mes EM FOCO (nao volta ao mes atual) e dispara EM PARALELO, sem await entre elas: EventoRepository.carregarPeriodo(de, ate) [GET /eventos; falha so logada no console '[calendario] falha ao carregar o mês' — o erro ja esta no signal]; NotaRepository.carregar(de, ate) [GET /notas; nao lanca]; TurmaRepository.garantirCarregada() [GET /turmas/minha SO se turma===null e nao esta carregando]. Exatamente UMA carga por entrada (nada no construtor).",
+        "Toque em '‹' / '›' -> andarMes(-1/+1): emFoco = mesVizinho(ano, mes, passo) (atravessa a virada do ano), diaAberto = null (painel fecha), carregarMes() com de/ate do NOVO mes (as mesmas 3 chamadas).",
+        "Toque num dia -> abrirDia(data): se ja e o dia aberto, fecha (null); senao abre esse. Nenhuma requisicao.",
+        "Toque num card de evento (painel ou lista 'tudo de') -> navega /tabs/eventos/{id}.",
+        "Toque em 'Anotar neste dia' -> navega /tabs/notas/nova?dia=AAAA-MM-DD (a tela de anotacao pre-preenche o dia e, apos salvar, faz navigateByUrl('/tabs/calendario'), o que dispara a recarga da aba).",
+        "Toque em 'Anotar alguma coisa' -> navega /tabs/notas/nova (la o dia padrao e hoje).",
+        "Toque numa anotacao 'minha' -> navega /tabs/notas/{id}/editar (a tela de editar busca a nota em NotaRepository.notas() em memoria; nao existe GET /notas/{id}).",
+        "Toque em 'Ocultar da turma' -> ocultarNota(id): se moderando, ignora. moderando=true; erroDaModeracao=null; POST /moderacao/nota/{id}/ocultar corpo {\"motivo\": null}. Sucesso: notaOcultada=id; janela.abrir() (8 s, reinicia se ja aberta); depois (ainda moderando) await NotaRepository.carregar(de, ate) do mes em foco — recarrega em vez de remover localmente. Falha do POST: erroDaModeracao = mensagemDeErro(e). Finally: moderando=false. Sem dialogo de confirmacao.",
+        "Toque em 'Desfazer' -> desfazerOcultarNota(id): se desfazendo OU moderando, ignora em silencio. desfazendo=true; erroDaModeracao=null; POST /moderacao/nota/{id}/reexibir (corpo {}). Sucesso: janela.fechar() (alerta some) e await NotaRepository.carregar(de, ate). Falha: erroDaModeracao = mensagemDeErro(e) e a janela CONTINUA aberta (o relogio original de 8 s segue). Finally: desfazendo=false.",
+        "Janela de desfazer: fecha sozinha exatamente 8000 ms apos o ultimo abrir(); fechar() cancela o timer; destruir a tela cancela o timer."
+      ],
+      "navegacao": [
+        "Entrada: aba 'Calendário' (href /tabs/calendario), para aluno e docente. O redirect padrao das abas NAO e o calendario (aluno -> Home, docente -> Painel).",
+        "-> /tabs/eventos/{eventoId} (card de evento no painel do dia ou na lista do mes).",
+        "-> /tabs/notas/nova?dia=AAAA-MM-DD ('Anotar neste dia').",
+        "-> /tabs/notas/nova ('Anotar alguma coisa').",
+        "-> /tabs/notas/{notaId}/editar (toque em anotacao 'minha').",
+        "<- /tabs/notas/nova e /tabs/notas/{id}/editar voltam com navigateByUrl('/tabs/calendario') apos salvar/excluir (dispara recarga). O back button da tela de anotacao tem defaultHref /tabs/calendario.",
+        "Global (interceptor): 401 -> /login; 404 com codigo SEM_TURMA -> /entrar-turma."
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/eventos?de=AAAA-MM-DD&ate=AAAA-MM-DD",
+      "quando": "Calendario: toda entrada na aba e toda troca de mes (EventoRepository.carregarPeriodo). de = dia 1 do mes em foco; ate = ultimo dia (inclusivo; servidor usa BETWEEN).",
+      "corpo": "nenhum; query params 'de' e 'ate' em ISO data local, montados a partir de numeros (nunca toISOString/UTC). Ambos obrigatorios no servidor.",
+      "resposta": "200 Evento[]. So eventos com visivel_turma=true e excluido_em null da turma, ordenados por data ASC SOMENTE (sem desempate por hora). Campos nulos OMITIDOS do JSON (hora, sala, excluidoEm, autoria.autorSelo, autoria.editadoPorNome, autoria.editadoPorSelo). hora vem 'HH:mm:ss'.",
+      "headers": "Authorization: Bearer <jwt> (toda URL que nao contenha '/auth/', se houver token). X-Turma-Id: <turma ativa> SO se a conta e docente (tipoConta definido e != 'ALUNO') e SO para URLs que comecam com apiUrl; a requisicao espera TurmaAtivaService.pronto (leitura do disco) antes de sair; sem turma ativa vai sem o header. Sem If-Match. Base: dev 'http://localhost:8080/api/v1', prod 'https://projetofans-api.onrender.com/api/v1'.",
+      "erros": "Mapeamento COMUM do erroHttpInterceptor (vale para todos os endpoints): status 0 -> ErroApi OFFLINE 'Sem conexão.' (podeTentarNovamente); timeout 75 s -> DEMOROU 'O servidor demorou demais para responder. Tente de novo.'; 401 -> encerra sessao (token/usuario/turmaId=null, cancela lembretes, apaga sessao do disco) + navega /login, mensagem detail ?? title ?? 'Sua sessão expirou. Entre de novo.'; 403 -> detail ?? title ?? 'Só quem criou pode editar.'; 404 -> detail ?? title ?? 'Isso não existe mais.', e se corpo.codigo === 'SEM_TURMA' -> registrarTurma(null) (apaga snapshot e lembretes) + navega /entrar-turma (404 sem esse codigo nao derruba nada); 409 -> detail ?? title ?? 'Alguém editou isso enquanto você editava.' (recarregarRegistro=true); 428 -> detail ?? title ?? 'Recarregue o registro e tente de novo.'; >=500 -> SEMPRE 'Deu problema no servidor. Tente de novo.' (ignora detail); outros (400...) -> detail ?? title ?? 'Não deu para completar a ação.'. Sempre relanca. ESPECIFICO: EventoRepository grava erro = e.message (ou 'Não deu para carregar.' se nao for Error), NAO limpa a lista e RELANCA; a pagina so loga. Turma alheia -> 404."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/notas?de=AAAA-MM-DD&ate=AAAA-MM-DD",
+      "quando": "Calendario: toda entrada, toda troca de mes, apos ocultar com sucesso e apos desfazer com sucesso (NotaRepository.carregar), sempre com de/ate do mes em foco naquele momento.",
+      "corpo": "nenhum; query 'de' e 'ate' (mesmo contrato de /eventos).",
+      "resposta": "200 Nota[]: notas TURMA (visiveis, OU ocultas se eu sou o autor) + minhas PESSOAIS, nao excluidas, ordenadas por data ASC, criadoEm ASC. autorNome vem em TODA nota TURMA (inclusive as minhas) e e OMITIDO nas PESSOAIS. autorSelo so em nota TURMA cujo autor tem alcance de turma inteira (na pratica 'COORDENACAO'), omitido caso contrario. Nao existe GET /notas/{id}.",
+      "headers": "Authorization Bearer; X-Turma-Id so docente (mesma regra).",
+      "erros": "Mapeamento comum. ESPECIFICO: NotaRepository NAO relanca — grava erro = e.message (ou 'Não deu para carregar as anotações.') e MANTEM a lista anterior; carregando=false no finally."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/turmas/minha",
+      "quando": "Calendario chama TurmaRepository.garantirCarregada() em toda entrada/troca de mes, mas a requisicao so sai se turma===null e nao ha carga em andamento. Serve para souLider e meuAlcance (mostrar/esconder 'Ocultar da turma').",
+      "corpo": "nenhum",
+      "resposta": "200 MinhaTurma {id, nome, semestre|null, codigoConvite, membros: MembroDaTurma[], meuAlcance?: {tipo: 'NENHUM'|'MATERIAS'|'TURMA', materiaIds: string[]}} (meuAlcance ausente = NENHUM).",
+      "headers": "Authorization Bearer; X-Turma-Id so docente.",
+      "erros": "Mapeamento comum. TurmaRepository.carregar: ErroApi.codigo==='SEM_TURMA' -> limpar() e retorna sem erro; outra falha -> erro = e.message ou 'Não deu para carregar a turma.', MANTEM a turma anterior, nao lanca. Nada disso e exibido no calendario."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/moderacao/nota/{notaId}/ocultar",
+      "quando": "Toque em 'Ocultar da turma' numa anotacao TURMA nao-minha (visivel so para lider ou alcance TURMA). Generico no repositorio: /moderacao/{evento|material|nota}/{id}/ocultar (tipo em minusculas; o servidor aceita qualquer caixa).",
+      "corpo": "JSON {\"motivo\": null} (a chave vai presente com null; o calendario passa motivo=null). Content-Type application/json.",
+      "resposta": "200 com corpo VAZIO (nao decodificar JSON). Grava linha em acao_moderacao e visivel_turma=false.",
+      "headers": "Authorization Bearer; X-Turma-Id so docente. Sem If-Match.",
+      "erros": "Mapeamento comum; a mensagem vai para erroDaModeracao via mensagemDeErro (ErroApi.message; nao-ErroApi -> 'Não deu para completar a ação. Tente de novo.'). Servidor: nota inexistente, de outra turma, excluida ou PESSOAL -> 404 'Registro nao encontrado' (checado ANTES do papel); aluno nao-lider -> 403 'Somente o lider da turma modera'; docente (PROFESSOR/COORDENADOR) sem alcance -> 403 'Sem permissao nesta materia'; tipo invalido -> 400 'Tipo de registro invalido: x'. Textos do servidor vem SEM acento e sao exibidos como vieram."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/moderacao/nota/{notaId}/reexibir",
+      "quando": "Toque em 'Desfazer' no alerta 'Ocultado.' (janela de 8 s). Generico: /moderacao/{tipo}/{id}/reexibir.",
+      "corpo": "{} (ApiService.post sem corpo envia objeto vazio).",
+      "resposta": "200 corpo vazio.",
+      "headers": "Authorization Bearer; X-Turma-Id so docente.",
+      "erros": "Mapeamento comum; mesmas regras de 404/403 do ocultar. Falha -> erroDaModeracao e a janela continua aberta."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/eventos/{id}",
+      "quando": "EventoRepository.detalhe — tela do evento (fora desta area; o metodo mora aqui).",
+      "corpo": "nenhum",
+      "resposta": "200 EventoDetalhe = campos de Evento achatados no mesmo nivel + materiais: Material[] (SOMENTE os vinculados a este evento).",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum. Evento de outra turma, oculto ou excluido -> 404 (nunca 403). Tratamento fica na tela chamadora."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/eventos",
+      "quando": "EventoRepository.criar — tela de novo evento (qualquer membro, sem aprovacao).",
+      "corpo": "CriarEventoRequest {materiaId: uuid, tipo: 'PROVA'|'ENTREGA', titulo: string nao-branco, data: 'AAAA-MM-DD', hora: 'HH:mm'|null, sala: string<=40|null}",
+      "resposta": "201 Evento. Sem fila nem status pendente.",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum; 400 de validacao com detail. Repositorio repassa (nao trata)."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/api/v1/eventos/{id}",
+      "quando": "EventoRepository.atualizar(id, version, req) — edicao pelo autor (ou docente com alcance).",
+      "corpo": "AtualizarEventoRequest = CriarEventoRequest COMPLETO (substitui todos os campos; objeto parcial leva 400; hora null APAGA a hora).",
+      "resposta": "200 Evento (version nova).",
+      "headers": "If-Match: <version> OBRIGATORIO (String(version)); Authorization; X-Turma-Id so docente.",
+      "erros": "Comum. Sem If-Match -> 428 'Header If-Match com a version e obrigatorio'; version divergente -> 409 'Este registro mudou desde que voce abriu (...)' (reler antes de insistir); nao-autor -> 403; outra turma -> 404."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/api/v1/eventos/{id}",
+      "quando": "EventoRepository.excluir(id, version) — exclusao LOGICA pelo autor.",
+      "corpo": "nenhum",
+      "resposta": "204",
+      "headers": "If-Match: <version>; Authorization; X-Turma-Id so docente.",
+      "erros": "Comum: 428 sem If-Match, 409 versao, 403 nao-autor ('Somente o autor edita ou exclui o proprio registro'), 404 outra turma."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/eventos/{id}/materiais/{materialId}",
+      "quando": "EventoRepository.vincularMaterial — qualquer membro; idempotente no servidor.",
+      "corpo": "{}",
+      "resposta": "204",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum; evento/material de outra turma -> 404."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/api/v1/eventos/{id}/materiais/{materialId}",
+      "quando": "EventoRepository.desvincularMaterial — so autor do evento ou docente com alcance na materia.",
+      "corpo": "nenhum (sem If-Match)",
+      "resposta": "204",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum; 403 sem permissao; 404 outra turma."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/notas",
+      "quando": "NotaRepository.criar — tela de nova anotacao (outra area; repositorio compartilhado).",
+      "corpo": "SalvarNota {alcance: 'TURMA'|'PESSOAL' (obrigatorio, sem padrao), data: 'AAAA-MM-DD', texto: string nao-branco, max 2000 (servidor faz trim)}",
+      "resposta": "201 Nota",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum; 400 de validacao."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/api/v1/notas/{id}",
+      "quando": "NotaRepository.atualizar(id, version, req) — so o autor.",
+      "corpo": "SalvarNota completo (substitui o objeto).",
+      "resposta": "200 Nota",
+      "headers": "If-Match: <version> obrigatorio; Authorization; X-Turma-Id so docente.",
+      "erros": "Comum. 428 sem If-Match; 409 versao; nota de outra turma, excluida ou PESSOAL alheia -> 404; nota TURMA alheia -> 403."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/api/v1/notas/{id}",
+      "quando": "NotaRepository.excluir(id, version) — exclusao logica pelo autor.",
+      "corpo": "nenhum",
+      "resposta": "204",
+      "headers": "If-Match: <version>; Authorization; X-Turma-Id so docente.",
+      "erros": "Iguais ao PATCH de nota."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/moderacao/pedidos",
+      "quando": "ModeracaoRepository.meusPedidos — pedidos de exclusao sobre registros que EU criei (outra tela).",
+      "corpo": "nenhum",
+      "resposta": "200 PedidoDeExclusao[] ordenado por 'em' DESC; so registros ainda vivos.",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/moderacao/ocultados",
+      "quando": "ModeracaoRepository.ocultados — o 'desfazer que nao expira' (secao Ocultados da tela da turma). So LIDER.",
+      "corpo": "nenhum",
+      "resposta": "200 Ocultado[] (eventos, materiais e notas TURMA ocultos da turma, por qualquer moderador; titulo de nota = comeco do texto numa linha, ate 80 chars com '…'); ordenado por ocultadoEm DESC com nulos no fim. Repositorio devolve COMO VEIO.",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum; nao-lider -> 403 'Somente o lider da turma modera' (docente coordenador tambem leva 403); sem turma -> 404."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/moderacao/{tipo}/{id}/pedir-exclusao",
+      "quando": "ModeracaoRepository.pedirExclusao — avisa o autor; nao apaga nem oculta.",
+      "corpo": "{\"motivo\": string|null}",
+      "resposta": "200 vazio",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum; mesmas regras de permissao do ocultar (nota PESSOAL -> 404)."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/turmas/lideranca/transferir",
+      "quando": "ModeracaoRepository.transferirLideranca(novoLiderUsuarioId) — tela de transferir (outra area).",
+      "corpo": "{\"novoLiderUsuarioId\": uuid}",
+      "resposta": "200 vazio. Em seguida o repositorio faz await TurmaRepository.carregar() (GET /turmas/minha); se depois disso turmas.erro() !== null, chama turmas.limpar() (turma=null).",
+      "headers": "Authorization; X-Turma-Id so docente.",
+      "erros": "Comum. Falha do POST -> relanca e NAO mexe na turma em memoria. Falha da releitura -> NAO relanca (a transferencia valeu), mas zera a turma para nao mostrar o ex-lider como lider. Nao-lider -> 403."
+    }
+  ],
+  "modelos": [
+    {
+      "nome": "Evento (EventoResponse)",
+      "campos": "id: string (UUID)\ntipo: 'PROVA' | 'ENTREGA'\ntitulo: string\ndata: string 'AAAA-MM-DD'\nhora: string 'HH:mm:ss' | null (AUSENTE no JSON quando nula)\nsala?: string | null (ausente = na sala da materia)\nmateriaId: string\nmateriaSigla: string\nmateriaCorHex: string (ex. '#0369A1', uma das 12 hues)\nautoria: Autoria\nversion: int (vai no If-Match)\nvisivelTurma: bool\nexcluidoEm: string ISO instant | null (ausente quando nulo)"
+    },
+    {
+      "nome": "Autoria (AutoriaResponse)",
+      "campos": "autorId: string\nautorNome: string ('Desconhecido' se o usuario sumiu)\ncriadoEm: string ISO instant (ex. '2026-08-30T12:00:00Z'; pode ter fracao de segundo)\natualizadoEm: string ISO instant\nautorSelo?: 'PROFESSOR' | 'COORDENACAO' | null (ausente = sem selo)\neditadoPorNome?: string | null (so quando quem editou != autor)\neditadoPorSelo?: 'PROFESSOR' | 'COORDENACAO' | null"
+    },
+    {
+      "nome": "EventoDetalhe",
+      "campos": "todos os campos de Evento (achatados, mesmo nivel)\nmateriais: Material[] (somente os vinculados)"
+    },
+    {
+      "nome": "Material (usado por EventoDetalhe)",
+      "campos": "id: string\ntipo: 'AULA' | 'ADICIONAL'\ntitulo: string\nurl: string | null\narquivoRef: string | null\nmateriaId: string\nautoria: Autoria\nversion: int\nvisivelTurma: bool\nexcluidoEm: string | null\ndataAula?: 'AAAA-MM-DD' | null\nresumo?: string | null\nresumoEm?: string | null"
+    },
+    {
+      "nome": "CriarEventoRequest / AtualizarEventoRequest (identicos; PATCH substitui tudo)",
+      "campos": "materiaId: string\ntipo: 'PROVA' | 'ENTREGA'\ntitulo: string\ndata: 'AAAA-MM-DD'\nhora: 'HH:mm' | null (null explicito = sem horario / apagar)\nsala: string | null"
+    },
+    {
+      "nome": "Nota (NotaResponse)",
+      "campos": "id: string\nalcance: 'TURMA' | 'PESSOAL'\ndata: 'AAAA-MM-DD'\ntexto: string (<= 2000)\nautorId: string\nautorNome?: string | null (presente em TODA nota TURMA, inclusive as minhas; ausente em PESSOAL)\nautorSelo?: 'COORDENACAO' | 'PROFESSOR' | null (na pratica so COORDENACAO e so em TURMA)\ncriadoEm: string ISO instant\natualizadoEm: string ISO instant\nversion: int\nvisivelTurma: bool (false = moderador ocultou; so o autor ainda recebe)"
+    },
+    {
+      "nome": "SalvarNota (request de criar/editar nota)",
+      "campos": "alcance: 'TURMA' | 'PESSOAL' (obrigatorio)\ndata: 'AAAA-MM-DD' (obrigatorio)\ntexto: string (nao-branco, max 2000)"
+    },
+    {
+      "nome": "TipoModeravel",
+      "campos": "'evento' | 'material' | 'nota' (minusculas, vai no caminho)"
+    },
+    {
+      "nome": "PedidoDeExclusao",
+      "campos": "registroTipo: 'EVENTO' | 'MATERIAL'\nregistroId: string\ntitulo: string\nmotivo: string | null (pode vir ausente)\npedidoPor: string (nome; 'o líder' se o usuario sumiu)\nem: string ISO instant"
+    },
+    {
+      "nome": "Ocultado",
+      "campos": "registroTipo: 'EVENTO' | 'MATERIAL' | 'NOTA'\nregistroId: string\ntitulo: string (nota: comeco do texto, ate 80 chars)\nautorId: string\nautorNome: string (tipado nao-nulo no app, mas pode vir ausente se o usuario nao existir)\nocultadoEm: string ISO | null (ausente = sem data; nunca tratar como 'agora')"
+    },
+    {
+      "nome": "MinhaTurma / MembroDaTurma / MeuAlcance (TurmaRepository; usados para o botao de ocultar)",
+      "campos": "MinhaTurma.id: string\nMinhaTurma.nome: string\nMinhaTurma.semestre: string | null\nMinhaTurma.codigoConvite: string\nMinhaTurma.membros: MembroDaTurma[]\nMinhaTurma.meuAlcance?: MeuAlcance (ausente = NENHUM)\nMembroDaTurma.usuarioId: string\nMembroDaTurma.nome: string\nMembroDaTurma.papel: 'ALUNO' | 'LIDER' | 'PROFESSOR' | 'COORDENADOR'\nMembroDaTurma.entrouEm: string ISO\nMembroDaTurma.selo?: Selo | null\nMembroDaTurma.contestado?: bool\nMembroDaTurma.lecionadas?: string[] (siglas)\nMeuAlcance.tipo: 'NENHUM' | 'MATERIAS' | 'TURMA'\nMeuAlcance.materiaIds: string[]"
+    },
+    {
+      "nome": "Celula (mes.ts)",
+      "campos": "dia: int (0 = celula vazia antes do dia 1)\ndata: string 'AAAA-MM-DD' ('' na celula vazia)\ntemProva: bool\ntemEntrega: bool\ntemNota: bool\ncores: string[] (cores distintas das materias do dia, ordem da 1a ocorrencia, sem vazias)"
+    },
+    {
+      "nome": "Mes (mes.ts, retorno de montarMes)",
+      "campos": "ano: int\nmes: int 0..11 (ZERO-based, como Date do JS)\nnome: string ('Janeiro'..'Dezembro', com 'Março')\nde: 'AAAA-MM-01'\nate: 'AAAA-MM-<ultimo dia>'\ncelulas: Celula[] (vazias iniciais + 1 por dia; sem preenchimento final)"
+    },
+    {
+      "nome": "FonteDoDia (entrada de montarMes)",
+      "campos": "data: string 'AAAA-MM-DD'\ntipo?: 'PROVA' | 'ENTREGA'\ncor?: string"
+    },
+    {
+      "nome": "EventoVm (eventoVm em features/evento-vm.ts; o calendario acrescenta id)",
+      "campos": "id: string (acrescentado pelo calendario)\ntipo: 'PROVA' | 'ENTREGA'\ndia: string (parte DD do ISO, COM zero a esquerda: '03')\nmes: string ('jan'..'dez'; fallback = numero cru)\nquando: string (hora.slice(0,5) se hora truthy; senao 'prova' ou 'entrega')\ntitulo: string\nmateria: {sigla: string, cor: string}\nautoria: string (assinatura: 'Nome · há 5 h' ou so 'Nome')\nautoriaSelo: Selo | null\neditadoPor: string | null\neditadoPorSelo: Selo | null\nsala: string ('' se ausente; NAO usado no calendario)"
+    },
+    {
+      "nome": "NotaVm (computed 'notas' da pagina)",
+      "campos": "id: string\nalcance: 'TURMA' | 'PESSOAL'\ntexto: string\ndata: 'AAAA-MM-DD'\ndia: string (diaCurto: '12 set'; fallback = data crua se o mes for invalido)\nminha: bool (= !autorNome: ausente/null/'')\nvisivelTurma: bool\nautoriaSelo: Selo | null (autorSelo ?? null so se autorNome truthy; senao null)\nautoria: string | null (assinatura({autorId, autorNome, criadoEm, atualizadoEm}) se autorNome truthy; senao null)"
+    },
+    {
+      "nome": "ErroApi (core/http-error.interceptor)",
+      "campos": "classe: 'DEMOROU' | 'AUTH' | 'PROIBIDO' | 'NAO_ENCONTRADO' | 'PRECONDICAO' | 'CONFLITO' | 'SERVIDOR' | 'OFFLINE' | 'DESCONHECIDO'\nstatus: int (0 para offline/timeout)\nmessage: string (pronta para a tela)\npodeTentarNovamente: bool (5xx, offline, timeout)\nrecarregarRegistro: bool (409)\ncodigo: string | null (ProblemDetail.codigo, ex. 'SEM_TURMA')"
+    },
+    {
+      "nome": "ProblemDetail (corpo de erro do backend, RFC 7807)",
+      "campos": "type, title, status, detail: string (mensagem do servidor, sem acentos), instance\ncodigo?: string (propriedade raiz; so em alguns 404, ex. 'SEM_TURMA')"
+    },
+    {
+      "nome": "Selo / AlcanceNota / TipoEvento (shared/tipos)",
+      "campos": "Selo = 'PROFESSOR' | 'COORDENACAO'\nAlcanceNota = 'TURMA' | 'PESSOAL'\nTipoEvento = 'PROVA' | 'ENTREGA'"
+    }
+  ],
+  "servicos_e_estado": [
+    "EventoRepository (singleton do app, providedIn root): eventos: Evento[] (inicial []), carregando: bool (false), erro: string|null (null). carregarPeriodo(de, ate): carregando=true, erro=null; GET /eventos; sucesso -> eventos = resposta como veio; falha -> erro = (e instanceof Error ? e.message : 'Não deu para carregar.'), NAO limpa eventos, RELANCA; finally carregando=false. Sem cancelamento nem controle de corrida. Demais metodos sao repasse direto sem estado: detalhe(id) GET /eventos/{id}; criar(req) POST /eventos; atualizar(id, version, req) PATCH com If-Match; excluir(id, version) DELETE com If-Match; vincularMaterial(eventoId, materialId) POST; desvincularMaterial(eventoId, materialId) DELETE sem If-Match. So o calendario le o estado 'eventos'.",
+    "NotaRepository (singleton; COMPARTILHADO com a tela de escrever/editar anotacao): notas: Nota[] ([]), carregando (false), erro (null). carregar(de, ate): carregando=true, erro=null; GET /notas; sucesso -> notas = resposta; falha -> erro = (Error ? message : 'Não deu para carregar as anotações.'), MANTEM notas, NAO lanca; finally carregando=false. criar(req) POST /notas; atualizar(id, version, req) PATCH If-Match; excluir(id, version) DELETE If-Match. A tela de editar procura a nota em notas() (sem GET por id); se nao acha, mostra 'Abra a anotação pelo calendário para poder editar.'.",
+    "ModeracaoRepository (singleton, sem estado proprio; depende de TurmaRepository): meusPedidos() GET /moderacao/pedidos; ocultar(tipo, id, motivo) POST /moderacao/{tipo}/{id}/ocultar {motivo}; reexibir(tipo, id) POST .../reexibir {}; ocultados() GET /moderacao/ocultados (devolve como veio); pedirExclusao(tipo, id, motivo) POST .../pedir-exclusao {motivo}; transferirLideranca(novoLiderUsuarioId): POST /turmas/lideranca/transferir {novoLiderUsuarioId}, depois await turmas.carregar(), e se turmas.erro() !== null -> turmas.limpar().",
+    "TurmaRepository (singleton; dependencia): turma: MinhaTurma|null, carregando, erro. souLider (computed): false se usuario ou turma nulos; senao algum membro com usuarioId === usuario.id e papel === 'LIDER'. alcanca(materiaId|null): meuAlcance.tipo 'TURMA' -> true; 'MATERIAS' -> materiaId !== null && materiaIds contem; senao false (o calendario usa alcanca(null): so coordenacao). garantirCarregada(): carrega so se turma===null e !carregando. carregar(): GET /turmas/minha; SEM_TURMA -> limpar() silencioso; outra falha -> erro e mantem turma. limpar(): turma=null, erro=null. Efeito reativo: se auth.usuario()===null OU auth.turmaId()===null -> limpar().",
+    "TurmaAtivaService (singleton; dependencia): turmaId() e nome() computed, so valem se o dono gravado (usuarioId) == usuario logado; senao null. pronto: Future da leitura do disco (@capacitor/preferences chave 'pf.turmaAtiva', JSON {usuarioId, turmaId, nome}). Usado no titulo e no header X-Turma-Id. escolher() troca a turma e RECARREGA O APP se ja havia uma (zera os repositorios singleton).",
+    "JanelaDesfazer (core/janela-desfazer, uma instancia por tela): aberta: bool. abrir(): fecha a anterior (cancela timer), aberta=true, agenda fechar() em 8000 ms (JANELA_DESFAZER_MS, fora da NgZone). fechar(): cancela timer e aberta=false. Ao destruir a tela: fechar().",
+    "ApiService: get(rota, params) com query string (valores String()); post(rota, corpo?, headers?) envia corpo ?? {}; put; patch(rota, corpo, version?) com If-Match: String(version) quando version definida; delete(rota, version?) com If-Match quando definida. Nunca trata erro. Base = environment.apiUrl.",
+    "Interceptores, na ordem (o 1o e o mais externo): authInterceptor (Bearer em tudo exceto URL contendo '/auth/') -> turmaAtivaInterceptor (X-Turma-Id so docente e so apiUrl; espera TurmaAtivaService.pronto, FORA do teto de timeout) -> erroHttpInterceptor (traduz para ErroApi, 401 desloga, SEM_TURMA esquece a turma) -> timeoutInterceptor (75 000 ms por requisicao).",
+    "mes.ts (funcoes puras): DIAS_DA_SEMANA = ['D','S','T','Q','Q','S','S']; montarMes(ano, mes0, eventos=[], diasComNota=[]) -> Mes (vazias = weekday do dia 1 com domingo=0; ultimo dia = Date(ano, mes+1, 0); por dia: temProva/temEntrega por some(), temNota por Set, cores = distintas das cor truthy, na ordem); mesVizinho(ano, mes0, passo) -> {ano, mes0} via Date(ano, mes+passo, 1); iso() monta 'AAAA-MM-DD' com padStart, nunca toISOString.",
+    "features/evento-vm.ts: eventoVm(fonte, agora) (ver modelo EventoVm); assinatura(autoria, agora) = 'Nome · {desde}' ou so 'Nome' se criadoEm nao parseia; desde(): ms = agora - Date.parse(criadoEm); minutos = round(ms/60000); <1 -> 'agora'; <60 -> 'há {m} min'; horas = round(min/60); <24 -> 'há {h} h'; dias = round(h/24); 1 -> 'há 1 dia'; senao 'há {d} dias'. Usa criadoEm, nunca atualizadoEm.",
+    "features/auth/erro.ts mensagemDeErro(e): ErroApi -> e.message; qualquer outra coisa -> 'Não deu para completar a ação. Tente de novo.'.",
+    "CalendarioPage (estado local): emFoco {ano, mes0} (inicial = data do aparelho na construcao); diaAberto: string|null; moderando: bool; erroDaModeracao: string|null; notaOcultada: string|null (nunca volta a null); desfazendo: bool; janela: JanelaDesfazer. Lidos de repositorios: carregando/erro (EventoRepository), erroDasNotas (NotaRepository.erro), souLider (TurmaRepository). Computed: eventos (VM de todos, agora=new Date() no recalculo), grade = montarMes(emFoco, eventos->{data, tipo, cor: materiaCorHex}, notas->data), eventosDoDia, notasDoDia, tituloDoDiaAberto ('' se nenhum; senao `${Number(dd)} de ${grade.nome.toLowerCase()}`), notas (NotaVm), vazio, alcancaNota = turmaRepo.alcanca(null). Funcao local diaCurto('AAAA-MM-DD') -> '{Number(dd)} {jan..dez}'."
+  ],
+  "regras": [
+    "NN1 Autoria visivel: todo card de evento mostra '{Prof. |Coord. }Nome · há X' e, se outro editou, 'editado por ...'; toda anotacao com autorNome mostra a assinatura. Timestamp ilegivel nunca some com o nome nem mostra 'NaN' — cai para so o nome. Anotacao PESSOAL nao e assinada (a dona e voce).",
+    "NN2 Edicao nao apaga, exclusao logica: excluir evento/nota e DELETE logico com If-Match; ocultar NAO apaga — tira da lista da turma e o autor continua vendo (o servidor devolve a nota oculta ao autor com visivelTurma=false).",
+    "NN4 Ordem e urgencia, nunca tipo: lista do mes, painel do dia e anotacoes saem na ordem da resposta (eventos por data; notas por data e criadoEm). Proibido agrupar provas no topo ou reordenar por hora no cliente.",
+    "NN5 / 'nenhuma regra de negocio no componente': visibilidade (oculto, excluido, pessoal alheia) e decidida pelo servidor; a pagina so filtra por DIA o que ja veio do mes. A janela do mes (de/ate) e da tela.",
+    "NN6 Vazio mostra pouca coisa: 'Nada marcado em {Mês}.' + uma frase; dia vazio 'Nada marcado neste dia.'. Sem dica, sugestao, card promocional ou skeleton permanente.",
+    "Erro != vazio (proibido catch que devolve lista vazia): falha ao buscar eventos mostra aviso e NUNCA o estado vazio; falha nunca limpa a lista; falha de anotacao tem aviso PROPRIO e nao apaga eventos; o EventoRepository relanca e a pagina so registra no console.",
+    "NN7 Cor + sigla: os cards usam MateriaChip (sigla e cor juntas). Componentes de shared/ sao entregues prontos — nao criar outro caminho para exibir materia. (A grade usa pontinhos so de cor — ver armadilhas.)",
+    "NN8 Prova mais pesada que entrega por peso de tinta: na grade, dia com prova = bloco solido; dia so com entrega = contorno 1px. No card, prova = bloco solido + titulo 700 + glifo cheio; entrega = contorno 1px + 600 + glifo vazado. A cor nao participa; tem de distinguir em escala de cinza.",
+    "NN9 Qualquer membro posta sem aprovacao: EventoRepository.criar e NotaRepository.criar sem fila nem status pendente.",
+    "NN10 So o autor edita/exclui: so a anotacao 'minha' leva a tela de editar; lider/coordenacao so OCULTA (muda visibilidade) anotacao da turma. O botao e so dica visual: quem decide e o servidor (403/404).",
+    "NN11 Tela de prova mostra so os materiais vinculados: EventoRepository.detalhe traz SOMENTE os vinculados.",
+    "Lider so modera o que consegue LER: nunca ha botao de ocultar em anotacao PESSOAL; o servidor responde 404 para nota pessoal (nao 403, que confirmaria que ela existe).",
+    "Acesso a registro de outra turma = 404, nunca 403 (servidor); o app nao tenta distinguir.",
+    "PATCH/DELETE de evento e nota exigem If-Match: <version>; ausente -> 428; divergente -> 409; nunca sobrescrever em silencio.",
+    "Privacidade da nota pessoal: nao existe GET /notas/{id}; leitura sempre por janela de dias; editar so a partir da lista em memoria.",
+    "Papel e alcance sao LIDOS de GET /turmas/minha, nunca gravados na sessao (a lideranca se transfere).",
+    "Sem multi-turma na UI do aluno: aluno nao manda X-Turma-Id e nao tem seletor; docente usa a turma ativa escolhida no painel (titulo da tela = nome dela).",
+    "Todo erro HTTP passa pelo interceptor central e chega pronto em ErroApi.message; nenhuma tela le status cru.",
+    "Datas de calendario nunca passam por UTC: montar 'AAAA-MM-DD' a partir de numeros e partir strings por '-'."
+  ],
+  "armadilhas": [
+    "RECARGA A CADA ENTRADA NA ABA: no Ionic a pagina da aba e criada uma vez e fica viva; a carga esta em ionViewWillEnter (1a entrada inclusive), NAO no construtor. No Flutter (aba em IndexedStack/StatefulShellRoute) e preciso recarregar ao selecionar a aba Calendario E ao voltar de rota empilhada por cima (tela do evento, nova/editar anotacao — RouteAware.didPopNext ou equivalente). Sem isso o colega cadastra uma prova e o outro nao ve ate matar o app.",
+    "UMA carga por entrada, nao duas: nao carregar no initState E no 'ficou visivel'. O teste espera exatamente 1 GET /eventos e 1 GET /notas por entrada (o servidor Render dorme; cada chamada extra custa dezenas de segundos).",
+    "As tres chamadas da entrada saem EM PARALELO (eventos, notas, turma); nenhuma espera a outra.",
+    "Reentrar NAO volta ao mes atual nem fecha o painel: emFoco e diaAberto sobrevivem; so recarrega o mes em foco. So andarMes fecha o painel.",
+    "Flash de vazio: antes da 1a carga carregando=false/erro=null/eventos=[] satisfaz 'vazio'. No Flutter marcar 'carregando' antes do primeiro build, senao aparece 'Nada marcado em X.' por um frame.",
+    "'vazio' olha SO eventos (nem notas, nem erro de notas). Mes so com anotacoes mostra as anotacoes e TAMBEM o bloco 'Nada marcado em {Mês}.' no fim — e o comportamento atual.",
+    "Falha nunca limpa: EventoRepository mantem a lista anterior e relanca; NotaRepository mantem a lista e NAO relanca. Em Dart nao usar try/catch que devolva [] nem catchError((_) => []).",
+    "Dado velho de outro mes: ao trocar de mes, a lista em memoria ainda e do mes anterior ate a resposta chegar (e para sempre se falhar). Resultado atual: 'tudo de Outubro' lista eventos de setembro durante a carga ou apos falha; a grade nao os marca (datas nao batem). As anotacoes de setembro tambem continuam sob 'anotações'. Reproduzir fielmente ou registrar a mudanca como decisao.",
+    "Corrida em navegacao rapida de mes: sem cancelamento nem verificacao de que a resposta e do mes em foco; a que resolver por ultimo vence, e 'carregando' vira false quando a PRIMEIRA termina. Um port que ignore respostas obsoletas muda comportamento (provavelmente para melhor) — registrar.",
+    "Mes ZERO-based no JS (0..11) vs Dart 1-based (1..12): montarMes(2026, 8) e SETEMBRO. Ultimo dia = DateTime(ano, mes1+1, 0).day (Dart normaliza dia 0 como o JS). Vazias iniciais: JS getDay() domingo=0; Dart weekday segunda=1..domingo=7 -> usar weekday % 7. Aritmetica de calendario com DateTime.utc para nao tropecar em horario de verao.",
+    "Nunca derivar 'AAAA-MM-DD' de toIso8601String()/toUtc(): num fuso negativo o dia 1 vira o ultimo do mes anterior. Montar com padLeft(2,'0'). Para ler, partir a string por '-' (o codigo Angular nunca faz new Date('AAAA-MM-DD')).",
+    "'dia' do card do evento mantem o ZERO a esquerda ('03') porque e o pedaco da string ISO; ja o titulo do painel ('3 de setembro') e o rotulo da nota ('3 set') usam Number() e tiram o zero.",
+    "hora vem 'HH:mm:ss' do backend: o card mostra slice(0,5). hora null, AUSENTE ou '' -> rotulo 'prova'/'entrega' (o CSS deixa maiusculo). Nunca inventar '00:00'.",
+    "Backend usa default-property-inclusion non_null: campos nulos NAO vem no JSON (hora, sala, excluidoEm, autorNome da nota pessoal, autorSelo, editadoPorNome, editadoPorSelo, meuAlcance, motivo, ocultadoEm). O parser Dart tem de tratar chave ausente como null (json['hora'] as String?) e nunca exigir a chave.",
+    "BUG LATENTE 'minha': minha = autorNome AUSENTE/null/'' (falsy), NAO comparacao com o id do usuario. Mas o servidor (NotaResponse.de) manda autorNome em TODA nota TURMA, inclusive as do proprio usuario. Com dados reais: (a) a anotacao TURMA que eu escrevi NAO e tocavel para editar no calendario (e nao ha outro caminho para editar); (b) o aviso 'O líder tirou esta anotação da lista da turma. Só você ainda vê.' na pratica nunca aparece (nota PESSOAL nunca e oculta; nota TURMA sempre tem autorNome); (c) o lider/coordenacao ve 'Ocultar da turma' na propria anotacao da turma — se ocultar, ela volta na recarga (o autor ainda a recebe) com o botao de novo e sem aviso. Os testes usam fixtures TURMA SEM autorNome, entao codificam a regra atual. Decisao para o dono: replicar (passa nos testes portados) ou corrigir para autorId == usuario.id (muda a, b e c). Registrar em PERGUNTAS-ABERTAS.",
+    "autoria/autoriaSelo da nota so existem quando autorNome e truthy; nota sem autorNome nunca mostra selo nem assinatura, mesmo que autorSelo venha.",
+    "Prefixo do selo: 'Prof. ' / 'Coord. ' (com espaco) colado antes do nome e SO quando ha selo; sem selo e so o nome (teste: 'Coord. Helena' vs 'Ana' sem 'Coord.'). Linha de edicao: 'editado por ' + prefixo do selo do EDITOR + nome.",
+    "Botao 'Ocultar da turma': (souLider || alcanca(null)) && alcance==='TURMA', so no ramo nao-minha. alcanca(null) so e true para meuAlcance.tipo==='TURMA' (coordenacao); professor (MATERIAS) nunca oculta anotacao porque nota nao tem materia. souLider compara usuario.id com membros[].usuarioId e papel 'LIDER'.",
+    "Papel guardado em memoria pelo tempo de vida do app, apesar do comentario 'lido a cada entrada': garantirCarregada so busca se turma===null. Se outra pessoa transferir a lideranca, o botao continua ate a turma ser limpa (logout, SEM_TURMA, transferencia feita por mim). O repositorio tem de ser singleton e se limpar quando usuario ou turmaId ficam nulos.",
+    "Falha ao carregar a turma e SILENCIOSA nesta tela (so esconde o botao) e e tentada de novo na proxima entrada.",
+    "Ocultar e UM toque, sem dialogo de confirmacao — o 'Desfazer' de 8 s e a rede de seguranca. Corpo {\"motivo\": null} (chave presente com null).",
+    "Apos ocultar: abrir a janela ANTES de recarregar as notas e manter moderando=true durante a recarga. Recarregar do servidor (ele deixa de mandar a oculta a quem nao e autor) em vez de remover localmente.",
+    "Ocultar OK mas recarga das notas falha: a lista antiga e mantida, entao a nota oculta CONTINUA na lista (com 'Ocultar da turma' de novo habilitado), junto do alerta 'Ocultado. Desfazer' e do aviso de erro das anotacoes. Tocar de novo faz outro POST (o servidor aceita e grava outra linha de moderacao). Simetrico: desfazer OK + recarga falha -> a janela fecha e a nota NAO reaparece ate a proxima carga.",
+    "Desfazer e ignorado em silencio se moderando OU desfazendo — logo apos ocultar, enquanto a recarga roda, o botao 'Desfazer' esta visivel e HABILITADO (disabled so olha desfazendo), mas o toque nao faz nada.",
+    "Desfazer que falha: mostra erro e a janela continua aberta — mas o timer NAO reinicia; o alerta some no prazo original de 8 s. O teste so verifica logo apos a falha.",
+    "Janela: exatamente 8000 ms (ainda aberta em 7999); abrir() de novo reinicia do zero (ocultar duas seguidas nao encurta a segunda) e o Desfazer passa a valer so para a ULTIMA ocultada (notaOcultada sobrescrita). Cancelar o Timer no dispose. Se a aba ficar viva em IndexedStack, o timer continua correndo ao trocar de aba (igual ao Ionic).",
+    "Coordenacao (docente com alcance TURMA) pode ocultar anotacao, mas GET /moderacao/ocultados e so do LIDER (403 para docente). Para a coordenacao, o 'Desfazer' de 8 s e o UNICO caminho de volta pelo app; o comentario 'Depois, o caminho de volta e Ocultados, na tela da turma' so vale para o lider.",
+    "erroDaModeracao so e limpo no inicio do proximo ocultar/desfazer; sobrevive a troca de mes e a reentrada.",
+    "Respostas de moderacao sao 200 com corpo vazio: nao chamar jsonDecode no corpo vazio. reexibir manda '{}' como corpo JSON.",
+    "Mensagens do servidor vem sem acento ('Somente o lider da turma modera', 'Registro nao encontrado', 'Sem permissao nesta materia') e sao exibidas como vieram (detail tem prioridade sobre o texto padrao, exceto em status 0, timeout e 5xx). 5xx e SEMPRE 'Deu problema no servidor. Tente de novo.'.",
+    "Timeout de 75 s por requisicao (cold start do Render medido em 45,6 s); um teto de 30 s abortaria requisicao legitima. A espera do disco da turma ativa nao conta no teto. Timeout vira 'O servidor demorou demais para responder. Tente de novo.' — nao pode cair no texto generico.",
+    "401 em qualquer chamada desloga na hora e vai a /login. 404 so derruba o vinculo se o corpo tiver codigo 'SEM_TURMA'; 404 de proxy, HTML ou sem codigo e erro comum.",
+    "Docente: o header X-Turma-Id tem de esperar a leitura persistida da turma ativa antes da PRIMEIRA requisicao; sem isso o servidor responde pela turma 'mais recente' — dado de outra turma, sem erro. tipoConta ausente (sessao antiga) = aluno = sem header. Trocar de turma ativa recarrega o app inteiro (zera os repositorios singleton); no Flutter, zerar EventoRepository, NotaRepository e TurmaRepository na troca, senao o titulo 'ADS 3B' fica sobre as provas da 3A.",
+    "Titulo reativo: nome da turma ativa (docente) ou 'Calendário'. Aluno nunca tem turma ativa.",
+    "Repositorios sao singletons do app: a tela de editar anotacao depende de NotaRepository.notas() preenchido pelo calendario. Um repositorio por tela quebra a edicao ('Abra a anotação pelo calendário para poder editar.').",
+    "Grade: semana comeca no DOMINGO; os cabecalhos repetem letras ('Q','Q','S','S') — usar indice como chave, nao a letra. Mes que comeca no domingo NAO tem celula vazia. Sem celulas de preenchimento no fim e sem marcacao de 'hoje'.",
+    "Pontinhos: uma cor por materia distinta (duas provas da mesma materia = 1 ponto), ordem da 1a ocorrencia na resposta, cores falsy descartadas; o ponto de anotacao e VAZADO (contorno), nao colorido, e dentro do dia-com-prova usa prova-fg-2 para manter contraste >= 3:1. Dia com prova e entrega fica com estilo de prova (o contorno de entrega so vale sem prova).",
+    "Grade so com cor (pontinhos sem sigla) e uma tensao com o NN7; o aria-label do dia tambem nao cita a materia. A identificacao da materia fica nos chips dos cards. Nao 'corrigir' trocando ou removendo nada sem decisao do dono.",
+    "aria-label do dia (Semantics no Flutter): 'Dia {n}' ou 'Dia {n}, com ' + marcas na ordem fixa prova, entrega, anotação unidas por ' e ' (ex.: 'Dia 12, com prova e anotação'). selected/aria-pressed = dia aberto. Erros com role=alert (anotacoes, moderacao), desfazer com role=status; o aviso de erro dos eventos e 'Carregando…' NAO tem role.",
+    "Tocar no mesmo dia FECHA o painel. O titulo do painel usa o nome do mes EM FOCO em minusculas.",
+    "Painel do dia: anotacoes sem rotulo de dia, sem link de editar, sem botao de ocultar e sem aviso de oculta — esses so existem na lista principal de anotacoes. Eventos no painel SAO links para o evento.",
+    "'Anotar neste dia' passa ?dia=AAAA-MM-DD; 'Anotar alguma coisa' nao passa nada (a tela de anotacao usa hoje).",
+    "'tudo de {Mês}' so aparece se ha eventos em memoria (inclusive velhos); 'anotações' aparece sempre.",
+    "Nao ha indicador de carregamento das anotacoes: NotaRepository.carregando nao e lido pela tela. So os eventos mostram 'Carregando…'.",
+    "Tempo relativo calculado no recompute (nao 'anda' sozinho) e sempre a partir de criadoEm. Math.round em cada degrau (90 min = 'há 2 h'; 36 h = 'há 2 dias'); diferenca negativa (relogio adiantado) = 'agora'. Usar DateTime.tryParse; se falhar -> so o nome.",
+    "O CSS deixa maiusculo: rotulos .pf-rotulo ('TUDO DE SETEMBRO', 'ANOTAÇÕES'), rotulo de dia da nota ('12 SET'), mes do card ('SET'), 'quando' do card ('PROVA'/'19:00'), cabeca da nota ('DA TURMA · TODOS VEEM'), sigla do chip. O texto-fonte e minusculo/misto e e ele que os testes conferem — no Flutter, transformar na apresentacao e manter o texto literal nos testes.",
+    "A sala do evento e calculada pelo eventoVm mas NAO e passada ao card no calendario — nao exibir.",
+    "materiaCorHex e string CSS; no Flutter parsear com tolerancia (string invalida nao pode derrubar a tela).",
+    "A ordem dos eventos no mesmo dia nao segue a hora (o servidor ordena so por data). Nao ordenar no cliente.",
+    "emFoco e calculado uma vez na construcao da pagina, com DUAS chamadas a new Date() (ano e mes separados — na virada de 31/dez pode montar dezembro do ano novo). No Dart, usar um so DateTime.now(). App aberto atravessando a virada do mes continua no mes antigo ate navegar.",
+    "Nenhuma requisicao ao tocar num dia: o painel filtra o mes ja carregado.",
+    "ModeracaoRepository.transferirLideranca: falha na releitura NAO rejeita a transferencia mas zera a turma (dado velho mostraria o papel que a pessoa acabou de perder); falha do POST rejeita e nao mexe em nada."
+  ],
+  "testes": [
+    "calendario.page.spec: renderiza o periodo na ORDEM que o servidor devolveu (ENTREGA dia 03 antes de PROVA dia 19 => titulos ['evento entrega-cedo','evento prova-depois']).",
+    "calendario.page.spec: falha de rede ao carregar eventos mostra .pf-aviso contendo 'Sem conexão' e NAO mostra .pf-vazio.",
+    "calendario.page.spec: cada card de evento e link; hrefs = ['/tabs/eventos/c-1','/tabs/eventos/c-2'] (sem dia aberto e sem notas).",
+    "calendario.page.spec: anotacao da turma aparece com texto e nome do autor ('Ana'); a pessoal (sem autorNome) tambem aparece; o unico link de nota (a.ir) e '/tabs/notas/n-minha/editar'.",
+    "calendario.page.spec: GET /notas com 500 e GET /turmas/minha com 500 NAO apagam os eventos (1 card continua).",
+    "calendario.page.spec: lider (papel LIDER em /turmas/minha) ve o botao 'Ocultar da turma' em anotacao TURMA alheia.",
+    "calendario.page.spec: aluno comum (papel ALUNO, sem meuAlcance) NAO ve 'Ocultar da turma'.",
+    "calendario.page.spec (desfazer): apos ocultar (POST /moderacao/nota/n-turma/ocultar -> 200, depois GET /notas recarregado) aparece .alerta--desfazer contendo 'Ocultado.' e o botao 'Desfazer'.",
+    "calendario.page.spec (desfazer): 'Desfazer' faz POST /moderacao/nota/n-turma/reexibir (metodo POST), depois GET /notas; a nota reaparece e o botao 'Desfazer' some.",
+    "calendario.page.spec (desfazer): reexibir com 500 mostra .pf-erro e o botao 'Desfazer' continua.",
+    "calendario.page.spec (desfazer): o aviso some sozinho apos 8000 ms (relogio falso).",
+    "calendario.page.spec (docente): titulo e 'Calendário' quando a turma ativa e nula; muda para 'ADS 3A' quando nome() vira 'ADS 3A' (reativo).",
+    "calendario.page.spec (docente): meuAlcance {tipo:'TURMA'} (coordenacao) ve 'Ocultar da turma' mesmo com papel ALUNO.",
+    "calendario.page.spec (docente): meuAlcance {tipo:'MATERIAS', materiaIds:['m1']} NAO ve 'Ocultar da turma'.",
+    "calendario.page.spec (docente): nota TURMA com autorSelo 'COORDENACAO' mostra 'Coord. Helena' e selo com texto 'Coordenação'; nota sem selo mostra 'Ana', sem 'Coord.' e sem selo.",
+    "calendario.page.spec (docente): card com autorSelo PROFESSOR e editadoPorNome 'Helena' + editadoPorSelo COORDENACAO mostra 'Prof. Otavio' e 'editado por Coord. Helena'.",
+    "calendario.page.spec: anotacao 'minha' com visivelTurma=false mostra texto contendo 'tirou esta anotação da lista'.",
+    "calendario.page.spec: anotacao 'minha' com visivelTurma=true NAO mostra 'tirou esta anotação da lista' (pega o campo ausente do view-model).",
+    "calendario.page.spec: a grade tem exatamente tantos .cal-dia quanto dias do mes ATUAL, e o dia 12 com PROVA tem a classe tem-prova (fixtures relativas a hoje, nunca mes fixo).",
+    "calendario.page.spec: tocar no dia 12 abre .dia-painel contendo '12 de'.",
+    "calendario.page.spec: 'Anotar neste dia' do dia 15 tem href contendo 'dia={AAAA-MM-15 do mes atual}' e aponta para /tabs/notas/nova.",
+    "calendario.page.spec: dia sem nada mostra .dia-vazio com 'Nada marcado neste dia' e nenhum .pf-aviso.",
+    "calendario.page.spec: aria-label do dia 12 com uma prova = 'Dia 12, com prova'.",
+    "calendario.page.spec: 'Próximo mês' faz novo GET /eventos com de = 1o dia do mes seguinte (e GET /notas), e o painel do dia aberto fecha.",
+    "calendario.page.spec (harness): cada entrada dispara exatamente 1 GET /eventos e 1 GET /notas; /turmas/minha sai 0 ou 1 vez (cache).",
+    "mes.spec: fevereiro tem 29 dias em 2024, 28 em 2026 e 28 em 2100 (nao bissexto).",
+    "mes.spec: o dia 1 cai na coluna = weekday do dia 1 (set/2026: 2 vazias, terca).",
+    "mes.spec: mes que comeca no domingo (nov/2026) nao tem celula vazia (celulas[0].dia === 1).",
+    "mes.spec: datas locais sem UTC: jan/2026 de='2026-01-01', ate='2026-01-31', celula do dia 1 data='2026-01-01'.",
+    "mes.spec: marca prova (dia 10), entrega (dia 12) e anotacao (dia 15) nos dias certos; dia 11 com cores [].",
+    "mes.spec: mesmo dia com prova E entrega marca os dois e tem 2 cores.",
+    "mes.spec: duas provas da mesma materia no dia = UMA cor (['#1D4ED8']).",
+    "mes.spec: DIAS_DA_SEMANA tem 7 e comeca em 'D'.",
+    "mes.spec: mesVizinho(2026,0,-1)={2025,11}; mesVizinho(2026,11,1)={2027,0}; mesVizinho(2026,5,+1)={2026,6} e (2026,5,-1)={2026,4}.",
+    "janela-desfazer.spec: abre; ainda aberta em 7999 ms; fecha em 8000 ms.",
+    "janela-desfazer.spec: abrir de novo apos 7000 ms reinicia a contagem (ainda aberta 7999 ms depois do 2o abrir; fecha no ms seguinte).",
+    "janela-desfazer.spec: fechar() cancela o relogio sem timer pendente.",
+    "janela-desfazer.spec: destruir a tela fecha a janela e cancela o timer.",
+    "moderacao.repository.spec: transferirLideranca faz POST /turmas/lideranca/transferir, depois GET /turmas/minha; o novo lider (u2) aparece e souLider vira false.",
+    "moderacao.repository.spec: se a releitura da turma falha (500), a promessa da transferencia RESOLVE, turma() vira null e souLider false.",
+    "moderacao.repository.spec: se o POST de transferir falha (500), a promessa rejeita e souLider continua true.",
+    "moderacao.repository.spec: ocultados() faz GET /moderacao/ocultados e devolve a lista exatamente como veio (inclusive ocultadoEm null).",
+    "evento-vm.spec (dependencia): data '2026-08-21' vira dia '21' e mes 'ago' sem voltar um dia por UTC.",
+    "evento-vm.spec: sem hora -> quando = 'prova'; com '19:00' -> '19:00'.",
+    "evento-vm.spec: '19:00:00' -> '19:00'; '07:05:30' -> '07:05'; hora '' com PROVA -> 'prova'.",
+    "evento-vm.spec: autoria contem o nome e '5 h' para criado 5 h antes; criadoEm ilegivel -> autoria exatamente 'Otávio'."
+  ],
+  "nativo": [
+    "Nenhum plugin Capacitor e chamado diretamente pela area calendario.",
+    "Indireto: @capacitor/preferences via TurmaAtivaService — le e grava a chave 'pf.turmaAtiva' (JSON {usuarioId, turmaId, nome}) que alimenta o titulo da tela e o header X-Turma-Id do docente. Equivalente Flutter: shared_preferences. A leitura e assincrona e as requisicoes do docente esperam por ela.",
+    "Indireto: StorageService (sessao jwt/usuario/turmaId e snapshot offline) via AuthService/interceptor — limpo em 401 e em SEM_TURMA. O calendario nao le snapshot offline.",
+    "Indireto: NotificacoesService (lembretes locais) e cancelado pelo AuthService no 401/SEM_TURMA disparado por qualquer chamada desta tela.",
+    "UI e ciclo de vida do Ionic (nao nativo): ion-header/ion-toolbar/ion-title/ion-content e o hook ionViewWillEnter. No Flutter precisa de equivalente para 'aba ficou visivel' e 'voltei de rota empilhada'.",
+    "Timer JS (setTimeout fora da NgZone) para a janela de desfazer de 8 s -> dart:async Timer, cancelado no dispose."
+  ]
+}

@@ -1,0 +1,494 @@
+{
+  "unidade": "turma — features/turma/turma.page.ts (/tabs/turma), features/turma/editar-turma.page.ts (/tabs/turma/editar), features/turma/transferir.page.ts (/tabs/turma/transferir), data/turma.repository.ts. Dependências lidas para fixar o comportamento: data/moderacao.repository.ts (ocultados, reexibir, transferirLideranca), data/materia.repository.ts, data/models.ts, data/docente.models.ts, core/api.service.ts, core/http-error.interceptor.ts, core/auth.interceptor.ts, core/turma-ativa.interceptor.ts, core/timeout.interceptor.ts, core/interceptores.ts, core/auth.service.ts, core/auth.guard.ts, core/turma-ativa.service.ts, features/auth/erro.ts, features/auth/espera.ts, shared/selo.component.ts, shared/materia-chip.component.ts, tabs/tabs.routes.ts, tabs/tabs.page.ts, global.scss, mais os controllers e services do backend (TurmaController, DocenteController, ModeracaoController, TurmaService, ModeracaoService, TurmaScopeResolverJpa, ProblemDetailHandler) para os status de erro.",
+  "telas": [
+    {
+      "rota": "/tabs/turma",
+      "arquivo": "app/src/app/features/turma/turma.page.ts",
+      "proposito": "Mostrar a turma: período, código de convite (para TODO membro, com Compartilhar/Copiar), quem está nela (papel, selo, matérias declaradas, marca de contestado) e, só para o líder, as ferramentas do cargo: remover membro (com opção de trocar o código junto), gerar novo código, contestar/restaurar docente, e a lista de Ocultados com Reexibir. Para quem tem papel PROFESSOR na turma, também o bloco 'matérias que eu leciono'. Entradas: aba 'Turma' da barra (só conta docente), link 'a turma →' no Meu quadro e botão 'Minha turma' no Perfil (aluno). Sem guarda própria de rota (está sob a guarda de sessão das abas).",
+      "estados": [
+        "CARREGANDO (repo.carregando=true): aviso tracejado (classe pf-aviso: borda 1px dashed, fundo rule-soft, 12.5px) com o texto 'Carregando…'. Se já havia turma em memória (re-entrada na aba), o conteúdo antigo continua renderizado ABAIXO do aviso — não há tela branca de loading nem skeleton.",
+        "ERRO DE CARGA (repo.erro != null e não carregando): aviso tracejado com a mensagem pronta do interceptor (ex.: 'Sem conexão.', 'Deu problema no servidor. Tente de novo.', 'O servidor demorou demais para responder. Tente de novo.', 'Isso não existe mais.'). Sem turma em memória: só o aviso — nenhuma linha de membro, NENHUM código de convite (nunca placeholder). Com turma em memória: aviso + conteúdo antigo abaixo (o dado velho continua valendo).",
+        "SEM_TURMA (GET /turmas/minha → 404 com codigo='SEM_TURMA', a pessoa foi removida): o interceptor central esquece o vínculo (registrarTurma(null)) e navega para '/entrar-turma'; o repositório limpa turma E erro — a tela NÃO mostra aviso de erro.",
+        "CONTEÚDO (turma != null): blocos descritos em 'elementos'. Variações por papel: LIDER vê ferramentas e seção Ocultados; PROFESSOR vê bloco de matérias que leciona; ALUNO/COORDENADOR veem só o comum.",
+        "OCULTADOS (só líder): null = ainda não se sabe (não renderiza lista nem vazio, só o rótulo e eventual aviso de erro); [] = estado vazio 'Nada oculto.'; lista = linhas com Reexibir; falha ao listar = aviso tracejado com a mensagem, lista anterior (ou null) mantida — nunca vira 'Nada oculto'.",
+        "PERGUNTAS INLINE (sem diálogo modal): confirmação de gerar código (dentro do bloco do código), confirmação de remover e de contestar (logo abaixo da linha da pessoa). No máximo uma pergunta de linha por vez (remover OU contestar); a do código é independente.",
+        "AGINDO (flag única 'agindo' para toda ação do líder): botões de confirmação, Cancelar das perguntas, Restaurar e Reexibir ficam desabilitados; rótulos dos botões de confirmação mudam para 'Gerando…', 'Contestando…', 'Removendo…'."
+      ],
+      "elementos": [
+        "AppBar (header translúcido): título = turma.nome (lido do servidor) ?? turmaAtiva.nome (nome da turma ativa do DOCENTE guardado no aparelho) ?? 'A turma'.",
+        "[se carregando] aviso tracejado: 'Carregando…'  — [senão, se repo.erro] aviso tracejado: '<mensagem do erro>'.",
+        "--- daqui para baixo só se turma != null ---",
+        "[se turma.semestre não vazio] rótulo (pf-rotulo: mono 11px, CSS uppercase, letter-spacing .11em, cor ink-3, com filete horizontal à direita): 'período · {semestre}'.",
+        "[se meuMembro.papel == 'PROFESSOR'] rótulo: 'matérias que eu leciono'.",
+        "[PROFESSOR] grupo (semântica/aria-label 'Matérias que eu leciono') com uma linha por matéria da turma, na ordem que GET /materias devolve: checkbox 22px (cor accent) + MateriaChip (cor + sigla, texto branco, uppercase) + nome da matéria. Linha min-height 52px, borda 1px, fundo surface. Marcado = está em 'marcadas'.",
+        "[PROFESSOR, lista de matérias vazia] texto (pf-cache-aviso): 'Esta turma ainda não tem matéria. Qualquer membro cria na aba Matérias.'",
+        "[PROFESSOR, se erroLecionadas] erro sólido (pf-erro, role alert): '<mensagem>'.",
+        "[PROFESSOR] botão primário (data-testid 'salvar-lecionadas', desabilitado enquanto salvandoLecionadas): 'Salvando…' se salvando; senão 'Salvo ✓' se lecionadasSalvas; senão 'Salvar matérias'.",
+        "[PROFESSOR] nota (pf-cache-aviso), exatamente uma: se meuMembro.contestado → 'O líder contestou sua declaração. Você pode ajustar as matérias, mas elas não valem até ele restaurar.'; senão se auth.usuario.docenteStatus == 'PENDENTE' → 'A declaração fica guardada e passa a valer quando sua conta for aprovada.'; senão se 'RECUSADO' → 'Seu cadastro não foi aprovado: as matérias ficam guardadas, sem efeito.'; senão (APROVADO ou ausente) → 'Vale na hora, sem fila. Se você marcar uma matéria que não leciona, o líder pode contestar — e você perde o selo desta turma até ele restaurar.'",
+        "rótulo: 'código de convite'.",
+        "Bloco do código (coluna, gap 10, padding 15, raio md, fundo surface-2, borda 1px accent-line, sombra e1), em ordem:",
+        "  • o código (data-testid 'codigo-convite'): turma.codigoConvite em fonte mono 26px bold, letter-spacing 0.2em, centralizado, SELECIONÁVEL (user-select: all → SelectableText).",
+        "  • botão primário (accent, largura total): 'Compartilhar convite'.",
+        "  • botão contorno largura total (botao-copiar): 'Copiado ✓' se copiado, senão 'Copiar código'.",
+        "  • texto 12px ink-3 centralizado: 'Quem tiver este código entra na turma. Ele não expira.'",
+        "  • [LÍDER, pergunta do código aberta] aviso neutro (alerta, role status): 'O código antigo para de funcionar. Quem já entrou continua.'; [se erroDoCodigo] erro sólido '<mensagem>'; linha com dois botões contorno-pílula: 'Gerar novo código' (ou 'Gerando…' enquanto agindo; desabilitado se agindo) e 'Cancelar' (desabilitado se agindo).",
+        "  • [LÍDER, pergunta fechada] botão contorno largura total: 'Gerar novo código' (NÃO desabilitado por agindo).",
+        "rótulo: 'quem está aqui · {turma.membros.length}' (conta todos, inclusive eu).",
+        "[se erroDaTroca] erro sólido (role alert): 'A pessoa saiu da turma, mas o código novo não foi gerado ({mensagem}) Gere um novo código para ela não voltar com o atual.' (atenção: sem ponto entre ')' e 'Gere').",
+        "[se erroDoDocente] erro sólido (role alert): '<mensagem>'.",
+        "Para cada membro, NA ORDEM DO SERVIDOR (entrouEm, nome, id) — linha (.membro: flex wrap, padding 11/13, raio md, fundo surface, borda 1px rule, sombra e1; se contestado: fundo transparente, borda TRACEJADA, sem sombra):",
+        "  • avatar circular 34px (fundo accent-soft, texto accent 14px bold): inicial = primeiro caractere do nome aparado, maiúsculo; '?' se vazio.",
+        "  • coluna: linha do nome (14.5px semibold) = nome + [se selo] SeloComponent ('Professor' com ícone de capelo vazado, contorno tinta; ou 'Coordenação' com escudo cheio, cor accent) + [se contestado] tag tracejada com ícone de bandeira e texto 'contestado'; abaixo 'entrou em {d} de {mmm}.' (11.5px ink-3; vazio se data ilegível); [se texto leciona não vazio] linha 11.5px ink-3: COORDENADOR → 'turma inteira'; PROFESSOR com lecionadas → 'leciona {siglas unidas por \", \"}'; PROFESSOR sem lecionadas → 'nenhuma matéria declarada'; aluno/líder → nada.",
+        "  • à direita: se papel LIDER → pílula 'líder' (10.5px bold, CSS uppercase → 'LÍDER', cor accent sobre accent-soft) — visível para todos; senão, se EU sou líder e nenhuma pergunta (remover/contestar) está aberta PARA ESTA LINHA → ações (botões contorno-pílula pequenos, 12px, padding 5/10): [se membro é PROFESSOR ou COORDENADOR] 'Restaurar' (se contestado; aria 'Restaurar {nome}'; desabilitado se agindo) ou 'Contestar' (aria 'Contestar {nome}'; não desabilita); depois 'Remover' (aria 'Remover {nome}'; não desabilita).",
+        "  • [pergunta de contestar aberta para esta linha] aviso neutro (role status): '<b>{nome}</b> perde o poder e o selo <b>nesta turma</b>, na hora — inclusive nos registros antigos. Nas outras turmas dele nada muda. Entrar de novo com o código não desfaz; só você, tocando em Restaurar.' + botões: 'Sim, contestar' (testid 'contestar-confirmar'; 'Contestando…' se agindo; desabilitado se agindo) e 'Cancelar' (desabilitado se agindo). O erro desta ação NÃO fica aqui: vai para erroDoDocente, acima da lista.",
+        "  • [pergunta de remover aberta para esta linha] aviso neutro (role status): '<b>{nome}</b> perde o acesso à turma. O que ele postou continua. Remover não bane: sem um código novo, a pessoa pode voltar com o código atual.' + [se erroDoMembro] erro sólido '<mensagem>' + botões (com wrap): 'Remover' (testid 'remover-confirmar'; 'Removendo…' se agindo), 'Remover e gerar novo código' (testid 'remover-e-trocar-codigo'; rótulo fixo), 'Cancelar' — os três desabilitados se agindo.",
+        "[LÍDER] rótulo: 'ocultados'.",
+        "[LÍDER, se erroDosOcultados] aviso TRACEJADO (pf-aviso, role alert): '<mensagem>'.",
+        "[LÍDER, se erroDoOcultado] erro sólido (role alert): '<mensagem>'.",
+        "[LÍDER, ocultados != null] uma linha (.membro, sem avatar) por item, na ordem do servidor (mais recente primeiro, sem data no fim): título (semibold) e detalhe '{rótulo do tipo} de {autorNome} · {quando}' onde rótulo = 'anotação' para NOTA, 'evento'/'material' para os outros (minúsculo) e quando = 'ocultado em {d} de {mmm}.' ou 'sem data'; botão contorno-pílula pequeno 'Reexibir' (aria 'Reexibir {titulo}', desabilitado se agindo). Lista vazia → bloco vazio: '<b>Nada oculto.</b>' e 'O que você ocultar da turma aparece aqui.'",
+        "botão-link fantasma (contorno, largura total): 'Ajustes' → /tabs/ajustes (todos).",
+        "[LÍDER] botão-link fantasma: 'Editar turma' → /tabs/turma/editar.",
+        "[LÍDER] botão-link fantasma: 'Passar a liderança' → /tabs/turma/transferir.",
+        "nota final (pf-cache-aviso, 12.5px ink-2, sem caixa): 'O líder não edita nem apaga registro de ninguém. Ele só oculta o que não devia estar ali, e pode transferir a liderança.'"
+      ],
+      "acoes": [
+        "Entrar na tela (TODA vez que fica visível: primeira entrada, troca de aba, volta de editar/transferir — equivalente ao ionViewWillEnter; NÃO carregar também no initState) → preparar(): 1) repo.carregar() = GET /turmas/minha; 2) depoisDeAgir(releOcultados=true): fecha as três perguntas, descarta marcações locais de matérias e, SE souLider (calculado com a turma recém-lida), GET /moderacao/ocultados; 3) SE meuMembro.papel=='PROFESSOR' → erroLecionadas=null e materiaRepo.carregar() = GET /materias (falha → erroLecionadas=mensagem; lista antiga fica). As três chamadas são SEQUENCIAIS, nessa ordem.",
+        "Toque em 'Compartilhar convite' → share nativo com {title:'Entrar na turma {nome}', text:'Entra na turma {nome} no projetoFans — é onde a gente anota as provas e entregas. O código é {codigo}.'}. Qualquer falha/rejeição do share (plugin indisponível, navegador sem Web Share, permissão; no Capacitor também o cancelamento da folha) → executa 'Copiar código'. Nunca mostra erro.",
+        "Toque em 'Copiar código' → copia SÓ o código para a área de transferência; sucesso → copiado=true (rótulo 'Copiado ✓'); falha → copiado=false, sem mensagem.",
+        "LÍDER: toque em 'Gerar novo código' (fechado) → erroDoCodigo=null, abre a pergunta do código. Nenhuma chamada.",
+        "LÍDER: 'Gerar novo código' (na pergunta) → se agindo, ignora; agindo=true; erroDoCodigo=null; POST /turmas/minha/codigo; sucesso → turma := resposta (código novo na hora, sem GET extra), fecha a pergunta, copiado=false; falha → erroDoCodigo=mensagem, pergunta continua aberta, código antigo na tela; finally agindo=false.",
+        "LÍDER: 'Cancelar' (pergunta do código) → fecha a pergunta.",
+        "LÍDER: 'Remover' na linha → erroDoMembro=null, fecha pergunta de contestar, abre pergunta de remover para esse usuarioId. Nenhuma chamada.",
+        "LÍDER: 'Remover' (confirmar) → remover(id, false): se agindo, ignora; agindo=true; erroDoMembro=null; erroDaTroca=null; DELETE /turmas/minha/membros/{id} (204) → repositório tira a pessoa da lista local e faz GET /turmas/minha (falha do GET vira repo.erro, não lança) → página fecha a pergunta de remover. Falha do DELETE → erroDoMembro=mensagem dentro da pergunta, que fica aberta, pessoa continua na lista. finally agindo=false. NÃO chama depoisDeAgir (não fecha outras perguntas, não relê ocultados).",
+        "LÍDER: 'Remover e gerar novo código' → mesmo fluxo + depois do DELETE e do GET: POST /turmas/minha/codigo, turma := resposta, copiado=false. Se o POST do código falhar (pessoa já saiu): erroDaTroca='A pessoa saiu da turma, mas o código novo não foi gerado ({mensagem}) Gere um novo código para ela não voltar com o atual.' — exibido acima da lista; código antigo continua na tela.",
+        "LÍDER: 'Cancelar' (pergunta de remover) → fecha a pergunta. Nenhuma chamada.",
+        "LÍDER: 'Contestar' na linha de docente → erroDoDocente=null, fecha pergunta de remover, abre pergunta de contestar para o id.",
+        "LÍDER: 'Sim, contestar' → se agindo, ignora; agindo=true; erroDoDocente=null; POST /turmas/minha/docentes/{id}/contestar → repositório marca local contestado=true e selo=null, depois GET /turmas/minha → depoisDeAgir(sem ocultados): fecha perguntas, descarta marcações locais. Falha do POST → erroDoDocente=mensagem (acima da lista), pergunta continua aberta, docente mantém selo. finally agindo=false.",
+        "LÍDER: 'Cancelar' (pergunta de contestar) → fecha.",
+        "LÍDER: 'Restaurar' (sem pergunta) → se agindo, ignora; agindo=true; erroDoDocente=null; POST /turmas/minha/docentes/{id}/restaurar → repositório marca contestado=false (selo só volta com o GET) e faz GET /turmas/minha → depoisDeAgir(sem ocultados). Falha → erroDoDocente=mensagem. finally agindo=false.",
+        "LÍDER: 'Reexibir' → se agindo, ignora; agindo=true; erroDoOcultado=null; POST /moderacao/{tipo em minúsculas}/{registroId}/reexibir; sucesso → remove o item da lista local (por tipo+id) e GET /moderacao/ocultados (falha deste GET → erroDosOcultados, lista filtrada fica); falha → erroDoOcultado=mensagem e, SE status 404 e codigo != 'SEM_TURMA', relê GET /moderacao/ocultados; outros status (500, 403…) não relêem e o item fica. finally agindo=false.",
+        "PROFESSOR: tocar checkbox (ou a linha) → marcadas := cópia das marcadas atuais com o id alternado; vira marcação local; lecionadasSalvas=false. Nenhuma chamada.",
+        "PROFESSOR: 'Salvar matérias' → se salvando, ignora; salvando=true; erroLecionadas=null; PUT /turmas/minha/lecionadas {materiaIds:[...marcadas na ordem de inserção]} → repositório faz GET /turmas/minha → lecionadasSalvas=true → depoisDeAgir(sem ocultados) (descarta marcações locais: passa a valer o servidor). Falha do PUT → erroLecionadas=mensagem, marcações locais mantidas para tentar de novo. finally salvando=false.",
+        "Toque em 'Ajustes' / 'Editar turma' / 'Passar a liderança' → navega (push) para a rota."
+      ],
+      "navegacao": [
+        "Entradas: aba 'Turma' (só conta docente), link 'a turma →' no Meu quadro, botão 'Minha turma' no Perfil.",
+        "'Ajustes' → /tabs/ajustes.",
+        "'Editar turma' (só líder) → /tabs/turma/editar.",
+        "'Passar a liderança' (só líder) → /tabs/turma/transferir.",
+        "Qualquer resposta 404 com codigo SEM_TURMA (desta ou de outra tela) → interceptor navega para /entrar-turma.",
+        "Qualquer 401 → interceptor encerra a sessão e navega para /login."
+      ]
+    },
+    {
+      "rota": "/tabs/turma/editar",
+      "arquivo": "app/src/app/features/turma/editar-turma.page.ts",
+      "proposito": "Renomear a turma e acertar o período (só o líder). O código de convite deliberadamente NÃO está aqui e não é enviado.",
+      "estados": [
+        "CARREGANDO (repo.carregando): aviso tracejado 'Carregando…'. Se já houver turma em memória (vinda da aba Turma), o formulário aparece JUNTO, abaixo, com os valores em cache.",
+        "ERRO DE SALVAR (erro local): erro sólido (role alert) com a mensagem — aparece logo abaixo do 'Carregando…' e acima do formulário. ATENÇÃO: este erro é um signal LOCAL da página, não repo.erro — a falha do GET de carga NÃO é exibida aqui.",
+        "SEM TURMA E SEM CARGA (GET falhou e não havia cache): nada além do cabeçalho (comportamento atual; ver armadilhas).",
+        "NÃO LÍDER (turma carregada, souLider=false): bloco vazio informativo, sem formulário.",
+        "LÍDER: formulário.",
+        "ENVIANDO: botão desabilitado com 'Salvando…'; depois de 4 s de espera, 'Acordando o servidor…'."
+      ],
+      "elementos": [
+        "AppBar: botão voltar (fallback /tabs/turma) + título 'Editar turma'.",
+        "Container (pf-auth: coluna, gap 10, padding 12/16/24).",
+        "[se carregando] aviso tracejado: 'Carregando…'.",
+        "[se erro local] erro sólido (role alert): '<mensagem>'.",
+        "--- só se turma != null ---",
+        "[não líder] bloco vazio: '<b>Isto é só o líder que faz.</b>' e 'Renomear a turma muda o que todo mundo vê. Se o período está errado, peça a quem está com a liderança.'",
+        "[líder] rótulo de campo (12.5px semibold ink-3): 'nome da turma'.",
+        "[líder] campo de texto (name 'nome', maxlength 120, valor inicial = turma.nome, semântica 'Nome da turma', fonte ≥ 16px).",
+        "[líder] rótulo de campo: 'período ' + span '— opcional' (texto completo 'período — opcional').",
+        "[líder] campo de texto (name 'semestre', maxlength 20, placeholder '2027.1', valor inicial = turma.semestre ?? '', semântica 'Período').",
+        "[líder] aviso neutro (alerta): 'O código de convite <b>não muda</b>. Ele está anotado no celular de todo mundo — trocá-lo tiraria a turma inteira do grupo.'",
+        "[líder] botão primário largura total (desabilitado enquanto enviando): 'Salvar' | 'Salvando…' | 'Acordando o servidor…' (enviando há mais de 4000 ms)."
+      ],
+      "acoes": [
+        "Abrir a página (na criação do widget, uma vez por abertura) → repo.carregar() = GET /turmas/minha (não await; erro não lança).",
+        "Toque em 'Salvar' → lê os valores ATUAIS dos dois campos; se enviando, ignora; se nome.trim()=='' → erro='A turma precisa de um nome.' e NÃO chama o servidor; senão enviando=true, erro=null, começa o timer de 4 s; PATCH /turmas/minha {nome: nome.trim(), semestre: semestre.trim()=='' ? null : semestre.trim()} SEM If-Match; sucesso → repo.turma := resposta (MinhaTurma inteira) e navega para '/tabs/turma'; falha → erro=mensagem, fica na tela; finally enviando=false e timer zerado (rótulo volta a 'Salvar').",
+        "Voltar (botão do AppBar) → volta para /tabs/turma (que recarrega ao reaparecer)."
+      ],
+      "navegacao": [
+        "Sucesso ao salvar → navigateByUrl('/tabs/turma') (equivale a ir para a raiz da aba Turma; em go_router: go('/tabs/turma')).",
+        "Voltar → /tabs/turma (defaultHref)."
+      ]
+    },
+    {
+      "rota": "/tabs/turma/transferir",
+      "arquivo": "app/src/app/features/turma/transferir.page.ts",
+      "proposito": "O líder escolhe outro membro e passa a liderança. Avisa ANTES de confirmar que quem passa deixa de ser líder na hora e só volta se o outro devolver; a autoria dos registros não muda.",
+      "estados": [
+        "CARREGANDO (repo.carregando): aviso tracejado 'Carregando…' (o erro local fica escondido enquanto carrega: é @else if). Se houver cache e for líder, a lista/confirmação aparece abaixo.",
+        "ERRO DE TRANSFERIR (erro local, não carregando): erro sólido (role alert) no topo. A falha do GET de carga (repo.erro) NÃO é exibida.",
+        "NÃO LÍDER: só quando !souLider E !carregando E turma != null → bloco vazio informativo (não pisca durante a carga).",
+        "LÍDER, sem escolhido: rótulo 'para quem' + lista de candidatos (ou vazio) + nota de autoria.",
+        "LÍDER, com escolhido: confirmação + botões.",
+        "ENVIANDO: botão principal desabilitado com 'Passando…'.",
+        "SEM TURMA E SEM CARGA: só o cabeçalho (GET falhou sem cache)."
+      ],
+      "elementos": [
+        "AppBar: botão voltar (fallback /tabs/turma) + título 'Passar a liderança'.",
+        "Container pf-pilha (coluna, gap 8, padding 12/16/16).",
+        "[se carregando] aviso tracejado 'Carregando…' — [senão, se erro local] erro sólido (role alert) '<mensagem>'.",
+        "[!souLider && !carregando && turma != null] bloco vazio: '<b>Isto é só o líder que faz.</b>' e 'Quem passa a liderança é quem a tem. Se precisar do cargo, peça a quem está com ele — a troca é de uma pessoa para outra, sempre.'",
+        "[líder, escolhido != null] aviso neutro (role status) com: '<b>Passar a liderança para {nome}?</b>' e '{nome} passa a poder ocultar registro impróprio e a passar a liderança adiante. <b>Você deixa de ser líder na hora</b> — para voltar, só se {nome} devolver.'",
+        "[líder, escolhido] botão primário (desabilitado se enviando): 'Passar a liderança' | 'Passando…'.",
+        "[líder, escolhido] botão fantasma (NÃO desabilitado durante envio): 'Escolher outra pessoa'.",
+        "[líder, sem escolhido] rótulo: 'para quem'.",
+        "[líder, sem escolhido] um botão-cartão por candidato (todos os membros menos eu, ordem do servidor; largura total, borda 1px, raio md): avatar inicial 34px + nome (14.5px semibold) + 'entrou em {d} de {mmm}.' (11.5px ink-3) + à direita 'passar →' (12.5px semibold accent).",
+        "[líder, sem escolhido, zero candidatos] bloco vazio: '<b>Não há para quem passar.</b>' e 'Você é a única pessoa na turma. Quando alguém entrar com o código, o nome aparece aqui.'",
+        "[líder, sem escolhido] nota (pf-cache-aviso): 'A autoria não muda de dono junto com o cargo: tudo o que você cadastrou continua seu depois de passar a liderança.'"
+      ],
+      "acoes": [
+        "Abrir a página (criação do widget) → repo.carregar() = GET /turmas/minha (não await).",
+        "Toque num candidato → escolhidoId = usuarioId. Nenhuma chamada. (escolhido é recalculado da lista: se a pessoa sumir numa releitura, volta para a lista.)",
+        "'Escolher outra pessoa' → escolhidoId = null.",
+        "'Passar a liderança' → se escolhidoId null ou enviando, ignora; enviando=true; erro=null; ModeracaoRepository.transferirLideranca(id): POST /turmas/lideranca/transferir {novoLiderUsuarioId:id} → GET /turmas/minha (via repo.carregar) → se repo.erro != null após o GET, repo.limpar() (esquece a turma). Só DEPOIS disso navega para '/tabs/turma'. Falha do POST → erro=mensagem, NÃO navega, confirmação continua (cargo não mudou). finally enviando=false."
+      ],
+      "navegacao": [
+        "Sucesso → navigateByUrl('/tabs/turma') somente após o GET de releitura terminar.",
+        "Voltar → /tabs/turma."
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/turmas/minha",
+      "quando": "TurmaRepository.carregar(): ao entrar/re-entrar na aba Turma; ao abrir Editar e Transferir; depois de DELETE membro, PUT lecionadas, POST contestar, POST restaurar (dentro do repositório); depois de POST transferir (ModeracaoRepository); e via garantirCarregada() (outras áreas: só se turma==null e não carregando).",
+      "corpo": "nenhum",
+      "resposta": "200 MinhaTurma: {id: uuid, nome: string, semestre?: string (OMITIDO quando nulo), codigoConvite: string, membros: [{usuarioId: uuid, nome: string, papel: 'ALUNO'|'LIDER'|'PROFESSOR'|'COORDENADOR', entrouEm: ISO-8601 instant, selo?: 'PROFESSOR'|'COORDENACAO' (omitido sem poder), contestado: bool, lecionadas: string[] (SIGLAS, ordenadas)}], meuAlcance: {tipo: 'NENHUM'|'MATERIAS'|'TURMA', materiaIds: uuid[]}}. Membros já ordenados por entrouEm, nome, usuarioId — não reordenar.",
+      "headers": "Authorization: Bearer <jwt>. X-Turma-Id: <turma ativa> SÓ se a conta é docente (tipoConta PROFESSOR/COORDENADOR) e a turma ativa existe (espera TurmaAtivaService.pronto). Sem If-Match.",
+      "erros": "Nunca lança para o chamador (carregar engole e guarda em repo.erro). 404 com corpo {codigo:'SEM_TURMA'} (usuário sem nenhum vínculo — foi removido) → interceptor: auth.registrarTurma(null) (memória já, disco depois; cancela lembretes e apaga snapshot) + navega /entrar-turma; repo.limpar() → turma=null, erro=null (sem aviso). 404 SEM codigo (X-Turma-Id de turma alheia/malformado, proxy, portal cativo, HTML) → repo.erro='Isso não existe mais.' ou detail do servidor; turma em memória mantida, vínculo NÃO apagado. 401 → interceptor encerrarSessao() + navega /login (o effect do repositório zera a turma). 0 → 'Sem conexão.'; 5xx → 'Deu problema no servidor. Tente de novo.' (ignora detail); timeout 75 s → 'O servidor demorou demais para responder. Tente de novo.'. Em todos os não-SEM_TURMA: turma antiga mantida, só erro preenchido."
+    },
+    {
+      "metodo": "PATCH",
+      "caminho": "/api/v1/turmas/minha",
+      "quando": "Editar turma → Salvar (nome não vazio).",
+      "corpo": "{nome: string (trim, não vazio, ≤120), semestre: string|null (trim; '' vira null; ≤20)}. NUNCA codigoConvite.",
+      "resposta": "200 MinhaTurma inteira (mesmo shape do GET) → substitui repo.turma.",
+      "headers": "Authorization; X-Turma-Id se docente. SEM If-Match (turma não tem coluna version; mandar seria inventar concorrência — o servidor não exige, não há 428 aqui).",
+      "erros": "Erro vira mensagem local na tela (pf-erro), sem navegar. 400 validação (nome em branco/>120, semestre >20) → DESCONHECIDO: detail do Spring ou 'Não deu para completar a ação.'; 403 'Somente o lider da turma modera'; 404 'Registro nao encontrado' (ou SEM_TURMA → fluxo global); 0/5xx/timeout com as mensagens padrão."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/turmas/minha/codigo",
+      "quando": "Líder confirma 'Gerar novo código'; ou 'Remover e gerar novo código' (após DELETE + GET).",
+      "corpo": "{} (o ApiService manda objeto vazio quando não há corpo)",
+      "resposta": "200 MinhaTurma inteira com o codigoConvite novo → substitui repo.turma (sem GET extra).",
+      "headers": "Authorization; X-Turma-Id se docente. Sem If-Match.",
+      "erros": "Lança para a página. Pergunta do código: erroDoCodigo=mensagem dentro da confirmação aberta, código antigo na tela. No fluxo remover+trocar: erroDaTroca com o texto composto. 403 'Somente o lider da turma modera'; 404; 5xx 'Deu problema no servidor. Tente de novo.'."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/api/v1/turmas/minha/membros/{usuarioId}",
+      "quando": "Líder confirma 'Remover' ou 'Remover e gerar novo código'.",
+      "corpo": "nenhum",
+      "resposta": "204 sem corpo. Em seguida o repositório remove o membro da lista local e faz GET /turmas/minha.",
+      "headers": "Authorization; X-Turma-Id se docente. Sem If-Match (o version é opcional no ApiService.delete e não é passado).",
+      "erros": "Lança para a página; a lista local NÃO muda. Ordem do servidor: 404 'Registro nao encontrado' (alvo não é da turma) → 403 'Somente o lider da turma modera' → 409 'Transfira a lideranca antes de sair' (remover a si mesmo; a UI nem oferece). Mensagem vai para erroDoMembro dentro da pergunta, que fica aberta."
+    },
+    {
+      "metodo": "PUT",
+      "caminho": "/api/v1/turmas/minha/lecionadas",
+      "quando": "Professor toca 'Salvar matérias'.",
+      "corpo": "{materiaIds: uuid[]} — o CONJUNTO INTEIRO marcado (substitui; [] = 'não leciono nenhuma'), na ordem de inserção do Set; ≤100; nunca ausente.",
+      "resposta": "200 MinhaTurma inteira — IGNORADA pelo app (tipada void); o repositório faz GET /turmas/minha em seguida.",
+      "headers": "Authorization; X-Turma-Id (o professor é conta docente, então vai a turma ativa).",
+      "erros": "Lança para a página; turma em memória não muda; marcações locais ficam. 403 'Somente professor declara materias'; 404 (matéria de outra turma) 'Registro nao encontrado'; 400 corpo inválido. Mensagem em erroLecionadas."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/turmas/minha/docentes/{usuarioId}/contestar",
+      "quando": "Líder confirma 'Sim, contestar'.",
+      "corpo": "{}",
+      "resposta": "200 MinhaTurma inteira — IGNORADA. Antes do GET, o repositório marca localmente o membro com contestado=true e selo=null; depois GET /turmas/minha.",
+      "headers": "Authorization; X-Turma-Id se docente.",
+      "erros": "Lança; nada muda na lista. 403 'Somente o lider da turma modera'; 404 (alvo não é docente da turma). Mensagem em erroDoDocente (acima da lista); pergunta continua aberta."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/turmas/minha/docentes/{usuarioId}/restaurar",
+      "quando": "Líder toca 'Restaurar' (sem pergunta).",
+      "corpo": "{}",
+      "resposta": "200 MinhaTurma inteira — IGNORADA. Antes do GET, marca local contestado=false (o selo NÃO é reposto localmente; volta com o GET).",
+      "headers": "Authorization; X-Turma-Id se docente.",
+      "erros": "Lança; erroDoDocente=mensagem. 403/404 como contestar."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/moderacao/ocultados",
+      "quando": "Só se souLider: ao entrar/re-entrar na aba (depois do GET da turma); depois de um Reexibir bem-sucedido; depois de um Reexibir que falhou com 404 sem SEM_TURMA.",
+      "corpo": "nenhum",
+      "resposta": "200 Ocultado[]: {registroTipo: 'EVENTO'|'MATERIAL'|'NOTA', registroId: uuid, titulo: string (para NOTA, começo do texto ≤80 chars com '…'), autorId: uuid, autorNome: string, ocultadoEm?: ISO instant (OMITIDO quando nulo)}. Já ordenado: mais recente primeiro, sem data no fim.",
+      "headers": "Authorization; X-Turma-Id se docente.",
+      "erros": "Página captura: erroDosOcultados=mensagem (aviso tracejado), lista anterior mantida (ou continua null). Nunca vira 'Nada oculto'. 403 'Somente o lider da turma modera'; 404; 5xx 'Deu problema no servidor. Tente de novo.'."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/moderacao/{tipo}/{registroId}/reexibir",
+      "quando": "Líder toca 'Reexibir' num ocultado. {tipo} = registroTipo em MINÚSCULAS: 'evento' | 'material' | 'nota'.",
+      "corpo": "{}",
+      "resposta": "200 sem corpo (não parsear).",
+      "headers": "Authorization; X-Turma-Id se docente.",
+      "erros": "Página: erroDoOcultado=mensagem. 404 sem codigo SEM_TURMA (registro deixou de ser da turma, ex. anotação virou pessoal) → também relê GET /moderacao/ocultados. 404 SEM_TURMA → fluxo global, NÃO relê. 500/403/400 → só mostra o erro, item fica, não relê. 403 'Somente o lider da turma modera' ou 'Sem permissao nesta materia'; 400 'Tipo de registro invalido: …'."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/turmas/lideranca/transferir",
+      "quando": "Transferir → 'Passar a liderança' com alguém escolhido.",
+      "corpo": "{novoLiderUsuarioId: uuid}",
+      "resposta": "200 sem corpo. Em seguida GET /turmas/minha; se esse GET falhar (repo.erro != null), repo.limpar(). Só então navega.",
+      "headers": "Authorization; X-Turma-Id se docente.",
+      "erros": "Lança para a página → erro local (pf-erro), não navega, confirmação continua. 403 'Somente o lider da turma modera'; 404 'Registro nao encontrado' (novo líder não é membro); 400 id nulo; 5xx 'Deu problema no servidor. Tente de novo.' (o detail do 500 é descartado)."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/materias",
+      "quando": "Só quando meuMembro.papel=='PROFESSOR', a cada entrada na aba Turma, depois do GET da turma (MateriaRepository.carregar, compartilhado com a aba Matérias).",
+      "corpo": "nenhum",
+      "resposta": "200 Materia[]: {id, nome, sigla, corHex, sala?, professor?}. Grava snapshot em disco (storage.mesclar({materias})) e, se a lista em memória estiver vazia, pinta antes o snapshot do disco (sem sobrescrever se o servidor já respondeu).",
+      "headers": "Authorization; X-Turma-Id (professor é docente).",
+      "erros": "MateriaRepository guarda em seu erro e RELANÇA; a página captura → erroLecionadas=mensagem; lista antiga (ou vazia) fica."
+    }
+  ],
+  "modelos": [
+    {
+      "nome": "MinhaTurma (resposta de GET/PATCH /turmas/minha, POST /turmas/minha/codigo, e corpo ignorado de PUT lecionadas/contestar/restaurar)",
+      "campos": "id: String (uuid)\nnome: String\nsemestre: String? — backend usa non_null: chega AUSENTE quando nulo\ncodigoConvite: String\nmembros: List<MembroDaTurma>\nmeuAlcance: MeuAlcance? — ausente (servidor/snapshot antigo) = NENHUM"
+    },
+    {
+      "nome": "MembroDaTurma",
+      "campos": "usuarioId: String (uuid)\nnome: String\npapel: PapelMembro (ALUNO | LIDER | PROFESSOR | COORDENADOR)\nentrouEm: String (ISO-8601 instant; parse pode falhar → exibe '')\nselo: Selo? (PROFESSOR | COORDENACAO) — ausente = sem poder aqui (aluno, líder, pendente, recusado, contestado)\ncontestado: bool? — servidor sempre manda; default false\nlecionadas: List<String>? — SIGLAS (não ids), ordenadas; inclui declaração inerte (pendente/contestado); default []"
+    },
+    {
+      "nome": "MeuAlcance",
+      "campos": "tipo: TipoAlcance (NENHUM | MATERIAS | TURMA)\nmateriaIds: List<String> (uuid; vazio para NENHUM e TURMA)"
+    },
+    {
+      "nome": "Ocultado (GET /moderacao/ocultados)",
+      "campos": "registroTipo: 'EVENTO' | 'MATERIAL' | 'NOTA' (maiúsculas)\nregistroId: String (uuid)\ntitulo: String\nautorId: String (uuid)\nautorNome: String (teoricamente pode faltar)\nocultadoEm: String? (ISO instant; AUSENTE quando nulo → 'sem data')"
+    },
+    {
+      "nome": "TipoModeravel (segmento de rota)",
+      "campos": "'evento' | 'material' | 'nota' — minúsculas; = registroTipo.toLowerCase()"
+    },
+    {
+      "nome": "Materia (GET /materias, usada no bloco do professor)",
+      "campos": "id: String\nnome: String\nsigla: String\ncorHex: String (uma das 12 hues da paleta; nunca inventada)\nsala: String? (omitido se nulo)\nprofessor: String? (omitido se nulo)"
+    },
+    {
+      "nome": "Usuario (sessão, AuthService.usuario)",
+      "campos": "id: String\nnome: String\nemail: String\ntipoConta: TipoConta? (ALUNO | PROFESSOR | COORDENADOR; ausente = ALUNO)\ndocenteStatus: DocenteStatus? (PENDENTE | APROVADO | RECUSADO; nulo/ausente para aluno)"
+    },
+    {
+      "nome": "AtualizarTurmaRequest (corpo do PATCH)",
+      "campos": "nome: String (não vazio após trim, ≤120)\nsemestre: String? (null quando vazio após trim, ≤20)"
+    },
+    {
+      "nome": "LecionadasRequest (corpo do PUT)",
+      "campos": "materiaIds: List<String> (uuid, não nula, ≤100; [] permitido)"
+    },
+    {
+      "nome": "TransferirLiderancaRequest (corpo do POST)",
+      "campos": "novoLiderUsuarioId: String (uuid, obrigatório)"
+    },
+    {
+      "nome": "ConviteShare (convite(turma))",
+      "campos": "title: String = 'Entrar na turma {nome}'\ntext: String = 'Entra na turma {nome} no projetoFans — é onde a gente anota as provas e entregas. O código é {codigoConvite}.'"
+    },
+    {
+      "nome": "ErroApi (erro de domínio produzido pelo interceptor central)",
+      "campos": "classe: DEMOROU | AUTH | PROIBIDO | NAO_ENCONTRADO | PRECONDICAO | CONFLITO | SERVIDOR | OFFLINE | DESCONHECIDO\nstatus: int (0 para offline/timeout)\nmessage: String (pronta para a tela)\npodeTentarNovamente: bool (5xx, offline, timeout)\nrecarregarRegistro: bool (409)\ncodigo: String? (ProblemDetail.codigo; só 'SEM_TURMA' hoje)"
+    },
+    {
+      "nome": "ProblemDetail (corpo de erro do backend, RFC 7807)",
+      "campos": "type: String?\ntitle: String?\nstatus: int\ndetail: String? (mensagem preferida; textos do servidor SEM acento, ex. 'Somente o lider da turma modera')\ninstance: String?\ncodigo: String? (raiz do JSON; 'SEM_TURMA')\n— corpo pode NÃO ser JSON (HTML de proxy): parse tolerante"
+    },
+    {
+      "nome": "MembroVm (derivado na tela da turma)",
+      "campos": "usuarioId: String\nnome: String\nehLider: bool (papel==LIDER)\ndesde: String ('entrou em {d} de {mmm}.' ou '')\ninicial: String (1º caractere do nome aparado, maiúsculo; '?' se vazio)\ndocente: bool (papel PROFESSOR ou COORDENADOR)\nselo: Selo?\ncontestado: bool\nleciona: String ('turma inteira' | 'leciona A, B' | 'nenhuma matéria declarada' | '')"
+    },
+    {
+      "nome": "OcultadoVm",
+      "campos": "chave: String ('{registroTipo}:{registroId}')\ntitulo: String\ndetalhe: String ('{anotação|evento|material} de {autorNome} · {ocultado em d de mmm.|sem data}')\noriginal: Ocultado"
+    },
+    {
+      "nome": "CandidatoVm (transferir)",
+      "campos": "usuarioId: String\nnome: String\ninicial: String\ndesde: String"
+    },
+    {
+      "nome": "TurmaAtiva (Preferences 'pf.turmaAtiva', só docente)",
+      "campos": "usuarioId: String (dono; só vale se == usuário logado)\nturmaId: String\nnome: String"
+    }
+  ],
+  "servicos_e_estado": [
+    "TurmaRepository (singleton do app inteiro; ponto ÚNICO para GET /turmas/minha — outras áreas leem souLider/alcanca/seloNa daqui). Estado: turma: MinhaTurma? (null = não se sabe), carregando: bool, erro: String?. Derivados: souLider = usuário logado está em turma.membros com papel LIDER (false se usuário ou turma null); meuMembro = o membro cujo usuarioId == auth.usuario.id, ou null. Efeito: sempre que auth.usuario()==null OU auth.turmaId()==null → limpar() (logout, 401, remoção via SEM_TURMA de qualquer rota).",
+    "TurmaRepository.carregar(): carregando=true, erro=null; GET /turmas/minha → turma=resposta. Falha: se ErroApi.codigo=='SEM_TURMA' → limpar() e retorna; senão erro = e.message (ou 'Não deu para carregar a turma.' se não for Error) e a turma ANTIGA fica. finally carregando=false. NUNCA lança.",
+    "TurmaRepository.garantirCarregada(): só chama carregar() se turma==null e !carregando (usado por outras áreas para saber o papel).",
+    "TurmaRepository.limpar(): turma=null, erro=null.",
+    "TurmaRepository.alcanca(materiaId?): tipo TURMA → true (inclusive null = nota); MATERIAS → materiaId != null && materiaIds.contains(materiaId); NENHUM/ausente/turma null → false.",
+    "TurmaRepository.seloNa(materiaId?): se !alcanca → null; senão 'COORDENACAO' se tipo TURMA, senão 'PROFESSOR'. Só para AVISAR antes de salvar (o servidor carimba).",
+    "TurmaRepository.declararLecionadas(ids): PUT /turmas/minha/lecionadas {materiaIds} (ignora corpo) → carregar(). Lança se o PUT falhar.",
+    "TurmaRepository.contestar(id): POST .../docentes/{id}/contestar → marcarContestado(id, true) (contestado=true, selo=null) → carregar(). restaurar(id): POST .../restaurar → marcarContestado(id, false) (só contestado=false; selo intocado) → carregar(). Lançam se o POST falhar (sem marcar nada).",
+    "TurmaRepository.renomear(nome, semestre): PATCH /turmas/minha {nome, semestre} sem If-Match → turma = resposta.",
+    "TurmaRepository.removerMembro(id): DELETE /turmas/minha/membros/{id} → remove da lista local → carregar(). gerarNovoCodigo(): POST /turmas/minha/codigo → turma = resposta.",
+    "ModeracaoRepository (singleton): ocultados() = GET /moderacao/ocultados; reexibir(tipo, id) = POST /moderacao/{tipo}/{id}/reexibir; transferirLideranca(novoId) = POST /turmas/lideranca/transferir {novoLiderUsuarioId} → turmas.carregar() → se turmas.erro != null → turmas.limpar(). (ocultar, pedirExclusao, meusPedidos são de outras áreas.)",
+    "MateriaRepository (singleton, compartilhado com a aba Matérias): materias: List<Materia> (inicial []), carregando, erro. carregar(): GET /materias; em paralelo aquece do disco se a lista em memória estiver vazia e o servidor ainda não respondeu; sucesso → materias=resposta e storage.mesclar({materias}); falha → erro=mensagem e RELANÇA.",
+    "AuthService: usuario (Usuario?), token, turmaId (String?), autenticado, temTurma. registrarTurma(id|null): seta em memória ANTES de qualquer await, grava sessão; com null também cancela lembretes e apaga o snapshot local. encerrarSessao(): zera token/usuario/turmaId (síncrono), cancela lembretes, apaga sessão em disco em segundo plano. Lido pela tela: usuario (id para souLider, docenteStatus para a nota do professor).",
+    "TurmaAtivaService (só docente): nome e turmaId da turma ativa (guardada em Preferences 'pf.turmaAtiva' com o dono; só vale se o dono == usuário logado); pronto: Future da leitura do disco. A tela usa 'nome' como título enquanto a turma não chegou; o interceptor usa turmaId no X-Turma-Id.",
+    "ApiService: base = environment.apiUrl ('https://projetofans-api.onrender.com/api/v1' prod, 'http://localhost:8080/api/v1' dev). get/post(corpo ?? {})/put(corpo ?? {})/patch(corpo, version?)/delete(version?) — If-Match só quando version é passado (nunca nesta área). Não trata erro.",
+    "Pipeline de interceptores (ordem importa, de fora para dentro): auth (Authorization: Bearer <jwt> exceto URLs com '/auth/') → turma-ativa (X-Turma-Id só para conta docente e só para a URL da API; espera TurmaAtivaService.pronto) → erro central (traduz para ErroApi; 401 → encerrarSessao + /login; codigo SEM_TURMA → registrarTurma(null) + /entrar-turma, falhas de disco/navegação só no console) → timeout (75 000 ms; TimeoutError vira DEMOROU).",
+    "Tradução de status (interceptor central): 0 → 'Sem conexão.'; 401 → detail ?? 'Sua sessão expirou. Entre de novo.'; 403 → detail ?? 'Só quem criou pode editar.'; 404 → detail ?? 'Isso não existe mais.' (+ codigo); 409 → detail ?? 'Alguém editou isso enquanto você editava.'; 428 → detail ?? 'Recarregue o registro e tente de novo.'; ≥500 → SEMPRE 'Deu problema no servidor. Tente de novo.'; outros (400…) → detail ?? 'Não deu para completar a ação.'; timeout → 'O servidor demorou demais para responder. Tente de novo.'. detail = corpo.detail ?? corpo.title.",
+    "mensagemDeErro(e): ErroApi → e.message; qualquer outra coisa → 'Não deu para completar a ação. Tente de novo.'",
+    "Espera (editar-turma): demorando=false; comecar(4000 ms) liga demorando=true após o prazo; terminar() cancela e zera. Usada no rótulo 'Acordando o servidor…'.",
+    "Estado local da TurmaPage: copiado (bool), marcadasLocais (Set<String>? — null = vale o servidor), declaradas (computed: ids das matérias cuja sigla está em meuMembro.lecionadas OU cujo id está em meuAlcance.materiaIds), marcadas = marcadasLocais ?? declaradas, salvandoLecionadas, lecionadasSalvas, erroLecionadas, confirmandoCodigo (bool), confirmandoRemover (usuarioId?), confirmandoContestar (usuarioId?), agindo (bool único), erroDoCodigo, erroDoMembro, erroDaTroca, erroDoDocente, erroDoOcultado, ocultados (List<Ocultado>? — null = desconhecido), erroDosOcultados.",
+    "Estado local da EditarTurmaPage: erro (String?), enviando (bool), espera (Espera). Estado local da TransferirPage: erro (String?), enviando (bool), escolhidoId (String?), candidatos (computed: membros menos eu), escolhido (computed: candidato com escolhidoId ou null)."
+  ],
+  "regras": [
+    "NN9 (qualquer membro posta sem aprovação) levado ao convite: o código de convite é visível e compartilhável por TODO membro, não só o líder — escondê-lo seria um gate de fato. A declaração de matérias do professor 'Vale na hora, sem fila' (sem aprovação do líder; a correção é posterior, por contestação).",
+    "NN10 (só o autor edita/exclui; o líder só muda visibilidade): as ferramentas do líder são remover pessoa, trocar código, contestar/restaurar docente e reexibir — nenhuma edita registro alheio. Rodapé da tela diz isso literalmente. Editar turma (nome/período) é do líder; o registro de ninguém é tocado.",
+    "NN1/NN2 (autoria visível; nada é apagado): remover membro não apaga o que ele postou ('O que ele postou continua'); transferir não muda autoria ('tudo o que você cadastrou continua seu'); ocultados mostram o autor de cada registro; ocultar não apaga e Reexibir desfaz.",
+    "NN6 + 'proibido catch que devolve vazio': falhar ao buscar nunca vira lista vazia — falha da turma não mostra 'turma vazia' nem código; falha dos ocultados não mostra 'Nada oculto'; ocultados=null ≠ []. Estado vazio é curto e informativo ('Nada oculto.', 'Não há para quem passar.'), sem dica/promo/skeleton.",
+    "NN7 (cor + sigla juntas): as matérias do bloco do professor usam o MateriaChip (cor + sigla); nunca só a cor.",
+    "Proibido 'múltiplas turmas na UI': a tela mostra UMA turma; não há seletor. Para docente a turma vem da turma ativa (X-Turma-Id, escolhida no Painel); para aluno o servidor resolve pelo vínculo.",
+    "Backend: escopo antes de poder (404 antes de 403); registro/turma alheia é 404, nunca 403; o app nunca lê status cru — toda tela usa a mensagem pronta do interceptor central (ProblemDetail detail).",
+    "PATCH sem If-Match na turma: turma não tem coluna version; If-Match só vale para evento/material (aqui não se aplica).",
+    "Papel lido, nunca guardado na sessão: souLider/meuMembro/alcance saem de GET /turmas/minha + id do usuário logado — a liderança se transfere e a sessão envelheceria.",
+    "Na dúvida, não oferecer: enquanto o papel é desconhecido souLider=false; para quem não é líder os botões do líder NÃO aparecem (nem desabilitados — cinza convida a perguntar 'por que não posso?'). O servidor reconfere sempre (permissão velha vira 403 com frase).",
+    "Código de convite: só aparece se veio do servidor; nunca inventado/placeholder. Não muda ao editar a turma (não é enviado no PATCH). Trocar código só pelo líder, com pergunta, e o antigo morre na hora.",
+    "Remover não bane: sem código novo a pessoa volta com o atual — por isso existe 'Remover e gerar novo código' (duas chamadas existentes, não uma rota nova). O líder não pode remover a si mesmo (409; botão nem é oferecido na linha do líder).",
+    "Contestar tira poder e selo SÓ nesta turma, na hora, inclusive em registros antigos; não tira ninguém da turma; entrar de novo com o código não desfaz; só o líder restaura. Restaurar não pergunta (reversível). Contestar, remover e gerar código perguntam inline, sem diálogo por cima.",
+    "Transferir: a turma nunca fica sem líder nem com dois (operação única no servidor); só para quem já é membro; quem passa perde o cargo na hora e a tela diz isso ANTES de confirmar; nunca para si mesmo.",
+    "Período (semestre) é opcional: vazio vira null (nunca string vazia); sem período, o rótulo 'período · …' não aparece (melhor ausente do que mentindo um semestre velho).",
+    "Selo = poder AQUI: contestado não tem selo e ganha marca tracejada 'contestado' (estado, não poder). Tracejado = ausência/estado degradado; sólido = poder/falha de ação.",
+    "Interface por TIPO de conta, poder por STATUS: a nota do professor muda com docenteStatus (PENDENTE/RECUSADO) e com contestado, mas o bloco aparece para todo membro com papel PROFESSOR."
+  ],
+  "armadilhas": [
+    "RECARREGAR A CADA ENTRADA: a carga está em ionViewWillEnter (toda vez que a tela fica visível: primeira entrada, troca de aba, volta de /tabs/turma/editar ou /transferir via back ou navigateByUrl). No Flutter, disparar em: primeira exibição + seleção da aba (StatefulShellRoute/IndexedStack mantém o widget vivo!) + RouteAware.didPopNext. NÃO duplicar no initState (o original tirou do construtor de propósito para não fazer dois GETs). Sem isto: Ocultados não mostra o que o líder acabou de ocultar noutra aba e quem foi removido nunca descobre.",
+    "Ordem SEQUENCIAL das chamadas na entrada: GET /turmas/minha → (só se souLider, decidido com a turma RECÉM-lida) GET /moderacao/ocultados → (só se meuMembro.papel=='PROFESSOR') GET /materias. Aluno/coordenador/líder NÃO pedem /materias; não-líder NÃO pede /ocultados (os testes verificam que essas chamadas não acontecem). Não paralelizar com a decisão antecipada de papel.",
+    "FALHA ≠ VAZIO: repo.carregar() nunca lança e nunca zera a turma em erro — o dado antigo continua na tela com o aviso tracejado em cima. Só SEM_TURMA zera. Um port que faz 'turma = null' no catch transforma 'não consegui atualizar' em 'a turma sumiu'.",
+    "'Carregando…' e conteúdo coexistem: em re-entrada, o aviso aparece EM CIMA da turma antiga (não substitui a tela). E durante a carga repo.erro foi zerado, então o aviso de erro some até o resultado.",
+    "SEM_TURMA é decidido SÓ pelo campo `codigo` do ProblemDetail, nunca por status 404: 404 de proxy/portal cativo/Render acordando (corpo HTML!) tem de virar aviso comum e manter vínculo e turma. O parser de erro tem de aguentar corpo não-JSON sem estourar.",
+    "SEM_TURMA não pode deixar aviso na tela: o repositório limpa turma E erro; o interceptor central (para QUALQUER rota) faz registrarTurma(null) — memória antes do disco, cancela lembretes, apaga snapshot — e navega para /entrar-turma; falha de disco/navegação vai só para log e não prende a pessoa. Depois disso souLider=false e NÃO se pede /moderacao/ocultados.",
+    "Repositório singleton precisa se limpar sozinho quando usuario vira null (logout, 401) OU turmaId vira null (removido via outra rota). Sem isso a próxima conta no mesmo aparelho herda a turma e o papel de líder da anterior, e garantirCarregada() das outras telas não rebusca porque 'já tem'.",
+    "souLider/meuMembro são reativos ao usuário logado (trocar o usuário re-renderiza na hora — teste troca 'eu' e o link 'Passar a liderança' some sem nova carga).",
+    "Botões do líder ESCONDIDOS, não desabilitados, para quem não é líder: Remover, Contestar/Restaurar, Gerar novo código, seção 'ocultados' inteira, links 'Editar turma' e 'Passar a liderança'. O link 'Ajustes' e o código são para todos.",
+    "Código de convite: nunca renderizar placeholder/'—' quando turma é null ou a carga falhou. Deve ser selecionável (SelectableText), porque se o clipboard falhar a pessoa copia à mão.",
+    "Compartilhar: o código vai DENTRO do texto (função pura convite() — é o que se testa, porque o plugin não aceita spy). Qualquer falha do share cai em Copiar; no Capacitor cancelar a folha de compartilhamento também REJEITA a promessa e portanto copia e mostra 'Copiado ✓'. share_plus devolve ShareResultStatus.dismissed/unavailable em vez de lançar: decidir explicitamente (fiel = tratar unavailable e erro como fallback; dismissed copiava no original). Falha do clipboard é silenciosa (copiado=false), sem erro na tela.",
+    "'Copiado ✓' persiste (inclusive entre re-entradas na aba) até o código mudar: gerarCodigo e o caminho remover+trocar fazem copiado=false. Esquecer isso deixa a tela dizendo que o código NOVO já foi copiado.",
+    "Gerar novo código: usar a MinhaTurma da resposta do POST (sem GET extra) — uma segunda ida deixaria uma janela com o código velho. Em falha, o código antigo fica e o erro aparece DENTRO da pergunta aberta.",
+    "Remover: a pessoa sai da lista local LOGO após o DELETE dar 204, ANTES do GET de releitura — se o GET falhar, ela continua fora (com aviso de carga). Se o DELETE falhar, a lista não muda e a pergunta fica aberta com o motivo (erroDoMembro dentro dela).",
+    "Remover e gerar novo código: sequência estrita DELETE → GET /turmas/minha → POST /turmas/minha/codigo (o POST não pode sair antes do DELETE responder). Se o POST falhar, a linha da pessoa (e a pergunta) já sumiu: o erro vai para erroDaTroca ACIMA da lista, com o texto composto '…não foi gerado ({mensagem}) Gere um novo código…' (sem ponto antes de 'Gere'), e o código antigo continua na tela. 'Remover' sozinho NÃO troca o código.",
+    "remover() NÃO chama depoisDeAgir: só fecha a própria pergunta. Não fecha a pergunta do código, não descarta marcações de matérias e NÃO relê ocultados. gerarCodigo() idem (só fecha a do código).",
+    "Contestar/restaurar: marcação local antes do GET (contestar: contestado=true E selo=null; restaurar: só contestado=false — o selo volta com o GET). Se o GET falhar, a marcação fica (o POST já valeu). Se o POST falhar, nada muda e a pergunta de contestar continua aberta; o erro aparece em erroDoDocente ACIMA da lista, não dentro da pergunta.",
+    "PUT lecionadas, POST contestar e POST restaurar devolvem a turma inteira, mas o app IGNORA o corpo e faz GET /turmas/minha depois (os testes esperam esse GET). Não 'otimizar' sem atualizar os testes.",
+    "Flag 'agindo' ÚNICA para todas as ações do líder (gerar código, remover, contestar, restaurar, reexibir): impede duplo toque e ações concorrentes. Efeito colateral fiel: os rótulos 'Gerando…'/'Contestando…'/'Removendo…' derivam desse mesmo flag, então uma pergunta aberta muda de rótulo se OUTRA ação estiver em voo. Os botões de linha 'Contestar' e 'Remover' e o 'Gerar novo código' inicial NÃO desabilitam.",
+    "Uma pergunta de linha por vez: abrir Remover fecha Contestar e vice-versa; a pergunta do código é independente e pode coexistir. Enquanto uma pergunta está aberta numa linha, os botões de ação DAQUELA linha somem. Toda re-entrada na aba (e todo contestar/restaurar/salvar matérias bem-sucedido) fecha as três perguntas.",
+    "Posição dos erros: erroDoCodigo dentro da pergunta do código; erroDoMembro dentro da pergunta de remover; erroDaTroca e erroDoDocente entre o rótulo 'quem está aqui' e a lista; erroDosOcultados como aviso TRACEJADO (estado da lista) e erroDoOcultado como erro SÓLIDO (ação) sob 'ocultados'; erroLecionadas acima do botão Salvar matérias. Nenhum é limpo na re-entrada (só erroLecionadas, ao recarregar matérias); cada um só é limpo ao iniciar a sua ação de novo.",
+    "Ocultados: null ≠ []. null (nunca carregou) não mostra nem lista nem 'Nada oculto'. Falha mantém a lista anterior. Reexibir OK: tira o item local por (registroTipo, registroId) ANTES de reler — se a releitura falhar o item continua fora. Reexibir 404 sem SEM_TURMA: mostra erro E relê (a linha é velha, ex. anotação que virou pessoal). 500: mostra erro, NÃO relê, item fica. SEM_TURMA: não relê.",
+    "Rota de moderação usa o tipo em MINÚSCULAS ('evento'|'material'|'nota'), a lista vem em MAIÚSCULAS; rótulo exibido: NOTA → 'anotação', os outros em minúsculas.",
+    "Datas: original usa toLocaleDateString('pt-BR', {day:'numeric', month:'short'}) no fuso LOCAL do aparelho, que produz '1 de set.' (o comentário do código diz '1 set', mas a saída real tem 'de' e ponto). Flutter: DateFormat.MMMd('pt_BR') (com initializeDateFormatting) sobre .toLocal(). Data ilegível em entrouEm → string vazia (nunca 'Invalid Date'); ocultadoEm ausente/nulo/ilegível → 'sem data' (nunca 'agora').",
+    "Backend serializa com non_null: semestre, selo, ocultadoEm (e meuAlcance em snapshot antigo) chegam AUSENTES, não null. fromJson deve tratar chave ausente como null; contestado default false; lecionadas default []; meuAlcance ausente = NENHUM.",
+    "Período: exibir 'período · X' só se semestre for não vazio. No editar, null vira '' no campo; ao salvar, trim e '' vira null (nunca enviar \"\"). Nome com trim; nome em branco dá erro local 'A turma precisa de um nome.' SEM chamar o servidor. maxlength 120/20 nos campos (o servidor também valida).",
+    "PATCH /turmas/minha NÃO leva If-Match nem codigoConvite (teste verifica que a chave codigoConvite não está no corpo).",
+    "Editar e Transferir carregam no CONSTRUTOR (cada abertura faz GET /turmas/minha) e mostram imediatamente o cache do repositório. Eles NÃO exibem repo.erro: GET falhou sem cache = tela só com o cabeçalho (gap do original — reproduzir ou decidir mostrar o aviso, mas registrar a decisão). Transferir esconde o erro local enquanto carrega (@else if).",
+    "Editar: o formulário é não-controlado no original (lê os valores no clique); com TextEditingController, inicializar quando a turma chega e só sobrescrever se o valor do servidor MUDAR — senão a releitura apaga o que a pessoa digitou. Sucesso → repo.turma := resposta do PATCH (título da aba Turma muda na hora) e navega para '/tabs/turma'; falha → fica na tela com o erro.",
+    "Editar: rótulo do botão passa a 'Acordando o servidor…' após 4 s de envio (cold start do Render ~45 s); o timer é zerado no finally, inclusive em erro.",
+    "Transferir: depois do POST OK, ESPERAR o GET /turmas/minha antes de navegar (teste exige que a navegação só ocorra depois). Se esse GET falhar, limpar() a turma — o dado velho é justamente o que acabou de deixar de valer (mostraria o ex-líder como líder em todas as telas que usam garantirCarregada). Falha do POST: fica, mostra erro, não navega.",
+    "Transferir: candidatos = todos os membros menos eu (por auth.usuario.id), INCLUSIVE docentes (PROFESSOR/COORDENADOR). O servidor não recusa promover docente a LIDER, embora o spec diga que docente nunca é líder — comportamento atual; reproduzir fielmente e sinalizar ao dono, não filtrar por conta própria.",
+    "Transferir: 'Escolher outra pessoa' não é desabilitado durante o envio; o id já foi capturado no início, então a transferência em voo continua. A mensagem 'Isto é só o líder que faz.' só aparece com turma carregada e fora de carga (evita piscar durante o loading).",
+    "Bloco do professor: só para papel PROFESSOR (não COORDENADOR). As caixas marcadas vêm de SIGLAS (meuMembro.lecionadas, a declaração guardada mesmo inerte) casadas com GET /materias, UNIÃO com meuAlcance.materiaIds — pendente tem alcance NENHUM e mesmo assim as caixas aparecem marcadas. Sem a lista de matérias carregada, nada aparece marcado.",
+    "Marcações locais (não salvas) são descartadas em toda releitura (re-entrada, salvar, contestar, restaurar). O PUT envia o CONJUNTO INTEIRO na ordem de inserção (Set ordenado: LinkedHashSet do Dart) — teste espera exatamente ['m-bd','m-calc'] após desmarcar ENG SW e marcar CALC. Falha do PUT mantém as marcações.",
+    "'Salvo ✓' só volta a 'Salvar matérias' quando a pessoa alterna uma caixa — persiste entre re-entradas na aba. E aparece mesmo se o GET de releitura após o PUT falhar (o PUT valeu).",
+    "GET /materias é refeito a CADA entrada na aba para o professor (o comentário do código diz 'uma só vez', mas o código chama em todo preparar()); reloads de ação não refazem. MateriaRepository é compartilhado com a aba Matérias e aquece do disco antes do servidor.",
+    "Inicial do avatar: original usa nome.trim()[0] (unidade UTF-16 — corta emoji ao meio; a barra de abas já corrigiu por code point). No Flutter usar characters.first; '?' se vazio; maiúsculo.",
+    "Pílula 'líder' e rótulos (pf-rotulo) são minúsculos no texto e maiúsculos só por CSS (text-transform). Testes comparam 'líder' e 'ocultados' em minúsculas: no Flutter, guardar o texto minúsculo e aplicar caixa alta só no estilo, ou ajustar os finders.",
+    "Ordem dos membros é a do servidor (entrouEm, nome, id) — não reordenar no cliente. O contador 'quem está aqui · N' é membros.length (inclui o próprio usuário).",
+    "Docente: toda chamada leva X-Turma-Id da turma ativa e espera a leitura do disco (pronto) antes de sair — sem isso o servidor responde pela turma 'mais recente' (dado de OUTRA turma, sem erro). Aluno nunca manda o cabeçalho. Título da tela usa o nome da turma ativa só enquanto a turma não chegou; depois vale o nome lido (o líder pode ter renomeado).",
+    "500 descarta o detail do servidor ('Deu problema no servidor. Tente de novo.'); 4xx mostram o detail do servidor VERBATIM (textos do backend sem acento: 'Somente o lider da turma modera', 'Transfira a lideranca antes de sair', 'Registro nao encontrado').",
+    "Respostas sem corpo (200 de reexibir e transferir, 204 de DELETE) não podem ser parseadas como JSON; POSTs sem corpo enviam '{}'.",
+    "Timeout de 75 s por requisição (não 30): cold start do servidor gratuito leva ~45 s; abortar antes ensina que o app não funciona.",
+    "Sem deduplicação de carregar(): re-entradas rápidas podem disparar GETs concorrentes; o último a responder vence (fiel ao original)."
+  ],
+  "testes": [
+    "convite(): text contém o código ('93EB9244') e o nome da turma ('Fans 2026.2'); title contém o nome.",
+    "TurmaPage: após carregar, o elemento 'codigo-convite' mostra exatamente '93EB9244' e há botão 'Copiar código'.",
+    "TurmaPage: lista os nomes na ordem do servidor ['Otávio','Ana Beatriz','Bruno'] e exatamente UMA marca 'líder' (na pessoa certa).",
+    "TurmaPage: GET falha por rede (status 0) → aviso contém 'Sem conexão'; nenhuma linha de membro; elemento do código ausente.",
+    "TurmaPage: 'Compartilhar' existe; com Share indisponível, o toque copia '93EB9244' para o clipboard e a tela mostra 'Copiado'.",
+    "TurmaPage: líder vê o link para /tabs/turma/transferir; trocando o usuário logado para um aluno, o link some imediatamente.",
+    "TurmaPage (aluno): não há botões 'Remover' nem 'Gerar novo código', não há rótulo 'ocultados' e NÃO há GET /moderacao/ocultados.",
+    "TurmaPage (líder): botões Remover com aria/semântica exatamente ['Remover Ana Beatriz','Remover Bruno'] (nunca no próprio líder).",
+    "TurmaPage: tocar 'Remover Ana Beatriz' não chama DELETE; o aviso contém 'Ana Beatriz', 'perde o acesso', 'O que ele postou continua', 'pode voltar com o código atual'; botões 'remover-confirmar' = 'Remover' e 'remover-e-trocar-codigo' = 'Remover e gerar novo código'; 'Cancelar' fecha o aviso sem chamada.",
+    "TurmaPage: confirmar remoção → DELETE /turmas/minha/membros/u2 (204) → GET /turmas/minha → lista ['Otávio','Bruno'] e a pergunta fecha.",
+    "TurmaPage: remoção falha 409 com detail 'Transfira a liderança antes de sair' → erro sólido contém 'Transfira a liderança' e Bruno continua na lista.",
+    "TurmaPage: 'Remover e gerar novo código' → DELETE (sem POST do código antes do DELETE responder) → GET turma → POST /turmas/minha/codigo → lista ['Otávio','Bruno'], código 'NOVO0001', nenhum erro.",
+    "TurmaPage: 'Remover' sozinho não faz POST do código.",
+    "TurmaPage: removeu mas POST do código falhou (500) → lista ['Otávio','Bruno']; erro contém 'saiu da turma' e 'código novo não foi gerado'; código continua '93EB9244'.",
+    "TurmaPage: Copiar → clipboard('93EB9244') e 'Copiado ✓'; 'Gerar novo código' abre pergunta sem chamada, aviso contém 'O código antigo para de funcionar'; confirmar → POST /turmas/minha/codigo → código 'NOVO0001', botão volta a 'Copiar código', membros inalterados.",
+    "TurmaPage: gerar código falha 403 ('Só o líder pode.') → erro contém 'Só o líder pode'; código continua '93EB9244'.",
+    "TurmaPage (líder): Ocultados mostra rótulo 'ocultados', título 'Lista 3 (errada)', detalhe com 'material', 'Bruno' e 'ocultado em', e botão 'Reexibir'.",
+    "TurmaPage: ocultado com ocultadoEm null → texto 'sem data' e nunca 'Invalid Date'.",
+    "TurmaPage: ocultados [] → 'Nada oculto' e nenhum 'Reexibir'.",
+    "TurmaPage: GET /moderacao/ocultados falha 500 → NÃO aparece 'Nada oculto'; aviso tracejado contém 'servidor'.",
+    "TurmaPage: Reexibir → POST /moderacao/material/mat1/reexibir → GET /moderacao/ocultados [] → item some e aparece 'Nada oculto'.",
+    "TurmaPage: Reexibir falha 500 → erro contém 'servidor'; item continua; NENHUM GET de ocultados.",
+    "TurmaPage: Reexibir falha 404 ('Registro nao encontrado') → GET de ocultados acontece; erro contém 'nao encontrado'; item some; 'Nada oculto'.",
+    "TurmaPage: GET turma 404 com codigo SEM_TURMA → registrarTurma(null) chamado, navegação para '/entrar-turma', e nenhum aviso de erro na tela.",
+    "TurmaPage: GET turma 404 com corpo HTML (sem codigo) → registrarTurma NÃO chamado, sem navegação, aviso presente.",
+    "TurmaPage (visto por aluno): Marcos tem selo 'Professor' e 'leciona BD, ENG SW'; Helena tem 'Coordenação' e 'turma inteira'; Lúcia (contestada) sem selo e com tag 'contestado'; Ana sem selo, sem leciona, sem tag.",
+    "TurmaPage (líder): existem 'Contestar Marcos', 'Contestar Helena', 'Restaurar Lúcia'; não existem 'Contestar Lúcia', 'Restaurar Marcos', 'Contestar Ana Beatriz', 'Contestar Otávio'.",
+    "TurmaPage (aluno): sem 'Contestar Marcos' nem 'Restaurar Lúcia'.",
+    "TurmaPage: 'Contestar Marcos' não chama nada; aviso contém 'Marcos', 'perde o poder e o selo', 'Nas outras turmas' e 'Restaurar'; 'Cancelar' fecha sem chamada.",
+    "TurmaPage: confirmar contestar → POST /turmas/minha/docentes/u4/contestar → GET turma → Marcos sem selo, com tag 'contestado', botão 'Restaurar Marcos' presente, pergunta fechada.",
+    "TurmaPage: 'Restaurar Lúcia' (sem pergunta) → POST /turmas/minha/docentes/u5/restaurar → GET → Lúcia sem tag e com selo 'Professor'.",
+    "TurmaPage: contestar falha 403 ('Só o líder contesta') → erro contém o texto; 'contestar-confirmar' ainda existe (pergunta aberta); Marcos mantém o selo.",
+    "TurmaPage (professor Marcos): 3 linhas de matéria ('Banco de Dados','Engenharia de Software','Cálculo'), marcadas [true,true,false].",
+    "TurmaPage (aluno): sem bloco de matérias e sem GET /materias.",
+    "TurmaPage (professor): desmarcar ENG SW e marcar CALC não chama PUT; 'Salvar matérias' → PUT /turmas/minha/lecionadas {materiaIds:['m-bd','m-calc']} → GET turma → botão 'Salvo ✓'.",
+    "TurmaPage (professor): PUT falha 404 ('Matéria não encontrada') → erro mostra o texto; marcações ficam [true,true,true].",
+    "TurmaPage (professor contestado): texto contém 'elas não valem até ele restaurar'.",
+    "TurmaPage (professor PENDENTE): texto contém 'passa a valer quando sua conta for aprovada' e as caixas continuam [true,true,false] com meuAlcance NENHUM.",
+    "TurmaPage: docente com turma ativa 'ADS 3A' vê esse título antes da carga e 'Fans 2026.2' depois; aluno sem turma ativa vê 'A turma' antes da carga.",
+    "EditarTurmaPage: abre com campos preenchidos 'Fans 2026.2' e '2026.2'.",
+    "EditarTurmaPage: salvar → PATCH /turmas/minha {nome:'Fans', semestre:'2027.1'} sem chave codigoConvite → navega '/tabs/turma'.",
+    "EditarTurmaPage: semestre vazio vai como null.",
+    "EditarTurmaPage (não líder): sem campo 'nome'; texto contém 'só o líder'.",
+    "EditarTurmaPage: nome '   ' → nenhuma requisição; erro contém 'nome'.",
+    "TransferirPage: candidatos são 2 (Ana Beatriz, Bruno), nunca o próprio usuário.",
+    "TransferirPage: escolher alguém não chama POST; texto contém o nome e 'deixa de ser'.",
+    "TransferirPage: confirmar → POST /turmas/lideranca/transferir {novoLiderUsuarioId:'u2'} → NÃO navega antes do GET /turmas/minha → após o GET navega '/tabs/turma' e souLider fica false.",
+    "TransferirPage (não líder): zero candidatos; texto contém 'só o líder'.",
+    "TransferirPage: POST falha 500 → erro sólido presente; sem navegação.",
+    "TurmaRepository: sair da conta zera a turma (antes souLider true).",
+    "TurmaRepository: encerrarSessao (401) zera turma e erro.",
+    "TurmaRepository: depois de zerada, garantirCarregada busca de novo; usuário novo (u9) fora da lista não é líder.",
+    "TurmaRepository.removerMembro: DELETE na rota certa; lista local já sem u2 antes do GET; após GET, turma == resposta.",
+    "TurmaRepository.removerMembro: GET de releitura falha → erro != null e u2 continua fora.",
+    "TurmaRepository.removerMembro: 409 → rejeita com mensagem /Transfira a liderança/; lista inalterada (2 membros).",
+    "TurmaRepository.gerarNovoCodigo: POST; codigoConvite 'NOVO0001'; membros continuam 2.",
+    "TurmaRepository (SEM_TURMA): turma null, souLider false, erro null, carregando false.",
+    "TurmaRepository (SEM_TURMA): temTurma false mas autenticado true; turmaId da sessão em disco null; jwt mantido.",
+    "TurmaRepository (SEM_TURMA): navega '/entrar-turma'; se registrarTurma rejeitar, console.error e ainda navega.",
+    "TurmaRepository: 404 HTML sem codigo → temTurma true, sem navegação, erro != null, turma mantida.",
+    "TurmaRepository: registrarTurma(null) vindo de outra rota → turma null e souLider false.",
+    "TurmaRepository: 500 → temTurma true, sem navegação, turma mantida.",
+    "alcanca: antes de carregar false (inclusive null); NENHUM false; meuAlcance ausente false; MATERIAS ['m1','m2'] → m1/m2 true, m3 false, null false; TURMA → qualquer true e null true; logout (encerrarSessao) volta a false.",
+    "seloNa: TURMA → 'COORDENACAO'; MATERIAS ['m1'] → m1 'PROFESSOR', m2 null; NENHUM → null.",
+    "declararLecionadas: PUT {materiaIds:['m1','m2']} → GET → alcanca('m2') true; 404 → rejeita e nada muda.",
+    "contestar: POST na rota; antes do GET o membro já está contestado=true e selo null; GET falha → erro != null e marca permanece; POST 404 → rejeita e contestado continua false.",
+    "restaurar: POST na rota; contestado=false antes do GET; selo 'PROFESSOR' após o GET.",
+    "meuMembro: null antes de carregar; papel 'LIDER' depois."
+  ],
+  "nativo": [
+    "@capacitor/share — Share.share({title, text}) no botão 'Compartilhar convite' (folha de compartilhamento do sistema). No web cai em navigator.share ou lança. Flutter: share_plus (ex.: SharePlus.instance.share(ShareParams(text: ..., title/subject: ...))); tratar indisponível/erro (e, para fidelidade, dismissed) caindo em copiar.",
+    "Área de transferência — navigator.clipboard.writeText(codigo) em 'Copiar código' e no fallback do share. Flutter: Clipboard.setData(ClipboardData(text: codigo)) de package:flutter/services; falha silenciosa.",
+    "@capacitor/preferences (indireto): TurmaAtivaService guarda 'pf.turmaAtiva' = JSON {usuarioId, turmaId, nome} (turma ativa do docente, usada no X-Turma-Id e no título); StorageService guarda a sessão (jwt, usuario, turmaId) e o snapshot local (inclui materias, gravado por MateriaRepository). Flutter: shared_preferences (ou flutter_secure_storage para o jwt).",
+    "Notificações locais (indireto, via AuthService.registrarTurma(null)/encerrarSessao): ao perder a turma ou a sessão, os lembretes agendados são cancelados (NotificacoesService.esquecer). Flutter: flutter_local_notifications cancelAll — chamado pelo fluxo global, não por esta tela.",
+    "Nenhum outro recurso nativo nesta área (sem câmera, arquivo, geolocalização)."
+  ]
+}

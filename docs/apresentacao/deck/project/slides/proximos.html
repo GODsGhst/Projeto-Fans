@@ -1,0 +1,35 @@
+<section id="proximos" data-transition="fade" style="background:#EEF0EC;color:#14181A;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#0F766E">14 &middot; Limites e próximos passos</p>
+<h2 style="font-size:62px;font-weight:600;line-height:1.1;letter-spacing:-2px">O que ainda não está resolvido.</h2>
+</div>
+
+<div style="display:flex;gap:28px">
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:23px;letter-spacing:2px;text-transform:uppercase;color:#B91C1C">Limites conhecidos</p>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">Isolamento só na aplicação.</b> Todas as rotas filtram por turma corretamente, mas o banco não tem uma segunda barreira própria. Uma rota nova escrita sem cuidado não seria barrada duas vezes.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">Força bruta.</b> Há teto de tentativas, mas o limite prático ainda é o hardware do plano gratuito.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">Sem política de conteúdo no navegador.</b> Não há falha hoje, mas é defesa em profundidade que falta.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #B91C1C"><b style="font-weight:600;color:#14181A">iOS não foi testado.</b> O código compila, mas o comportamento de notificação em segundo plano é diferente lá.</p>
+</div>
+</div>
+
+<div style="flex:1;display:flex;flex-direction:column;gap:18px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:23px;letter-spacing:2px;text-transform:uppercase;color:#0F766E">Próximos passos</p>
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Envio de arquivo de verdade.</b> Hoje material é link. O armazenamento está desenhado e falta ligar &mdash; e é provável que foto do quadro seja o uso principal.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Aviso quando o colega cadastra.</b> Hoje o lembrete da véspera é local. Falta o empurrão imediato quando alguém publica algo novo.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Segunda barreira no banco.</b> Fechar o limite de isolamento acima.</p>
+<p style="font-size:26px;line-height:1.4;color:#4A5254;background:#FFFFFF;padding:22px;border:1px solid #D7DBD7;border-radius:12px;border-left:5px solid #0F766E"><b style="font-weight:600;color:#14181A">Distribuição.</b> Hoje é APK por link. Publicar na loja é o passo para sair da turma piloto.</p>
+</div>
+</div>
+</div>
+<aside>Slide de honestidade. Bancas gostam disso, e quem esconde limite geralmente é pego no Q&A.
+
+A frase para abrir: "nenhum sistema está pronto. Esses são os limites que eu conheço e consigo nomear — e conhecer o limite é diferente de não ter limite."
+
+Se o professor perguntar "por que você não fez o item X ainda?", a resposta já está no slide: ordem de prioridade. O envio de arquivo é o próximo porque é provavelmente o uso principal (foto do quadro), e foi deixado para depois porque exige armazenamento externo, política de tamanho e limpeza de arquivo órfão — é um subsistema, não um campo.
+
+O limite do iOS é bom de citar porque mostra que eu sei o que NÃO testei, em vez de afirmar que funciona em tudo.</aside>
+</section>

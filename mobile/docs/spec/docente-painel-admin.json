@@ -1,0 +1,433 @@
+{
+  "unidade": "docente-painel-admin — Painel do docente (/tabs/painel), fila de aprovação de docentes do admin (/tabs/admin) com o subpainel \"Turmas\" (DocenteTurmasComponent), PainelRepository, DocenteAdminRepository, docente.models.ts e as guardas de docente (core/docente.guard.ts). Fontes: C:/Users/gh0st/Projeto Fans/app/src/app/{features/painel/painel.page.ts, features/admin/admin.page.ts, features/admin/docente-turmas.component.ts, data/painel.repository.ts, data/docente-admin.repository.ts, data/docente.models.ts, core/docente.guard.ts} + specs; contratos conferidos no backend (PainelController/PainelService, AdminController/AdminService, DTOs).",
+  "telas": [
+    {
+      "rota": "/tabs/painel",
+      "arquivo": "app/src/app/features/painel/painel.page.ts",
+      "proposito": "Entrada do app para conta docente (PROFESSOR ou COORDENADOR, de QUALQUER status) no lugar da Home e do Meu quadro. Responde três perguntas, nesta ordem: em qual turma estou (cartões; tocar troca a turma ativa), o que vem aí nas minhas matérias (agrupado por turma, na ordem do servidor) e onde eu crio algo (atalhos na turma ativa). Rota protegida pela guarda soDocente; fica dentro das abas (aba 'Painel', ícone grid-outline).",
+      "estados": [
+        "INICIAL (antes do primeiro ionViewWillEnter): painel=null, carregando=false, erro=null → nenhum aviso, nenhum cartão, sem estado vazio. Ainda aparecem: faixa de status da conta (vem da sessão), atalhos 'criar em …' (se houver turma ativa persistida) e o link 'Entrar em outra turma'.",
+        "CARREGANDO: parágrafo .pf-aviso (tracejado) com 'Carregando…' (reticências U+2026) no topo. Aparece em TODA recarga, inclusive quando já há painel na tela — o conteúdo anterior continua renderizado abaixo dele. Durante a recarga o estado vazio NÃO aparece (vazia exige !carregando).",
+        "ERRO: parágrafo .pf-aviso (mesmo estilo tracejado do 'Carregando', NÃO .pf-erro, sem role=alert, sem botão de tentar de novo) com a mensagem pronta do ErroApi (ex.: 'Sem conexão.', 'O servidor demorou demais para responder. Tente de novo.', 'Deu problema no servidor. Tente de novo.', detail do servidor para 403). Se já havia painel carregado, ele CONTINUA na tela abaixo do aviso. Se nunca carregou, só o aviso (+ faixa, atalhos se houver turma ativa, link de entrar). Nunca mostra 'Nenhuma turma ainda.' em erro. Tentar de novo = reentrar na aba.",
+        "VAZIO (carregou com sucesso, erro=null, painel!==null e turmas=[]): bloco .pf-vazio com 'Nenhuma turma ainda.' (negrito) e 'Entre numa turma com o código de convite.'; o link 'Entrar em outra turma' continua no fim. Nada de dica/sugestão/skeleton.",
+        "CONTEÚDO: rótulo + grade de cartões de turma + um bloco de próximos por turma.",
+        "TURMA SEM PRÓXIMOS: dentro do bloco da turma, em vez de cards, um parágrafo .nada: 'Você ainda não declarou matérias aqui. Faça isso na aba Turma.' se papel==='PROFESSOR' e lecionadas.length===0; senão 'Nada nos próximos 14 dias.'",
+        "CONTA PENDENTE: faixa (borda tracejada, ícone hourglass-outline, role=status). CONTA RECUSADA: faixa com borda SÓLIDA (classe faixa--solida), ícone close-circle-outline. APROVADO ou status ausente: nenhuma faixa.",
+        "CONTESTADO numa turma: uma faixa por turma contestada (tracejada, ícone flag-outline) + tag 'contestado' no cartão daquela turma; o servidor manda selo ausente nessa turma.",
+        "SEM TURMA ATIVA (turmaAtiva.nome()==null): o bloco 'criar em …' e os três atalhos não são renderizados."
+      ],
+      "elementos": [
+        "Cabeçalho (ion-header translucent) com título 'Painel'. Sem botão de voltar.",
+        "Conteúdo (ion-content fullscreen) numa pilha vertical (.pf-pilha: gap 8px, padding 12px 16px 16px):",
+        "1. Se carregando: <p class=pf-aviso>'Carregando…'</p>; senão, se erro: <p class=pf-aviso>{mensagem de erro}</p>.",
+        "2. Faixa de status da conta (role=status), só PENDENTE ou RECUSADO. Texto com {conta} = 'coordenação' se tipoConta==='COORDENADOR', senão 'professor'. PENDENTE: '<b>Em análise.</b> Sua conta de {conta} espera aprovação — até lá você posta como aluno, sem selo.' RECUSADO: '<b>Não aprovado.</b> Seu cadastro de {conta} não foi aprovado. Você continua nas turmas como aluno, sem selo.' (título em negrito seguido de espaço e o texto).",
+        "3. Para cada turma com contestado===true (na ordem do servidor), uma faixa (role=status, ícone flag-outline): '<b>Contestado em {nome}.</b> O líder contestou sua declaração. Lá você está como aluno, sem selo, até ele restaurar. Nas outras turmas nada muda.'",
+        "4. Se houver turmas: rótulo .pf-rotulo 'minhas turmas · toque para trocar' (fonte mono 11px, CSS uppercase, com fio horizontal ocupando o resto da linha).",
+        "5. Grade (role=group, aria-label 'Turma ativa'; grid auto-fit minmax(150px,1fr), gap 8px) com UM botão-cartão por turma (.tcard, min-height 96px, aria-pressed = é a ativa). Dentro, em ordem: linha de topo com o nome (15.5px, 700) e, se ativa, à direita, ícone checkmark-outline + 'ativa' (11px, 700); linha .sub: '{semestre} · ' (só se semestre truthy) + '{N} próximo' (N===1) ou '{N} próximos' (inclusive '0 próximos'), N = proximos.length; linha final: selo (SeloComponent: 'Professor' com ícone de capelo vazado, ou 'Coordenação' com escudo cheio; nada se selo ausente), depois tag tracejada com ícone flag-outline + 'contestado' (se contestado), depois: se papel==='COORDENADOR' o texto 'turma inteira' (estilo .sub), senão um MateriaChip (cor+sigla) por item de lecionadas, na ordem recebida. Cartão ativo: fundo accent-soft, borda accent-line, sombra interna 1.5px accent.",
+        "6. Para cada turma (mesma ordem): rótulo .pf-rotulo '{nome} · próximos da turma inteira' (papel COORDENADOR) ou '{nome} · próximos das minhas matérias' (qualquer outro papel); depois, para cada item de proximos na ordem do servidor, um link (.ir) para '/tabs/eventos/{eventoId}' envolvendo o EventoCard inteiro; se não houver itens, o parágrafo .nada (ver estados).",
+        "7. Senão, se vazia: .pf-vazio com '<b>Nenhuma turma ainda.</b>' e '<span>Entre numa turma com o código de convite.</span>'.",
+        "8. Se turmaAtiva.nome() não nulo: rótulo .pf-rotulo 'criar em {nome da turma ativa}'; grade de 3 colunas (role=group, aria-label 'Atalhos') com três links-cartão (min-height 76px, 11.5px, 600): [ícone square] 'Nova prova' → /tabs/eventos/novo?tipo=PROVA[&materiaId=…]; [ícone ellipse-outline] 'Nova entrega' → /tabs/eventos/novo?tipo=ENTREGA[&materiaId=…]; [ícone document-text-outline] 'Novo material' → /tabs/materias/{materiaId}/material/novo ou /tabs/materias.",
+        "9. Sempre, por último: link estilo botão fantasma (.botao.botao--fantasma) 'Entrar em outra turma' → /entrar-turma.",
+        "EventoCard (shared, não alterar) recebe de eventoVm: tipo; dia = 3º pedaço de data.split('-') (com zero à esquerda, ex. '08'); mes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][mês-1]; quando = hora.slice(0,5) se hora truthy, senão 'prova' (PROVA) ou 'entrega'; titulo; materia {sigla: materiaSigla, cor: materiaCorHex}; autoria = '{autorNome} · {desde}' ('agora' <1 min; 'há N min' <60; 'há N h' <24 (horas arredondadas); 'há 1 dia' / 'há N dias'; data ilegível → só o nome) e o card prefixa 'Prof. ' ou 'Coord. ' conforme autorSelo; autoriaSelo; editadoPor → linha 'editado por {Prof. |Coord. }{editadoPorNome}' + selo; editadoPorSelo. Prova = bloco sólido, entrega = contorno 1px."
+      ],
+      "acoes": [
+        "Entrar/reentrar na aba (ionViewWillEnter, TODA vez): await PainelRepository.carregar() → GET /painel. Se erro===null e painel!==null: await TurmaAtivaService.conciliar(turmas.map({turmaId,nome})); depois, se turmaAtiva.turmaId()!==null, dispara SEM await SyncRepository.reagendarAvisos(). Se a carga falhou: não concilia e não reagenda.",
+        "Tocar num cartão de turma → TurmaAtivaService.escolher({turmaId, nome}) (exatamente esses dois campos). Mesma turma ativa: nada. Havia outra ativa: grava em memória+disco, limpa o snapshot offline e RECARREGA O APP INTEIRO (location.reload). Primeira escolha (não havia ativa): grava sem recarregar. O aria-pressed/realce passa para o cartão tocado imediatamente.",
+        "Tocar num card de evento → navega para /tabs/eventos/{eventoId} SEM trocar a turma ativa (evento de outra turma do docente abre assim mesmo).",
+        "Tocar 'Nova prova'/'Nova entrega' → /tabs/eventos/novo com query tipo=PROVA|ENTREGA e, só se a turma ATIVA tiver exatamente 1 matéria em lecionadas, &materiaId={id}. URL exata ex.: '/tabs/eventos/novo?tipo=PROVA&materiaId=m-bd'.",
+        "Tocar 'Novo material' → com exatamente 1 lecionada na turma ativa: /tabs/materias/{materiaId}/material/novo; senão /tabs/materias (a lista deixa escolher).",
+        "Tocar 'Entrar em outra turma' → /entrar-turma (fora das abas)."
+      ],
+      "navegacao": [
+        "Chega-se aqui pelo redirect inicial (rotaInicial: '' e 'tabs/' → '/tabs/painel' para docente, '/tabs/home' para aluno) e pela guarda soAluno: docente que cai em /tabs/home ou /tabs/quadro (login e entrar-turma terminam em navigateByUrl('/tabs/home'); vários 'voltar' apontam para lá) é redirecionado para /tabs/painel.",
+        "Guarda soDocente nesta rota: conta sem tipoConta ou ALUNO é redirecionada para /tabs/home (a API daria 403).",
+        "Saídas: /tabs/eventos/{id}, /tabs/eventos/novo?tipo=…[&materiaId=…], /tabs/materias/{id}/material/novo, /tabs/materias, /entrar-turma.",
+        "O texto do vazio de professor manda para 'a aba Turma' (/tabs/turma), que na barra do docente substitui o Meu quadro. Abas do docente: painel, calendario, materias, turma, perfil.",
+        "Interceptor central: 401 → encerra sessão e vai a /login; 404 com codigo 'SEM_TURMA' → esquece a turma e vai a /entrar-turma."
+      ],
+      "proposito_extra": ""
+    },
+    {
+      "rota": "/tabs/admin",
+      "arquivo": "app/src/app/features/admin/admin.page.ts",
+      "proposito": "Tela do admin da plataforma para decidir QUEM é docente: aprovar, recusar, revogar e reaprovar contas de professor/coordenação. Aprovar vale para todas as turmas; recusar/revogar tira o poder e o selo de todas na hora. Cada cartão (exceto recusado) abre o subpainel 'Turmas' para vincular a conta a turmas existentes. Sem guarda de rota: quem não é admin recebe 404 da API e vê o erro.",
+      "estados": [
+        "CARREGANDO (só na PRIMEIRA carga: carregando && !carregou; carregando nasce true): <p class=pf-aviso>'Carregando…'</p>. Nenhuma lista, nenhum 'Ninguém na fila.'",
+        "ERRO DE CARGA sem nunca ter carregado: <p class=pf-erro role=alert>{mensagem}</p> + botão fantasma 'Tentar de novo'. Nenhuma lista e nenhum estado vazio (não finge fila vazia). Ex. offline: 'Sem conexão.'; não-admin: detail do 404 do servidor ('Nao encontrado').",
+        "RECARGA (ao reentrar, ou após ação): carregou=true → não mostra 'Carregando…'; listas antigas permanecem. Se a recarga falhar: erro + 'Tentar de novo' no topo E as listas antigas continuam abaixo.",
+        "CONTEÚDO (carregou=true): alerta explicativo, seção pendentes, seção aprovados, recusados recolhidos.",
+        "FILA VAZIA: na seção pendentes, .pf-vazio com 'Ninguém na fila.' e o texto explicativo. Aprovados vazio: só o rótulo 'aprovados · 0', sem texto. Recusados vazio: summary 'recusados · 0'.",
+        "ERRO DE AÇÃO: <p class=pf-erro role=alert>{mensagem}</p> logo abaixo do bloco de carga/erro, no topo da página (não dentro do cartão). Persiste até o INÍCIO da próxima ação (recargas não o apagam).",
+        "AGINDO (uma decisão no ar): TODOS os botões de TODOS os cartões ficam disabled (Aprovar, Recusar, Revogar, Sim, revogar, Cancelar, Turmas), inclusive durante a recarga que segue o sucesso.",
+        "CONFIRMANDO REVOGAÇÃO (revogando===usuarioId): o cartão troca a fila de botões e o botão/painel 'Turmas' pela caixa de confirmação."
+      ],
+      "elementos": [
+        "Cabeçalho translucent: botão voltar (ion-back-button, defaultHref '/tabs/perfil') à esquerda; título 'Aprovar professores'.",
+        "Pilha .pf-pilha:",
+        "1. Se carregando && !carregou: .pf-aviso 'Carregando…'. Senão, se erroCarga: .pf-erro role=alert com a mensagem + botão .botao.botao--fantasma 'Tentar de novo'.",
+        "2. Se erroAcao: .pf-erro role=alert com a mensagem.",
+        "3. Se carregou: bloco .alerta: 'Você decide <b>quem a pessoa é</b>. Aprovar vale para todas as turmas; recusar ou revogar tira o poder de todas, na hora. Em <b>Turmas</b>, você vincula a pessoa a uma turma que já existe e marca as matérias dela — o conteúdo da turma não aparece aqui.'",
+        "4. Rótulo .pf-rotulo 'pendentes · {N}' (CSS uppercase); um cartão por pendente; se nenhum: .pf-vazio '<b>Ninguém na fila.</b>' + '<span>Quando alguém se cadastrar como professor ou coordenação, aparece aqui.</span>'.",
+        "5. Rótulo .pf-rotulo 'aprovados · {N}'; um cartão por aprovado (sem estado vazio).",
+        "6. <details> recolhido (fechado por padrão) com <summary> 'recusados · {N}' (12.5px, 600, ink-3, NÃO uppercase, com triângulo ▸ fechado / ▾ aberto via CSS, min-height 44px); dentro, coluna (gap 8px) com um cartão por recusado.",
+        "CARTÃO (.pessoa, data-situacao={status}; superfície com borda e sombra, padding 12px 13px, gap 10px), em ordem:",
+        "  a. Linha topo: círculo 34px (accent-soft/accent, 14px 700, aria-hidden) com a inicial = primeiro code point do nome aparado, maiúsculo ('?' se vazio); coluna com nome (14.5px 600), e-mail (12px ink-3, quebra em qualquer lugar) e meta '{Professor|Coordenação} · cadastro em {data}' (11.5px ink-3). Tipo: 'Coordenação' se tipoConta==='COORDENADOR', senão 'Professor'. Data: Intl pt-BR {day:'numeric', month:'short', year:'numeric'} no fuso local → ex. '5 de out. de 2026' (equivale a DateFormat.yMMMd('pt_BR')).",
+        "  b. Só se docenteStatus==='PENDENTE' && !emailVerificado: <p class='alerta aviso-email' role=note>'<b>E-mail não verificado:</b> confirme com a pessoa antes de aprovar' (sem ponto final).",
+        "  c. Se revogando===usuarioId: grupo .confirma (role=group, aria-label 'Revogar {nome}'): parágrafo '<b>Revogar {nome}?</b> Esta conta perde o poder e o selo em <b>todas as turmas, na hora</b>. Nada do que postou é apagado.' e linha de botões: 'Sim, revogar' (FANTASMA) e 'Cancelar' (botão sólido/primário). Nada mais no cartão.",
+        "  d. Senão, linha .acoes (botões flex:1, min-height 44px): PENDENTE → 'Aprovar' (sólido, aria-label 'Aprovar {nome}') e 'Recusar' (fantasma, aria-label 'Recusar {nome}'); APROVADO → 'Revogar' (fantasma, aria-label 'Revogar {nome}'); RECUSADO → 'Aprovar' (sólido, aria-label 'Aprovar {nome} de novo').",
+        "  e. Se status !== 'RECUSADO': botão fantasma 'Turmas' (aria-label 'Turmas de {nome}', aria-expanded = este cartão aberto) e, se aberto, o subpainel DocenteTurmasComponent logo abaixo, dentro do cartão.",
+        "Ordem de botões verificada nos testes: pendente ['Aprovar','Recusar','Turmas']; aprovado ['Revogar','Turmas']; recusado ['Aprovar']; em confirmação ['Sim, revogar','Cancelar']."
+      ],
+      "acoes": [
+        "Entrar/reentrar na tela (ionViewWillEnter, toda vez, sem await): carregar() → carregando=true, erroCarga=null; três GETs em paralelo /admin/docentes?status=PENDENTE, APROVADO, RECUSADO (Promise.all, tudo ou nada). Sucesso: substitui as três listas e carregou=true. Falha de qualquer uma: erroCarga = mensagemDeErro(e), nenhuma lista muda. finally carregando=false.",
+        "'Tentar de novo' → carregar().",
+        "'Aprovar' (pendente ou recusado) → agir(d,'aprovar'): se agindo!==null retorna; agindo=usuarioId; erroAcao=null; POST /admin/docentes/{id}/aprovar. Sucesso: revogando=null; await carregar() (recarrega as três listas do servidor; não move o cartão na mão). Falha: erroAcao=mensagem; não recarrega. finally agindo=null.",
+        "'Recusar' (pendente) → agir(d,'recusar'): POST /admin/docentes/{id}/recusar, imediato, sem confirmação.",
+        "'Revogar' (aprovado) → só abre a confirmação (revogando=usuarioId); NÃO chama a API. Abrir em outro cartão move a confirmação para ele (uma por vez).",
+        "'Sim, revogar' → agir(d,'recusar') → POST /admin/docentes/{id}/recusar (a rota é a mesma de recusar). Sucesso fecha a confirmação e recarrega; falha mantém a confirmação aberta e mostra erroAcao no topo.",
+        "'Cancelar' (confirmação) → revogando=null, sem API.",
+        "'Turmas' → alterna turmasAbertas: se era este cartão, fecha (null); senão abre este e fecha o anterior (um por vez; o estado do anterior — busca, editor — é destruído). Ao abrir, o subpainel faz GET /admin/docentes/{id}/turmas."
+      ],
+      "navegacao": [
+        "Chega-se pelo botão 'Aprovar professores' (routerLink /tabs/admin) da tela Perfil, mostrado só quando GET /eu devolve adminPlataforma=true (comodidade, não segurança).",
+        "Voltar: ion-back-button com defaultHref '/tabs/perfil'.",
+        "Rota dentro das abas, SEM guarda (de propósito).",
+        "401 → /login pelo interceptor central."
+      ]
+    },
+    {
+      "rota": "(embutido em /tabs/admin, dentro do cartão de cada pessoa; sem rota própria)",
+      "arquivo": "app/src/app/features/admin/docente-turmas.component.ts",
+      "proposito": "Subpainel 'Turmas' de uma conta docente: lista em quais turmas existentes ela tem vínculo e o que leciona em cada uma; permite buscar uma turma existente, vincular/marcar matérias (PUT, substitui o conjunto daquela turma) e desvincular (DELETE). Mostra só nome de turma e de matéria, nunca conteúdo. Input obrigatório: docente (DocenteAdmin).",
+      "estados": [
+        "CARREGANDO (até a primeira carga com sucesso e sem erro: !carregou && !erroCarga): .pf-aviso 'Carregando…'. Não há flag de carregando: ao reler depois de salvar/tirar (carregou já true) nada indica carregamento.",
+        "ERRO DE CARGA: .pf-erro role=alert com a mensagem + botão fantasma 'Tentar de novo' (disabled enquanto agindo). Se nunca carregou, só isso. Se já carregou, aparece no topo e a lista antiga continua abaixo. Clicar 'Tentar de novo' zera o erro → volta a mostrar 'Carregando…' se nunca carregou.",
+        "CARREGADO SEM VÍNCULOS: rótulo 'turmas · 0' + .pf-aviso 'Esta conta ainda não está em nenhuma turma.'",
+        "CARREGADO COM VÍNCULOS: um bloco .vinculo por vínculo, na ordem do servidor (mais recente primeiro).",
+        "CONFIRMANDO TIRAR (tirando===turmaId): o bloco daquele vínculo troca os botões pela confirmação (uma confirmação por vez).",
+        "EDITOR ABERTO (um por vez): bloco .editor (borda accent) renderizado DEPOIS da lista de vínculos e ANTES da seção de busca (não dentro do vínculo).",
+        "BUSCA: aviso 'Digite pelo menos 2 letras' (.pf-aviso) quando <2 caracteres; erro de busca (.pf-erro role=alert); resultados (null = nunca buscou ou busca inválida → nada; [] → 'Nenhuma turma encontrada.').",
+        "AGINDO (boolean único compartilhado por busca, salvar e tirar): desabilita 'Tentar de novo', 'Matérias', 'Tirar da turma', 'Sim, tirar', 'Cancelar' (da confirmação), checkboxes, 'Salvar'/'Vincular', 'Cancelar' (do editor), 'Buscar' e cada botão de resultado (resultado disabled com opacidade .45)."
+      ],
+      "elementos": [
+        "(host: coluna, gap 10px)",
+        "1. Se erroCarga: .pf-erro role=alert {mensagem} + botão fantasma 'Tentar de novo'.",
+        "2. Se !carregou && !erroCarga: .pf-aviso 'Carregando…'.",
+        "Tudo abaixo só se carregou:",
+        "3. Rótulo .pf-rotulo 'turmas · {N}'.",
+        "4. Para cada vínculo (.vinculo, fundo rule-soft, borda 1px): linha '{turmaNome}' (600) + ' · {semestre}' (12px ink-3, só se semestre truthy); linha de papel: se papel==='COORDENADOR' 'Coordenação — turma inteira', senão resumo: 'Leciona: {siglas na ordem de materias, filtradas por lecionadas, unidas por ' · '}' ou 'Nenhuma matéria marcada'; se contestado: 'Contestado pelo líder desta turma' (600, ink); depois: se tirando===turmaId, grupo .confirma (role=group, aria-label 'Tirar {nome do docente} de {turmaNome}') com '<b>Tirar {nome} de {turmaNome}?</b> Perde o acesso a essa turma e as matérias marcadas nela.', erroTirar (.pf-erro role=alert) se houver, e botões 'Sim, tirar' (FANTASMA) e 'Cancelar' (sólido); senão botões: 'Matérias' (sólido, SÓ se papel==='PROFESSOR', aria-label 'Matérias de {turmaNome}') e 'Tirar da turma' (fantasma, aria-label 'Tirar da turma de {turmaNome}').",
+        "5. Se nenhum vínculo: .pf-aviso 'Esta conta ainda não está em nenhuma turma.'",
+        "6. Se editor aberto: .editor com <h3> '{turmaNome}' (15px 600); se papel==='PROFESSOR': se a turma tem matérias, grupo (role=group, aria-label 'Matérias que {nome} leciona nesta turma') com uma linha por matéria (min-height 44px): checkbox 20x20 + '{sigla} — {nome}' (travessão com espaços), marcada se id ∈ marcadas; se não tem matérias: .pf-aviso 'Esta turma ainda não tem matérias. Crie a matéria pelo app da turma antes.'; se papel COORDENADOR: .pf-aviso 'Coordenação alcança a turma inteira; não há matérias para marcar.' (sem checkboxes); erroEditor (.pf-erro role=alert) se houver; botões 'Salvar' (PROFESSOR) ou 'Vincular' (COORDENADOR) (sólido) e 'Cancelar' (fantasma).",
+        "7. Rótulo .pf-rotulo 'vincular a uma turma'.",
+        "8. Formulário de busca (coluna): rótulo de campo 'Nome ou código da turma' (12.5px ink-2) com input type=search, autocomplete=off (min-height 44px, fonte 16px); botão sólido submit 'Buscar'.",
+        "9. Se avisoBusca: .pf-aviso 'Digite pelo menos 2 letras'.",
+        "10. Se erroBusca: .pf-erro role=alert {mensagem}.",
+        "11. Se resultados !== null: coluna de botões .resultado (largura total, alinhado à esquerda), cada um com nome (14px 600) e meta (12px ink-3) = partes não vazias de [semestre, '{N} matérias', 'já vinculado' se a conta já tem vínculo nessa turma] unidas por ' · ' (ex.: '2026.2 · 3 matérias · já vinculado'; sem singular: '1 matérias'); lista vazia → .pf-aviso 'Nenhuma turma encontrada.'"
+      ],
+      "acoes": [
+        "Abrir o subpainel (initState/ngOnInit) → carregar(): erroCarga=null; GET /admin/docentes/{usuarioId}/turmas; sucesso → vinculos=lista, carregou=true; falha → erroCarga=mensagemDeErro(e). Não usa agindo.",
+        "'Tentar de novo' → carregar().",
+        "Enviar a busca (Enter no campo ou 'Buscar'): busca=texto.trim(); erroBusca=null; se busca.length<2 → resultados=null (some a lista anterior), avisoBusca='Digite pelo menos 2 letras', sem chamada. Senão avisoBusca=null; se agindo → retorna sem chamar; agindo=true; GET /admin/turmas?busca={aparado}; sucesso → resultados=lista; falha → erroBusca=mensagem (resultados anteriores ficam); finally agindo=false.",
+        "Tocar num resultado → abrirTurma(t): se já existe vínculo com t.id → abre o editor DESSE vínculo (papel e lecionadas do vínculo). Senão erroEditor=null e editor = {turmaId:t.id, turmaNome:t.nome, papel: docente.tipoConta, materias:t.materias, marcadas:[]}. Substitui qualquer editor aberto.",
+        "'Matérias' num vínculo → abrirEditor(v): erroEditor=null; editor={turmaId, turmaNome, papel:v.papel, materias:v.materias, marcadas: cópia de v.lecionadas}.",
+        "Marcar/desmarcar checkbox → só alterna o id em marcadas (sem API).",
+        "'Salvar'/'Vincular' → salvar(): se não há editor ou agindo → retorna. materiaIds = PROFESSOR ? editor.materias (ordem da turma) filtradas por marcadas, mapeadas para id : []. agindo=true, erroEditor=null; PUT /admin/docentes/{usuarioId}/turmas/{turmaId} {materiaIds}. Sucesso: editor=null; await carregar() (resposta do PUT é ignorada). Falha: erroEditor=mensagem; editor continua aberto com as marcações; botão volta a habilitar. finally agindo=false.",
+        "'Cancelar' do editor → editor=null (sem API).",
+        "'Tirar da turma' → abrirTirar(v): erroTirar=null; tirando=v.turmaId (sem API). Não fecha o editor.",
+        "'Cancelar' da confirmação → tirando=null (sem API).",
+        "'Sim, tirar' → tirar(v): se agindo → retorna; agindo=true; erroTirar=null; DELETE /admin/docentes/{usuarioId}/turmas/{turmaId}. Sucesso: tirando=null; se o editor aberto é dessa turma → editor=null; await carregar(). Falha: erroTirar=mensagem (dentro da confirmação, que continua aberta). finally agindo=false."
+      ],
+      "navegacao": [
+        "Nenhuma navegação: tudo acontece inline no cartão da pessoa em /tabs/admin. Fechar o cartão ('Turmas' de novo, ou abrir 'Turmas' de outra pessoa) destrói o componente e todo o seu estado."
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/painel",
+      "quando": "Toda vez que a aba Painel aparece (ionViewWillEnter → PainelRepository.carregar()). Sem paginação, sem query.",
+      "corpo": "nenhum",
+      "resposta": "PainelResponse {turmas: TurmaDoPainel[]}. Turmas na ordem do vínculo mais recente primeiro (membro.entrouEm desc). Cada TurmaDoPainel: turmaId (UUID string), nome (string), semestre (string, OMITIDO do JSON quando nulo), papel ('PROFESSOR'|'COORDENADOR' — é PapelMembro.name(), em tese poderia vir 'ALUNO'/'LIDER'), selo ('PROFESSOR'|'COORDENACAO', OMITIDO quando nulo: conta pendente/recusada ou contestada na turma), contestado (bool), lecionadas [{materiaId, sigla, corHex}] ordenadas por sigla asc (coordenação: vazio), proximos ItemHome[] já filtrados (professor: só matérias declaradas; coordenador: turma toda), ordenados e cortados (14 dias, teto 6) pelo servidor.",
+      "headers": "Authorization: Bearer <jwt>. X-Turma-Id: <turma ativa> é anexado pelo interceptor porque a conta é docente (se houver turma ativa), mas o servidor IGNORA esse cabeçalho no painel (o painel é da conta). Sem If-Match.",
+      "erros": "Todos passam pelo interceptor central e viram ErroApi com mensagem pronta; PainelRepository grava erro=e.message (ou 'Não deu para carregar.' se não for ErroApi) e MANTÉM o painel anterior (null se nunca carregou). 403 (conta ALUNO): mensagem do servidor (detail 'Painel e so de professor ou coordenacao'; teste usa 'Só docente tem painel.') ; fallback 'Só quem criou pode editar.'. 401: encerra sessão + navega /login; mensagem detail ou 'Sua sessão expirou. Entre de novo.'. status 0: 'Sem conexão.'. Timeout 75 s: 'O servidor demorou demais para responder. Tente de novo.'. 5xx: 'Deu problema no servidor. Tente de novo.'. 404 com codigo 'SEM_TURMA': além do erro, zera turma da sessão e navega /entrar-turma. Em qualquer erro a página NÃO concilia a turma ativa nem reagenda lembretes."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/admin/docentes?status={PENDENTE|APROVADO|RECUSADO}",
+      "quando": "Ao entrar em /tabs/admin (toda vez), em 'Tentar de novo' e após cada aprovar/recusar bem-sucedido. São TRÊS chamadas em paralelo, uma por status, disparadas na ordem PENDENTE, APROVADO, RECUSADO; o resultado só é aplicado se as três derem certo.",
+      "corpo": "nenhum (query param status obrigatório na prática; sem ele o servidor devolve todos os status, mas o app sempre manda)",
+      "resposta": "DocenteAdmin[] ordenado por criadoEm asc, id. Cada item: usuarioId (UUID), nome, email, tipoConta ('PROFESSOR'|'COORDENADOR'), docenteStatus ('PENDENTE'|'APROVADO'|'RECUSADO'), criadoEm (Instant ISO-8601 UTC, data de criação da conta, não da decisão), emailVerificado (bool; hoje SEMPRE false).",
+      "headers": "Authorization: Bearer <jwt>. X-Turma-Id só se a conta do admin for docente (irrelevante para o servidor). Sem If-Match.",
+      "erros": "Não-admin: 404 com detail 'Nao encontrado' → tela mostra essa mensagem em .pf-erro + 'Tentar de novo'. Qualquer falha (offline 'Sem conexão.', timeout, 5xx, 401→/login) → erroCarga = mensagemDeErro(e); nenhuma lista é alterada; se já tinha carregado antes, as listas antigas ficam visíveis."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/admin/docentes/{usuarioId}/aprovar",
+      "quando": "Botão 'Aprovar' de um pendente ou de um recusado ('aprovar de novo' usa a MESMA rota). Sem confirmação.",
+      "corpo": "{} (ApiService.post manda objeto vazio quando não há corpo; o servidor não lê corpo)",
+      "resposta": "204 No Content (sem corpo). Em seguida o app recarrega as três listas.",
+      "headers": "Authorization: Bearer <jwt>. Sem If-Match.",
+      "erros": "404 (não-admin, conta inexistente ou conta ALUNO) com detail 'Nao encontrado' (teste: 'Conta não encontrada') → erroAcao no topo (.pf-erro role=alert), NÃO recarrega, botões reabilitam. Demais status → mensagem do interceptor no mesmo lugar."
+    },
+    {
+      "metodo": "POST",
+      "caminho": "/api/v1/admin/docentes/{usuarioId}/recusar",
+      "quando": "Botão 'Recusar' de um pendente (imediato) OU 'Sim, revogar' na confirmação de um aprovado (revogar NÃO tem rota própria).",
+      "corpo": "{}",
+      "resposta": "204 No Content. Efeito imediato no servidor: o poder é lido do banco a cada requisição, então some em todas as turmas na próxima chamada do docente. App recarrega as três listas.",
+      "headers": "Authorization: Bearer <jwt>. Sem If-Match.",
+      "erros": "Iguais ao aprovar. Na revogação que falha, a caixa de confirmação continua aberta e o erro aparece no topo da página."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/admin/turmas?busca={texto aparado}",
+      "quando": "Subpainel Turmas: enviar a busca com 2+ caracteres após trim (com menos, o app não chama).",
+      "corpo": "nenhum",
+      "resposta": "TurmaAdmin[] (no máximo 20): id (UUID), nome, semestre (OMITIDO se nulo), materias [{id, nome, sigla}] ordenadas por sigla asc. Casa parte do nome (sem caixa) ou o código de convite EXATO; o código nunca volta na resposta. Menos de 2 caracteres → [] no servidor.",
+      "headers": "Authorization: Bearer <jwt>.",
+      "erros": "Falha → erroBusca (.pf-erro role=alert) abaixo do formulário; resultados anteriores permanecem. Não-admin: 404 'Nao encontrado'."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/admin/docentes/{usuarioId}/turmas",
+      "quando": "Ao abrir o subpainel Turmas de uma pessoa, em 'Tentar de novo' e depois de cada PUT/DELETE bem-sucedido.",
+      "corpo": "nenhum",
+      "resposta": "VinculoAdmin[] (vínculo mais recente primeiro): turmaId, turmaNome, semestre (OMITIDO se nulo), papel (PapelMembro do vínculo; na prática 'PROFESSOR'|'COORDENADOR', mas o servidor lista TODOS os vínculos da conta, então em tese 'ALUNO'/'LIDER'), contestado (bool, contestação do líder ainda vigente), materias (TODAS as matérias da turma [{id,nome,sigla}] por sigla asc), lecionadas (ids das matérias que ESTA conta leciona nesta turma, na ordem de materias).",
+      "headers": "Authorization: Bearer <jwt>.",
+      "erros": "404 (não-admin, conta inexistente ou ALUNO) 'Nao encontrado' → erroCarga + 'Tentar de novo'. Falha numa recarga mantém a lista antiga visível com o erro acima."
+    },
+    {
+      "metodo": "PUT",
+      "caminho": "/api/v1/admin/docentes/{usuarioId}/turmas/{turmaId}",
+      "quando": "Botão 'Salvar' (professor) ou 'Vincular' (coordenação) do editor. Cria o vínculo se não existir e SUBSTITUI as matérias lecionadas NESTA turma; idempotente.",
+      "corpo": "{\"materiaIds\": string[]} — obrigatório (ausente → 400), máx. 100. Professor: ids marcados na ORDEM das matérias da turma (não na ordem de clique); lista vazia = nenhuma matéria (válido). Coordenação: sempre [] (lista não vazia → 400 no servidor).",
+      "resposta": "VinculoAdmin (mesmo formato do GET de vínculos). O app IGNORA o corpo e relê a lista com GET.",
+      "headers": "Authorization: Bearer <jwt>. Content-Type JSON. Sem If-Match.",
+      "erros": "404 'Nao encontrado' (não-admin, docente inexistente/ALUNO, turma inexistente, matéria inexistente ou de outra turma — nada é gravado); 400 (coordenador com matérias; corpo inválido) → DESCONHECIDO com detail; 409 'Esta conta ja tem outro papel nesta turma' (vínculo existente como ALUNO/LIDER) → CONFLITO com detail. Todos: erroEditor dentro do editor (.pf-erro role=alert), editor continua aberto com as marcações, botão reabilita."
+    },
+    {
+      "metodo": "DELETE",
+      "caminho": "/api/v1/admin/docentes/{usuarioId}/turmas/{turmaId}",
+      "quando": "'Sim, tirar' na confirmação de 'Tirar da turma'.",
+      "corpo": "nenhum",
+      "resposta": "204 No Content. Apaga o vínculo e as matérias declaradas nessa turma; outras turmas ficam; a contestação do líder NÃO é apagada. App relê a lista.",
+      "headers": "Authorization: Bearer <jwt>. SEM If-Match (ApiService.delete sem version não manda o cabeçalho).",
+      "erros": "404 'Nao encontrado' (não-admin ou sem vínculo PROFESSOR/COORDENADOR nessa turma) → erroTirar dentro da confirmação, que continua aberta."
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/api/v1/sync",
+      "quando": "INDIRETO: PainelPage chama SyncRepository.reagendarAvisos() (sem await) após um GET /painel bem-sucedido + conciliação, se houver turma ativa. Só roda no app nativo (no navegador retorna sem chamar); não repete se já há uma ida em voo ou se a última deu certo há menos de 60 s.",
+      "corpo": "nenhum",
+      "resposta": "RespostaSync com eventosAlterados (usados para reagendar notificações locais da turma ativa) — detalhado na área de sync/notificações.",
+      "headers": "Authorization: Bearer <jwt>; X-Turma-Id: <turma ativa> (por isso precisa vir DEPOIS de conciliar).",
+      "erros": "Nunca lança: falha é só logada ('lembretes nao reagendados; os de antes continuam'); a tela do painel não mostra nada."
+    }
+  ],
+  "modelos": [
+    {
+      "nome": "Painel (GET /painel)",
+      "campos": "turmas: List<TurmaDoPainel> (não nulo; [] = não tem turma)\nObs.: no estado do repositório, painel == null significa 'ainda não chegou' e é DIFERENTE de {turmas: []}."
+    },
+    {
+      "nome": "TurmaDoPainel",
+      "campos": "turmaId: String (UUID)\nnome: String\nsemestre: String? (omitido no JSON quando nulo — tratar ausente como null)\npapel: PapelDocente 'PROFESSOR' | 'COORDENADOR' (vem de PapelMembro.name(); parse tolerante a 'ALUNO'/'LIDER')\nselo: Selo? 'PROFESSOR' | 'COORDENACAO' (omitido = sem poder nessa turma: conta pendente/recusada ou contestada)\ncontestado: bool\nlecionadas: List<MateriaLecionada> (ordem por sigla; coordenação: [])\nproximos: List<ItemHome> (já filtrado, ordenado e cortado pelo servidor)"
+    },
+    {
+      "nome": "MateriaLecionada",
+      "campos": "materiaId: String (UUID)\nsigla: String\ncorHex: String (uma das 12 hues da paleta, ex. '#0369A1')"
+    },
+    {
+      "nome": "ItemHome (itens de proximos)",
+      "campos": "eventoId: String (UUID)\ntipo: 'PROVA' | 'ENTREGA'\ntitulo: String\ndata: String ISO 'AAAA-MM-DD' (LocalDate — NÃO converter com DateTime.parse para exibir)\nhora: String? 'HH:mm:ss' (omitido quando nulo; exibir só HH:mm)\nmateriaSigla: String\nmateriaCorHex: String\nautoria: Autoria\nfeitoPeloUsuario: bool (vem de estado_pessoal; o painel não usa)"
+    },
+    {
+      "nome": "Autoria",
+      "campos": "autorId: String (UUID)\nautorNome: String\ncriadoEm: String (Instant ISO-8601 UTC)\natualizadoEm: String (Instant)\nautorSelo: Selo? (omitido quando nulo)\neditadoPorNome: String? (omitido quando nulo / editado pelo próprio autor)\neditadoPorSelo: Selo? (omitido quando nulo)"
+    },
+    {
+      "nome": "Selo / PapelDocente / TipoConta / DocenteStatus (enums)",
+      "campos": "Selo: 'PROFESSOR' | 'COORDENACAO' (atenção: COORDENACAO, não COORDENADOR; nomeia a função)\nPapelDocente: 'PROFESSOR' | 'COORDENADOR' (docente nunca é LIDER)\nTipoConta: 'ALUNO' | 'PROFESSOR' | 'COORDENADOR' (define a INTERFACE)\nDocenteStatus: 'PENDENTE' | 'APROVADO' | 'RECUSADO' (define o PODER; o servidor lê do banco a cada requisição)"
+    },
+    {
+      "nome": "Usuario (sessão; campos usados por esta área)",
+      "campos": "id: String\nnome: String\nemail: String\ntipoConta: TipoConta? (AUSENTE em sessão gravada antes da onda docente = ALUNO)\ndocenteStatus: DocenteStatus? (null/ausente para aluno)\nHelpers: tipoDaConta(u) = u?.tipoConta; ehContaDocente(u) = tipoConta != null && tipoConta != 'ALUNO'; statusDocente(u) = u?.docenteStatus ?? null."
+    },
+    {
+      "nome": "TurmaRef / turma ativa persistida",
+      "campos": "TurmaRef: { turmaId: String, nome: String }\nAtiva (gravada em Preferences, chave 'pf.turmaAtiva', JSON): { usuarioId: String, turmaId: String, nome: String } — só vale se usuarioId == id do usuário logado; JSON ilegível ou com campos não-string é descartado."
+    },
+    {
+      "nome": "DocenteAdmin (linha de GET /admin/docentes)",
+      "campos": "usuarioId: String (UUID)\nnome: String\nemail: String\ntipoConta: 'PROFESSOR' | 'COORDENADOR'\ndocenteStatus: 'PENDENTE' | 'APROVADO' | 'RECUSADO'\ncriadoEm: String (Instant ISO; data de criação da conta)\nemailVerificado: bool (hoje sempre false)"
+    },
+    {
+      "nome": "MateriaAdmin",
+      "campos": "id: String (UUID)\nnome: String\nsigla: String\n(sem cor, sem conteúdo)"
+    },
+    {
+      "nome": "TurmaAdmin (GET /admin/turmas)",
+      "campos": "id: String (UUID)\nnome: String\nsemestre: String? (omitido quando nulo)\nmaterias: List<MateriaAdmin> (por sigla asc)\n(nunca traz código de convite)"
+    },
+    {
+      "nome": "VinculoAdmin (GET /admin/docentes/{id}/turmas e resposta do PUT)",
+      "campos": "turmaId: String (UUID)\nturmaNome: String\nsemestre: String? (omitido quando nulo)\npapel: 'PROFESSOR' | 'COORDENADOR' (PapelMembro no servidor; parse tolerante)\ncontestado: bool\nmaterias: List<MateriaAdmin> (todas as da turma)\nlecionadas: List<String> (ids das matérias que ESTA conta leciona nesta turma)"
+    },
+    {
+      "nome": "LecionadasRequest (corpo do PUT)",
+      "campos": "materiaIds: List<String> (obrigatório, não nulo, itens não nulos, máx. 100; [] = nenhuma)"
+    },
+    {
+      "nome": "Editor (estado local do subpainel Turmas)",
+      "campos": "turmaId: String\nturmaNome: String\npapel: 'PROFESSOR' | 'COORDENADOR'\nmaterias: List<MateriaAdmin>\nmarcadas: List<String> (ids)"
+    },
+    {
+      "nome": "EventoVm (formatação para o EventoCard)",
+      "campos": "tipo, dia (String 2 dígitos), mes (abreviação pt minúscula), quando ('HH:mm' | 'prova' | 'entrega'), titulo, materia {sigla, cor}, autoria ('Nome · há …'), autoriaSelo: Selo?, editadoPor: String?, editadoPorSelo: Selo?, sala ('' no painel; ItemHome não tem sala)\nNo painel: id = eventoId."
+    },
+    {
+      "nome": "ErroApi (erro de domínio de todo HTTP)",
+      "campos": "classe: 'DEMOROU'|'AUTH'|'PROIBIDO'|'NAO_ENCONTRADO'|'PRECONDICAO'|'CONFLITO'|'SERVIDOR'|'OFFLINE'|'DESCONHECIDO'\nstatus: int (0 para offline/timeout)\nmessage: String (pronta para a tela; ProblemDetail.detail ?? title ?? fallback)\npodeTentarNovamente: bool\nrecarregarRegistro: bool\ncodigo: String? (ProblemDetail.codigo, ex. 'SEM_TURMA')"
+    }
+  ],
+  "servicos_e_estado": [
+    "PainelRepository (singleton, providedIn root — o estado SOBREVIVE à página): signals painel: Painel? (null = ainda não chegou), carregando: bool (false inicial), erro: String? . carregar(): carregando=true, erro=null; painel = await GET /painel; catch → erro = ErroApi.message ou 'Não deu para carregar.' (painel anterior fica, NÃO é zerado); finally carregando=false. Nunca lança, nunca reordena/filtra/corta. Sem snapshot offline de propósito (o snapshot guarda uma turma só).",
+    "DocenteAdminRepository (singleton sem estado; todos os métodos relançam ErroApi): listar(status) → GET /admin/docentes?status=; aprovar(id) → POST …/aprovar; recusar(id) → POST …/recusar (serve também para revogar); buscarTurmas(busca) → GET /admin/turmas?busca=; vinculos(id) → GET /admin/docentes/{id}/turmas; vincular(id, turmaId, materiaIds) → PUT …/turmas/{turmaId} {materiaIds} retorna VinculoAdmin; desvincular(id, turmaId) → DELETE …/turmas/{turmaId}.",
+    "TurmaAtivaService (singleton): turmaId e nome (computeds; só devolvem algo se o usuarioId gravado == usuário logado); pronto: Future da leitura de Preferences 'pf.turmaAtiva' disparada na construção. escolher(TurmaRef): await pronto; igual à atual → nada; senão grava (memória primeiro, depois storage.limpar() do snapshot offline se trocou de turma, depois Preferences) e, se JÁ havia turma ativa, recarrega o app inteiro (RECARREGAR_APP = location.reload). conciliar(turmas): await pronto; mantém a atual se ela está na lista, senão pega a PRIMEIRA da lista; lista vazia → zera em memória e apaga do disco; grava se mudou id ou nome; nunca recarrega. Falhas de disco só logam.",
+    "AuthService (usado): usuario (signal da sessão, com tipoConta/docenteStatus — atualizado em segundo plano por GET /eu no restaurar, o que muda a faixa do painel reativamente), token, ehDocente (computed igual a ehContaDocente).",
+    "SyncRepository.reagendarAvisos(forcar=false): no-op sem suporte a notificações (web); deduplica ida em voo; janela de 60 s após sucesso; reseta ao trocar de conta (época); GET /sync e entrega a NotificacoesService.sincronizar; erros só logados.",
+    "Interceptores (ordem: auth → turmaAtiva → erro → timeout): authInterceptor põe 'Authorization: Bearer <jwt>' em tudo exceto URLs com '/auth/'; turmaAtivaInterceptor, SÓ para conta docente e SÓ para URLs que começam com apiUrl, espera TurmaAtivaService.pronto e adiciona 'X-Turma-Id: <turmaId>' se houver turma ativa; erroHttpInterceptor traduz para ErroApi (401 → encerrarSessao + /login; codigo SEM_TURMA → registrarTurma(null) + /entrar-turma), sempre relança; timeoutInterceptor 75 000 ms.",
+    "mensagemDeErro(e) (features/auth/erro.ts): ErroApi → e.message; qualquer outra coisa → 'Não deu para completar a ação. Tente de novo.' Usado pela AdminPage e pelo DocenteTurmasComponent (o PainelRepository usa fallback próprio 'Não deu para carregar.').",
+    "Guardas (core/docente.guard.ts): ROTA_HOME='/tabs/home', ROTA_PAINEL='/tabs/painel'. rotaInicial() → '/tabs/painel' se ehContaDocente(usuario) senão '/tabs/home' (usada como redirectTo em '' dentro e fora de 'tabs'). soAluno: docente → UrlTree '/tabs/painel', aluno → true (em /tabs/home e /tabs/quadro). soDocente: docente → true, aluno/sem tipo → UrlTree '/tabs/home' (em /tabs/painel). /tabs/admin sem guarda.",
+    "PainelPage (estado derivado, sem estado próprio além do repositório): carregando/erro (do repo); grupos = painel.turmas.map(turma → {turma, eventos: proximos.map(i → {id: i.eventoId, ...eventoVm(i, agora)})}) com agora = DateTime no momento do recálculo; contestadas = turmas com contestado; vazia = !carregando && erro==null && painel!=null && grupos.isEmpty; faixa = f(auth.usuario) (PENDENTE/RECUSADO/null); materiaDoAtalho = lecionadas[0].materiaId da turma do painel cujo turmaId == turmaAtiva.turmaId() SE lecionadas.length==1, senão null; atalhos = {prova:{tipo:'PROVA'[,materiaId]}, entrega:{tipo:'ENTREGA'[,materiaId]}}; rotaNovoMaterial = ['/tabs/materias', materiaId, 'material', 'novo'] ou ['/tabs/materias']; ativa(t) = turmaAtiva.turmaId()==t.turmaId.",
+    "AdminPage (estado local): pendentes/aprovados/recusados: List<DocenteAdmin> ([]); carregando: bool (TRUE inicial); carregou: bool (false; vira true na primeira carga boa e não volta); erroCarga: String?; erroAcao: String?; agindo: String? (usuarioId com decisão no ar); revogando: String? (usuarioId com confirmação aberta); turmasAbertas: String? (usuarioId com subpainel aberto).",
+    "DocenteTurmasComponent (estado local, morre ao fechar): docente (input obrigatório); vinculos: List<VinculoAdmin> ([]); carregou: bool; erroCarga: String?; resultados: List<TurmaAdmin>? (null = nada a mostrar); avisoBusca: String?; erroBusca: String?; editor: Editor?; erroEditor: String?; tirando: String? (turmaId); erroTirar: String?; agindo: bool (único para busca, salvar e tirar)."
+  ],
+  "regras": [
+    "Não-negociável 5 (teto 6 / janela 14 dias no servidor) e regra de frontend 'nenhuma regra de negócio no componente': o painel NÃO ordena, NÃO filtra, NÃO corta turmas nem próximos; o filtro por matéria declarada (professor) vs turma inteira (coordenador) também é do servidor. Refazer no cliente faria painel e calendário discordarem.",
+    "Não-negociável 4 (ordem é urgência, nunca tipo): renderiza na ordem recebida; nada de agrupar provas no topo. O único agrupamento é por TURMA, vindo do servidor.",
+    "Proibição de catch que devolve vazio / 'falhei' ≠ 'não há nada': painel null ≠ {turmas: []}; carregando, erro e vazio são três telas distintas; na Admin as listas e o 'Ninguém na fila.' só valem depois de uma carga bem-sucedida (flag carregou); no subpainel idem; falha de recarga nunca apaga o que já estava na tela.",
+    "Não-negociável 6 (semana vazia mostra pouca coisa): vazio = 'Nenhuma turma ainda.' + uma linha; turma sem próximos = uma frase. Sem sugestão, dica ou skeleton permanente.",
+    "Não-negociável 7 (cor + sigla sempre juntas): matérias lecionadas no cartão usam MateriaChip (cor+sigla); o card de evento recebe {sigla, cor} como par. No admin, matéria aparece só por texto 'SIGLA — Nome' / siglas.",
+    "Não-negociável 8 (prova = bloco sólido, entrega = contorno 1px): delegado ao EventoCard (shared), que recebe o tipo.",
+    "Não-negociável 1 (autoria visível): os cards do painel mostram autor + tempo relativo, prefixo 'Prof. '/'Coord. ' + selo, e 'editado por …' quando outro corrigiu.",
+    "Pasta shared/ é proibida de alterar: EventoCard, MateriaChip e Selo são usados como estão; o selo da turma no cartão é o MESMO componente da autoria (texto + forma + contorno, nunca só cor, e não parece chip de matéria).",
+    "Interface sai do TIPO da conta, poder sai do STATUS (spec 2.9): docente pendente/recusado também usa painel e abas de docente; o status só muda o aviso; quem confere poder a cada requisição é o servidor. Sessão sem tipoConta = aluno.",
+    "Multi-turma só para docente: AGENTS.md proíbe seletor de turma/múltiplas turmas para o aluno; a onda docente (spec 2026-10-06) introduziu a turma ativa só para conta docente. Aluno nunca manda X-Turma-Id e nunca vê o painel. Não estender o seletor ao aluno.",
+    "X-Turma-Id: só para conta docente e só para o host da API (vazaria o id de turma a terceiros); requisições do docente esperam a leitura do disco antes de sair, senão o servidor responderia pela turma 'mais recente' — dado de outra turma sem erro.",
+    "Admin decide QUEM a pessoa é, não onde manda: aprovar/recusar não pede turma e vale para todas; vincular a turma é ação separada (subpainel Turmas). O admin vê só nome de turma e de matéria, nunca conteúdo nem código de convite (V6).",
+    "Rotas de admin respondem 404 (não 403) a quem não é admin; o app NÃO tem checagem própria nem guarda em /tabs/admin — o link no Perfil (só para adminPlataforma) é comodidade, não segurança.",
+    "Revogar pede confirmação; aprovar, recusar pendente e reaprovar recusado não (se desfazem com um toque na mesma tela). Revogar = POST /recusar.",
+    "Depois de qualquer ação, a fonte de verdade é o servidor: recarrega as listas/vínculos em vez de mover cartões na memória (outro admin pode ter mexido).",
+    "Ações travam enquanto há uma no ar (sem decisão dupla): Admin trava todos os cartões; subpainel trava busca/salvar/tirar juntos.",
+    "Um subpainel 'Turmas' aberto por vez na Admin; um editor por vez no subpainel; uma confirmação de revogar/tirar por vez.",
+    "Coordenação alcança a turma inteira: não marca matérias (PUT com []), cartão mostra 'turma inteira' em vez de chips, próximos 'da turma inteira'.",
+    "Atalhos de criar só pré-escolhem matéria quando não há o que perguntar (exatamente UMA declarada na turma ativa); chutar a primeira poria a prova na matéria errada sem ninguém perceber. Criar sempre acontece na turma ATIVA, por isso o rótulo 'criar em {nome}'.",
+    "Todo erro HTTP passa pelo interceptor central e chega com mensagem pronta; nenhuma tela lê status cru nem inventa texto (exceto os fallbacks fixos).",
+    "Docente não tem Home, e é a Home quem reagenda lembretes; por isso o painel chama reagendarAvisos (após conciliar).",
+    "Sem paginação na fila do admin (ponytail: dezenas, não milhares). Busca de turma limitada a 20 pelo servidor."
+  ],
+  "armadilhas": [
+    "RECARREGAR AO ENTRAR: Painel e Admin recarregam em ionViewWillEnter (TODA vez que a tela/aba aparece), porque o Ionic mantém a página viva. Em Flutter, initState não basta: recarregar ao focar a aba e ao voltar para a rota (RouteAware.didPopNext / listener do tab controller). O subpainel Turmas carrega só ao abrir (initState).",
+    "Estado do painel mora no repositório singleton, não no widget: ao reentrar, o painel anterior aparece imediatamente com 'Carregando…' em cima. Se o estado ficar no State do widget, a primeira pintura vira tela vazia e pode piscar 'Nenhuma turma ainda.'",
+    "Três estados distintos no painel: null (não chegou) ≠ {turmas: []} (não tem turma) ≠ erro. Falha NÃO zera painel; recarga que falha mantém o painel antigo + aviso. 'Nenhuma turma ainda.' só com painel!=null, erro==null e !carregando.",
+    "Conciliar a turma ativa SÓ com painel que chegou (erro==null && painel!=null). Recarga que falha não concilia (esquecer a ativa puniria quem só está sem sinal) e não reagenda.",
+    "Ordem obrigatória: await carregar → await conciliar → (se turmaAtiva.turmaId != null) reagendarAvisos SEM await. Reagendar antes de conciliar mandaria /sync sem X-Turma-Id (ou com turma velha → 404) na primeira abertura. Sem turma ativa não chama /sync.",
+    "conciliar na primeira vez escolhe turmas[0] = vínculo MAIS RECENTE (ordem do servidor); se a ativa gravada sumiu (removido), troca para a primeira; lista vazia apaga a ativa; renomeação atualiza o nome sem limpar o snapshot. Conciliar nunca recarrega o app.",
+    "Trocar de turma (tocar outro cartão) recarrega o APP INTEIRO quando já havia ativa — todos os repositórios (calendário, matérias, turma, eventos, notas) guardam dados da turma antiga. Em Flutter, um port ingênuo que só troca uma variável mostra 'ADS 3B' sobre provas da 3A. É preciso resetar todo o estado dependente de turma (ex.: reiniciar o ProviderScope/árvore) e limpar o snapshot offline. Primeira escolha (sem ativa anterior) NÃO recarrega; tocar a turma já ativa não faz nada.",
+    "Turma ativa amarrada ao dono: Preferences 'pf.turmaAtiva' guarda {usuarioId, turmaId, nome}; turmaId()/nome() só valem se usuarioId == usuário logado. Outro docente no mesmo aparelho não pode herdar a turma (o servidor responderia 404 a tudo).",
+    "X-Turma-Id só para docente e só para o host da API; requisições do docente devem esperar a leitura do disco (pronto) antes de sair — sem isso as primeiras chamadas saem sem cabeçalho e o servidor responde pela turma 'mais recente' sem erro. O GET /painel ignora o cabeçalho, mas /sync e as telas de turma dependem dele.",
+    "Nada de sort/filter/take no cliente: teste com 7 próximos numa turma (acima do teto 6) e datas fora de ordem exige exibir os 7 na ordem recebida. Turmas também na ordem recebida.",
+    "Datas: dia/mês do card vêm de split('-') da string 'AAAA-MM-DD'; DateTime.parse('2026-10-08') em UTC e conversão para local num fuso negativo mostraria o dia anterior. Hora: cortar 'HH:mm:ss' para 'HH:mm'; hora vazia/nula → 'prova'/'entrega'.",
+    "Tempo relativo da autoria é calculado com 'agora' no momento em que o painel muda (computed), não fica atualizando sozinho. Data ilegível → só o nome (nunca 'NaN'). Arredondamento: Math.round de minutos, horas e dias.",
+    "Backend OMITE campos nulos (jackson non_null): semestre, selo, hora, autorSelo, editadoPorNome, editadoPorSelo podem simplesmente não existir no JSON. Parse deve aceitar chave ausente como null e nunca exibir 'null'/'undefined'.",
+    "Selo 'COORDENACAO' ≠ papel 'COORDENADOR'. Selo nulo → não renderizar selo nenhum (teste: nenhum .selo). Texto do selo é exatamente 'Professor' / 'Coordenação' e tem ícone (svg) — nunca só cor.",
+    "Parse tolerante de enums: papel vem de PapelMembro e o GET de vínculos lista TODOS os vínculos da conta; um 'ALUNO'/'LIDER' inesperado não pode derrubar a tela. Comportamento original: papel != 'COORDENADOR' é tratado como professor no texto; 'Matérias' só aparece para 'PROFESSOR'; 'Tirar da turma' aparece e o DELETE daria 404.",
+    "Faixa de status vem da SESSÃO (auth.usuario), não do /painel, e é reativa: quando o GET /eu em segundo plano atualiza docenteStatus, a faixa aparece/some sem recarregar. Aparece mesmo durante carregamento/erro. docenteStatus ausente ou APROVADO → sem faixa. Palavra 'coordenação' vs 'professor' pelo tipoConta.",
+    "Contestação é POR TURMA: uma faixa por turma contestada, nomeando só ela ('Contestado em {nome}.'), e a tag 'contestado' só no cartão dela; as outras turmas seguem normais.",
+    "Contagem do cartão: '{N} próximo' só para N==1; '0 próximos' no plural. Prefixo '{semestre} · ' só se semestre não vazio.",
+    "Mensagem de turma sem próximos depende do papel E das lecionadas: só PROFESSOR com lecionadas vazia recebe 'Você ainda não declarou matérias aqui. Faça isso na aba Turma.'; coordenador sem eventos e professor com matérias recebem 'Nada nos próximos 14 dias.'",
+    "Atalhos: matéria pré-escolhida só se a turma ATIVA (por turmaAtiva.turmaId, não o primeiro cartão nem a turma do grupo) tem exatamente 1 lecionada. Duas, zero ou coordenação → só ?tipo=. Ordem dos params: tipo depois materiaId. 'Novo material' usa path param, não query. Se a turma ativa não está no painel (não carregou/falhou), sem materiaId.",
+    "Bloco 'criar em {nome}' depende de turmaAtiva.nome() (persistido), não do painel: aparece mesmo com painel falhando ou carregando, e some quando não há turma ativa. 'Entrar em outra turma' aparece SEMPRE, em qualquer estado.",
+    "Abrir evento de outra turma do docente pelo card NÃO troca a turma ativa (spec 4). Não chamar escolher() ao navegar para /tabs/eventos/{id}.",
+    "Erro do painel usa o estilo de aviso de estado (.pf-aviso, tracejado), sem role=alert e sem botão de retry; 'Carregando…' aparece em toda recarga. Já a Admin mostra 'Carregando…' SÓ na primeira carga (carregando && !carregou) e erro em .pf-erro sólido com 'Tentar de novo'. Não unificar os dois comportamentos.",
+    "Admin: carregando nasce TRUE (a primeira pintura já diz 'Carregando…', antes do ionViewWillEnter resolver). 'Ninguém na fila.' não pode aparecer antes de carregar nem após falha.",
+    "Admin: as três listas são tudo-ou-nada (Promise.all). Se PENDENTE carregar e RECUSADO falhar, nenhuma lista muda — senão a tela mostra uma fila que não é a fila.",
+    "Admin: erroAcao fica no TOPO da página (não no cartão), não é limpo por recargas (ionViewWillEnter/Tentar de novo) — só no início da próxima ação. Falha de ação não recarrega, devolve os botões e mantém a confirmação de revogar aberta.",
+    "Admin: agindo trava TODOS os botões de TODOS os cartões (incluindo 'Turmas' e 'Cancelar' da confirmação) e continua travado durante a recarga pós-sucesso (agindo só zera no finally, depois de await carregar()). Há também guarda no método (agindo != null → return) contra duplo toque.",
+    "Admin: confirmação de revogar fecha só em sucesso ou 'Cancelar'. Enquanto aberta, o cartão esconde os botões normais E o botão/subpainel 'Turmas' (turmasAbertas continua apontando para a pessoa; cancelar faz o subpainel reaparecer e ele é recriado → novo GET de vínculos).",
+    "Admin: 'Turmas' some para RECUSADO. turmasAbertas não é limpo quando a pessoa vira recusada; se for reaprovada depois, o subpainel reaparece aberto. Cartão que muda de lista após ação é recriado (subpainel recarrega os vínculos).",
+    "Ênfase visual invertida nas confirmações destrutivas: 'Sim, revogar' e 'Sim, tirar' são botões FANTASMA; 'Cancelar' é o botão sólido/primário. Não inverter.",
+    "Revogar usa POST /recusar (não existe rota revogar); aprovar de novo um recusado usa POST /aprovar. O rótulo do botão vem do status de quem está na lista, não da rota.",
+    "Aviso de e-mail só para PENDENTE && !emailVerificado; o servidor manda sempre false hoje, então todo pendente tem o aviso; aprovado/recusado nunca. Quando o servidor passar a mandar true, o aviso some sozinho.",
+    "Data do cadastro: formato pt-BR curto com ano ('5 de out. de 2026'), no fuso local. Inicial do avatar por code point (não por unidade UTF-16) para não quebrar emoji; maiúscula; '?' se vazio.",
+    "Rótulos .pf-rotulo estão em minúsculas no texto e ficam MAIÚSCULOS só por CSS (text-transform). Os testes comparam a string minúscula ('pendentes · 2', 'minhas turmas · toque para trocar'). O summary 'recusados · N' NÃO é uppercase. Separador é ' · ' (ponto médio U+00B7 com espaços); 'Carregando…' usa reticências U+2026; travessões '—' (U+2014) em 'Coordenação — turma inteira', '{sigla} — {nome}', 'espera aprovação — até lá'.",
+    "Recusados ficam num <details> FECHADO por padrão (teste exige open=false), mas sempre presentes com a contagem para desfazer recusa errada.",
+    "Subpainel: busca apara o texto; com <2 caracteres NÃO chama a API, limpa os resultados anteriores (resultados=null) e mostra 'Digite pelo menos 2 letras' (sem ponto). Busca válida apaga o aviso; resultados antigos só são substituídos quando a resposta chega; erro mantém os antigos. 'Nenhuma turma encontrada.' só depois de uma busca que voltou []. O aviso de <2 letras é mostrado mesmo se agindo; a chamada é que é bloqueada.",
+    "Subpainel: 'agindo' é UM boolean para busca, salvar e tirar — buscar trava salvar/tirar e vice-versa. Enter no campo com o botão 'Buscar' desabilitado não submete.",
+    "Subpainel: meta do resultado não tem singular ('1 matérias', '0 matérias'); 'já vinculado' é calculado contra a lista de vínculos atual (atualiza após salvar). Partes vazias (semestre nulo) são omitidas sem deixar ' · ' sobrando.",
+    "Subpainel: tocar num resultado de turma JÁ vinculada abre o editor do vínculo existente (com papel e lecionadas atuais), não um editor vazio. Turma nova: papel = tipoConta do docente, nada marcado.",
+    "Subpainel: materiaIds do PUT na ORDEM das matérias da turma (ordem do servidor, por sigla), não na ordem de clique (teste: marcar CAL e FIS → ['m-cal','m-fis']). Coordenação manda sempre [] (não-vazio seria 400). Professor sem nada marcado manda [] — válido (vínculo sem matérias).",
+    "Subpainel: rótulo do botão é 'Salvar' para PROFESSOR e 'Vincular' para COORDENADOR, inclusive ao reeditar um vínculo de coordenação já existente (aberto pela busca). Vínculo de coordenação não tem botão 'Matérias' na lista.",
+    "Subpainel: o corpo da resposta do PUT é ignorado — sempre relê com GET. Editor fecha só em sucesso; em erro continua aberto, com as marcações, erro dentro dele (role=alert) e botão reabilitado.",
+    "Subpainel: editor e confirmação de tirar são independentes (editor da turma A pode estar aberto com a confirmação de tirar B). Tirar com sucesso fecha o editor só se for da mesma turma. Abrir a confirmação não fecha o editor.",
+    "Subpainel: desmarcar/marcar checkbox não chama API; só 'Salvar'/'Vincular' grava. DELETE e PUT sem If-Match (recurso sem version).",
+    "Subpainel: sem flag de carregando — após salvar/tirar, a releitura acontece sem indicador; se ela falhar, o erro de carga aparece no topo com a lista antiga abaixo (editor já fechado).",
+    "POST sem corpo deve enviar '{}' (ApiService.post usa corpo ?? {}). Timeout de 75 s em toda chamada (cold start do Render ~45 s): não usar 30 s.",
+    "401 em qualquer chamada desta área encerra a sessão e navega para /login; 404 com codigo 'SEM_TURMA' (nunca por status sozinho) esquece a turma e vai para /entrar-turma.",
+    "Não proteger /tabs/admin no cliente nem esconder a rota: quem não é admin vê a mensagem do 404 do servidor ('Nao encontrado'). Também não adicionar checagem de status na guarda soDocente: docente de QUALQUER status entra no painel.",
+    "Guarda soAluno precisa existir: login e entrar-turma terminam em '/tabs/home' e vários 'voltar' apontam para lá; sem redirecionar, o docente cairia na Home de aluno. soDocente manda aluno para /tabs/home."
+  ],
+  "testes": [
+    "PainelPage: um cartão por turma; cartão mostra nome, '2026.2 · 1 próximo', selo 'Professor' e 2 chips para 2 lecionadas; cartão de coordenação mostra 'Coordenação', '0 próximos', 'turma inteira' e nenhum chip.",
+    "PainelPage: turma com selo null não renderiza nenhum .selo.",
+    "PainelPage: aria-pressed ['true','false'] com t1 ativa; tocar o 2º cartão chama escolher exatamente uma vez com {turmaId:'t2', nome:'ADS 3B'} e aria-pressed vira ['false','true'].",
+    "PainelPage: próximos agrupados por turma na ordem do servidor (títulos ['evento tarde','evento cedo','evento b1'], sem reordenar); rótulos 'ADS 3A · próximos das minhas matérias' e 'ADS 3B · próximos da turma inteira'; primeiro link do card tem href '/tabs/eventos/tarde'.",
+    "PainelPage: professor sem matéria declarada vê 'Você ainda não declarou matérias aqui. Faça isso na aba Turma.'; outra turma com matéria e sem eventos vê 'Nada nos próximos 14 dias.'",
+    "PainelPage: APROVADO → nenhuma .faixa; PENDENTE professor → faixa contém 'Em análise.' e texto 'Sua conta de professor espera aprovação'; PENDENTE coordenador → 'Sua conta de coordenação espera aprovação'; RECUSADO → faixa contém 'Não aprovado.'",
+    "PainelPage: contestado em t1 → exatamente 1 .faixa contendo 'Contestado em ADS 3A.' e 'Nas outras turmas nada muda.'; cartão t1 tem .tag com 'contestado'; cartão t2 não tem .tag.",
+    "PainelPage: falha de rede no GET /painel → existe .pf-aviso, texto NÃO contém 'Nenhuma turma ainda' e conciliar não é chamado.",
+    "PainelPage: {turmas: []} → 'Nenhuma turma ainda' e existe link com href '/entrar-turma'.",
+    "PainelPage: com painel carregado, conciliar é chamado uma vez com [{turmaId:'t1',nome:'ADS 3A'},{turmaId:'t2',nome:'ADS 3B'}]; recarga que falha não concilia de novo.",
+    "PainelPage: ao entrar com turma ativa, reagendarAvisos é chamado 1 vez; a ordem é ['conciliar','reagendar']; sem turma ativa (turmaId null) e turmas [] não reagenda; painel que falhou não reagenda.",
+    "PainelPage: card de próximo com autorSelo PROFESSOR, editadoPorNome 'Helena', editadoPorSelo COORDENACAO mostra 'Prof. Ana', 'editado por Coord. Helena' e 2 app-selo.",
+    "PainelPage: selo do cartão de turma tem texto exatamente 'Professor' e contém um svg.",
+    "PainelPage atalhos: 'criar em Turma t1' (nome vem da turma ativa); 'Nova prova' href contém '/tabs/eventos/novo?tipo=PROVA' e 'Nova entrega' '/tabs/eventos/novo?tipo=ENTREGA'.",
+    "PainelPage atalhos: com 1 lecionada (BD) → hrefs exatos '/tabs/eventos/novo?tipo=PROVA&materiaId=m-bd' e '/tabs/eventos/novo?tipo=ENTREGA&materiaId=m-bd'; com 2 (BD, ES) → exatamente '/tabs/eventos/novo?tipo=PROVA' e '…?tipo=ENTREGA'.",
+    "PainelPage atalhos: após tocar o cartão t2 (lecionada ES), 'Nova prova' contém 'materiaId=m-es' (usa a turma ATIVA).",
+    "PainelPage atalhos: 'Novo material' com 1 lecionada → '/tabs/materias/m-bd/material/novo'; com 2 → '/tabs/materias'; sem turma ativa (nome null) → não existe .origem.",
+    "PainelRepository: entrega turmas e próximos exatamente como o servidor mandou (ordem ['b','a'], próximos ['z','y'], 7 itens mantidos); erro null e carregando false após sucesso.",
+    "PainelRepository: falha → painel continua null (não vira lista vazia) e erro não nulo.",
+    "PainelRepository: segunda carga que falha mantém o painel da primeira e erro não nulo.",
+    "PainelRepository: 403 com {detail:'Só docente tem painel.'} → painel null e erro === 'Só docente tem painel.'",
+    "Guardas: rotaInicial → '/tabs/painel' para PROFESSOR PENDENTE e COORDENADOR RECUSADO; '/tabs/home' para ALUNO e para sessão sem tipoConta.",
+    "Guardas: soAluno redireciona PROFESSOR PENDENTE para '/tabs/painel' e deixa ALUNO passar (true); soDocente redireciona ALUNO para '/tabs/home' e deixa COORDENADOR PENDENTE passar.",
+    "AdminPage: pede as três listas (GET /admin/docentes com status PENDENTE, APROVADO, RECUSADO); seções na ordem 'pendentes · 2', 'aprovados · 1', 'recusados · 1'; cartão mostra 'Professor'/'Coordenação' e o e-mail; <details> dos recusados fechado.",
+    "AdminPage: todo pendente com emailVerificado false tem 'E-mail não verificado: confirme com a pessoa antes de aprovar'; aprovado e recusado não; pendente com emailVerificado true não tem.",
+    "AdminPage: antes de carregar mostra 'Carregando' e não 'Ninguém na fila'; depois de carregar com pendentes [] mostra 'Ninguém na fila' e não 'Carregando'.",
+    "AdminPage: rótulos dos botões: pendente ['Aprovar','Recusar','Turmas'], aprovado ['Revogar','Turmas'], recusado ['Aprovar'].",
+    "AdminPage: 'Aprovar' → POST /admin/docentes/id-Renata/aprovar, depois recarrega as três listas; com as listas novas, Renata vira ['Revogar','Turmas'] e contagens 'pendentes · 1', 'aprovados · 1'.",
+    "AdminPage: 'Recusar' pendente → POST …/recusar e recarrega ('recusados · 1'); 'Aprovar' de recusado → POST …/aprovar (mesma rota).",
+    "AdminPage: primeiro toque em 'Revogar' NÃO chama a API; mostra 'Revogar Marcos?' e 'todas as turmas, na hora'; botões ['Sim, revogar','Cancelar']. 'Sim, revogar' → POST …/recusar; após recarga a confirmação não fica aberta. 'Cancelar' fecha sem API e volta ['Revogar','Turmas'].",
+    "AdminPage: falha 404 {detail:'Conta não encontrada'} ao aprovar → .pf-erro com role='alert' e a mensagem; não recarrega; botões continuam ['Aprovar','Recusar','Turmas'] e o primeiro botão não está disabled.",
+    "AdminPage: com decisão no ar, todos os botões de todos os cartões ficam disabled; tocar 'Aprovar' de outro não faz requisição.",
+    "AdminPage: falha ao carregar (rede) → .pf-erro contém 'Sem conexão' e não 'Ninguém na fila'; 'Tentar de novo' refaz as três GETs e, com sucesso, some o .pf-erro e aparece 'pendentes · 1'.",
+    "AdminPage: chamar ionViewWillEnter de novo recarrega as listas.",
+    "AdminPage: 'Turmas' só para pendente e aprovado; tocar abre o subpainel (componente presente), que faz GET /admin/docentes/id-Renata/turmas; com [] mostra 'ainda não está em nenhuma turma'; o botão fica aria-expanded='true'.",
+    "DocenteTurmas: ao abrir mostra 'Carregando…'; com 3 vínculos mostra 'turmas · 3', '2026.2', 'Leciona: CAL · FIS', 'Coordenação — turma inteira' (sem 'Leciona'), 'Nenhuma matéria marcada' e 'Contestado pelo líder desta turma' só no contestado.",
+    "DocenteTurmas: busca 'A' não chama a API e mostra 'Digite pelo menos 2 letras'; ' ADS ' manda busca='ADS' (aparado) e some o aviso, 1 resultado; 'zz' com [] mostra 'Nenhuma turma encontrada.'",
+    "DocenteTurmas: escolher ADS 3A (BD desmarcada), marcar CAL e FIS, 'Salvar' → PUT /admin/docentes/u-renata/turmas/t-3a com corpo {materiaIds:['m-cal','m-fis']}; depois relê GET de vínculos; editor fecha; 'turmas · 1'.",
+    "DocenteTurmas: 'Matérias' de um vínculo abre o editor com o nome da turma e as lecionadas marcadas (BD false, CAL true, FIS true).",
+    "DocenteTurmas: 'Tirar da turma' não chama API e mostra 'Tirar Renata de ADS 3A?'; 'Cancelar' não chama API e remove .confirma; 'Sim, tirar' → DELETE /admin/docentes/u-renata/turmas/t-3a; relê vínculos; 'turmas · 0'.",
+    "DocenteTurmas: coordenador → editor sem checkboxes, texto 'Coordenação alcança a turma inteira; não há matérias para marcar.', botão 'Vincular' manda {materiaIds: []} e relê ('turmas · 1').",
+    "DocenteTurmas: PUT com 404 {detail:'Turma não encontrada'} → .pf-erro role='alert' DENTRO do editor com a mensagem; editor continua; 'Salvar' não está disabled."
+  ],
+  "nativo": [
+    "@capacitor/preferences — TurmaAtivaService grava/lê/apaga a turma ativa do docente na chave 'pf.turmaAtiva' (JSON {usuarioId, turmaId, nome}); também é o armazenamento da sessão (StorageService) de onde vêm tipoConta/docenteStatus. Em Flutter: shared_preferences (ou equivalente) com o mesmo formato.",
+    "Recarga do app inteiro (RECARREGAR_APP = location.reload()) ao trocar de turma ativa quando já havia uma — em Flutter, reinício do estado global/árvore de providers + limpeza do snapshot offline (StorageService.limpar).",
+    "@capacitor/local-notifications (indireto) — o painel chama SyncRepository.reagendarAvisos(), que via NotificacoesService reagenda lembretes locais das provas/entregas da turma ativa; no navegador (sem plugin) é no-op. Em Flutter: flutter_local_notifications, mantendo a deduplicação de 60 s.",
+    "Ciclo de vida Ionic ionViewWillEnter (não é plugin, mas é comportamento de plataforma): recarregar ao reentrar na aba/tela.",
+    "Ícones ionicons usados: checkmark-outline (turma ativa), close-circle-outline (recusado), document-text-outline (Novo material), ellipse-outline (Nova entrega), flag-outline (contestado), hourglass-outline (pendente), square (Nova prova); ícones de aba grid-outline (Painel) e people-outline (Turma); ion-back-button na Admin."
+  ]
+}
