@@ -225,7 +225,8 @@ public class EventoService {
      *
      * 404 e nao 403: 403 confirmaria que o registro esta la.
      */
-    private Evento daTurmaDoUsuario(UsuarioAtual usuario, UUID eventoId) {
+    // Pacote, e nao private: o ArquivoService anexa arquivo a evento com o mesmo escopo.
+    Evento daTurmaDoUsuario(UsuarioAtual usuario, UUID eventoId) {
         Evento evento = eventos.findById(eventoId).orElseThrow(AcessoNegadoException::new);
         escopo.exigirMesmaTurma(usuario.usuarioId(), evento.getTurmaId());
         if (!evento.visivelPara(usuario.usuarioId())) {

@@ -71,6 +71,18 @@ public class MaterialService {
         return resposta(salvo);
     }
 
+    /** Material de arquivo enviado. Quem valida e grava o arquivo e o ArquivoService. */
+    @Transactional
+    public MaterialResponse criarDeArquivo(UsuarioAtual autor, UUID materiaId, String titulo,
+                                           String arquivoRef) {
+        Materia materia = materiaDaTurmaDoUsuario(autor, materiaId);
+        Material salvo = materiais.saveAndFlush(Material.deArquivo(UUID.randomUUID(),
+                materia.getTurmaId(), materia.getId(), titulo, arquivoRef, autor.usuarioId(),
+                Instant.now()));
+        em.refresh(salvo);
+        return resposta(salvo);
+    }
+
     @Transactional
     public MaterialResponse atualizar(UsuarioAtual usuario, UUID materialId,
                                       int versionEsperada, AtualizarMaterialRequest req) {

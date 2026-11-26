@@ -112,6 +112,15 @@ public class Material {
         this.visivelTurma = true;
     }
 
+    /** Material que e um arquivo enviado (V11), e nao um link: url nula, arquivo_ref preenchido. */
+    public static Material deArquivo(UUID id, UUID turmaId, UUID materiaId, String titulo,
+                                     String arquivoRef, UUID autorId, Instant agora) {
+        Material material = new Material(id, turmaId, materiaId, TipoMaterial.ADICIONAL, titulo,
+                null, null, autorId, agora);
+        material.arquivoRef = arquivoRef;
+        return material;
+    }
+
     public LocalDate getDataAula() {
         return dataAula;
     }

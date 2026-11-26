@@ -32,17 +32,18 @@ class MigrationsImutaveisTest {
 
     private static final Path PASTA = Path.of("src/main/resources/db/migration");
 
-    private static final Map<String, Integer> APLICADAS = Map.of(
-            "V1__schema_inicial.sql", -1227045531,
-            "V2__sala_professor_e_data_da_aula.sql", 314822761,
-            "V3__turma_nao_depende_do_periodo.sql", 1686895473,
-            "V4__resumo_do_material.sql", -1722328793,
-            "V5__anotacoes.sql", -582117543,
-            "V6__admin_de_plataforma.sql", 1160653929,
-            "V7__lider_modera_anotacao.sql", 1717707491,
-            "V8__professor_e_coordenador.sql", 550963251,
-            "V9__quem_editou.sql", -726529810,
-            "V10__contestacao_duravel_e_criador_da_turma.sql", 1001415950);
+    private static final Map<String, Integer> APLICADAS = Map.ofEntries(
+            Map.entry("V1__schema_inicial.sql", -1227045531),
+            Map.entry("V2__sala_professor_e_data_da_aula.sql", 314822761),
+            Map.entry("V3__turma_nao_depende_do_periodo.sql", 1686895473),
+            Map.entry("V4__resumo_do_material.sql", -1722328793),
+            Map.entry("V5__anotacoes.sql", -582117543),
+            Map.entry("V6__admin_de_plataforma.sql", 1160653929),
+            Map.entry("V7__lider_modera_anotacao.sql", 1717707491),
+            Map.entry("V8__professor_e_coordenador.sql", 550963251),
+            Map.entry("V9__quem_editou.sql", -726529810),
+            Map.entry("V10__contestacao_duravel_e_criador_da_turma.sql", 1001415950),
+            Map.entry("V11__arquivo_enviado.sql", -1188600411));
 
     @Test
     @DisplayName("nenhuma migration registrada mudou, e toda migration esta registrada")

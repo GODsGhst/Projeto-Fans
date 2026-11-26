@@ -14,6 +14,12 @@ spring:
     enabled: true
   jackson:
     default-property-inclusion: non_null
+  servlet:
+    multipart:
+      # Rede de cima do envio de arquivo. O teto de verdade (5 MB, com a mensagem
+      # em portugues) e do ArquivoService; isto so barra o abuso antes de ler tudo.
+      max-file-size: 6MB
+      max-request-size: 7MB
   mvc:
     # Erro do proprio Spring MVC (payload invalido, media type errado, rota
     # inexistente) tambem sai em RFC 7807. Sem isto o contrato de erro teria duas
