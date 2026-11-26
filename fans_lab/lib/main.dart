@@ -21,6 +21,7 @@ Future<void> main() async {
   final sessao = await deps.sessao.carregar();
   final tema = await deps.sessao.temaEscuro();
   deps.api.token = sessao?.jwt;
+  await deps.notificacoes.inicializar();
   runApp(FansLabApp(deps: deps, sessaoInicial: sessao, temaEscuro: tema));
 }
 

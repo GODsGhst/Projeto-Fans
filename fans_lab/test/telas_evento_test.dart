@@ -456,18 +456,16 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      final botao = tester.widget<TextButton>(find.byType(TextButton));
-      expect(botao.onPressed, isNull);
-      expect(
-        find.descendant(
-          of: find.byType(TextButton),
-          matching: find.byType(CircularProgressIndicator),
-        ),
-        findsOneWidget,
+      // O Excluir é o TextButton com o spinner (o Anexar arquivo também é TextButton).
+      final excluir = find.ancestor(
+        of: find.byType(CircularProgressIndicator),
+        matching: find.byType(TextButton),
       );
+      expect(excluir, findsOneWidget);
+      expect(tester.widget<TextButton>(excluir).onPressed, isNull);
 
       // Toque no botão travado: não abre outra confirmação nem manda outro DELETE.
-      await tester.tap(find.byType(TextButton));
+      await tester.tap(excluir);
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(AlertDialog), findsNothing);
 

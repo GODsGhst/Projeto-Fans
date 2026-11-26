@@ -5,6 +5,7 @@ import 'package:fans_lab/models/evento.dart';
 import 'package:fans_lab/models/evento_detalhe.dart';
 import 'package:fans_lab/models/material_aula.dart';
 import 'package:fans_lab/models/tipo_evento.dart';
+import 'package:fans_lab/screens/enviar_arquivo_page.dart';
 import 'package:fans_lab/screens/evento_form_page.dart';
 import 'package:fans_lab/services/api_exception.dart';
 import 'package:fans_lab/widgets/cores.dart';
@@ -130,8 +131,18 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
             ),
           ),
         const SizedBox(height: 24),
-        Text('Materiais vinculados', style: tema.titleSmall),
-        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: Text('Materiais vinculados', style: tema.titleSmall)),
+            // Qualquer membro anexa, sem aprovação: juntar material na prova de alguém é o espírito do app.
+            if (!excluido)
+              TextButton.icon(
+                onPressed: () => _anexar(e),
+                icon: const Icon(Icons.attach_file),
+                label: const Text('Anexar arquivo'),
+              ),
+          ],
+        ),
         if (detalhe.materiais.isEmpty) const Text('Nenhum material vinculado.'),
         ...detalhe.materiais.map(_materialCard),
         if (!excluido) ...[
@@ -211,7 +222,8 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
     child: ListTile(
       title: Text(m.titulo),
       subtitle: Text(
-        '${m.url ?? _tipoMaterial(m.tipo)}\n${m.autoria.autorNome} · '
+        '${m.url ?? (m.arquivoRef != null ? 'Arquivo enviado' : _tipoMaterial(m.tipo))}\n'
+        '${m.autoria.autorNome} · '
         '${tempoRelativo(m.autoria.criadoEm)}',
       ),
     ),
@@ -301,6 +313,23 @@ class _EventoDetalhePageState extends State<EventoDetalhePage> {
       _mudou = true;
       _recarregar();
     }
+  }
+
+  Future<void> _anexar(Evento e) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final enviou = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EnviarArquivoPage(deps: widget.deps, evento: e),
+      ),
+    );
+    if (enviou != true) return;
+    _mudou = true;
+    _recarregar();
+    // Aviso dentro do app; a notificação do sistema sai também, quando há permissão.
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Arquivo enviado e anexado ao evento.')),
+    );
   }
 
   Future<void> _excluir(Evento e) async {

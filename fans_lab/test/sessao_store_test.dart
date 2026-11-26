@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:fans_lab/models/sessao.dart';
 import 'package:fans_lab/models/usuario.dart';
 import 'package:fans_lab/repositories/sessao_store.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -52,6 +55,32 @@ void main() {
     },
   );
 
+  test('o JWT vai para o cofre do sistema, não para o SharedPreferences', () async {
+    await SessaoStore().salvar(_sessao);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('sessao'), isFalse);
+    expect(await const FlutterSecureStorage().read(key: 'sessao'), contains('jwt-de-teste'));
+  });
+
+  test('sessão antiga em texto puro migra para o cofre sem deslogar', () async {
+    SharedPreferences.setMockInitialValues({'sessao': jsonEncode(_sessao.toJson())});
+
+    final lida = await SessaoStore().carregar();
+
+    expect(lida?.jwt, 'jwt-de-teste');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('sessao'), isFalse);
+    expect(await const FlutterSecureStorage().read(key: 'sessao'), contains('jwt-de-teste'));
+  });
+
+  test('sessão ilegível no cofre é apagada e força novo login', () async {
+    FlutterSecureStorage.setMockInitialValues({'sessao': '{isto nao e json'});
+
+    expect(await SessaoStore().carregar(), isNull);
+    expect(await const FlutterSecureStorage().read(key: 'sessao'), isNull);
+  });
+
   test('limpar mantém o tema', () async {
     final store = SessaoStore();
     await store.salvar(_sessao);
@@ -62,6 +91,7 @@ void main() {
     await store.limpar();
 
     expect(await store.carregar(), isNull);
+    expect(await const FlutterSecureStorage().read(key: 'sessao'), isNull);
     expect(await store.temaEscuro(), isTrue);
     expect(await store.ultimaSincronizacao(), isNull);
     expect(await store.homeSalvaEm(), isNull);

@@ -1,10 +1,19 @@
 import 'dart:convert';
 
 import 'package:fans_lab/models/sessao.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Sessão, tema e datas de sincronização. A senha nunca passa por aqui.
+///
+/// A sessão carrega o JWT, que é credencial: fica no cofre do sistema
+/// (Keystore no Android, WebCrypto no navegador). O resto não é segredo e fica
+/// em SharedPreferences.
 class SessaoStore {
+  SessaoStore([this._cofre = const FlutterSecureStorage()]);
+
+  final FlutterSecureStorage _cofre;
+
   static const _sessao = 'sessao';
   static const _temaEscuro = 'temaEscuro';
   static const _ultimaSincronizacao = 'ultimaSincronizacao';
@@ -13,9 +22,9 @@ class SessaoStore {
   static const _ultimoUsuarioId = 'ultimoUsuarioId';
 
   Future<void> salvar(Sessao s) async {
+    await _cofre.write(key: _sessao, value: jsonEncode(s.toJson()));
     final prefs = await SharedPreferences.getInstance();
-    // ponytail: JWT em SharedPreferences é texto puro; trocar por flutter_secure_storage (docs/ENTREGA-FLUTTER.md §9).
-    await prefs.setString(_sessao, jsonEncode(s.toJson()));
+    await prefs.remove(_sessao); // cópia de antes do cofre, se ainda houver
     await prefs.setString(_ultimoUsuarioId, s.usuario.id);
   }
 
@@ -25,26 +34,38 @@ class SessaoStore {
     return prefs.getString(_ultimoUsuarioId);
   }
 
+  /// Sessão ilegível é apagada e vira null, o que força novo login. Não é falha
+  /// de rede escondida: a rede não entra aqui. Falha de plataforma do cofre propaga.
   Future<Sessao?> carregar() async {
+    final noCofre = await _cofre.read(key: _sessao);
+    if (noCofre != null) {
+      final s = _ler(noCofre);
+      if (s == null) await _cofre.delete(key: _sessao);
+      return s;
+    }
+    // Instalação de antes do cofre: a sessão estava em SharedPreferences.
+    // Migra na primeira leitura, sem deslogar ninguém, e apaga a cópia em texto puro.
     final prefs = await SharedPreferences.getInstance();
-    final bruto = prefs.getString(_sessao);
-    if (bruto == null) return null;
+    final antiga = prefs.getString(_sessao);
+    if (antiga == null) return null;
+    final s = _ler(antiga);
+    if (s != null) await _cofre.write(key: _sessao, value: antiga);
+    await prefs.remove(_sessao);
+    return s;
+  }
+
+  static Sessao? _ler(String bruto) {
     try {
       final mapa = jsonDecode(bruto);
-      if (mapa is! Map<String, dynamic>) {
-        throw const FormatException('sessão salva não é um objeto');
-      }
-      return Sessao.fromJson(mapa);
+      return mapa is Map<String, dynamic> ? Sessao.fromJson(mapa) : null;
     } on FormatException {
-      // Sessão ilegível: apaga e devolve null, o que força novo login.
-      // Não é falha de rede escondida; a rede não entra aqui.
-      await prefs.remove(_sessao);
       return null;
     }
   }
 
   /// Logout ou sessão expirada. Mantém o tema (preferência do aparelho) e o dono da última sessão.
   Future<void> limpar() async {
+    await _cofre.delete(key: _sessao);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessao);
     await prefs.remove(_ultimaSincronizacao);
