@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O flutter_local_notifications acha o icone pelo nome; sem isto o R8 do release pode tira-lo e a notificacao falha em silencio. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_launcher" />
