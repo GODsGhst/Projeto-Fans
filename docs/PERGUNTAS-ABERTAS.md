@@ -624,6 +624,24 @@ reescrever a camada HTTP/SQLite/sync. Mas é retrabalho: confirme com o enunciad
 
 **Levantada em 2026-10-22**, na sessão da entrega Flutter (premissa P1 de `docs/ENTREGA-FLUTTER.md`).
 
+### A29. Arquivo enviado mora no Postgres, e não no R2 da Task 15
+
+A apostila de upload pede `POST` em `multipart/form-data` para a API. A Task 15 previa outro
+desenho: URL pré-assinada do R2 em duas fases, com o app fazendo `PUT` direto no bucket. O R2 exige
+conta e credencial, e o disco do Render gratuito some a cada deploy.
+
+**Default aplicado:** `POST /api/v1/eventos/{id}/arquivos` recebe o arquivo, confere extensão e
+primeiros bytes (PDF, PNG, JPG), teto de 5 MB, e grava em `arquivo.conteudo` (`bytea`, V11). O
+material nasce com `arquivo_ref` apontando para lá e já vinculado ao evento. `GET /arquivos/{id}`
+devolve o arquivo a quem é da turma. Sem conta nova; o Neon free tem 0,5 GB, então serve para a
+turma, não para volume.
+
+**Se preferir o R2:** a interface `Armazenamento` da Task 15 continua valendo; o `ArquivoService`
+troca o `INSERT` pelo upload ao bucket e o `arquivo_ref` passa a ser a chave do objeto. A tabela
+`arquivo` vira só metadado.
+
+**Levantada em 2026-11-26**, na sessão que aplicou as apostilas de tokens e de upload no `fans_lab`.
+
 
 
 ---

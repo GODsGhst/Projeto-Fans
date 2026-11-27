@@ -1,6 +1,6 @@
 # fans_lab
 
-App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma (backend Spring em `../backend`, Postgres) e cobre as duas apostilas da disciplina Aplicações Móveis e Distribuídas: **Protocolo HTTP** e **Persistência local com sincronização**.
+App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma (backend Spring em `../backend`, Postgres) e cobre as quatro apostilas da disciplina Aplicações Móveis e Distribuídas: **Protocolo HTTP**, **Persistência local com sincronização**, **Autenticação, autorização e tokens** e **Upload de arquivos e notificações** (as duas últimas: ver "Apostilas de tokens e de upload").
 
 ## Requisitos da Etapa 2 → onde estão
 
@@ -17,6 +17,35 @@ App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma
 | Tratamento de erros | sem conexão, servidor fora do ar, 401, 404, 409, 5xx e JSON inesperado viram mensagem na tela; falha nunca aparece como lista vazia | `ApiService._enviar`, `_erroHttp`, `HomeService.carregar` |
 | Organização | Model, Database, Repository, Service e Screen em pastas separadas | ver "Estrutura" |
 
+## Apostilas de tokens e de upload → onde estão
+
+**Autenticação, autorização e tokens** (atividade prática da apostila):
+
+| Pedido da apostila | Como o app atende | Onde |
+|---|---|---|
+| Tela de login com e-mail e senha | formato do e-mail e senha obrigatória conferidos antes de enviar | `screens/login_page.dart` |
+| Enviar as credenciais e obter o token | POST `/auth/login`; a resposta traz o JWT e o usuário | `ApiService.login`, `models/sessao.dart` |
+| Guardar o token de forma adequada à plataforma | cofre do sistema com `flutter_secure_storage` (Keystore no Android, WebCrypto no navegador). A sessão antiga, de quando ficava no SharedPreferences, migra na primeira leitura e sai de lá | `repositories/sessao_store.dart` |
+| Mandar `Authorization: Bearer <token>` | em toda chamada autenticada, inclusive no upload | `ApiService._enviar`, `UploadService.enviar` |
+| Tratar 200, 401 e 403 | 401: "Sessão expirada. Entre de novo." e volta ao login; 403: "Você não tem permissão para isso." Membro de outra turma recebe 404, que não confirma que o registro existe | `ApiService._erroHttp`, `main.dart` (`_sessaoExpirou`) |
+| Logout que impede voltar às telas protegidas | Configurações → Sair apaga a sessão do cofre, fecha todas as telas e abre o login; o "voltar" não reabre nada | `screens/configuracoes_page.dart`, `main.dart` (`_aoSair`) |
+| Usuários com permissões diferentes | só o autor edita ou exclui o próprio evento: o servidor devolve 403 para os outros, e o app nem mostra os botões ("Só Ana edita ou apaga este registro.") | `../backend` (`EventoService`), `screens/evento_detalhe_page.dart` |
+
+**Upload de arquivos e notificações** (atividade "Central de documentos", aplicada a provas e entregas):
+
+| Pedido da apostila | Como o app atende | Onde |
+|---|---|---|
+| Tela com "Selecionar documento" e "Enviar" | detalhe do evento → **Anexar arquivo** | `screens/enviar_arquivo_page.dart` |
+| Só PDF, PNG ou JPG | seletor do sistema filtrado (`file_picker`) e conferência de extensão e tamanho (até 5 MB) no aparelho | `UploadService.validar` |
+| Nome e tamanho visíveis; não envia sem arquivo | nome e tamanho aparecem ao escolher; Enviar fica desabilitado sem arquivo válido | `enviar_arquivo_page.dart` |
+| `multipart/form-data` conforme o contrato | Dio com `FormData`: campo `arquivo` + campo opcional `descricao`; POST `/eventos/{id}/arquivos`, que responde 201 com o material criado | `services/upload_service.dart` |
+| Progresso durante o envio | `LinearProgressIndicator` alimentado pelo `onSendProgress` do Dio (indeterminado se o total não vier) | `enviar_arquivo_page.dart` |
+| Cancelamento, sucesso e falha | cancelar o seletor não é erro ("Seleção cancelada.") e mantém a escolha anterior; 401, 403, 404, 413, 415, 5xx, timeout e sem conexão viram mensagem própria | `UploadService._traduzir` |
+| Notificação local ao concluir | `flutter_local_notifications` no Android e no navegador; a permissão é pedida no primeiro envio, não ao abrir o app. Também há aviso dentro do app | `services/notificacao_service.dart`, `evento_detalhe_page.dart` |
+| Servidor valida e armazena | extensão **e** primeiros bytes do arquivo (um `.exe` renomeado para `.pdf` volta 415), teto de 5 MB, escopo da turma; o arquivo fica no Postgres e vira material com autor e hora, já vinculado ao evento | `../backend` (`ArquivoService`, `V11__arquivo_enviado.sql`) |
+
+Push com Firebase (FCM) fica de fora: exigiria projeto no Firebase e registrar o token do aparelho no backend. O backend já tem a interface `Notifier` (com `FcmNotifier`) por onde esse aviso sairia.
+
 ## O que cobre
 
 - **HTTP** (`lib/services/api_service.dart`): GET (`home`, `materias`, `evento`), POST (`criarEvento`, espera 201), PUT (`marcarFeito`, em `/eventos/{id}/estado-pessoal`, espera 204), PATCH (`atualizarEvento`) e DELETE (`excluirEvento`). Edição e exclusão enviam `If-Match` com a versão do evento.
@@ -24,9 +53,12 @@ App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma
 - **SQLite** (`lib/database/app_database.dart`, `lib/repositories/`): cache da Home, matérias, rascunhos (CRUD local) e estado pessoal ("feito").
 - **SharedPreferences** (`lib/repositories/sessao_store.dart`): sessão, tema escuro, datas de sincronização e o dono da última sessão.
 - **Offline e sincronização** (`lib/services/home_service.dart`, `lib/services/sync_service.dart`): sem rede, a Home vem do cache. Criar evento e marcar feito (inclusive pelo detalhe, sem rede) vão para uma fila e são enviados depois. A Home envia a fila sozinha quando carrega com rede. Não há serviço em segundo plano.
+- **Autenticação** (`lib/repositories/sessao_store.dart`): o JWT fica no cofre do sistema (`flutter_secure_storage`); tema e datas continuam em SharedPreferences, porque não são segredo.
+- **Upload** (`lib/services/upload_service.dart`, `lib/screens/enviar_arquivo_page.dart`): `file_picker` escolhe, Dio envia em `multipart/form-data` com progresso. O arquivo vira material do evento, com o nome de quem enviou.
+- **Notificação local** (`lib/services/notificacao_service.dart`): aviso "Arquivo enviado" no Android (canal `envios`) e no navegador (service worker do plugin).
 - **Navegador**: o SQLite roda em WebAssembly (`sqflite_common_ffi_web`; `web/sqlite3.wasm` e `web/sqflite_sw.js` vêm de `dart run sqflite_common_ffi_web:setup`). A API só aceita chamadas de navegador vindas de `http://localhost:8100` (CORS), por isso o `web_dev_config.yaml` fixa essa porta no `flutter run`.
 
-Fora do escopo: edição e exclusão offline, cache do detalhe de evento, armazenamento seguro do token (ver "Limites conhecidos").
+Fora do escopo: edição e exclusão offline, cache do detalhe de evento, push remoto (FCM) (ver "Limites conhecidos").
 
 ## Primeiro acesso
 
@@ -46,7 +78,7 @@ flutter run -d chrome                                          # navegador, API 
 flutter run                                                    # Android, API de produção
 flutter run --dart-define=API_URL=http://10.0.2.2:8080/api/v1  # Android, API local (backend na porta 8080 do PC)
 flutter run -d chrome --dart-define=API_URL=http://localhost:8080/api/v1  # navegador, API local
-flutter test                                                   # 195 testes, no PC, sem aparelho e sem backend
+flutter test                                                   # 213 testes, no PC, sem aparelho e sem backend
 flutter build apk --release                                    # APK em build/app/outputs/flutter-apk/app-release.apk
 flutter build web                                              # site em build/web (sirva em http://localhost:8100)
 ```
@@ -105,10 +137,11 @@ lib/
   models/          dados puros: fromJson/toJson, toMap/fromMap; sem Flutter
   database/        AppDatabase: SQLite (sqflite; no navegador, sqflite_common_ffi_web), esquema versão 1
   repositories/    CRUD local (cache, matérias, rascunhos, estado pessoal) e SessaoStore
-  services/        ApiService (HTTP), ApiException, HomeService (API ou cache), SyncService (fila)
-  screens/         login, criar conta, entrar na turma, Home, detalhe, formulário, fila de envio, configurações
+  services/        ApiService (HTTP), ApiException, HomeService (API ou cache), SyncService (fila),
+                   UploadService (multipart com Dio), NotificacaoService (notificação local)
+  screens/         login, criar conta, entrar na turma, Home, detalhe, formulário, anexar arquivo, fila de envio, configurações
   widgets/         MateriaChip, EventoCard, tema (CoresFans), tempo_relativo
-test/              195 testes: HTTP (MockClient), modelos, SQLite (ffi), serviços, telas, widgets, localização
+test/              213 testes: HTTP (MockClient), upload (Dio e seletor falsos), cofre, modelos, SQLite (ffi), serviços, telas, widgets, localização
 test_e2e/          13 testes contra o backend real (ver "Teste contra o backend real")
 ```
 
@@ -122,16 +155,21 @@ test_e2e/          13 testes contra o backend real (ver "Teste contra o backend 
 - **"E-mail ou senha incorretos."** Senha errada no login (401).
 - **"Endereço do servidor inválido. Confira o API_URL."** O `--dart-define=API_URL` está sem `https://` (ou com esquema errado). Nada é enviado.
 - **401 em outras telas (sessão expirada).** O app volta ao login com a mensagem "Sessão expirada. Entre de novo.". Rascunhos e marcações não enviados continuam no aparelho: entre de novo com a mesma conta e eles são enviados. Entrar com outra conta apaga os dados locais da conta anterior, para não enviar evento com a autoria errada.
+- **Build Android falha em `:android_file_picker:compileDebugKotlin` com "different roots".** No Windows, o projeto e o `PUB_CACHE` estão em drives diferentes (ex.: projeto em `C:`, pub cache em `D:`), e o cache do Kotlin não aceita. Gere o APK de uma cópia no mesmo drive do `PUB_CACHE` (`git worktree add D:\...`) ou use o `PUB_CACHE` padrão.
+- **A notificação de envio não aparece.** A permissão foi negada. No Android: Configurações → Apps → Fans Lab → Notificações. No navegador: o cadeado na barra de endereço → Notificações → Permitir. O envio não depende disso.
 - **Zerar dados.** Configurações → Sair (pede confirmação; apaga rascunhos e marcações não enviados e mantém o tema) ou desinstalar o app (apaga tudo).
 
 ## Limites conhecidos
 
-- O token (JWT) fica em SharedPreferences, em texto puro. O caminho seguro é `flutter_secure_storage`; não foi feito.
 - Logout não revoga o JWT no servidor: não existe endpoint de revogação. O token vale até expirar (720 h). O app limpa tudo localmente.
 - Editar e excluir evento exigem internet: PATCH e DELETE não entram na fila.
 - Abrir o detalhe de um evento sem rede mostra "Sem conexão com o servidor.": não há cache de detalhe. Mesmo assim, o botão "Marcar como feito" aparece e grava no aparelho.
 - Sem serviço em segundo plano. A fila é enviada ao carregar a Home com rede, pelo ícone de sincronizar, pelo botão "Sincronizar agora" da tela Fila de envio, e ao salvar ou marcar feito. Se a rede voltar com o app fechado, nada é enviado até o app ser aberto.
 - Se a resposta de um POST se perder por timeout, o rascunho continua pendente e o próximo envio cria outro evento. Não há chave de idempotência (comentário `ponytail` em `lib/services/sync_service.dart`).
-- Não há tela para criar material. A seção "Materiais vinculados" só mostra o que já existe no servidor.
+- Pelo app só se cria material de **arquivo** (Anexar arquivo). Material por link continua só pelo servidor ou pelo app Ionic.
+- O arquivo enviado aparece na lista do evento, mas o fans_lab não o abre. A API entrega o arquivo em `GET /arquivos/{id}`, com token e só para quem é da turma, então um link direto no navegador não funciona.
+- O arquivo fica no próprio Postgres (até 5 MB cada). Serve para a turma; volume grande pede um bucket (comentário `ponytail` na `V11`).
+- Quem é da turma e tem o id do arquivo de um material já excluído ainda consegue baixá-lo (comentário `ponytail` em `ArquivoService.baixar`).
+- A notificação depende da permissão. Negada, o envio funciona igual e o aviso aparece só dentro do app. No `flutter run -d chrome`, a notificação aparece mas não reage a clique (limite do plugin com a janela de depuração).
 - O APK de release é assinado com a chave debug (TODO do template Flutter). Serve para entregar, não para loja.
 - HTTP em claro só no build de debug. Apontar o debug para um IP da rede local manda senha e token sem criptografia. Para o emulador (`10.0.2.2`) é loopback.
