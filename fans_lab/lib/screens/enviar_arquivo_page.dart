@@ -141,6 +141,8 @@ class _EnviarArquivoPageState extends State<EnviarArquivoPage> {
             decoration: const InputDecoration(
               labelText: 'Descrição (opcional)',
               helperText: 'Vira o título do material. Vazia, usa o nome do arquivo.',
+              // Em celular de 360 dp a frase não cabe numa linha e sumia em "…".
+              helperMaxLines: 2,
             ),
           ),
           const SizedBox(height: 12),

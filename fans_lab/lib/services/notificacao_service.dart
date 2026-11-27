@@ -36,7 +36,8 @@ class NotificacaoService {
             ),
           ) ??
           false;
-    } on Exception catch (e) {
+    } on Object catch (e) {
+      // Roda no main(): o app abre sem notificação, mas abre. Error também entra aqui.
       developer.log('notificações indisponíveis: $e', name: 'notificacao');
     }
   }
