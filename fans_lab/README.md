@@ -87,6 +87,7 @@ flutter build web                                              # site em build/w
 - A URL padrão fica em `lib/config.dart`.
 - Nenhum APK vem pronto no repositório. O comando acima gera o arquivo no caminho indicado.
 - Verificado em 24/10/2026, no emulador Android 15 (API 35) e no Chrome, contra o backend local: login, consulta, cadastro com validação, fechar e reabrir, sem conexão (modo avião no Android, servidor desligado no navegador), cadastro offline e sincronização. O APK de release abre no emulador.
+- Verificado em 26/11/2026, no emulador Android 15 (API 35) e no navegador, contra o backend local: login com o token no cofre, Anexar arquivo (seletor nativo, progresso, pedido de permissão e notificação "Arquivo enviado"), arquivo acima de 5 MB barrado, logout. As correções da revisão de 27/11 foram conferidas pelos testes automáticos.
 
 ## Rodar contra o backend local
 
