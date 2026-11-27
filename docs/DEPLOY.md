@@ -215,6 +215,8 @@ consumiu meia hora e deixou contas de teste no banco de produção.
 
 ### Quando o `build` não muda
 
+**Primeiro, o branch.** O serviço `projetofans-api` publica a partir do branch `acelera-backend`, não do `master` (aparece ao lado do repositório no topo da página do serviço). Push só no `master` não dispara deploy nenhum: depois do push, avance o branch de deploy junto, com `git push origin master:acelera-backend`. Foi o que travou o deploy de 27/11 por 30 minutos.
+
 O Render redeploya sozinho a cada push na branch configurada. Se o digesto não
 mudar depois de ~10 min, o problema **não é lentidão** — é que o deploy não
 disparou. Em `dashboard.render.com` → serviço `projetofans-api`:
