@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -187,6 +188,28 @@ void main() {
     await deixarRodar(tester);
 
     expect(servidor.chamadas, 1);
+    expect(resultados, [true]);
+  });
+
+  testWidgets('voltar no meio do envio não sai da tela e avisa', (tester) async {
+    final resposta = Completer<void>();
+    final resultados = await abrir(tester, () => jsonResposta(materialCriado, 201));
+    servidor.antes = resposta.future;
+    seletor.proximo = ArquivoFalso('lista.pdf', _pdf(2048));
+    await tester.tap(find.text('Selecionar documento'));
+    await deixarRodar(tester);
+
+    await tester.tap(find.text('Enviar'));
+    await tester.pump();
+    final NavigatorState navegador = tester.state(find.byType(Navigator));
+    await navegador.maybePop();
+    await tester.pump();
+
+    expect(find.byType(EnviarArquivoPage), findsOneWidget);
+    expect(find.text('Espere o envio terminar.'), findsOneWidget);
+
+    resposta.complete();
+    await deixarRodar(tester);
     expect(resultados, [true]);
   });
 

@@ -18,6 +18,9 @@ class AdaptadorFalso implements HttpClientAdapter {
   String corpo = '';
   int chamadas = 0;
 
+  /// Quando não-nulo, o servidor só responde depois que este Future completar.
+  Future<void>? antes;
+
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
@@ -33,6 +36,7 @@ class AdaptadorFalso implements HttpClientAdapter {
     chamadas++;
     pedido = options;
     corpo = latin1.decode(bytes);
+    if (antes != null) await antes;
     return responder(options, corpo);
   }
 

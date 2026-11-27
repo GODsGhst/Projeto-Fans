@@ -15,7 +15,11 @@ import 'package:fans_lab/services/upload_service.dart';
 /// Selecionar não é enviar: escolher só guarda o arquivo na tela; os bytes saem
 /// quando a pessoa toca em Enviar.
 class EnviarArquivoPage extends StatefulWidget {
-  const EnviarArquivoPage({super.key, required this.deps, required this.evento});
+  const EnviarArquivoPage({
+    super.key,
+    required this.deps,
+    required this.evento,
+  });
 
   final AppDeps deps;
   final Evento evento;
@@ -40,10 +44,23 @@ class _EnviarArquivoPageState extends State<EnviarArquivoPage> {
   }
 
   Future<void> _escolher() async {
-    final arquivo = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: UploadService.extensoes,
-    );
+    PlatformFile? escolhido;
+    try {
+      escolhido = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: UploadService.extensoes,
+      );
+    } on Object {
+      // Ex.: arquivo do Drive sem internet, que o Android não consegue copiar.
+      if (mounted) {
+        setState(
+          () => _mensagem = 'Não foi possível abrir este arquivo. Escolha outro.',
+        );
+      }
+      return;
+    }
+    // Local final e já inicializado: o Dart mantém a checagem de nulo dentro do setState.
+    final arquivo = escolhido;
     if (!mounted) return;
     // Cancelar o seletor é fluxo normal: sem erro, e a escolha anterior fica.
     if (arquivo == null) {
@@ -77,8 +94,9 @@ class _EnviarArquivoPageState extends State<EnviarArquivoPage> {
     final Uint8List bytes;
     try {
       bytes = await arquivo.readAsBytes();
-    } on Exception {
-      // O arquivo sumiu ou perdeu a permissão entre escolher e enviar.
+    } on Object {
+      // O arquivo sumiu ou perdeu a permissão entre escolher e enviar. No navegador o erro
+      // de leitura é um objeto JS, não uma Exception.
       if (mounted) {
         setState(() {
           _enviando = false;
@@ -117,61 +135,78 @@ class _EnviarArquivoPageState extends State<EnviarArquivoPage> {
     final arquivo = _arquivo;
     final tema = Theme.of(context);
     final podeEnviar = arquivo != null && _problema == null && !_enviando;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Anexar arquivo')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'O arquivo fica em "${widget.evento.titulo}" e aparece para a turma com o seu nome.',
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _enviando ? null : _escolher,
-            icon: const Icon(Icons.attach_file),
-            label: Text(arquivo == null ? 'Selecionar documento' : 'Trocar documento'),
-          ),
-          const SizedBox(height: 4),
-          Text('PDF, PNG ou JPG, até 5 MB.', style: tema.textTheme.bodySmall),
-          if (arquivo != null)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.description_outlined),
-              title: Text(arquivo.name),
-              subtitle: Text(tamanhoLegivel(_tamanho)),
-            ),
-          if (_problema != null)
-            Text(_problema!, style: TextStyle(color: tema.colorScheme.error)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descricao,
-            enabled: !_enviando,
-            maxLength: 120,
-            decoration: const InputDecoration(
-              labelText: 'Descrição (opcional)',
-              helperText: 'Vira o título do material. Vazia, usa o nome do arquivo.',
-              // Em celular de 360 dp a frase não cabe numa linha e sumia em "…".
-              helperMaxLines: 2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: podeEnviar ? _enviar : null,
-            child: const Text('Enviar'),
-          ),
-          if (_enviando) ...[
-            const SizedBox(height: 16),
-            LinearProgressIndicator(value: _progresso),
-            const SizedBox(height: 4),
+    // Sair no meio do envio deixava o pedido correndo sem ninguém saber o resultado,
+    // e a pessoa mandava de novo. Volta só depois da resposta.
+    return PopScope(
+      canPop: !_enviando,
+      onPopInvokedWithResult: (saiu, _) {
+        if (!saiu) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Espere o envio terminar.')),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Anexar arquivo')),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
             Text(
-              _progresso == null ? 'Enviando…' : 'Enviando… ${(_progresso! * 100).toStringAsFixed(0)}%',
+              'O arquivo fica em "${widget.evento.titulo}" e aparece para a turma com o seu nome.',
             ),
-          ],
-          if (_mensagem.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Semantics(liveRegion: true, child: Text(_mensagem)),
+            OutlinedButton.icon(
+              onPressed: _enviando ? null : _escolher,
+              icon: const Icon(Icons.attach_file),
+              label: Text(
+                arquivo == null ? 'Selecionar documento' : 'Trocar documento',
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text('PDF, PNG ou JPG, até 5 MB.', style: tema.textTheme.bodySmall),
+            if (arquivo != null)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.description_outlined),
+                title: Text(arquivo.name),
+                subtitle: Text(tamanhoLegivel(_tamanho)),
+              ),
+            if (_problema != null)
+              Text(_problema!, style: TextStyle(color: tema.colorScheme.error)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descricao,
+              enabled: !_enviando,
+              maxLength: 120,
+              decoration: const InputDecoration(
+                labelText: 'Descrição (opcional)',
+                helperText:
+                    'Vira o título do material. Vazia, usa o nome do arquivo.',
+                // Em celular de 360 dp a frase não cabe numa linha e sumia em "…".
+                helperMaxLines: 2,
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: podeEnviar ? _enviar : null,
+              child: const Text('Enviar'),
+            ),
+            if (_enviando) ...[
+              const SizedBox(height: 16),
+              LinearProgressIndicator(value: _progresso),
+              const SizedBox(height: 4),
+              Text(
+                _progresso == null
+                    ? 'Enviando…'
+                    : 'Enviando… ${(_progresso! * 100).toStringAsFixed(0)}%',
+              ),
+            ],
+            if (_mensagem.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Semantics(liveRegion: true, child: Text(_mensagem)),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

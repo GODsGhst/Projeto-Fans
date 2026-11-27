@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:fans_lab/models/material_aula.dart';
 import 'package:fans_lab/services/api_exception.dart';
@@ -14,13 +13,19 @@ import 'package:fans_lab/services/api_service.dart';
 /// opcional `descricao`; responde 201 com o material criado, já vinculado ao evento.
 class UploadService {
   UploadService(this._api, {Dio? dio})
-      : _dio = dio ??
-            Dio(BaseOptions(
-              connectTimeout: const Duration(seconds: 15),
-              sendTimeout: const Duration(minutes: 2),
-              // Mesmo teto do ApiService: o Render gratuito leva ~50 s para acordar.
-              receiveTimeout: const Duration(seconds: 90),
-            ));
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              // No navegador o "connect" do Dio cobre também o preflight de CORS, que só
+              // responde quando o Render acorda (~50 s): 15 s derrubava todo envio com o
+              // servidor dormindo. Lá o teto é um só, connect + receive, para o pedido inteiro.
+              connectTimeout: kIsWeb ? null : const Duration(seconds: 15),
+              sendTimeout: kIsWeb ? null : const Duration(minutes: 2),
+              // Mesmo teto do ApiService no Android; no navegador cobre acordar + enviar 5 MB.
+              receiveTimeout: Duration(seconds: kIsWeb ? 180 : 90),
+            ),
+          );
 
   final ApiService _api;
   final Dio _dio;
@@ -61,7 +66,9 @@ class UploadService {
       r = await _dio.post<Object?>(
         '${_api.baseUrl}/eventos/${Uri.encodeComponent(eventoId)}/arquivos',
         data: formulario,
-        options: Options(headers: {if (token != null) 'Authorization': 'Bearer $token'}),
+        options: Options(
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        ),
         onSendProgress: aoEnviar,
       );
     } on DioException catch (e) {
@@ -83,10 +90,13 @@ class UploadService {
     return switch (e.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        const ApiException.semConexao(
-            'O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes.'),
-      DioExceptionType.badResponse when status != null => ApiException.http(status, _mensagem(status, _detalhe(e))),
+      DioExceptionType.receiveTimeout => const ApiException.semConexao(
+        'O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes.',
+      ),
+      DioExceptionType.badResponse when status != null => ApiException.http(
+        status,
+        _mensagem(status, _detalhe(e)),
+      ),
       // Sem rede, DNS, TLS; no navegador, também a origem recusada (CORS).
       _ => const ApiException.semConexao(),
     };
@@ -96,24 +106,28 @@ class UploadService {
   static String? _detalhe(DioException e) {
     final corpo = e.response?.data;
     final detalhe = corpo is Map ? corpo['detail'] : null;
-    return detalhe is String && detalhe.trim().isNotEmpty ? detalhe.trim() : null;
+    return detalhe is String && detalhe.trim().isNotEmpty
+        ? detalhe.trim()
+        : null;
   }
 
   String _mensagem(int status, String? detalhe) => switch (status) {
-        // 400 do envio diz qual campo está errado (descrição longa, arquivo vazio).
-        400 => detalhe ?? 'Dados inválidos.',
-        401 => 'Sessão expirada. Entre de novo.',
-        403 => 'Você não tem permissão para enviar arquivos aqui.',
-        // O 404 de escopo do servidor diz "Registro nao encontrado". Outro 404 é servidor
-        // sem a rota de envio (deploy antigo ainda no ar), e não evento apagado.
-        404 when detalhe == 'Registro nao encontrado' => 'Evento não encontrado — pode ter sido excluído.',
-        404 => 'O servidor ainda não aceita envio de arquivo. Tente de novo mais tarde.',
-        413 => 'O arquivo passa do limite de 5 MB aceito pelo servidor.',
-        415 => 'O servidor só aceita PDF, PNG ou JPG de verdade.',
-        507 => 'Acabou o espaço para arquivos da turma. Fale com o líder.',
-        >= 500 => 'Erro no servidor. Tente de novo em instantes.',
-        _ => 'O servidor recusou o envio (HTTP $status).',
-      };
+    // 400 do envio diz qual campo está errado (descrição longa, arquivo vazio).
+    400 => detalhe ?? 'Dados inválidos.',
+    401 => 'Sessão expirada. Entre de novo.',
+    403 => 'Você não tem permissão para enviar arquivos aqui.',
+    // O 404 de escopo do servidor diz "Registro nao encontrado". Outro 404 é servidor
+    // sem a rota de envio (deploy antigo ainda no ar), e não evento apagado.
+    404 when detalhe == 'Registro nao encontrado' =>
+      'Evento não encontrado — pode ter sido excluído.',
+    404 =>
+      'O servidor ainda não aceita envio de arquivo. Tente de novo mais tarde.',
+    413 => 'O arquivo passa do limite de 5 MB aceito pelo servidor.',
+    415 => 'O servidor só aceita PDF, PNG ou JPG de verdade.',
+    507 => 'Acabou o espaço para arquivos da turma. Fale com o líder.',
+    >= 500 => 'Erro no servidor. Tente de novo em instantes.',
+    _ => 'O servidor recusou o envio (HTTP $status).',
+  };
 }
 
 /// "340 KB", "1,2 MB".

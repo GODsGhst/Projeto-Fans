@@ -170,6 +170,7 @@ test_e2e/          13 testes contra o backend real (ver "Teste contra o backend 
 - O site Ionic (`app/`) ainda trata material de arquivo como link: mostra a linha com o rótulo "LINK", não abre o arquivo e não oferece editar. O líder continua podendo ocultar pelo site.
 - Nem o fans_lab nem o site oferecem apagar material de arquivo pela tela; pela API, `DELETE /materiais/{id}` vale para o autor, como em qualquer material.
 - Cada turma tem até 100 MB de arquivos e o servidor inteiro até 300 MB (o banco gratuito tem 0,5 GB para tudo); acima disso o envio volta 507, "Acabou o espaço para arquivos da turma".
+- O download (`GET /arquivos/{id}`) carrega o arquivo inteiro na memória do servidor. Muitos downloads simultâneos de arquivos de 5 MB pesam no plano gratuito; o caminho é o bucket da Task 15.
 - Pelo app só se cria material de **arquivo** (Anexar arquivo). Material por link continua só pelo servidor ou pelo app Ionic.
 - O arquivo enviado aparece na lista do evento, mas o fans_lab não o abre. A API entrega o arquivo em `GET /arquivos/{id}`, com token e só para quem é da turma, então um link direto no navegador não funciona.
 - O arquivo fica no próprio Postgres (até 5 MB cada). Serve para a turma; volume grande pede um bucket (comentário `ponytail` na `V11`).
