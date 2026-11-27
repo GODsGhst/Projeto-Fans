@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:fans_lab/models/sessao.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -35,12 +36,24 @@ class SessaoStore {
   }
 
   /// Sessão ilegível é apagada e vira null, o que força novo login. Não é falha
-  /// de rede escondida: a rede não entra aqui. Falha de plataforma do cofre propaga.
+  /// de rede escondida: a rede não entra aqui.
+  ///
+  /// Cofre que não abre (chave do navegador apagada, Keystore corrompido) também
+  /// vira null: o main() espera esta leitura antes do runApp, e um erro aqui
+  /// deixava o app em branco a cada abertura.
   Future<Sessao?> carregar() async {
-    final noCofre = await _cofre.read(key: _sessao);
+    String? noCofre;
+    try {
+      noCofre = await _cofre.read(key: _sessao);
+    } on Object catch (e) {
+      // No navegador o erro do WebCrypto é um objeto JS, não uma Exception.
+      // Segue como cofre vazio: se ainda houver a cópia antiga, ela vale e sai do texto puro.
+      developer.log('cofre ilegível, sessão descartada: $e', name: 'sessao');
+      await _apagarDoCofre();
+    }
     if (noCofre != null) {
       final s = _ler(noCofre);
-      if (s == null) await _cofre.delete(key: _sessao);
+      if (s == null) await _apagarDoCofre();
       return s;
     }
     // Instalação de antes do cofre: a sessão estava em SharedPreferences.
@@ -49,9 +62,25 @@ class SessaoStore {
     final antiga = prefs.getString(_sessao);
     if (antiga == null) return null;
     final s = _ler(antiga);
-    if (s != null) await _cofre.write(key: _sessao, value: antiga);
+    if (s != null) {
+      try {
+        await _cofre.write(key: _sessao, value: antiga);
+      } on Object catch (e) {
+        // A sessão vale até fechar o app; a cópia em texto puro sai do mesmo jeito.
+        developer.log('sessão antiga não migrou para o cofre: $e', name: 'sessao');
+      }
+    }
     await prefs.remove(_sessao);
     return s;
+  }
+
+  /// Apagar não pode derrubar o logout: com o cofre quebrado, a próxima leitura já devolve null.
+  Future<void> _apagarDoCofre() async {
+    try {
+      await _cofre.delete(key: _sessao);
+    } on Object catch (e) {
+      developer.log('não deu para apagar a sessão do cofre: $e', name: 'sessao');
+    }
   }
 
   static Sessao? _ler(String bruto) {
@@ -65,7 +94,7 @@ class SessaoStore {
 
   /// Logout ou sessão expirada. Mantém o tema (preferência do aparelho) e o dono da última sessão.
   Future<void> limpar() async {
-    await _cofre.delete(key: _sessao);
+    await _apagarDoCofre();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessao);
     await prefs.remove(_ultimaSincronizacao);

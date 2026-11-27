@@ -6,6 +6,7 @@ import com.projetofans.domain.Material;
 import com.projetofans.domain.RegistroTipo;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ConflitoVersaoException;
+import com.projetofans.erro.ErroDeNegocio;
 import com.projetofans.erro.NaoAutorException;
 import com.projetofans.repo.MateriaRepository;
 import com.projetofans.repo.MaterialRepository;
@@ -16,6 +17,7 @@ import com.projetofans.web.dto.AtualizarMaterialRequest;
 import com.projetofans.web.dto.CriarMaterialRequest;
 import com.projetofans.web.dto.MaterialResponse;
 import jakarta.persistence.EntityManager;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,6 +96,11 @@ public class MaterialService {
         // Autor OU docente com alcance na materia de origem E destino.
         exigirAutorOuAlcance(usuario, material, materia.getId());
         exigirVersao(material, versionEsperada);
+        // Material de arquivo nao tem link: sem esta excecao o autor nao conseguia
+        // nem corrigir o titulo do que enviou (nao-negociavel 10).
+        if (req.url() == null && material.getArquivoRef() == null) {
+            throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "O link e obrigatorio.");
+        }
 
         revisoes.registrar(RegistroTipo.MATERIAL, material.getId(), usuario.usuarioId(),
                 AcaoRevisao.EDITAR, material);

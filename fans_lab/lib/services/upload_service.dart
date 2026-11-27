@@ -86,18 +86,31 @@ class UploadService {
       DioExceptionType.receiveTimeout =>
         const ApiException.semConexao(
             'O servidor demorou para responder — ele pode estar acordando. Tente de novo em instantes.'),
-      DioExceptionType.badResponse when status != null => ApiException.http(status, _mensagem(status)),
+      DioExceptionType.badResponse when status != null => ApiException.http(status, _mensagem(status, _detalhe(e))),
       // Sem rede, DNS, TLS; no navegador, também a origem recusada (CORS).
       _ => const ApiException.semConexao(),
     };
   }
 
-  String _mensagem(int status) => switch (status) {
+  /// O `detail` do ProblemDetail, quando o corpo é JSON.
+  static String? _detalhe(DioException e) {
+    final corpo = e.response?.data;
+    final detalhe = corpo is Map ? corpo['detail'] : null;
+    return detalhe is String && detalhe.trim().isNotEmpty ? detalhe.trim() : null;
+  }
+
+  String _mensagem(int status, String? detalhe) => switch (status) {
+        // 400 do envio diz qual campo está errado (descrição longa, arquivo vazio).
+        400 => detalhe ?? 'Dados inválidos.',
         401 => 'Sessão expirada. Entre de novo.',
         403 => 'Você não tem permissão para enviar arquivos aqui.',
-        404 => 'Evento não encontrado — pode ter sido excluído.',
+        // O 404 de escopo do servidor diz "Registro nao encontrado". Outro 404 é servidor
+        // sem a rota de envio (deploy antigo ainda no ar), e não evento apagado.
+        404 when detalhe == 'Registro nao encontrado' => 'Evento não encontrado — pode ter sido excluído.',
+        404 => 'O servidor ainda não aceita envio de arquivo. Tente de novo mais tarde.',
         413 => 'O arquivo passa do limite de 5 MB aceito pelo servidor.',
         415 => 'O servidor só aceita PDF, PNG ou JPG de verdade.',
+        507 => 'Acabou o espaço para arquivos da turma. Fale com o líder.',
         >= 500 => 'Erro no servidor. Tente de novo em instantes.',
         _ => 'O servidor recusou o envio (HTTP $status).',
       };

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -63,22 +64,30 @@ class _EnviarArquivoPageState extends State<EnviarArquivoPage> {
   Future<void> _enviar() async {
     final arquivo = _arquivo;
     if (arquivo == null || _problema != null || _enviando) return;
-    // Primeiro: o navegador só mostra o pedido de permissão se ele vier direto do toque.
-    await widget.deps.notificacoes.pedirPermissao();
-    final Uint8List bytes;
-    try {
-      bytes = await arquivo.readAsBytes();
-    } on Exception {
-      // O arquivo sumiu ou perdeu a permissão entre escolher e enviar.
-      if (mounted) setState(() => _mensagem = 'Não foi possível ler o arquivo. Escolha de novo.');
-      return;
-    }
-    if (!mounted) return;
+    // Trava já no toque: o pedido de permissão e a leitura do arquivo esperam, e um
+    // segundo toque nesse meio-tempo mandava o mesmo arquivo duas vezes.
     setState(() {
       _enviando = true;
       _progresso = null;
       _mensagem = '';
     });
+    // Chamado ainda dentro do toque (o navegador só mostra o pedido assim) e sem esperar:
+    // no navegador o pedido só termina quando a pessoa responde, e o envio não depende disso.
+    unawaited(widget.deps.notificacoes.pedirPermissao());
+    final Uint8List bytes;
+    try {
+      bytes = await arquivo.readAsBytes();
+    } on Exception {
+      // O arquivo sumiu ou perdeu a permissão entre escolher e enviar.
+      if (mounted) {
+        setState(() {
+          _enviando = false;
+          _mensagem = 'Não foi possível ler o arquivo. Escolha de novo.';
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
     try {
       final material = await widget.deps.upload.enviar(
         eventoId: widget.evento.id,

@@ -11,7 +11,7 @@ App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma
 | Acesso real a banco de dados | a API grava e lê no PostgreSQL do servidor; nada é fictício nem fica só em memória | `../backend` |
 | Consulta | Home e detalhe vêm do banco por GET | `ApiService.home`, `ApiService.evento` |
 | Cadastro | criar conta (POST `/auth/registrar`), entrar na turma pelo código (POST `/turmas/entrar`) e cadastrar prova ou entrega (POST `/eventos`), que aparece para a turma com autor e hora | `cadastro_page.dart`, `entrar_turma_page.dart`, `evento_form_page.dart` |
-| Persistência após fechar e abrir | sessão e tema em SharedPreferences; cache, rascunhos e "feito" em SQLite (no navegador, o mesmo SQLite em WebAssembly, gravando no IndexedDB) | `lib/repositories/`, `lib/database/app_database.dart` |
+| Persistência após fechar e abrir | sessão (com o token) no `flutter_secure_storage`, tema em SharedPreferences; cache, rascunhos e "feito" em SQLite (no navegador, o mesmo SQLite em WebAssembly, gravando no IndexedDB) | `lib/repositories/`, `lib/database/app_database.dart` |
 | Atualização da interface | a Home recarrega ao voltar de qualquer tela e depois de salvar, editar, excluir ou sincronizar | `lib/screens/home_page.dart` |
 | Validação | e-mail com formato válido; senha de 8 a 100 caracteres, repetida igual; nome e código obrigatórios; matéria e título obrigatórios, título até 120 e sala até 40 caracteres; data de hoje em diante. O envio fica bloqueado até corrigir | `cadastro_page.dart`, `login_page.dart`, `evento_form_page.dart` |
 | Tratamento de erros | sem conexão, servidor fora do ar, 401, 404, 409, 5xx e JSON inesperado viram mensagem na tela; falha nunca aparece como lista vazia | `ApiService._enviar`, `_erroHttp`, `HomeService.carregar` |
@@ -25,7 +25,7 @@ App Flutter do projetoFans, para **Android e navegador**. Consome a API da turma
 |---|---|---|
 | Tela de login com e-mail e senha | formato do e-mail e senha obrigatória conferidos antes de enviar | `screens/login_page.dart` |
 | Enviar as credenciais e obter o token | POST `/auth/login`; a resposta traz o JWT e o usuário | `ApiService.login`, `models/sessao.dart` |
-| Guardar o token de forma adequada à plataforma | cofre do sistema com `flutter_secure_storage` (Keystore no Android, WebCrypto no navegador). A sessão antiga, de quando ficava no SharedPreferences, migra na primeira leitura e sai de lá | `repositories/sessao_store.dart` |
+| Guardar o token de forma adequada à plataforma | cofre do sistema com `flutter_secure_storage`: Keystore no Android; no navegador, cifrado com WebCrypto (a chave fica no próprio `localStorage`, ver "Limites conhecidos"). Se o cofre não abrir, o app pede login de novo em vez de travar. A sessão antiga, de quando ficava no SharedPreferences, migra na primeira leitura e sai de lá | `repositories/sessao_store.dart` |
 | Mandar `Authorization: Bearer <token>` | em toda chamada autenticada, inclusive no upload | `ApiService._enviar`, `UploadService.enviar` |
 | Tratar 200, 401 e 403 | 401: "Sessão expirada. Entre de novo." e volta ao login; 403: "Você não tem permissão para isso." Membro de outra turma recebe 404, que não confirma que o registro existe | `ApiService._erroHttp`, `main.dart` (`_sessaoExpirou`) |
 | Logout que impede voltar às telas protegidas | Configurações → Sair apaga a sessão do cofre, fecha todas as telas e abre o login; o "voltar" não reabre nada | `screens/configuracoes_page.dart`, `main.dart` (`_aoSair`) |
@@ -51,7 +51,7 @@ Push com Firebase (FCM) fica de fora: exigiria projeto no Firebase e registrar o
 - **HTTP** (`lib/services/api_service.dart`): GET (`home`, `materias`, `evento`), POST (`criarEvento`, espera 201), PUT (`marcarFeito`, em `/eventos/{id}/estado-pessoal`, espera 204), PATCH (`atualizarEvento`) e DELETE (`excluirEvento`). Edição e exclusão enviam `If-Match` com a versão do evento.
 - **JSON e Model** (`lib/models/`): `fromJson`/`toJson` para a API; `toMap`/`fromMap` para o SQLite.
 - **SQLite** (`lib/database/app_database.dart`, `lib/repositories/`): cache da Home, matérias, rascunhos (CRUD local) e estado pessoal ("feito").
-- **SharedPreferences** (`lib/repositories/sessao_store.dart`): sessão, tema escuro, datas de sincronização e o dono da última sessão.
+- **SharedPreferences** (`lib/repositories/sessao_store.dart`): tema escuro, datas de sincronização e o dono da última sessão. A sessão em si fica no cofre (próximo item).
 - **Offline e sincronização** (`lib/services/home_service.dart`, `lib/services/sync_service.dart`): sem rede, a Home vem do cache. Criar evento e marcar feito (inclusive pelo detalhe, sem rede) vão para uma fila e são enviados depois. A Home envia a fila sozinha quando carrega com rede. Não há serviço em segundo plano.
 - **Autenticação** (`lib/repositories/sessao_store.dart`): o JWT fica no cofre do sistema (`flutter_secure_storage`); tema e datas continuam em SharedPreferences, porque não são segredo.
 - **Upload** (`lib/services/upload_service.dart`, `lib/screens/enviar_arquivo_page.dart`): `file_picker` escolhe, Dio envia em `multipart/form-data` com progresso. O arquivo vira material do evento, com o nome de quem enviou.
@@ -166,10 +166,13 @@ test_e2e/          13 testes contra o backend real (ver "Teste contra o backend 
 - Abrir o detalhe de um evento sem rede mostra "Sem conexão com o servidor.": não há cache de detalhe. Mesmo assim, o botão "Marcar como feito" aparece e grava no aparelho.
 - Sem serviço em segundo plano. A fila é enviada ao carregar a Home com rede, pelo ícone de sincronizar, pelo botão "Sincronizar agora" da tela Fila de envio, e ao salvar ou marcar feito. Se a rede voltar com o app fechado, nada é enviado até o app ser aberto.
 - Se a resposta de um POST se perder por timeout, o rascunho continua pendente e o próximo envio cria outro evento. Não há chave de idempotência (comentário `ponytail` em `lib/services/sync_service.dart`).
+- No navegador o token fica cifrado, mas a chave do WebCrypto mora no mesmo `localStorage`: protege de quem olha o armazenamento por cima, não de um script na mesma origem nem de quem abre as ferramentas do navegador. No Android a chave fica no Keystore.
+- O site Ionic (`app/`) ainda trata material de arquivo como link: mostra a linha com o rótulo "LINK", não abre o arquivo e não oferece editar. O líder continua podendo ocultar pelo site.
+- Nem o fans_lab nem o site oferecem apagar material de arquivo pela tela; pela API, `DELETE /materiais/{id}` vale para o autor, como em qualquer material.
+- Cada turma tem até 100 MB de arquivos e o servidor inteiro até 300 MB (o banco gratuito tem 0,5 GB para tudo); acima disso o envio volta 507, "Acabou o espaço para arquivos da turma".
 - Pelo app só se cria material de **arquivo** (Anexar arquivo). Material por link continua só pelo servidor ou pelo app Ionic.
 - O arquivo enviado aparece na lista do evento, mas o fans_lab não o abre. A API entrega o arquivo em `GET /arquivos/{id}`, com token e só para quem é da turma, então um link direto no navegador não funciona.
 - O arquivo fica no próprio Postgres (até 5 MB cada). Serve para a turma; volume grande pede um bucket (comentário `ponytail` na `V11`).
-- Quem é da turma e tem o id do arquivo de um material já excluído ainda consegue baixá-lo (comentário `ponytail` em `ArquivoService.baixar`).
-- A notificação depende da permissão. Negada, o envio funciona igual e o aviso aparece só dentro do app. No `flutter run -d chrome`, a notificação aparece mas não reage a clique (limite do plugin com a janela de depuração).
+- A notificação depende da permissão. Negada, o envio funciona igual e o aviso aparece só dentro do app. No navegador, clicar na notificação não faz nada com o app aberto (o service worker do plugin não traz a aba para a frente).
 - O APK de release é assinado com a chave debug (TODO do template Flutter). Serve para entregar, não para loja.
 - HTTP em claro só no build de debug. Apontar o debug para um IP da rede local manda senha e token sem criptografia. Para o emulador (`10.0.2.2`) é loopback.

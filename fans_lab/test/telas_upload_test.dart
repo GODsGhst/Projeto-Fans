@@ -176,6 +176,20 @@ void main() {
     expect(find.byType(EnviarArquivoPage), findsNothing);
   });
 
+  testWidgets('dois toques seguidos em Enviar mandam o arquivo uma vez só', (tester) async {
+    final resultados = await abrir(tester, () => jsonResposta(materialCriado, 201));
+    seletor.proximo = ArquivoFalso('lista.pdf', _pdf(2048));
+    await tester.tap(find.text('Selecionar documento'));
+    await deixarRodar(tester);
+
+    await tester.tap(find.text('Enviar'));
+    await tester.tap(find.text('Enviar'), warnIfMissed: false);
+    await deixarRodar(tester);
+
+    expect(servidor.chamadas, 1);
+    expect(resultados, [true]);
+  });
+
   testWidgets('recusa do servidor aparece na tela e dá para tentar de novo', (tester) async {
     final resultados = await abrir(tester, () => jsonResposta({'detail': 'grande'}, 413));
     seletor.proximo = ArquivoFalso('lista.pdf', _pdf(2048));

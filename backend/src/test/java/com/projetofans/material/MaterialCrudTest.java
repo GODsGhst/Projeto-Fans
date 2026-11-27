@@ -130,6 +130,21 @@ class MaterialCrudTest extends TesteDeApi {
     }
 
     @Test
+    @DisplayName("material de link continua exigindo o link no PATCH (so o de arquivo dispensa)")
+    void materialDeLinkExigeLinkNoPatch() throws Exception {
+        JsonNode criado = materialCriado();
+        Map<String, Object> semLink = pedidoDeMaterial();
+        semLink.put("url", null);
+
+        http.perform(patch("/api/v1/materiais/" + criado.get("id").asText())
+                        .header("Authorization", bearerAutor)
+                        .header("If-Match", criado.get("version").asInt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(corpo(semLink)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("PATCH de material sem If-Match recebe 428 e com version divergente 409")
     void patchDeMaterialSemIfMatchRecebe428EDivergenteRecebe409() throws Exception {
         JsonNode criado = materialCriado();

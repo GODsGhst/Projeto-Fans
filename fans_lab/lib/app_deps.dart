@@ -11,6 +11,7 @@ import 'package:fans_lab/services/notificacao_service.dart';
 import 'package:fans_lab/services/sync_service.dart';
 import 'package:fans_lab/services/upload_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 /// Montagem única das dependências. As telas recebem isto pronto; testes trocam
@@ -47,6 +48,7 @@ class AppDeps {
     AbrirDb? abrirDb,
     String baseUrl = apiUrl,
     Dio? dio,
+    FlutterSecureStorage? cofre,
   }) {
     final api = ApiService(client: client, baseUrl: baseUrl);
     final abrir = abrirDb ?? AppDatabase.abrir;
@@ -54,7 +56,7 @@ class AppDeps {
     final materias = MateriaRepository(abrir);
     final rascunhos = RascunhoRepository(abrir);
     final estado = EstadoPessoalRepository(abrir);
-    final sessao = SessaoStore();
+    final sessao = cofre == null ? SessaoStore() : SessaoStore(cofre);
     return AppDeps(
       api: api,
       sessao: sessao,

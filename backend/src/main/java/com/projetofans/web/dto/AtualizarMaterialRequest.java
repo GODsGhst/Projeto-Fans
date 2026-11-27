@@ -15,7 +15,7 @@ public record AtualizarMaterialRequest(
         @NotBlank String titulo,
         // So http(s): a url vira href para a turma inteira, e o sanitizador do
         // Angular barra so javascript: — data:, intent: e file: passariam (achado C1).
-        @NotBlank
+        // Nula so em material de arquivo (V11); o MaterialService exige o link nos outros.
         @Pattern(regexp = "(?i)https?://\\S+", message = "o link precisa começar com http:// ou https://")
         String url,
         /** Mesmo motivo da sala em AtualizarEventoRequest: campo editavel entra aqui. */

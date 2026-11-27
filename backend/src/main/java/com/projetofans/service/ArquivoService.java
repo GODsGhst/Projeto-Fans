@@ -1,9 +1,10 @@
 package com.projetofans.service;
 
 import com.projetofans.domain.Evento;
+import com.projetofans.domain.Material;
 import com.projetofans.erro.AcessoNegadoException;
 import com.projetofans.erro.ErroDeNegocio;
-import com.projetofans.security.TurmaScopeResolver;
+import com.projetofans.repo.MaterialRepository;
 import com.projetofans.security.UsuarioAtual;
 import com.projetofans.web.dto.MaterialResponse;
 import org.springframework.http.HttpStatus;
@@ -43,17 +44,21 @@ public class ArquivoService {
             "jpg", "image/jpeg",
             "jpeg", "image/jpeg");
 
+    /** 100 MB por turma e 300 MB no servidor; o resto do 0,5 GB fica para os dados. */
+    long cotaTurmaBytes = 100L * 1024 * 1024;
+    long cotaServidorBytes = 300L * 1024 * 1024;
+
     private final JdbcTemplate jdbc;
     private final EventoService eventos;
     private final MaterialService materiais;
-    private final TurmaScopeResolver escopo;
+    private final MaterialRepository materialRepo;
 
     public ArquivoService(JdbcTemplate jdbc, EventoService eventos, MaterialService materiais,
-                          TurmaScopeResolver escopo) {
+                          MaterialRepository materialRepo) {
         this.jdbc = jdbc;
         this.eventos = eventos;
         this.materiais = materiais;
-        this.escopo = escopo;
+        this.materialRepo = materialRepo;
     }
 
     public record Baixado(String nome, String mime, byte[] conteudo) {
@@ -75,9 +80,11 @@ public class ArquivoService {
         }
         String mime = mimeConferido(nome, conteudo);
         String titulo = descricao == null || descricao.isBlank() ? nome : descricao.trim();
-        if (titulo.length() > TETO_TITULO) {
+        if (titulo.codePointCount(0, titulo.length()) > TETO_TITULO) {
             throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "A descricao passa de 120 caracteres.");
         }
+
+        exigirEspaco(evento.getTurmaId(), conteudo.length);
 
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO arquivo (id, turma_id, nome, mime, tamanho_bytes, conteudo, autor_id)"
@@ -89,22 +96,41 @@ public class ArquivoService {
         return material;
     }
 
-    /** So quem e da turma do arquivo baixa; de fora, 404 como todo registro alheio. */
+    /**
+     * O arquivo vale o que vale o material dele: de outra turma, oculto pelo lider ou
+     * excluido e 404 (o autor ainda ve o proprio, como no material). Sem isto, quem
+     * guardou o id baixava o arquivo que o lider tirou da turma. A regra e checada
+     * antes de o conteudo sair do banco.
+     */
     @Transactional(readOnly = true)
     public Baixado baixar(UsuarioAtual eu, UUID arquivoId) {
-        record Linha(UUID turmaId, Baixado arquivo) {
-        }
-        List<Linha> achados = jdbc.query(
-                "SELECT turma_id, nome, mime, conteudo FROM arquivo WHERE id = ?",
-                (rs, i) -> new Linha(rs.getObject("turma_id", UUID.class),
-                        new Baixado(rs.getString("nome"), rs.getString("mime"), rs.getBytes("conteudo"))),
+        Material material = materialRepo.findByArquivoRef(arquivoId.toString())
+                .orElseThrow(AcessoNegadoException::new);
+        materiais.daTurmaDoUsuario(eu, material.getId());
+        List<Baixado> achados = jdbc.query(
+                "SELECT nome, mime, conteudo FROM arquivo WHERE id = ?",
+                (rs, i) -> new Baixado(rs.getString("nome"), rs.getString("mime"), rs.getBytes("conteudo")),
                 arquivoId);
         if (achados.isEmpty()) {
             throw new AcessoNegadoException();
         }
-        // ponytail: confere so a turma; material excluido ainda deixa baixar quem tem o id.
-        escopo.exigirMesmaTurma(eu.usuarioId(), achados.get(0).turmaId());
-        return achados.get(0).arquivo();
+        return achados.get(0);
+    }
+
+    /**
+     * O banco e um so para todas as turmas (Neon gratuito, 0,5 GB para tudo). Sem cota,
+     * uma conta criada na hora enchia o banco e as escritas paravam para todo mundo.
+     */
+    private void exigirEspaco(UUID turmaId, int tamanho) {
+        // ponytail: dois envios ao mesmo tempo podem passar juntos da cota por ate um arquivo cada.
+        long daTurma = jdbc.queryForObject(
+                "SELECT COALESCE(SUM(tamanho_bytes), 0) FROM arquivo WHERE turma_id = ?", Long.class, turmaId);
+        long doServidor = jdbc.queryForObject(
+                "SELECT COALESCE(SUM(tamanho_bytes), 0) FROM arquivo", Long.class);
+        if (daTurma + tamanho > cotaTurmaBytes || doServidor + tamanho > cotaServidorBytes) {
+            throw new ErroDeNegocio(HttpStatus.INSUFFICIENT_STORAGE,
+                    "Acabou o espaco para arquivos. Fale com o lider da turma.");
+        }
     }
 
     /** Tira caminho e caractere de controle; o nome so serve para exibir. */

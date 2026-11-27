@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -42,6 +44,7 @@ class FansLabApp extends StatefulWidget {
 }
 
 class _FansLabAppState extends State<FansLabApp> {
+  final _avisos = GlobalKey<ScaffoldMessengerState>();
   Sessao? _sessao;
   bool _temaEscuro = false;
 
@@ -60,7 +63,20 @@ class _FansLabAppState extends State<FansLabApp> {
       await AppDatabase.limparTudo(widget.deps.abrirDb);
     }
     widget.deps.api.token = s.jwt;
-    await widget.deps.sessao.salvar(s);
+    try {
+      await widget.deps.sessao.salvar(s);
+    } on Object catch (e) {
+      // As telas de login não esperam este Future: sem o catch o erro sumia e o login não fazia nada.
+      // Entra mesmo assim; a sessão vale até fechar o app, e a pessoa fica sabendo.
+      developer.log('sessão não gravada no cofre: $e', name: 'sessao');
+      _avisos.currentState?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não deu para guardar o login neste aparelho. Na próxima vez que abrir o app, entre de novo.',
+          ),
+        ),
+      );
+    }
     setState(() => _sessao = s);
   }
 
@@ -89,6 +105,7 @@ class _FansLabAppState extends State<FansLabApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'projetoFans',
+      scaffoldMessengerKey: _avisos,
       debugShowCheckedModeBanner: false,
       theme: temaFans(Brightness.light),
       darkTheme: temaFans(Brightness.dark),

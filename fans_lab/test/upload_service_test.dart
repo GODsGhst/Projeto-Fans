@@ -16,6 +16,7 @@ class AdaptadorFalso implements HttpClientAdapter {
   final ResponseBody Function(RequestOptions pedido, String corpo) responder;
   RequestOptions? pedido;
   String corpo = '';
+  int chamadas = 0;
 
   @override
   Future<ResponseBody> fetch(
@@ -29,6 +30,7 @@ class AdaptadorFalso implements HttpClientAdapter {
         bytes.addAll(pedaco);
       }
     }
+    chamadas++;
     pedido = options;
     corpo = latin1.decode(bytes);
     return responder(options, corpo);
@@ -135,6 +137,7 @@ void main() {
     (403, 'Você não tem permissão para enviar arquivos aqui.'),
     (413, 'O arquivo passa do limite de 5 MB aceito pelo servidor.'),
     (415, 'O servidor só aceita PDF, PNG ou JPG de verdade.'),
+    (507, 'Acabou o espaço para arquivos da turma. Fale com o líder.'),
     (500, 'Erro no servidor. Tente de novo em instantes.'),
   ]) {
     test('HTTP $status vira mensagem própria', () async {
@@ -147,6 +150,27 @@ void main() {
       );
     });
   }
+
+  test('404 do escopo é evento sumido; 404 de servidor sem a rota não é', () async {
+    final escopo = servico((_, _) => jsonResposta({'detail': 'Registro nao encontrado'}, 404));
+    await expectLater(
+      escopo.enviar(eventoId: 'e1', nome: 'lista.pdf', bytes: pdf),
+      throwsA(isA<ApiException>().having((e) => e.mensagem, 'mensagem', 'Evento não encontrado — pode ter sido excluído.')),
+    );
+    final semRota = servico((_, _) => jsonResposta({'detail': 'No static resource api/v1/eventos/e1/arquivos.'}, 404));
+    await expectLater(
+      semRota.enviar(eventoId: 'e1', nome: 'lista.pdf', bytes: pdf),
+      throwsA(isA<ApiException>().having((e) => e.mensagem, 'mensagem', 'O servidor ainda não aceita envio de arquivo. Tente de novo mais tarde.')),
+    );
+  });
+
+  test('400 mostra o motivo que o servidor deu', () async {
+    final envio = servico((_, _) => jsonResposta({'detail': 'A descricao passa de 120 caracteres.'}, 400));
+    await expectLater(
+      envio.enviar(eventoId: 'e1', nome: 'lista.pdf', bytes: pdf),
+      throwsA(isA<ApiException>().having((e) => e.mensagem, 'mensagem', 'A descricao passa de 120 caracteres.')),
+    );
+  });
 
   test('sem rede é "sem conexão", nunca sucesso', () async {
     final envio = servico((_, _) => throw const SocketException('rede caiu'));

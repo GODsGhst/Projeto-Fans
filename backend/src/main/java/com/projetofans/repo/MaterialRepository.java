@@ -76,4 +76,7 @@ public interface MaterialRepository extends JpaRepository<Material, UUID> {
         order by m.criadoEm desc
         """)
     List<Material> ocultosDaTurma(@Param("turmaId") UUID turmaId);
+
+    /** O material que aponta para um arquivo enviado (V11). */
+    Optional<Material> findByArquivoRef(String arquivoRef);
 }

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MultipartException;
 
 import java.sql.SQLException;
 import java.util.Set;
@@ -79,6 +80,18 @@ public class ProblemDetailHandler {
             }
         }
         return false;
+    }
+
+    /**
+     * Multipart que nao se le (envio cortado no meio, sem boundary) e erro de quem
+     * mandou, nao do servidor: 400, e fora do log de erro. O 413 de arquivo grande
+     * (MaxUploadSizeExceededException) continua com o handler do proprio Spring.
+     */
+    @ExceptionHandler(MultipartException.class)
+    public ProblemDetail multipartIlegivel(MultipartException erro) {
+        log.warn("multipart ilegivel: {}", erro.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Nao foi possivel ler o arquivo enviado.");
     }
 
     /**
